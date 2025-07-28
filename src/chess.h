@@ -133,11 +133,43 @@ public:
    * @return A vector of valid moves for the piece at the specified position.
    */
   std::vector<Move> generate_moves(Position pos) const;
+
+  /**
+   * Returns the current timeline index.
+   * @return Current timeline index.
+   */
+  int current_timeline_index(void);
+
+  /**
+   * Returns the number of timelines in the game.
+   * @return Number of timelines.
+   */
+  int timeline_count(void) const;
+
+  /**
+   * Returns the parent timeline index of the current timeline.
+   * @return Parent timeline index.
+   */
+  int parent_timeline_index(void) const;
+
+  /**
+   * Returns the timeline offset for the current timeline.
+   * @return Timeline offset.
+   */
+  int timeline_offset(void) const;
+
+  /**
+   * Returns the person who created the specific timeline.
+   * @param timelineIndex The index of the timeline.
+   * @return The color of the piece that created the timeline, or std::nullopt if the timeline is the original one.
+   */
+  std::optional<PieceColor> created_by(int timelineIndex) const;
 private:
   using Timeline = std::vector<Board>;
   std::vector<Timeline> _timelines;
   std::vector<int> _timelineOffsets;
   std::vector<int> _parent;
+  std::vector<std::optional<PieceColor>> _createdBy;
   std::vector<Move> _moves;
   int _presentTimelineIndex;
 };

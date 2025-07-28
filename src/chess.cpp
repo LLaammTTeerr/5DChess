@@ -72,3 +72,26 @@ void Game::make_move(const Move& move) {
   _timelines[from.x()][from.y()][from.z()][from.t()] = std::nullopt;
   _timelines[to.x()][to.y()][to.z()][to.t()] = piece;
 }
+
+std::vector<Move> Game::generate_moves(Position pos) const {
+  std::vector<Move> valid_moves;
+  // Logic to generate valid moves for the piece at position `pos`
+  // This is a placeholder; actual implementation will depend on game rules.
+  return valid_moves;
+}
+
+int Game::current_timeline_index(void) {
+  return _presentTimelineIndex;
+}
+
+int Game::timeline_count(void) const {
+  return _timelines.size();
+}
+
+int Game::parent_timeline_index(void) const {
+  return _parent[_presentTimelineIndex];
+}
+
+int Game::timeline_offset(void) const {
+  return _timelineOffsets[_presentTimelineIndex];
+}
