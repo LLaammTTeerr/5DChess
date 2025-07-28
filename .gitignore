@@ -40,6 +40,5 @@
 # debug information files
 *.dwo
 
-
 makefile
-
+/.vscode
