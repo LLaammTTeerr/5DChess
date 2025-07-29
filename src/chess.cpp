@@ -95,3 +95,7 @@ int Game::parent_timeline_index(void) const {
 int Game::timeline_offset(void) const {
   return _timelineOffsets[_presentTimelineIndex];
 }
+
+std::optional<PieceColor> Game::created_by(int timelineIndex) const {
+  return _createdBy[timelineIndex];
+}

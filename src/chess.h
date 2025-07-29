@@ -68,14 +68,15 @@ private:
   PieceColor _color;
 };
 
+template<int N>
 class Board {
 public:
   Board(void);
 
-  std::array<std::optional<Piece>, 8>& operator [](int x);
-  const std::array<std::optional<Piece>, 8>& operator [](int x) const;
+  std::array<std::optional<Piece>, N>& operator [](int x);
+  const std::array<std::optional<Piece>, N>& operator [](int x) const;
 private:
-  std::array<std::array<std::optional<Piece>, 8>, 8> _board;
+  std::array<std::array<std::optional<Piece>, N>, N> _board;
 };
 
 class Move {
@@ -105,6 +106,7 @@ private:
   Piece _piece;
 };
 
+template<int N>
 class Game {
 public:
   Game(void);
@@ -165,11 +167,17 @@ public:
    */
   std::optional<PieceColor> created_by(int timelineIndex) const;
 private:
-  using Timeline = std::vector<Board>;
+  using Timeline = std::vector<Board<N>>;
   std::vector<Timeline> _timelines;
   std::vector<int> _timelineOffsets;
   std::vector<int> _parent;
   std::vector<std::optional<PieceColor>> _createdBy;
   std::vector<Move> _moves;
   int _presentTimelineIndex;
+};
+
+class ClassicGame : public Game<8> {
+};
+
+class SimplifiedGame : public Game<4> {
 };
