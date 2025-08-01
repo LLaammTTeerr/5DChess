@@ -16,6 +16,13 @@ enum class PieceColor : int{
   Black = 1,
 };
 
+enum class Result : int {
+  Win = 0,
+  Loss = 1,
+  Draw = 2,
+  Ongoing = 3,
+};
+
 class Position {
 public:
   Position() = default;
@@ -73,8 +80,15 @@ class Board {
 public:
   Board(void);
 
-  std::array<std::optional<Piece>, N>& operator [](int x);
-  const std::array<std::optional<Piece>, N>& operator [](int x) const;
+  /**
+   * Sets the piece at the specified position on the board.
+   * @param x The x-coordinate of the position.
+   * @param y The y-coordinate of the position.
+   * @param piece The piece to place on the board, can be nullopt for no piece.
+   */
+  void set_piece(int x, int y, std::optional<Piece> piece);
+
+  const std::array<std::optional<Piece>, N>& operator [](int) const;
 private:
   std::array<std::array<std::optional<Piece>, N>, N> _board;
 };
@@ -118,15 +132,15 @@ public:
    * You can use the function generateMoves() to get a list of valid moves.
    * @param move The move to make.
    */
-  void make_move(const Move&);
+  void make_move(const Move& move);
 
   /**
    * Get piece on the board at the specified position.
-   * @param Position The position to get.
+   * @param pos The position to get.
    * @return Piece placed on the board at the specified position.
    *         If no piece is placed at the position, it returns an empty optional.
    */
-  std::optional<Piece> get_piece(Position) const;
+  std::optional<Piece> get_piece(Position pos) const;
 
   /**
    * Generates a list of valid moves for the piece at the specified position.
@@ -134,7 +148,7 @@ public:
    * @param pos The position of the piece to generate moves for.
    * @return A vector of valid moves for the piece at the specified position.
    */
-  std::vector<Move> generate_moves(Position pos) const;
+  std::vector<Move> generate_valid_moves(Position pos) const;
 
   /**
    * Returns the current timeline index.
@@ -166,6 +180,19 @@ public:
    * @return The color of the piece that created the timeline, or std::nullopt if the timeline is the original one.
    */
   std::optional<PieceColor> created_by(int timelineIndex) const;
+
+  /**
+   * Returns the whether the current turn is white or black.
+   * @return PieceColor representing the current turn.
+   */
+  PieceColor current_turn(void) const;
+
+  /**
+   * Returns the result of the game.
+   * The result can be Win, Loss, Draw, or Ongoing.
+   * @return Result of the game.
+   */
+  Result game_result(void) const;
 private:
   using Timeline = std::vector<Board<N>>;
   std::vector<Timeline> _timelines;
@@ -174,6 +201,9 @@ private:
   std::vector<std::optional<PieceColor>> _createdBy;
   std::vector<Move> _moves;
   int _presentTimelineIndex;
+
+  std::optional<Piece> get(Position pos) const;
+  void set(Position pos, std::optional<Piece> piece);
 };
 
 class ClassicGame : public Game<8> {

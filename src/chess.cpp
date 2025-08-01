@@ -32,16 +32,13 @@ PieceColor Piece::color(void) const {
   return _color;
 }
 
-Board::Board(void) 
+template<int N>
+Board<N>::Board(void) 
   : _board{} {}
 
-std::array<std::optional<Piece>, 8>& Board::operator [](int x) {
-  assert(x >= 0 && x < 8);
-  return _board[x];
-}
-
-const std::array<std::optional<Piece>, 8>& Board::operator [](int x) const {
-  assert(x >= 0 && x < 8);
+template<int N>
+const std::array<std::optional<Piece>, N>& Board<N>::operator [](int x) const {
+  assert(x >= 0 && x < N);
   return _board[x];
 }
 
@@ -60,42 +57,46 @@ Piece Move::piece(void) const {
   return _piece;
 }
 
-std::optional<Piece> Game::get_piece(Position pos) const {
+template<int N>
+std::optional<Piece> Game<N>::get_piece(Position pos) const {
   return _timelines[pos.x()][pos.y()][pos.z()][pos.t()];
 }
 
-void Game::make_move(const Move& move) {
-  Position from = move.from();
-  Position to = move.to();
-  Piece piece = move.piece();
-
-  _timelines[from.x()][from.y()][from.z()][from.t()] = std::nullopt;
-  _timelines[to.x()][to.y()][to.z()][to.t()] = piece;
+template<int N>
+void Game<N>::make_move(const Move& move) {
+  //TODO: Implement the logic to make a move in the game.
 }
 
-std::vector<Move> Game::generate_moves(Position pos) const {
+
+template<int N>
+std::vector<Move> Game<N>::generate_valid_moves(Position pos) const {
   std::vector<Move> valid_moves;
   // Logic to generate valid moves for the piece at position `pos`
   // This is a placeholder; actual implementation will depend on game rules.
   return valid_moves;
 }
 
-int Game::current_timeline_index(void) {
+template<int N>
+int Game<N>::current_timeline_index(void) {
   return _presentTimelineIndex;
 }
 
-int Game::timeline_count(void) const {
+template<int N>
+int Game<N>::timeline_count(void) const {
   return _timelines.size();
 }
 
-int Game::parent_timeline_index(void) const {
+template<int N>
+int Game<N>::parent_timeline_index(void) const {
   return _parent[_presentTimelineIndex];
 }
 
-int Game::timeline_offset(void) const {
+template<int N>
+int Game<N>::timeline_offset(void) const {
   return _timelineOffsets[_presentTimelineIndex];
 }
 
-std::optional<PieceColor> Game::created_by(int timelineIndex) const {
+template<int N>
+std::optional<PieceColor> Game<N>::created_by(int timelineIndex) const {
   return _createdBy[timelineIndex];
 }
