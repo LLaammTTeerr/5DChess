@@ -1,102 +1,48 @@
 #include "chess.h"
-#include <cassert>
-#include <optional>
 
-Position::Position(int x, int y, int z, int t) 
-  : _coordinates{x, y, z, t} {}
-
-int Position::x(void) const {
-  return _coordinates[0];
-}
-
-int Position::y(void) const {
-  return _coordinates[1];
-}
-
-int Position::z(void) const {
-  return _coordinates[2];
-}
-
-int Position::t(void) const {
-  return _coordinates[3];
-}
-
-Piece::Piece(PieceType type, PieceColor color) 
-  : _type(type), _color(color) {}
-
-PieceType Piece::type(void) const {
-  return _type;
-}
-
-PieceColor Piece::color(void) const {
-  return _color;
+template<int N>
+std::shared_ptr<TimeLine<N>> Multiverse<N>::createBranch(
+  std::shared_ptr<TimeLine<N>> parent,
+  int forkTurn
+) {
+  auto branch = std::make_shared<TimeLine<N>>(_timeLines.size(), forkTurn, parent);
+  branch->pushBoard(*parent->boardAtTurn(forkTurn));
+  _timeLines.push_back(branch);
+  return branch;
 }
 
 template<int N>
-Board<N>::Board(void) 
-  : _board{} {}
+void Multiverse<N>::addMoveToQueue(const Move<N>& move) {
+  // You can only make a move from the present mark
+  // This mean that the move is make from the latest board of this timeline
+  Board<N> current = *move.fromTimeLine()->latestBoard();
 
-template<int N>
-const std::array<std::optional<Piece>, N>& Board<N>::operator [](int x) const {
-  assert(x >= 0 && x < N);
-  return _board[x];
-}
-
-Move::Move(Position from, Position to, Piece piece) 
-  : _from(from), _to(to), _piece(piece) {}
-
-Position Move::from(void) const {
-  return _from;
-}
-
-Position Move::to(void) const {
-  return _to;
-}
-
-Piece Move::piece(void) const {
-  return _piece;
-}
-
-template<int N>
-std::optional<Piece> Game<N>::get_piece(Position pos) const {
-  return _timelines[pos.x()][pos.y()][pos.z()][pos.t()];
-}
-
-template<int N>
-void Game<N>::make_move(const Move& move) {
-  //TODO: Implement the logic to make a move in the game.
-}
+  // The move is made from the present mark, so we need to update the board
+  // and the turn number
+  current.setPreviousBoard(move.fromTimeLine()->latestBoard());
+  current.setTurnNumber(current.turnNumber() + 1);
+  current.placePiece(move.from(), std::nullopt);
 
 
-template<int N>
-std::vector<Move> Game<N>::generate_valid_moves(Position pos) const {
-  std::vector<Move> valid_moves;
-  // Logic to generate valid moves for the piece at position `pos`
-  // This is a placeholder; actual implementation will depend on game rules.
-  return valid_moves;
-}
+  // Push to the timeline
+  move.fromTimeLine()->pushBoard(current);
 
-template<int N>
-int Game<N>::current_timeline_index(void) {
-  return _presentTimelineIndex;
-}
+  // If the move is a fork (time travelling to the past), we need to create a branch
+  // from the parent timeline at the target turn
+  if (move.targetTurn() < _present) {
+    // Create a branch from the parent timeline at the target turn
+    std::shared_ptr<TimeLine<N>> branch = createBranch(move.toTimeLine(), move.targetTurn());
+    
+    // Place the piece on the branch's latest board
+    branch->latestBoard()->placePiece(move.to(), move.piece());
+  } else {
+    // Edge case where the move is a normal move in the present
+    // We need to ensure that the timeline is updated correctly
+    if (move.fromTimeLine() != move.toTimeLine())
+      move.toTimeLine()->pushBoard();
+    move.toTimeLine()->latestBoard()->placePiece(move.to(), move.piece());
+  }
 
-template<int N>
-int Game<N>::timeline_count(void) const {
-  return _timelines.size();
-}
-
-template<int N>
-int Game<N>::parent_timeline_index(void) const {
-  return _parent[_presentTimelineIndex];
-}
-
-template<int N>
-int Game<N>::timeline_offset(void) const {
-  return _timelineOffsets[_presentTimelineIndex];
-}
-
-template<int N>
-std::optional<PieceColor> Game<N>::created_by(int timelineIndex) const {
-  return _createdBy[timelineIndex];
+  // Move present mark to the next turn
+  _present = move.targetTurn() + 1;
 }
