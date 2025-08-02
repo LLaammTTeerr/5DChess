@@ -1,97 +1,48 @@
 #include "chess.h"
-#include <cassert>
-#include <optional>
 
-Position::Position(int x, int y, int z, int t) 
-  : _coordinates{x, y, z, t} {}
-
-int Position::x(void) const {
-  return _coordinates[0];
+template<int N>
+std::shared_ptr<TimeLine<N>> Multiverse<N>::createBranch(
+  std::shared_ptr<TimeLine<N>> parent,
+  int forkTurn
+) {
+  auto branch = std::make_shared<TimeLine<N>>(_timeLines.size(), forkTurn, parent);
+  branch->pushBoard(*parent->boardAtTurn(forkTurn));
+  _timeLines.push_back(branch);
+  return branch;
 }
 
-int Position::y(void) const {
-  return _coordinates[1];
-}
+template<int N>
+void Multiverse<N>::addMoveToQueue(const Move<N>& move) {
+  // You can only make a move from the present mark
+  // This mean that the move is make from the latest board of this timeline
+  Board<N> current = *move.fromTimeLine()->latestBoard();
 
-int Position::z(void) const {
-  return _coordinates[2];
-}
+  // The move is made from the present mark, so we need to update the board
+  // and the turn number
+  current.setPreviousBoard(move.fromTimeLine()->latestBoard());
+  current.setTurnNumber(current.turnNumber() + 1);
+  current.placePiece(move.from(), std::nullopt);
 
-int Position::t(void) const {
-  return _coordinates[3];
-}
 
-Piece::Piece(PieceType type, PieceColor color) 
-  : _type(type), _color(color) {}
+  // Push to the timeline
+  move.fromTimeLine()->pushBoard(current);
 
-PieceType Piece::type(void) const {
-  return _type;
-}
+  // If the move is a fork (time travelling to the past), we need to create a branch
+  // from the parent timeline at the target turn
+  if (move.targetTurn() < _present) {
+    // Create a branch from the parent timeline at the target turn
+    std::shared_ptr<TimeLine<N>> branch = createBranch(move.toTimeLine(), move.targetTurn());
+    
+    // Place the piece on the branch's latest board
+    branch->latestBoard()->placePiece(move.to(), move.piece());
+  } else {
+    // Edge case where the move is a normal move in the present
+    // We need to ensure that the timeline is updated correctly
+    if (move.fromTimeLine() != move.toTimeLine())
+      move.toTimeLine()->pushBoard();
+    move.toTimeLine()->latestBoard()->placePiece(move.to(), move.piece());
+  }
 
-PieceColor Piece::color(void) const {
-  return _color;
-}
-
-Board::Board(void) 
-  : _board{} {}
-
-std::array<std::optional<Piece>, 8>& Board::operator [](int x) {
-  assert(x >= 0 && x < 8);
-  return _board[x];
-}
-
-const std::array<std::optional<Piece>, 8>& Board::operator [](int x) const {
-  assert(x >= 0 && x < 8);
-  return _board[x];
-}
-
-Move::Move(Position from, Position to, Piece piece) 
-  : _from(from), _to(to), _piece(piece) {}
-
-Position Move::from(void) const {
-  return _from;
-}
-
-Position Move::to(void) const {
-  return _to;
-}
-
-Piece Move::piece(void) const {
-  return _piece;
-}
-
-std::optional<Piece> Game::get_piece(Position pos) const {
-  return _timelines[pos.x()][pos.y()][pos.z()][pos.t()];
-}
-
-void Game::make_move(const Move& move) {
-  Position from = move.from();
-  Position to = move.to();
-  Piece piece = move.piece();
-
-  _timelines[from.x()][from.y()][from.z()][from.t()] = std::nullopt;
-  _timelines[to.x()][to.y()][to.z()][to.t()] = piece;
-}
-
-std::vector<Move> Game::generate_moves(Position pos) const {
-  std::vector<Move> valid_moves;
-  // Logic to generate valid moves for the piece at position `pos`
-  // This is a placeholder; actual implementation will depend on game rules.
-  return valid_moves;
-}
-
-int Game::current_timeline_index(void) {
-  return _presentTimelineIndex;
-}
-
-int Game::timeline_count(void) const {
-  return _timelines.size();
-}
-
-int Game::parent_timeline_index(void) const {
-  return _parent[_presentTimelineIndex];
-}
-
-int Game::timeline_offset(void) const {
-  return _timelineOffsets[_presentTimelineIndex];
+  // Move present mark to the next turn
+  _present = move.targetTurn() + 1;
 }
