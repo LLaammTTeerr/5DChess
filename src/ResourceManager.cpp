@@ -70,7 +70,7 @@ void ResourceManager::_unloadFont(const std::string &alias) {
 
 
 // flyweight pattern implementation
-Texture2D ResourceManager::getTexture2D(const std::string &alias) {
+Texture2D& ResourceManager::getTexture2D(const std::string &alias) {
     auto it = _MappingAliasToFilename.find(alias);
     if (it != _MappingAliasToFilename.end()) {
         const std::string &filename = it->second;
@@ -85,7 +85,7 @@ Texture2D ResourceManager::getTexture2D(const std::string &alias) {
     }
 }
 
-Font ResourceManager::getFont(const std::string &alias) {
+Font& ResourceManager::getFont(const std::string &alias) {
     auto it = _MappingAliasToFilename.find(alias);
     if (it != _MappingAliasToFilename.end()) {
         const std::string &filename = it->second;
