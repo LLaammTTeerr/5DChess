@@ -1,21 +1,19 @@
 #include "chess.h"
 
-template<int N>
-std::shared_ptr<TimeLine<N>> Multiverse<N>::createBranch(
-  std::shared_ptr<TimeLine<N>> parent,
+std::shared_ptr<TimeLine> Multiverse::createBranch(
+  std::shared_ptr<TimeLine> parent,
   int forkTurn
 ) {
-  auto branch = std::make_shared<TimeLine<N>>(_timeLines.size(), forkTurn, parent);
+  auto branch = std::make_shared<TimeLine>(_timeLines.size(), forkTurn, parent);
   branch->pushBoard(*parent->boardAtTurn(forkTurn));
   _timeLines.push_back(branch);
   return branch;
 }
 
-template<int N>
-void Multiverse<N>::addMoveToQueue(const Move<N>& move) {
+void Multiverse::addMoveToQueue(const Move& move) {
   // You can only make a move from the present mark
   // This mean that the move is make from the latest board of this timeline
-  Board<N> current = *move.fromTimeLine()->latestBoard();
+  Board current = *move.fromTimeLine()->latestBoard();
 
   // The move is made from the present mark, so we need to update the board
   // and the turn number
@@ -31,7 +29,7 @@ void Multiverse<N>::addMoveToQueue(const Move<N>& move) {
   // from the parent timeline at the target turn
   if (move.targetTurn() < _present) {
     // Create a branch from the parent timeline at the target turn
-    std::shared_ptr<TimeLine<N>> branch = createBranch(move.toTimeLine(), move.targetTurn());
+    std::shared_ptr<TimeLine> branch = createBranch(move.toTimeLine(), move.targetTurn());
     
     // Place the piece on the branch's latest board
     branch->latestBoard()->placePiece(move.to(), move.piece());
