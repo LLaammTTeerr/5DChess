@@ -104,6 +104,7 @@
     "text_encoding": "cpp",
     "thread": "cpp",
     "typeindex": "cpp",
-    "valarray": "cpp"
+    "valarray": "cpp",
+    "__node_handle": "cpp"
   }
 }
