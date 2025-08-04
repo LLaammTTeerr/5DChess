@@ -4,10 +4,10 @@ std::shared_ptr<TimeLine> Multiverse::createBranch(
   std::shared_ptr<TimeLine> parent,
   int forkTurn
 ) {
-  //auto branch = std::make_shared<TimeLine>(_timeLines.size(), forkTurn, parent);
-  //branch->pushBoard(*parent->boardAtTurn(forkTurn));
-  //_timeLines.push_back(branch);
-  return nullptr;
+  auto branch = std::make_shared<TimeLine>(_N, _timeLines.size(), forkTurn, parent);
+  branch->pushBoard(*parent->boardAtTurn(forkTurn));
+  _timeLines.push_back(branch);
+  return branch;
 }
 
 void Multiverse::addMoveToQueue(const Move& move) {
