@@ -10,8 +10,8 @@ class ResourceManager {
 public:
   static ResourceManager &getInstance();
   /* Resource Retrieval */
-  Texture2D getTexture2D(const std::string &alias);
-  Font getFont(const std::string &alias);
+  Texture2D& getTexture2D(const std::string &alias);
+  Font& getFont(const std::string &alias);
 
 private:
   ResourceManager();

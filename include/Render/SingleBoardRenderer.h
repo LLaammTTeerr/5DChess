@@ -3,17 +3,19 @@
 #include <iostream>
 
 class Board;
+class ThemeManager;
 
-class SingleBoardRendering {
+class SingleBoardRenderer {
 private:
   Board* _board;
   Texture2D* _boardTexture;
   std::pair<float, float> _boardPosition;
   float _boardSize;
-  float _scale;
+  // float _scale;
+  ThemeManager& _themeManager;
 
 public:
-  SingleBoardRendering(Board* board);
+  SingleBoardRenderer(Board* board, ThemeManager& themeManager);
   
   void render() const;
   
@@ -22,7 +24,7 @@ public:
   void setPosition(std::pair<float, float> position);
   void setSize(float size);
   void setBoard(Board* board);
-  void setScale(float scale);
+  // void setScale(float scale);
   void setBoardTexture(Texture2D* texture);
 
   /* getter */

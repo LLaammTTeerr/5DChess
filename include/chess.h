@@ -119,28 +119,28 @@ private:
   std::shared_ptr<Piece> _piece;
 };
 
-enum class Color : int {
-  WHITE = 0,
-  BLACK = 1,
+enum class PieceColor : int {
+  PIECE_WHITE = 0,
+  PIECE_BLACK = 1,
 };
 
 class Piece {
 public:
-  Piece(Color color) : _color(color) {}
+  Piece(PieceColor color) : _color(color) {}
 
-  inline Color color() const {
+  inline PieceColor color() const {
     return _color;
   }
 
   virtual const std::string& name(void);
   virtual const char& symbol(void);
 private:
-  Color _color;
+  PieceColor _color;
 };
 
 class King : public Piece {
 public:
-  King(Color color) : Piece(color) {}
+  King(PieceColor color) : Piece(color) {}
 
   inline const std::string& name(void) override {
     static const std::string name = "king";
@@ -155,7 +155,7 @@ public:
 
 class Queen : public Piece {
 public:
-  Queen(Color color) : Piece(color) {}
+  Queen(PieceColor color) : Piece(color) {}
 
   inline const std::string& name(void) override {
     static const std::string name = "queen";
@@ -170,7 +170,7 @@ public:
 
 class Rook : public Piece {
 public:
-  Rook(Color color) : Piece(color) {}
+  Rook(PieceColor color) : Piece(color) {}
 
   inline const std::string& name(void) override {
     static const std::string name = "rook";
@@ -185,7 +185,7 @@ public:
 
 class Bishop : public Piece {
 public:
-  Bishop(Color color) : Piece(color) {}
+  Bishop(PieceColor color) : Piece(color) {}
 
   inline const std::string& name(void) override {
     static const std::string name = "bishop";
@@ -200,7 +200,7 @@ public:
 
 class Knight : public Piece {
 public:
-  Knight(Color color) : Piece(color) {}
+  Knight(PieceColor color) : Piece(color) {}
 
   inline const std::string& name(void) override {
     static const std::string name = "knight";
@@ -215,7 +215,7 @@ public:
 
 class Pawn : public Piece {
 public:
-  Pawn(Color color) : Piece(color) {}
+  Pawn(PieceColor color) : Piece(color) {}
 
   inline const std::string& name(void) override {
     static const std::string name = "pawn";
@@ -245,6 +245,20 @@ public:
   inline void setPreviousBoard(std::shared_ptr<Board> previousBoard) {
     _previousBoard = previousBoard;
   }
+
+  inline const std::vector<std::vector<std::shared_ptr<Piece>>>& getPieces() const {
+    return _pieces;
+  }
+
+  inline std::shared_ptr<Piece> getPieceAt(const Position2D& position) const {
+    if (position.x() >= 0 && position.x() < _pieces.size() && 
+        position.y() >= 0 && position.y() < _pieces[position.x()].size()) {
+      return _pieces[position.x()][position.y()];
+    }
+    return nullptr;
+  }
+
+  
 private:
   std::vector<std::vector<std::shared_ptr<Piece>>> _pieces;
   int _N;
@@ -285,6 +299,7 @@ public:
     int offset = _history.front()->turnNumber();
     return _history[turn - offset];
   }
+
 private:
   int _N;
   int _timeLineNumber;
@@ -296,11 +311,11 @@ private:
 class Multiverse {
 public:
   Multiverse(int N) : _N(N), _present(0) {
-    auto initialBoard = std::make_shared<Board>();
-    initialBoard->setTurnNumber(0);
-    auto initialTimeLine = std::make_shared<TimeLine>(0);
-    initialTimeLine->pushBoard(*initialBoard);
-    _timeLines.push_back(initialTimeLine);
+    //auto initialBoard = std::make_shared<Board>();
+    //initialBoard->setTurnNumber(0);
+    //auto initialTimeLine = std::make_shared<TimeLine>(0);
+    //initialTimeLine->pushBoard(*initialBoard);
+    //_timeLines.push_back(initialTimeLine);
   }
 
   std::shared_ptr<TimeLine> createBranch(
@@ -314,8 +329,8 @@ public:
     return _present;
   }
 
-  inline Color turnColor(void) const {
-    return Color(_present % 2);
+  inline PieceColor turnColor(void) const {
+    return PieceColor(_present % 2);
   }
 
   std::vector<std::shared_ptr<TimeLine>> timeLineToMove(void) {
