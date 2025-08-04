@@ -109,14 +109,14 @@ public:
    * @return The Piece object representing the piece being moved.
    * This method returns the piece that is being moved from the starting position to the target position.
    */
-  inline Piece piece() const { return _piece; }
+  inline std::shared_ptr<Piece> piece() const { return _piece; }
 private:
   Position2D _from;
   Position2D _to;
   std::shared_ptr<TimeLine> _fromTimeLine;
   std::shared_ptr<TimeLine> _toTimeLine;
   int _targetTurn;
-  Piece _piece;
+  std::shared_ptr<Piece> _piece;
 };
 
 enum class Color : int {
