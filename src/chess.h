@@ -296,11 +296,11 @@ private:
 class Multiverse {
 public:
   Multiverse(int N) : _N(N), _present(0) {
-    auto initialBoard = std::make_shared<Board>();
-    initialBoard->setTurnNumber(0);
-    auto initialTimeLine = std::make_shared<TimeLine>(0);
-    initialTimeLine->pushBoard(*initialBoard);
-    _timeLines.push_back(initialTimeLine);
+    //auto initialBoard = std::make_shared<Board>();
+    //initialBoard->setTurnNumber(0);
+    //auto initialTimeLine = std::make_shared<TimeLine>(0);
+    //initialTimeLine->pushBoard(*initialBoard);
+    //_timeLines.push_back(initialTimeLine);
   }
 
   std::shared_ptr<TimeLine> createBranch(
