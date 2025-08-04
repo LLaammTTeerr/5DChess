@@ -47,7 +47,7 @@ void SingleBoardRenderer::render() const {
 
   // Render the board using _boardTexture, _boardPosition, _boardSize, and _scale
   if (_boardTexture) {
-    DrawTextureEx(*_boardTexture, { _boardPosition.first, _boardPosition.second }, 0.0f, _scale, WHITE);
+    DrawTextureEx(*_boardTexture, { _boardPosition.first, _boardPosition.second }, 0.0f, 1.0f, WHITE);
   }
   else {
     // Draw a rectangle to simulate a board
@@ -62,16 +62,16 @@ void SingleBoardRenderer::render() const {
   }
   
   // Draw the pieces
-  if (_board) {
-    for (const auto& piece : _board->getPieces()) {
-      const std::string& pieceName = piece.getColor() +  piece.getName();
-      // Alternatively, if you want to use the piece type and color:
-      // const std::string& pieceName = (piece.color == PieceColor::BLACK ? "black" : "white") + "_" + pieceNames[static_cast<int>(piece.type())];
-      Texture2D& texture = _themeManager.getPieceTexture(pieceName);
-      Vector2 position = { _boardPosition.first + piece.getX() * (_boardSize / 8), 
-                           _boardPosition.second + piece.getY() * (_boardSize / 8) };
+  // if (_board) {
+  //   for (const auto& piece : _board->getPieces()) {
+  //     const std::string& pieceName = piece.getColor() +  piece.getName();
+  //     // Alternatively, if you want to use the piece type and color:
+  //     // const std::string& pieceName = (piece.color == PieceColor::BLACK ? "black" : "white") + "_" + pieceNames[static_cast<int>(piece.type())];
+  //     Texture2D& texture = _themeManager.getPieceTexture(pieceName);
+  //     Vector2 position = { _boardPosition.first + piece.getX() * (_boardSize / 8), 
+  //                          _boardPosition.second + piece.getY() * (_boardSize / 8) };
 
-      TexturePieceRenderer::render(texture, position, _boardSize / 8, _themeManager);
-    }
-  }
+  //     TexturePieceRenderer::render(texture, position, _boardSize / 8, _themeManager);
+  //   }
+  // }
 }

@@ -1,5 +1,5 @@
 #include "PieceRenderer.h"
-#include "ThemeManager.h"
+#include "PieceTheme.h"
 
 void TexturePieceRenderer::render(Texture2D& texture, Vector2 position, float size, const ThemeManager& themeManager)
 {

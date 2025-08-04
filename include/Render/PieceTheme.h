@@ -35,6 +35,8 @@ public:
   ThemeManager(const ThemeManager&) = delete;
   ThemeManager& operator=(const ThemeManager&) = delete;
 private:
-  std::unique_ptr<IPieceTheme> _theme;
+  ThemeManager() = default;
+  ~ThemeManager() = default;
+std::unique_ptr<IPieceTheme> _theme;
   void ensureInitialized();
 };
