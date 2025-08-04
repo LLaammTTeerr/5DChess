@@ -120,8 +120,8 @@ private:
 };
 
 enum class PieceColor : int {
-  WHITE = 0,
-  BLACK = 1,
+  PIECE_WHITE = 0,
+  PIECE_BLACK = 1,
 };
 
 class Piece {
