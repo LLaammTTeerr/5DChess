@@ -9,11 +9,11 @@
 #include <cassert>
 
 class Position2D;
-class Move;
 class Piece;
 class Board;
 class TimeLine;
 class Multiverse;
+class Move;
 
 class Position2D {
 public:
@@ -65,7 +65,7 @@ public:
     std::shared_ptr<TimeLine> fromTimeLine,
     std::shared_ptr<TimeLine> toTimeLine,
     int targetTurn,
-    const Piece& piece
+    const std::shared_ptr<Piece>& piece
   ) : _from(from), _to(to), _fromTimeLine(fromTimeLine), _toTimeLine(toTimeLine),
       _targetTurn(targetTurn), _piece(piece) {}
 
@@ -230,7 +230,7 @@ public:
 
 class Board {
 public:
-  inline void placePiece(const Position2D& position, const std::optional<Piece>& piece) {
+  inline void placePiece(const Position2D& position, const std::shared_ptr<Piece>& piece) {
     _pieces[position.x()][position.y()] = piece;
   }
 
@@ -246,7 +246,7 @@ public:
     _previousBoard = previousBoard;
   }
 private:
-  std::vector<std::vector<std::optional<Piece>>> _pieces;
+  std::vector<std::vector<std::shared_ptr<Piece>>> _pieces;
   int _N;
   int _turnNumber;
   std::shared_ptr<Board> _previousBoard;

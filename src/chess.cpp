@@ -19,7 +19,7 @@ void Multiverse::addMoveToQueue(const Move& move) {
   // and the turn number
   current.setPreviousBoard(move.fromTimeLine()->latestBoard());
   current.setTurnNumber(current.turnNumber() + 1);
-  current.placePiece(move.from(), std::nullopt);
+  current.placePiece(move.from(), nullptr);
 
 
   // Push to the timeline
