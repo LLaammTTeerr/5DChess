@@ -5,7 +5,7 @@
 class Board;
 class ThemeManager;
 
-class SingleBoardRendering {
+class SingleBoardRenderer {
 private:
   Board* _board;
   Texture2D* _boardTexture;
@@ -15,7 +15,7 @@ private:
   ThemeManager& _themeManager;
 
 public:
-  SingleBoardRendering(Board* board, ThemeManager& themeManager);
+  SingleBoardRenderer(Board* board, ThemeManager& themeManager);
   
   void render() const;
   

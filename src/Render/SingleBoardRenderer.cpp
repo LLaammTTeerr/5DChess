@@ -1,9 +1,10 @@
-#include "SingleBoardRendering.h"
+#include "SingleBoardRenderer.h"
 #include "PieceTheme.h"
 #include "chess.h"
+#include "PieceRenderer.h"
 // #include "Board.h"
 
-SingleBoardRendering::SingleBoardRendering(Board* board, ThemeManager& themeManager) 
+SingleBoardRenderer::SingleBoardRenderer(Board* board, ThemeManager& themeManager) 
   : _board(board), _themeManager(themeManager) {
   _boardTexture = nullptr;
   _boardPosition = {0.0f, 0.0f};
@@ -11,15 +12,15 @@ SingleBoardRendering::SingleBoardRendering(Board* board, ThemeManager& themeMana
   // _scale = 1.0f;
 } 
 
-void SingleBoardRendering::setPosition(std::pair<float, float> position) {
+void SingleBoardRenderer::setPosition(std::pair<float, float> position) {
   _boardPosition = position;
 }
 
-void SingleBoardRendering::setSize(float size) {
+void SingleBoardRenderer::setSize(float size) {
   _boardSize = size;
 }
 
-void SingleBoardRendering::setBoard(Board* board) {
+void SingleBoardRenderer::setBoard(Board* board) {
   _board = board;
 }
 
@@ -27,20 +28,20 @@ void SingleBoardRendering::setBoard(Board* board) {
 //   _scale = scale;
 // }
 
-void SingleBoardRendering::setBoardTexture(Texture2D* texture) {
+void SingleBoardRenderer::setBoardTexture(Texture2D* texture) {
   _boardTexture = texture;
 }
 
-std::pair<float, float> SingleBoardRendering::getPosition() const {
+std::pair<float, float> SingleBoardRenderer::getPosition() const {
   return _boardPosition;
 }
 
-float SingleBoardRendering::getSize() const {
+float SingleBoardRenderer::getSize() const {
   return _boardSize;
 }
 
-void SingleBoardRendering::render() const {
-  static std::<std::vector<std::string>> pieceNames = {
+void SingleBoardRenderer::render() const {
+  static std::vector<std::string> pieceNames = {
     "pawn", "knight", "bishop", "rook", "queen", "king"
   };
 
@@ -63,14 +64,14 @@ void SingleBoardRendering::render() const {
   // Draw the pieces
   if (_board) {
     for (const auto& piece : _board->getPieces()) {
-      const string& pieceName = (piece.color == PieceColor::BLACK ? "black" : "white") + "_" + pieceNames[static_cast<int>(piece.type())];
+      const std::string& pieceName = piece.getColor() +  piece.getName();
+      // Alternatively, if you want to use the piece type and color:
+      // const std::string& pieceName = (piece.color == PieceColor::BLACK ? "black" : "white") + "_" + pieceNames[static_cast<int>(piece.type())];
       Texture2D& texture = _themeManager.getPieceTexture(pieceName);
       Vector2 position = { _boardPosition.first + piece.getX() * (_boardSize / 8), 
                            _boardPosition.second + piece.getY() * (_boardSize / 8) };
 
-      Rectangle sourceRect = { 0, 0, static_cast<float>(texture.width), static_cast<float>(texture.height) };
-      Rectangle destRect = { position.x, position.y, _boardSize / 8, _boardSize / 8 }; 
-      DrawTexturePro(texture, sourceRect, destRect, {0, 0}, 0.0f, WHITE);
+      TexturePieceRenderer::render(texture, position, _boardSize / 8, _themeManager);
     }
   }
 }
