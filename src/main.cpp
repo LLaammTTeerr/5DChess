@@ -3,19 +3,27 @@
 #include <iostream>
 #include <filesystem>
 
+#include "Menu/MenuStructure.h"
+
 int main() {
     // Initialize the window before using ResourceManager
     InitWindow(1400, 800, "5D Chess Game");
-    ResourceManager &resourceManager = ResourceManager::getInstance();
+    SetTargetFPS(60); // Set the frame rate
+    // ResourceManager &resourceManager = ResourceManager::getInstance();
 
-    // while(!WindowShouldClose()) {
-    //     BeginDrawing();
-    //     ClearBackground(RAYWHITE);
+    TestApp app;
+    app.init();
+    // app.update();
+    while(!WindowShouldClose()) {
+        BeginDrawing();
+        ClearBackground(RAYWHITE);
 
-    //     // Example of using a texture
-    //     Texture2D chessTexture = resourceManager.getTexture2D("chess");
-    //     DrawTexture(chessTexture, 100, 100, WHITE);
+        app.update();
+        app.render();
+    // //     // Example of using a texture
+    // //     Texture2D chessTexture = resourceManager.getTexture2D("chess");
+    // //     DrawTexture(chessTexture, 100, 100, WHITE);
 
-    //     EndDrawing();
-    // }
+        EndDrawing();
+    }
 }
