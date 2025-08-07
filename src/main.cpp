@@ -20,9 +20,9 @@ int main() {
 
         app.update();
         app.render();
-    // //     // Example of using a texture
-    // //     Texture2D chessTexture = resourceManager.getTexture2D("chess");
-    // //     DrawTexture(chessTexture, 100, 100, WHITE);
+    //     // Example of using a texture
+    //     Texture2D chessTexture = resourceManager.getTexture2D("chess");
+    //     DrawTexture(chessTexture, 100, 100, WHITE);
 
         EndDrawing();
     }
