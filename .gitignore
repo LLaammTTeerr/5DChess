@@ -41,4 +41,6 @@
 *.dwo
 
 makefile
+Makefile
+/build
 /.vscode

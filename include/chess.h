@@ -230,6 +230,10 @@ public:
 
 class Board {
 public:
+  Board(int N) : _N(N), _turnNumber(0), _previousBoard(nullptr) {
+    _pieces.resize(N, std::vector<std::shared_ptr<Piece>>(N, nullptr));
+  }
+
   inline void placePiece(const Position2D& position, const std::shared_ptr<Piece>& piece) {
     _pieces[position.x()][position.y()] = piece;
   }
@@ -251,14 +255,8 @@ public:
   }
 
   inline std::shared_ptr<Piece> getPieceAt(const Position2D& position) const {
-    if (position.x() >= 0 && position.x() < _pieces.size() && 
-        position.y() >= 0 && position.y() < _pieces[position.x()].size()) {
-      return _pieces[position.x()][position.y()];
-    }
-    return nullptr;
+    return _pieces[position.x()][position.y()];
   }
-
-  
 private:
   std::vector<std::vector<std::shared_ptr<Piece>>> _pieces;
   int _N;
@@ -311,11 +309,11 @@ private:
 class Multiverse {
 public:
   Multiverse(int N) : _N(N), _present(0) {
-    //auto initialBoard = std::make_shared<Board>();
-    //initialBoard->setTurnNumber(0);
-    //auto initialTimeLine = std::make_shared<TimeLine>(0);
-    //initialTimeLine->pushBoard(*initialBoard);
-    //_timeLines.push_back(initialTimeLine);
+    auto initialBoard = std::make_shared<Board>(_N);
+    initialBoard->setTurnNumber(0);
+    auto initialTimeLine = std::make_shared<TimeLine>(_N, 0);
+    initialTimeLine->pushBoard(*initialBoard);
+    _timeLines.push_back(initialTimeLine);
   }
 
   std::shared_ptr<TimeLine> createBranch(
