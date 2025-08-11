@@ -7,6 +7,23 @@
 #include <optional>
 #include <queue>
 #include <cassert>
+#include <functional>
+
+namespace Chess {
+
+using u8 = uint8_t;
+using u16 = uint16_t;
+using u32 = uint32_t;
+using u64 = uint64_t;
+
+enum class Color : int {
+  WHITE = 0,
+  BLACK = 1,
+};
+
+inline constexpr Color opposite(Color c) {
+  return c == Color::WHITE ? Color::BLACK : Color::WHITE;
+}
 
 class Position2D;
 class Piece;
@@ -50,97 +67,29 @@ private:
 
 class Move {
 public:
-  /**
-   * Construct a Move object with the given parameters.
-   * @param from The starting position of the move.
-   * @param to The target position of the move.
-   * @param fromTimeLine The timeline from which the move is made.
-   * @param toTimeLine The timeline to which the move is made.
-   * @param targetTurn The turn number at which the move is targeted.
-   * @param piece The piece being moved.
-   */
-  Move(
-    const Position2D& from,
-    const Position2D& to,
-    std::shared_ptr<TimeLine> fromTimeLine,
-    std::shared_ptr<TimeLine> toTimeLine,
-    int targetTurn,
-    const std::shared_ptr<Piece>& piece
-  ) : _from(from), _to(to), _fromTimeLine(fromTimeLine), _toTimeLine(toTimeLine),
-      _targetTurn(targetTurn), _piece(piece) {}
-
-  /**
-   * Get the starting position of the move.
-   * @return The starting position as a Position2D object.
-   * This method returns the position from which the piece is being moved.
-   */
-  inline Position2D from() const { return _from; }
-
-  /**
-   * Get the target position of the move.
-   * @return The target position as a Position2D object.
-   * This method returns the position to which the piece is being moved.
-   */
-  inline Position2D to() const { return _to; }
-
-  /**
-   * Get the timeline from which the move is made.
-   * @return A shared pointer to the TimeLine object representing the timeline.
-   * This method returns the timeline from which the piece is being moved.
-   */
-  inline std::shared_ptr<TimeLine> fromTimeLine() const { return _fromTimeLine; }
-
-  /**
-   * Get the timeline to which the move is made.
-   * @return A shared pointer to the TimeLine object representing the target timeline.
-   * This method returns the timeline to which the piece is being moved.
-   */
-  inline std::shared_ptr<TimeLine> toTimeLine() const { return _toTimeLine; }
-
-  /**
-   * Get the target turn number of the move.
-   * @return The target turn number as an integer.
-   * This method returns the turn number at which the move is targeted.
-   */
-  inline int targetTurn() const { return _targetTurn; }
-
-  /**
-   * Get the piece being moved.
-   * @return The Piece object representing the piece being moved.
-   * This method returns the piece that is being moved from the starting position to the target position.
-   */
-  inline std::shared_ptr<Piece> piece() const { return _piece; }
-private:
-  Position2D _from;
-  Position2D _to;
-  std::shared_ptr<TimeLine> _fromTimeLine;
-  std::shared_ptr<TimeLine> _toTimeLine;
-  int _targetTurn;
+  Position2D _from, _to;
+  int _fromTimeLineID, _toTimeLineID;
+  int _fromTurn, _toTurn;
   std::shared_ptr<Piece> _piece;
-};
-
-enum class PieceColor : int {
-  PIECE_WHITE = 0,
-  PIECE_BLACK = 1,
 };
 
 class Piece {
 public:
-  Piece(PieceColor color) : _color(color) {}
+  Piece(Color color) : _color(color) {}
 
-  inline PieceColor color() const {
+  inline Color color() const {
     return _color;
   }
 
   virtual const std::string& name(void);
   virtual const char& symbol(void);
 private:
-  PieceColor _color;
+  Color _color;
 };
 
 class King : public Piece {
 public:
-  King(PieceColor color) : Piece(color) {}
+  King(Color color) : Piece(color) {}
 
   inline const std::string& name(void) override {
     static const std::string name = "king";
@@ -155,7 +104,7 @@ public:
 
 class Queen : public Piece {
 public:
-  Queen(PieceColor color) : Piece(color) {}
+  Queen(Color color) : Piece(color) {}
 
   inline const std::string& name(void) override {
     static const std::string name = "queen";
@@ -170,7 +119,7 @@ public:
 
 class Rook : public Piece {
 public:
-  Rook(PieceColor color) : Piece(color) {}
+  Rook(Color color) : Piece(color) {}
 
   inline const std::string& name(void) override {
     static const std::string name = "rook";
@@ -185,7 +134,7 @@ public:
 
 class Bishop : public Piece {
 public:
-  Bishop(PieceColor color) : Piece(color) {}
+  Bishop(Color color) : Piece(color) {}
 
   inline const std::string& name(void) override {
     static const std::string name = "bishop";
@@ -200,7 +149,7 @@ public:
 
 class Knight : public Piece {
 public:
-  Knight(PieceColor color) : Piece(color) {}
+  Knight(Color color) : Piece(color) {}
 
   inline const std::string& name(void) override {
     static const std::string name = "knight";
@@ -215,7 +164,7 @@ public:
 
 class Pawn : public Piece {
 public:
-  Pawn(PieceColor color) : Piece(color) {}
+  Pawn(Color color) : Piece(color) {}
 
   inline const std::string& name(void) override {
     static const std::string name = "pawn";
@@ -230,138 +179,150 @@ public:
 
 class Board {
 public:
-  Board(int N) : _N(N), _turnNumber(0), _previousBoard(nullptr) {
-    _pieces.resize(N, std::vector<std::shared_ptr<Piece>>(N, nullptr));
-  }
+  Board(int N);
 
-  inline void placePiece(const Position2D& position, const std::shared_ptr<Piece>& piece) {
-    _pieces[position.x()][position.y()] = piece;
-  }
+  /**
+   * Get the dimension of the board.
+   * @return The dimension of the board as an integer.
+   * This method returns the size of the board (N).
+   */
+  inline int dim(void) const;
 
-  inline int turnNumber(void) const {
-    return _turnNumber;
-  }
+  /**
+   * Place a piece on the board.
+   * @param position The position on the board where the piece will be placed.
+   * @param piece The piece to be placed on the board.
+   * This method asserts that the position is within the bounds of the board
+   * Please note that this method transfers ownership of the piece to the board.
+   */
+  void placePiece(Position2D position, std::shared_ptr<Piece> piece);
 
-  inline void setTurnNumber(int turnNumber) {
-    _turnNumber = turnNumber;
-  }
-
-  inline void setPreviousBoard(std::shared_ptr<Board> previousBoard) {
-    _previousBoard = previousBoard;
-  }
-
-  inline const std::vector<std::vector<std::shared_ptr<Piece>>>& getPieces() const {
-    return _pieces;
-  }
-
-  inline std::shared_ptr<Piece> getPieceAt(const Position2D& position) const {
-    return _pieces[position.x()][position.y()];
-  }
+  /**
+   * Get a piece from the board.
+   * @param position The position on the board from which to retrieve the piece.
+   * @return A shared pointer to the Piece object at the specified position, or nullptr if no piece is present.
+   */
+  std::shared_ptr<const Piece> getPiece(Position2D position) const;
 private:
-  std::vector<std::vector<std::shared_ptr<Piece>>> _pieces;
   int _N;
-  int _turnNumber;
+  int _fullTurnNumber;
+  int _halfTurnNumber;
   std::shared_ptr<Board> _previousBoard;
+  std::vector<std::vector<std::shared_ptr<Piece>>> _pieces;
 };
 
 class TimeLine {
 public:
-  TimeLine(int N, int id) : _N(N), _timeLineNumber(id), _forkAt(-1), _parent(nullptr) {}
-  TimeLine(int N, int id, int forkAt, std::shared_ptr<TimeLine> parent)
-    : _N(N), _timeLineNumber(id), _forkAt(forkAt), _parent(parent) {}
+  TimeLine(int N, int ID = 0);
 
-  inline int id(void) const {
-    return _timeLineNumber;
-  }
+  /**
+   * Get the ID of the timeline.
+   * @return The ID of the timeline as an integer.
+   */
+  inline int ID(void) const;
 
-  inline int size(void) const {
-    return _history.size();
-  }
+  /**
+   * Get the dimension of the timeline.
+   * @return The dimension of the timeline as an integer.
+   * This method returns the size of the board (N).
+   */
+  inline int dim(void) const;
 
-  inline std::shared_ptr<Board> latestBoard(void) const {
-    return _history.back();
-  }
+  /**
+   * Get the fork point of the timeline.
+   * @return The fork point of the timeline as an integer.
+   */
+  inline int forkAt(void) const;
 
-  inline void pushBoard(const Board& board) {
-    _history.push_back(std::make_shared<Board>(board));
-  }
+  /**
+   * Get the full turn number of the timeline.
+   * @return The full turn number of the timeline as an integer.
+   */
+  inline int fullTurnNumber(void) const;
 
-  inline void pushBoard(void) {
-    Board current = *latestBoard();
-    current.setTurnNumber(current.turnNumber() + 1);
-    current.setPreviousBoard(latestBoard());
-    _history.push_back(std::make_shared<Board>(current));
-  }
+  /**
+   * Get the half turn number of the timeline.
+   * @return The half turn number of the timeline as an integer.
+   */
+  inline int halfTurnNumber(void) const;
 
-  inline std::shared_ptr<Board> boardAtTurn(int turn) const {
-    int offset = _history.front()->turnNumber();
-    return _history[turn - offset];
-  }
+  /**
+   * Get the parent timeline of the current timeline.
+   * @return A shared pointer to the parent timeline, or nullptr if there is no parent.
+   */
+  inline std::shared_ptr<const TimeLine> parent(void) const;
 
+  /**
+   * Push a new board state onto the timeline.
+   * @param board The board state to be added to the timeline.
+   */
+  void pushBack(std::shared_ptr<Board> board);
 private:
   int _N;
-  int _timeLineNumber;
+  int _ID;
   int _forkAt;
+  int _fullTurnNumber;
+  int _halfTurnNumber;
   std::vector<std::shared_ptr<Board>> _history;
   std::shared_ptr<TimeLine> _parent;
 };
 
-class Multiverse {
+class Game {
 public:
-  Multiverse(int N) : _N(N), _present(0) {
-    auto initialBoard = std::make_shared<Board>(_N);
-    initialBoard->setTurnNumber(0);
-    auto initialTimeLine = std::make_shared<TimeLine>(_N, 0);
-    initialTimeLine->pushBoard(*initialBoard);
-    _timeLines.push_back(initialTimeLine);
-  }
+  /**
+   * Constructor for the Game class.
+   * @param N The size of the board.
+   * @param board The initial board configuration.
+   * Please note that this constructor transfers ownership of the board to the game.
+   */
+  Game(int N, std::shared_ptr<Board> board);
 
-  std::shared_ptr<TimeLine> createBranch(
-    std::shared_ptr<TimeLine> parent,
-    int forkTurn
-  );
+  /**
+   * Constructor for the Game class.
+   * @param builderFunction A function that builds the initial board configuration, check out the BoardBuilder class
+   */
+  Game(std::function<std::shared_ptr<Board>(void)> builderFunction);
 
-  std::vector<Move> validMoves(Position2D position, std::shared_ptr<TimeLine> timeLine) const;
+  /**
+   * Get the dimension of the game.
+   * @return The dimension of the game as an integer.
+   * This method returns the size of the board (N).
+   */
+  inline int dim(void) const;
 
-  inline int present(void) const {
-    return _present;
-  }
+  /**
+   * Get the current full turn number.
+   * @return The current full turn number as an integer.
+   */
+  inline int presentFullTurn(void) const;
 
-  inline PieceColor turnColor(void) const {
-    return PieceColor(_present % 2);
-  }
+  /**
+   * Get the current half turn number.
+   * @return The current half turn number as an integer.
+   */
+  inline int presentHalfTurn(void) const;
 
-  std::vector<std::shared_ptr<TimeLine>> timeLineToMove(void) {
-    std::vector<std::shared_ptr<TimeLine>> result;
-    for (const auto& timeLine : _timeLines) {
-      if (timeLine->id() == _present) {
-        result.push_back(timeLine);
-      }
-    }
-    assert(!result.empty() && "No timeline to move in the present");
-    return result;
-  }
-
-  void addMoveToQueue(const Move& move);
-  bool canCommitMove(void) const {
-    return true; // Placeholder for actual logic to determine if a move can be committed
-  }
-
-  void undoMove(void) {
-    // Placeholder for actual logic to undo a move
-    if (!_moveQueue.empty()) {
-      _moveQueue.pop();
-    }
-  }
-  void commitMove(void) {
-    // Placeholder for actual logic to commit a move
-    while (!_moveQueue.empty()) {
-      _moveQueue.pop();
-    }
-  }
+  std::shared_ptr<const TimeLine> makeMove(Move move);
 private:
   int _N;
-  int _present;
-  std::queue<Move> _moveQueue;
+  int _presentFullTurn;
+  int _presentHalfTurn;
   std::vector<std::shared_ptr<TimeLine>> _timeLines;
 };
+
+class Constant {
+public:
+  static const int BOARD_SIZE = 8;
+};
+
+class BoardBuilder {
+public:
+  /**
+   * Build a standard chess board with pieces in their initial positions.
+   * @return A shared pointer to the constructed Board object.
+   * This method initializes a standard chess board with all pieces placed in their starting positions.
+   */
+  static std::shared_ptr<Board> buildStandardBoard(void);
+};
+
+} // namespace Chess
