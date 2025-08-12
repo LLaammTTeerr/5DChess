@@ -41,7 +41,6 @@ void ButtonMenuView::createItemViews(const MenuComponent& menuModel) {
 }
 
 void ButtonMenuView::draw(const MenuComponent& menuModel) const {
-    drawBackground();
     std::cout << "draw " << menuModel.getTitle() << std::endl; // Draw the menu title
     const auto& menuItems = menuModel.getChildren();
     // Draw each item view

@@ -1,14 +1,15 @@
-#include "MenuFactory.h"
-#include "MenuComponent.h"
-#include "MenuCommand.h"
-#include "gameState.h"
+// #include "MenuFactory.h"
+// #include "MenuComponent.h"
+// #include "MenuCommand.h"
+// #include "gameState.h"
+// #include "SceneManager.h"
 
-CompositeMenuFactory::CompositeMenuFactory(GameStateModel* state)
-    : gameState(state) {}
+// CompositeMenuFactory::CompositeMenuFactory(GameStateModel* gameStateModel, SceneManager* sceneManager)
+//     : _gameStateModel(gameStateModel), _sceneManager(sceneManager) {}
 
-std::shared_ptr<MenuComponent> CompositeMenuFactory::createMenuSystem() {
+// std::shared_ptr<MenuComponent> CompositeMenuFactory::createMenuSystem() {
     // Create the root container
-    auto root = createMainMenu();
+    // auto root = createMainMenu();
 
     // // Create main menu and add it to the root
     // auto mainMenu = createMainMenu();
@@ -16,105 +17,88 @@ std::shared_ptr<MenuComponent> CompositeMenuFactory::createMenuSystem() {
 
     // // Additional menus can be created and added here
 
-    return root;
+    // return root;
     // return nullptr; // Placeholder return, actual implementation needed
-}
+// }
 
-std::shared_ptr<MenuComponent> CompositeMenuFactory::createMenuForState(GameStateModel::State state) {
-    switch (state) {
-        case GameStateModel::State::MAIN_MENU:
-            return createMainMenu();
-        case GameStateModel::State::SETTINGS_MENU:
-            return createSettingsMenu();
-        case GameStateModel::State::IN_GAME:
-            return createInGameMenu(); // Implement this method
-        // Add cases for other states as needed
-        default:
-            return nullptr; // Unknown state
-    }
-}
-
-
+// std::shared_ptr<MenuComponent> CompositeMenuFactory::createMenuForState(GameStateModel::State state) {
+//     switch (state) {
+//         case GameStateModel::State::MAIN_MENU:
+//             return createMainMenu();
+//         case GameStateModel::State::SETTINGS_MENU:
+//             return createSettingsMenu();
+//         case GameStateModel::State::IN_GAME:
+//             return createInGameMenu(); // Implement this method
+//         // Add cases for other states as needed
+//         default:
+//             return nullptr; // Unknown state
+//     }
+// }
 
 
 
-std::shared_ptr<MenuComponent> CompositeMenuFactory::createMainMenu() {
-    auto mainMenu = std::make_shared<Menu>("Main Menu", true);
+
+
+// std::shared_ptr<MenuComponent> CompositeMenuFactory::createMainMenu() {
+//     auto mainMenu = std::make_shared<Menu>("Main Menu", true);
+//     std::shared_ptr<MenuComponent> Versus = std::make_shared<MenuItem>("Versus", true);
+//     Versus->setCommand(std::make_unique<VersusCommand>(gameState, _sceneManager)); // Set command for Versus
+
+//     std::shared_ptr<MenuComponent> Puzzles = std::make_shared<MenuItem>("Puzzles", true);
+//     std::shared_ptr<MenuComponent> Guide = std::make_shared<MenuItem>("Guide", true);
+//     std::shared_ptr<MenuComponent> Settings = std::make_shared<MenuItem>("Settings", true);
+//     std::shared_ptr<MenuComponent> Exit = std::make_shared<MenuItem>("Exit", true); 
+
     
-    // Add items to the main menu
-    std::shared_ptr<MenuComponent> startGame = std::make_shared<MenuItem>("Start Game", true);
-    // startGame->setCommand() // Example command
-    startGame->setCommand(std::make_unique<startGameCommand>(gameState)); // Example command
-    std::shared_ptr<MenuComponent> settings = std::make_shared<MenuItem>("Settings", true);
-    // settings->setCommand(std::make_unique<ICommand>()); // Example command
-    std::shared_ptr<MenuComponent> exitGame = std::make_shared<MenuItem>("Exit Game", true);
-    // exitGame->setCommand(std::make_unique<ICommand>()); // Example command 
-
-    mainMenu->addItem(startGame);
-    mainMenu->addItem(settings);
-    mainMenu->addItem(exitGame);
-
-    // mainMenu->setCommand() // Example command for the main menu
-
-    return mainMenu;
-}
-
-std::shared_ptr<MenuComponent> CompositeMenuFactory::createSettingsMenu() {
-    auto settingsMenu = std::make_shared<Menu>("Settings", true);
     
-    // Add items to the settings menu
-    std::shared_ptr<MenuComponent> audioSettings = std::make_shared<MenuItem>("Audio Settings", true);
-    // audioSettings->setCommand() // Example command for audio settings
-    std::shared_ptr<MenuComponent> videoSettings = std::make_shared<MenuItem>("Video Settings", true);
-    // videoSettings->setCommand() // Example command for video settings
-    std::shared_ptr<MenuComponent> controlsSettings = std::make_shared<MenuItem>("Controls Settings", true);
-    // controlsSettings->setCommand() // Example command for controls settings
+//     mainMenu->addItem(Versus);
+//     mainMenu->addItem(Puzzles);
+//     mainMenu->addItem(Guide);
+//     mainMenu->addItem(Settings);
+//     mainMenu->addItem(Exit);
 
-    settingsMenu->addItem(audioSettings);
-    settingsMenu->addItem(videoSettings);
-    settingsMenu->addItem(controlsSettings);
+//     // mainMenu->setCommand() // Example command for the main menu
 
-    // settingsMenu->setCommand() // Example command for the settings menu
+//     return mainMenu;
+// }
 
-    return settingsMenu;
-}
+// std::shared_ptr<MenuComponent> CompositeMenuFactory::createSettingsMenu() {
+//     auto settingsMenu = std::make_shared<Menu>("Settings", true);
+    
+//     // Add items to the settings menu
+//     std::shared_ptr<MenuComponent> audioSettings = std::make_shared<MenuItem>("Audio Settings", true);
+//     // audioSettings->setCommand() // Example command for audio settings
+//     std::shared_ptr<MenuComponent> videoSettings = std::make_shared<MenuItem>("Video Settings", true);
+//     // videoSettings->setCommand() // Example command for video settings
+//     std::shared_ptr<MenuComponent> controlsSettings = std::make_shared<MenuItem>("Controls Settings", true);
+//     // controlsSettings->setCommand() // Example command for controls settings
+
+//     settingsMenu->addItem(audioSettings);
+//     settingsMenu->addItem(videoSettings);
+//     settingsMenu->addItem(controlsSettings);
+
+//     // settingsMenu->setCommand() // Example command for the settings menu
+
+//     return settingsMenu;
+// }
 
 
-std::shared_ptr<MenuComponent> CompositeMenuFactory::createInGameMenu() {
-    auto inGameMenu = std::make_shared<Menu>("In-Game Menu", true);
+// std::shared_ptr<MenuComponent> CompositeMenuFactory::createInGameMenu() {
+//     auto inGameMenu = std::make_shared<Menu>("In-Game Menu", true);
 
-    // Add items to the in-game menu
-    std::shared_ptr<MenuComponent> resumeGame = std::make_shared<MenuItem>("Resume Game", true);
-    // resumeGame->setCommand() // Example command for resuming the game
-    std::shared_ptr<MenuComponent> saveGame = std::make_shared<MenuItem>("Save Game", true);
-    // saveGame->setCommand() // Example command for saving the game
-    std::shared_ptr<MenuComponent> exitToMainMenu = std::make_shared<MenuItem>("Exit to Main Menu", true);
-    // exitToMainMenu->setCommand() // Example command for exiting to main menu
+//     // Add items to the in-game menu
+//     std::shared_ptr<MenuComponent> resumeGame = std::make_shared<MenuItem>("Resume Game", true);
+//     // resumeGame->setCommand() // Example command for resuming the game
+//     std::shared_ptr<MenuComponent> saveGame = std::make_shared<MenuItem>("Save Game", true);
+//     // saveGame->setCommand() // Example command for saving the game
+//     std::shared_ptr<MenuComponent> exitToMainMenu = std::make_shared<MenuItem>("Exit to Main Menu", true);
+//     // exitToMainMenu->setCommand() // Example command for exiting to main menu
 
-    inGameMenu->addItem(resumeGame);
-    inGameMenu->addItem(saveGame);
-    inGameMenu->addItem(exitToMainMenu);
+//     inGameMenu->addItem(resumeGame);
+//     inGameMenu->addItem(saveGame);
+//     inGameMenu->addItem(exitToMainMenu);
 
-    // inGameMenu->setCommand() // Example command for the in-game menu
+//     // inGameMenu->setCommand() // Example command for the in-game menu
 
-    return inGameMenu;
-}
-
-void CompositeMenuFactory::activateMenu(std::shared_ptr<MenuComponent> root, const std::string& title) {
-    // if (!root) {
-    //     return; // No menu to show
-    // }
-
-    // for (auto child : root->getChildren()) {
-    //     child -> setEnabled(false); // Disable all children initially
-    // }
-
-    // auto showedMenu = root->findItem(title);
-    // if (showedMenu) {
-    //     showedMenu -> setEnabled(true);
-    // }
-    // else {
-    //     std::cerr << "Menu with title '" << title << "' not found." << std::endl;
-    //     return; // Menu not found
-    // }
-}   
+//     return inGameMenu;
+// }

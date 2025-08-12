@@ -2,10 +2,10 @@
 #include "Scene.h"
 #include <string>
 
-class WelcomeScene : public Scene {
+class MainMenuScene : public Scene {
 public:
-  WelcomeScene() = default;
-  ~WelcomeScene() override = default;
+  MainMenuScene() = default;
+  ~MainMenuScene() override = default;
 
   void init(void) override;
   void update(float deltaTime) override;
@@ -14,6 +14,7 @@ public:
 
   bool isActive(void) const override;
   std::string getName(void) const override;
+  std::string getGameStateName(void) const override;
 
   void onEnter(void) override;
   void onExit(void) override;

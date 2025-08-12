@@ -3,33 +3,33 @@
 #include <memory>
 #include <string>
 #include <iostream>
-#include "gameState.h"
 #include "MenuFactory.h"
-// forward declaration
 
+// forward declaration
 class MenuComponent;
 class IMenuView;
-
+class GameStateModel;
+class GameState;
+class SceneManager;
 class MenuController {
 private:
-  GameStateModel* _gameState;
-  GameStateModel::State _lastState;
+  SceneManager* _sceneManager; 
+  GameStateModel* _gameStateModel;
+  std::unique_ptr<GameState> _lastState;
 
-  std::shared_ptr<MenuComponent> _menuSystem;
+  std::shared_ptr<MenuComponent> _menuSystem; // root menu component
 
   std::shared_ptr<MenuComponent> _currentMenuModel;  // Changed to shared_ptr
   std::unique_ptr<IMenuView> _menuView;
-  CompositeMenuFactory _menuFactory;
 
 public:
-  MenuController(GameStateModel* gameState, std::shared_ptr<MenuComponent> menuSystem);
+  MenuController(GameStateModel* gameStateModel, std::shared_ptr<MenuComponent> menuSystem, 
+                 SceneManager* sceneManager);
   void setViewStrategy(std::unique_ptr<IMenuView> view); 
   void updateMenuForCurrentState();
-  // void updateSettingsDisplay();
+
   void handleInput(); // Handle user input for menu navigation
-
   void update();
-
   void draw() const;
 
   IMenuView* getMenuView() const;

@@ -12,6 +12,7 @@ public:
   // Scene state management
   virtual bool isActive(void) const = 0;
   virtual std::string getName(void) const = 0;
+  virtual std::string getGameStateName(void) const = 0; // Return state name instead of enum
 
   // Scene transition methods
   virtual void onEnter(void) = 0;

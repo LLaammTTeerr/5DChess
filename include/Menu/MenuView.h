@@ -76,7 +76,6 @@ public:
   virtual void draw(const MenuComponent& menuModel) const = 0;
   virtual void createItemViews(const MenuComponent& menuModel) = 0;
   
-  void drawBackground() const { ClearBackground(backgroundColor); }
   // virtual void drawTitle(const std::string& title) const;
   // virtual void drawStatusInfo(const GameStateModel& gameState) const;
 

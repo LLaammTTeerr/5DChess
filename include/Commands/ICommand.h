@@ -3,6 +3,13 @@
 #include <string>
 #include <memory> 
 
+// Command types for execution flow control
+enum class CommandType {
+    STATE_CHANGING,    // Commands that change game state (break execution)
+    NON_STATE,        // Commands that don't change state (can continue)
+    IMMEDIATE         // Commands that need immediate execution (break but don't change state)
+};
+
 // Interface
 class ICommand {
 public:
@@ -28,4 +35,7 @@ public:
 
     // Clone the command (for undo/redo purposes)
     virtual std::unique_ptr<ICommand> clone() const = 0;
+    
+    // Get command type for execution flow control
+    virtual CommandType getType() const = 0;
 };

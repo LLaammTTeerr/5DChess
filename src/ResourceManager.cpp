@@ -159,4 +159,9 @@ ResourceManager::ResourceManager() {
     _preloadTexture2D("assets/images/Theme_2/white_pawn.png", "white_pawn_2");
     _preloadTexture2D("assets/images/Theme_2/white_queen.png", "white_queen_2");
     _preloadTexture2D("assets/images/Theme_2/white_rook.png", "white_rook_2");
+
+
+    _preloadFont("assets/fonts/PublicSans-Regular.ttf", "public_sans_regular");
+    _preloadFont("assets/fonts/PublicSans-Bold.ttf", "public_sans_bold");
+    _preloadFont("assets/fonts/Nunito-VariableFont_wght.ttf", "nunito");
 }

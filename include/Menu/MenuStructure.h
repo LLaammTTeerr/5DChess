@@ -13,17 +13,24 @@
 
 class TestApp {
 private:
-  GameStateModel _gameState;
+  GameStateModel* _gameState;
   std::unique_ptr<MenuController> _menuController;
   std::shared_ptr<MenuComponent> _menuSystem;
 public:
+  TestApp(GameStateModel* gameState) : _gameState(gameState) {}
+  
   void init() {
+    if (!_gameState) {
+      std::cerr << "Error: GameState not provided to TestApp" << std::endl;
+      return;
+    }
+    
     // create menu model
-    _gameState.setState(GameStateModel::State::MAIN_MENU);
-    _menuSystem = CompositeMenuFactory(&_gameState).createMenuSystem();
+    _gameState->setState(GameStateModel::State::MAIN_MENU);
+    _menuSystem = CompositeMenuFactory(_gameState).createMenuSystem();
     
 
-    _menuController = std::make_unique<MenuController>(&_gameState, _menuSystem);
+    _menuController = std::make_unique<MenuController>(_gameState, _menuSystem);
     _menuController->setViewStrategy(std::make_unique<ButtonMenuView>());
   } 
 
