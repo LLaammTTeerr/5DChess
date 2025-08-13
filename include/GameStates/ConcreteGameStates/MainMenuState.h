@@ -22,5 +22,6 @@ public:
     std::shared_ptr<MenuComponent> createMenu(GameStateModel* gameStateModel, SceneManager* sceneManager) override;
     // virtual void renderMenu(std::shared_ptr<MenuComponent> menu) const override;
     virtual std::unique_ptr<Scene> createScene() const override;
+    virtual std::vector<std::shared_ptr<MenuItemView>> createMenuButtonItemViews(std::shared_ptr<MenuComponent> menu) const override;
 };
 

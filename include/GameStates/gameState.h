@@ -11,7 +11,7 @@ class GameState;
 class SceneManager;
 class MenuComponent;
 class Scene;
-
+class MenuItemView;
 
 // Abstract base class for game states
 class GameState {
@@ -27,6 +27,7 @@ public:
     virtual std::shared_ptr<MenuComponent> createMenu(GameStateModel* gameStateModel, SceneManager* sceneManager) = 0;
     // virtual void renderMenu(std::shared_ptr<MenuComponent> menu) const = 0;
     virtual std::unique_ptr<Scene> createScene() const = 0;
+    virtual std::vector<std::shared_ptr<MenuItemView>> createMenuButtonItemViews(std::shared_ptr<MenuComponent> menu) const = 0;
 };
 
 

@@ -6,6 +6,9 @@
 #include "Scene/ConcreteScene/VersusScene.h"
 #include "Scene/SceneManager.h"
 #include "GameStates/ConcreteGameStates/VersusState.h"
+#include "ResourceManager.h"
+#include "Menu/MenuItemView.h"
+
 
 
 std::shared_ptr<MenuComponent> VersusState::createMenu(GameStateModel* gameStateModel, SceneManager* sceneManager) {
@@ -42,3 +45,33 @@ std::unique_ptr<GameState> VersusState::clone() const {
 // std::unique_ptr<GameState> VersusState::createState() const {
 //     return std::make_unique<VersusState>();
 // }
+
+std::vector<std::shared_ptr<MenuItemView>> VersusState::createMenuButtonItemViews(std::shared_ptr<MenuComponent> menu) const {
+    std::vector<std::shared_ptr<MenuItemView>> itemViews;
+
+    int activeItems = 0;
+    for (const auto& child : menu->getChildren()) {
+        if (child) {
+            ++activeItems;
+        }
+    }
+
+    
+    const float verticalSpacing = 20.0f; // spacing between items
+    const float itemHeight = 40.0f;
+    const float itemWidth = 200;
+    const Rectangle menuArea = {0, 0, 300, (float)GetScreenHeight()}; // Example menu area
+
+    const float startX = menuArea.x + (menuArea.width - itemWidth) / 2;
+    const float startY = menuArea.y + (menuArea.height - (activeItems * itemHeight + (activeItems - 1) * verticalSpacing)) / 2;
+
+    itemViews.reserve(activeItems); // Reserve space for active items
+    for (int i = 0; i < activeItems; ++i) {
+        Vector2 position = {startX, startY + i * (itemHeight + verticalSpacing)};
+        Vector2 size = {itemWidth, itemHeight};
+        auto itemView = std::make_shared<MenuItemView>(position, size);
+        itemView->setFont(ResourceManager::getInstance().getFont("public_sans_bold"));
+        itemViews.push_back(itemView);
+    }
+    return itemViews;
+}

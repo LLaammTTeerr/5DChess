@@ -23,7 +23,7 @@ MenuController::MenuController(GameStateModel* gameStateModel, std::shared_ptr<M
 void MenuController::setViewStrategy(std::unique_ptr<IMenuView> view) {
     _menuView = std::move(view);
     if (_menuView) {
-        _menuView->createItemViews(*_currentMenuModel);
+        _menuView->createItemViews(_currentMenuModel, _gameStateModel->getCurrentState());
     }
 }
 
@@ -34,7 +34,7 @@ void MenuController::updateMenuForCurrentState() {
         std::shared_ptr<MenuComponent> newMenu = _gameStateModel->getCurrentState()->createMenu(_gameStateModel, _sceneManager);
         if (newMenu) {
             _currentMenuModel = newMenu; // Update current menu model (both are shared_ptr now)
-            _menuView->createItemViews(*_currentMenuModel); // Update item views for the new menu
+            _menuView->createItemViews(_currentMenuModel, _gameStateModel->getCurrentState()); // Update item views for the new menu
         }
         _lastState = std::move(_gameStateModel->getCurrentState()->clone()); // Store the last state
     }
@@ -88,7 +88,7 @@ void MenuController::update() {
 
 void MenuController::draw() const {
     if (_menuView) {
-        _menuView -> draw(*_currentMenuModel); 
+        _menuView -> draw(_currentMenuModel); 
     }
     std::cout << "Drawing menu for current state: " << _gameStateModel->getCurrentStateName() << std::endl;
 }
