@@ -20,7 +20,4 @@ public:
   void onExit(void) override;
 
   bool shouldTransition(void) const override;
-
-  void loadResources(void) override;
-  void unloadResources(void) override;
 };

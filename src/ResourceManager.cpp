@@ -164,4 +164,7 @@ ResourceManager::ResourceManager() {
     _preloadFont("assets/fonts/PublicSans-Regular.ttf", "public_sans_regular");
     _preloadFont("assets/fonts/PublicSans-Bold.ttf", "public_sans_bold");
     _preloadFont("assets/fonts/Nunito-VariableFont_wght.ttf", "nunito");
+
+
+    _preloadTexture2D("assets/5DChess.png", "welcomeImage");
 }

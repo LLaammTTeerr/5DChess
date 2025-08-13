@@ -20,10 +20,6 @@ public:
 
   virtual bool shouldTransition(void) const { return false; }
 
-  // Resource management
-  virtual void loadResources(void) = 0;  // Load scene-specific resources
-  virtual void unloadResources(void) = 0;  // Unload when scene ends
-
 protected:
   bool _isActive = false;
   float _transitionTimer = 0.0f;

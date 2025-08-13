@@ -34,11 +34,12 @@ SceneManager::~SceneManager() {
 void SceneManager::pushScene(std::unique_ptr<Scene> scene) {
   // Check if the scene was created successfully
   if (scene) {
+    // std::cout << "Pushing scene: " << scene->getName() << std::endl;
     _sceneStack.emplace(std::move(scene));
     auto &entry = _sceneStack.top();
-    entry->loadResources();
     entry->init();
     entry->onEnter();
+    std::cout << "Scene pushed: " << entry->getName() << std::endl;
   }
 }
 
@@ -47,7 +48,6 @@ void SceneManager::popScene() {
     auto &currentEntry = _sceneStack.top();
     currentEntry->onExit();
     currentEntry->cleanup();
-    currentEntry->unloadResources();
     _sceneStack.pop();
   }
 }
@@ -79,6 +79,7 @@ void SceneManager::update(float deltaTime) {
       currentEntry->update(deltaTime);
     }
   }
+  std::cout << "SceneManager update called with deltaTime: " << deltaTime << std::endl;
   
   // Update menu system if active
   if (_menuActive && _menuController) {
@@ -121,7 +122,8 @@ std::unique_ptr<Scene> SceneManager::createScene(const std::string &name) {
 void SceneManager::processTransition() {
   assert(_pendingTransition && _nextScene != nullptr);
 
-  std::cout << "Processing transition to scene: " << _nextScene->getName() << std::endl;
+  std::string sceneName = _nextScene->getName(); // Store name before moving
+  // std::cout << "Processing transition to scene: " << sceneName << std::endl;
 
   if (_isChangeScene) {
     popScene(); // Pop current scene if changing
@@ -130,8 +132,8 @@ void SceneManager::processTransition() {
   
   // Create and push the new scene
   pushScene(std::move(_nextScene));
-  std::cout << "Transitioning to scene: " << _nextScene->getName() << std::endl;
-  _nextScene = nullptr; // Clear after processing
+  // std::cout << "Transitioning to scene: " << sceneName << std::endl;
+  _nextScene = nullptr; // Clear after processing (now safe to uncomment)
   _pendingTransition = false;
 }
 

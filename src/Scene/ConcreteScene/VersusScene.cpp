@@ -3,10 +3,7 @@
 #include "gameState.h"
 #include <iostream>
 #include <raylib.h> // Assuming raylib is used for rendering
-void VersusScene::init(void) {
-  // Initialize versus scene resources
-  loadResources();
-}
+void VersusScene::init(void) {}
 
 void VersusScene::update(float deltaTime) {
   std::cout << "Updating VersusScene..." << std::endl;
@@ -51,12 +48,11 @@ std::string VersusScene::getGameStateName(void) const {
   return "VERSUS";
 }
 
-void VersusScene::onEnter() { _isActive = true; }
+void VersusScene::onEnter() { 
+  std::cout << "Entering VersusScene..." << std::endl;
+  _isActive = true; 
+}
 
 void VersusScene::onExit() { _isActive = false; }
 
 bool VersusScene::shouldTransition() const { return false; }
-
-void VersusScene::loadResources(void) {}
-
-void VersusScene::unloadResources(void) {}

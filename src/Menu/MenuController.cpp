@@ -5,7 +5,8 @@
 #include "MenuComponent.h"
 #include "SceneManager.h"
 #include "gameState.h"
-
+#include "GameStates/ConcreteGameStates/MainMenuState.h"
+#include "GameStates/ConcreteGameStates/VersusState.h"
 
 MenuController::MenuController(GameStateModel* gameStateModel, std::shared_ptr<MenuComponent> menuSystem, 
                                SceneManager* sceneManager)
@@ -65,6 +66,7 @@ void MenuController::handleInput() {
                 CommandType cmdType = command->getType();
                 command->execute(); // Execute the command
                 
+                std::cout << "hihihihihihihihihihihi" << std::endl;
                 // Handle different command types
                 if (cmdType == CommandType::STATE_CHANGING || cmdType == CommandType::IMMEDIATE) {
                     std::cout << "State-changing command executed, stopping command processing" << std::endl;
@@ -75,6 +77,7 @@ void MenuController::handleInput() {
             }
         }
     }
+    std::cout << "Input handling complete." << std::endl;
 }
 
 
@@ -87,6 +90,7 @@ void MenuController::draw() const {
     if (_menuView) {
         _menuView -> draw(*_currentMenuModel); 
     }
+    std::cout << "Drawing menu for current state: " << _gameStateModel->getCurrentStateName() << std::endl;
 }
 
 IMenuView* MenuController::getMenuView() const {
