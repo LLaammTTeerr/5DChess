@@ -1,10 +1,8 @@
 #include "SceneManager.h"
-#include "SceneFactory.h"
 #include "Scene.h"
 #include "MainMenuScene.h"
 #include "gameState.h"
 #include "MenuController.h"
-#include "MenuFactory.h"
 #include "MenuView.h"
 
 #include <raylib.h>

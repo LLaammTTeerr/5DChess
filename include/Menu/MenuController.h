@@ -3,7 +3,6 @@
 #include <memory>
 #include <string>
 #include <iostream>
-#include "MenuFactory.h"
 
 // forward declaration
 class MenuComponent;

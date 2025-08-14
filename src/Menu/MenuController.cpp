@@ -1,6 +1,5 @@
 #include "MenuController.h"
 #include "MenuView.h"
-#include "MenuFactory.h"
 #include "MenuCommand.h"
 #include "MenuComponent.h"
 #include "SceneManager.h"
@@ -18,7 +17,6 @@ MenuController::MenuController(GameStateModel* gameStateModel, std::shared_ptr<M
     _currentMenuModel = _menuSystem; // Use the shared menu system directly
     _menuView = std::make_unique<ButtonMenuView>(); // Default view strategy
 }
-
 
 void MenuController::setViewStrategy(std::unique_ptr<IMenuView> view) {
     _menuView = std::move(view);
