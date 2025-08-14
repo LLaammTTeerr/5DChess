@@ -16,13 +16,13 @@ using u16 = uint16_t;
 using u32 = uint32_t;
 using u64 = uint64_t;
 
-enum class Color : int {
-  WHITE = 0,
-  BLACK = 1,
+enum class PieceColor : int {
+  PIECEWHITE = 0,
+  PIECEBLACK = 1,
 };
 
-inline constexpr Color opposite(Color c) {
-  return c == Color::WHITE ? Color::BLACK : Color::WHITE;
+inline constexpr PieceColor opposite(PieceColor c) {
+  return c == PieceColor::PIECEWHITE ? PieceColor::PIECEBLACK : PieceColor::PIECEWHITE;
 }
 
 class Position2D;
@@ -75,10 +75,10 @@ public:
 
 class Piece {
 public:
-  Piece(Color color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1));
+  Piece(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1));
   virtual ~Piece() = default;
 
-  inline Color color() const {
+  inline PieceColor color() const {
     return _color;
   }
 
@@ -89,14 +89,14 @@ public:
   Position2D getPosition() const { return _position; }
 
 protected:
-  Color _color;
+  PieceColor _color;
   std::shared_ptr<Board> _board; // The board this piece belongs to
   Position2D _position; // The position of the piece on the board
 };
 
 class King : public Piece {
 public:
-  King(Color color, std::shared_ptr<Board> board, Position2D position);
+  King(PieceColor color, std::shared_ptr<Board> board, Position2D position);
 
   inline const std::string& name(void) override {
     static const std::string name = "king";
@@ -111,7 +111,7 @@ public:
 
 class Queen : public Piece {
 public:
-  Queen(Color color, std::shared_ptr<Board> board, Position2D position);
+  Queen(PieceColor color, std::shared_ptr<Board> board, Position2D position);
 
   inline const std::string& name(void) override {
     static const std::string name = "queen";
@@ -126,7 +126,7 @@ public:
 
 class Rook : public Piece {
 public:
-  Rook(Color color, std::shared_ptr<Board> board, Position2D position);
+  Rook(PieceColor color, std::shared_ptr<Board> board, Position2D position);
 
   inline const std::string& name(void) override {
     static const std::string name = "rook";
@@ -141,7 +141,7 @@ public:
 
 class Bishop : public Piece {
 public:
-  Bishop(Color color, std::shared_ptr<Board> board, Position2D position);
+  Bishop(PieceColor color, std::shared_ptr<Board> board, Position2D position);
 
   inline const std::string& name(void) override {
     static const std::string name = "bishop";
@@ -156,7 +156,7 @@ public:
 
 class Knight : public Piece {
 public:
-  Knight(Color color, std::shared_ptr<Board> board, Position2D position);
+  Knight(PieceColor color, std::shared_ptr<Board> board, Position2D position);
 
   inline const std::string& name(void) override {
     static const std::string name = "knight";
@@ -171,7 +171,7 @@ public:
 
 class Pawn : public Piece {
 public:
-  Pawn(Color color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1));
+  Pawn(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1));
 
   inline const std::string& name(void) override {
     static const std::string name = "pawn";

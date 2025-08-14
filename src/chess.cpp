@@ -4,21 +4,21 @@
 namespace Chess {
 const int Constant::BOARD_SIZE = 8;
 
-Piece::Piece(Color color, std::shared_ptr<Board> board, Position2D position)
+Piece::Piece(PieceColor color, std::shared_ptr<Board> board, Position2D position)
     : _color(color), _board(board), _position(position) {}
 
-King::King(Color color, std::shared_ptr<Board> board, Position2D position)
+King::King(PieceColor color, std::shared_ptr<Board> board, Position2D position)
     : Piece(color, board, position) {}
 
-Queen::Queen(Color color, std::shared_ptr<Board> board, Position2D position)
+Queen::Queen(PieceColor color, std::shared_ptr<Board> board, Position2D position)
     : Piece(color, board, position) {}  
-Rook::Rook(Color color, std::shared_ptr<Board> board, Position2D position) 
+Rook::Rook(PieceColor color, std::shared_ptr<Board> board, Position2D position) 
     : Piece(color, board, position) {}
-Bishop::Bishop(Color color, std::shared_ptr<Board> board, Position2D position)
+Bishop::Bishop(PieceColor color, std::shared_ptr<Board> board, Position2D position)
     : Piece(color, board, position) {}
-Knight::Knight(Color color, std::shared_ptr<Board> board, Position2D position)
+Knight::Knight(PieceColor color, std::shared_ptr<Board> board, Position2D position)
     : Piece(color, board, position) {}
-Pawn::Pawn(Color color, std::shared_ptr<Board> board, Position2D position)
+Pawn::Pawn(PieceColor color, std::shared_ptr<Board> board, Position2D position)
     : Piece(color, board, position) {}
 
 Board::Board(int N, std::shared_ptr<TimeLine> timeLine) : _N(N), _fullTurnNumber(0), _halfTurnNumber(0), _previousBoard(nullptr), _timeLine(timeLine) {
@@ -112,26 +112,26 @@ std::shared_ptr<const TimeLine> Game::makeMove(Move move) {
 std::shared_ptr<Board> BoardBuilder::buildStandardBoard(std::shared_ptr<TimeLine> timeLine) {
   std::shared_ptr<Board> board = std::make_shared<Board>(Constant::BOARD_SIZE, timeLine);
   for (int i = 0; i < Constant::BOARD_SIZE; i += 1) {
-    board->placePiece({i, 1}, std::make_shared<Pawn>(Color::WHITE, board, Position2D(i, 1)));
-    board->placePiece({i, 6}, std::make_shared<Pawn>(Color::BLACK, board, Position2D(i, 6)));
+    board->placePiece({i, 1}, std::make_shared<Pawn>(PieceColor::PIECEWHITE, board, Position2D(i, 1)));
+    board->placePiece({i, 6}, std::make_shared<Pawn>(PieceColor::PIECEBLACK, board, Position2D(i, 6)));
   }
-  board->placePiece({0, 0}, std::make_shared<Rook>(Color::WHITE, board, Position2D(0, 0)));
-  board->placePiece({1, 0}, std::make_shared<Knight>(Color::WHITE, board, Position2D(1, 0)));
-  board->placePiece({2, 0}, std::make_shared<Bishop>(Color::WHITE, board, Position2D(2, 0)));
-  board->placePiece({3, 0}, std::make_shared<Queen>(Color::WHITE, board, Position2D(3, 0)));
-  board->placePiece({4, 0}, std::make_shared<King>(Color::WHITE, board, Position2D(4, 0)));
-  board->placePiece({5, 0}, std::make_shared<Bishop>(Color::WHITE, board, Position2D(5, 0)));
-  board->placePiece({6, 0}, std::make_shared<Knight>(Color::WHITE, board, Position2D(6, 0)));
-  board->placePiece({7, 0}, std::make_shared<Rook>(Color::WHITE, board, Position2D(7, 0)));
+  board->placePiece({0, 0}, std::make_shared<Rook>(PieceColor::PIECEWHITE, board, Position2D(0, 0)));
+  board->placePiece({1, 0}, std::make_shared<Knight>(PieceColor::PIECEWHITE, board, Position2D(1, 0)));
+  board->placePiece({2, 0}, std::make_shared<Bishop>(PieceColor::PIECEWHITE, board, Position2D(2, 0)));
+  board->placePiece({3, 0}, std::make_shared<Queen>(PieceColor::PIECEWHITE, board, Position2D(3, 0)));
+  board->placePiece({4, 0}, std::make_shared<King>(PieceColor::PIECEWHITE, board, Position2D(4, 0)));
+  board->placePiece({5, 0}, std::make_shared<Bishop>(PieceColor::PIECEWHITE, board, Position2D(5, 0)));
+  board->placePiece({6, 0}, std::make_shared<Knight>(PieceColor::PIECEWHITE, board, Position2D(6, 0)));
+  board->placePiece({7, 0}, std::make_shared<Rook>(PieceColor::PIECEWHITE, board, Position2D(7, 0)));
 
-  board->placePiece({0, 7}, std::make_shared<Rook>(Color::BLACK, board, Position2D(0, 7)));
-  board->placePiece({1, 7}, std::make_shared<Knight>(Color::BLACK, board, Position2D(1, 7)));
-  board->placePiece({2, 7}, std::make_shared<Bishop>(Color::BLACK, board, Position2D(2, 7)));
-  board->placePiece({3, 7}, std::make_shared<Queen>(Color::BLACK, board, Position2D(3, 7)));
-  board->placePiece({4, 7}, std::make_shared<King>(Color::BLACK, board, Position2D(4, 7)));
-  board->placePiece({5, 7}, std::make_shared<Bishop>(Color::BLACK, board, Position2D(5, 7)));
-  board->placePiece({6, 7}, std::make_shared<Knight>(Color::BLACK, board, Position2D(6, 7)));
-  board->placePiece({7, 7}, std::make_shared<Rook>(Color::BLACK, board, Position2D(7, 7)));
+  board->placePiece({0, 7}, std::make_shared<Rook>(PieceColor::PIECEBLACK, board, Position2D(0, 7)));
+  board->placePiece({1, 7}, std::make_shared<Knight>(PieceColor::PIECEBLACK, board, Position2D(1, 7)));
+  board->placePiece({2, 7}, std::make_shared<Bishop>(PieceColor::PIECEBLACK, board, Position2D(2, 7)));
+  board->placePiece({3, 7}, std::make_shared<Queen>(PieceColor::PIECEBLACK, board, Position2D(3, 7)));
+  board->placePiece({4, 7}, std::make_shared<King>(PieceColor::PIECEBLACK, board, Position2D(4, 7)));
+  board->placePiece({5, 7}, std::make_shared<Bishop>(PieceColor::PIECEBLACK, board, Position2D(5, 7)));
+  board->placePiece({6, 7}, std::make_shared<Knight>(PieceColor::PIECEBLACK, board, Position2D(6, 7)));
+  board->placePiece({7, 7}, std::make_shared<Rook>(PieceColor::PIECEBLACK, board, Position2D(7, 7)));
   return board;
 }
 
