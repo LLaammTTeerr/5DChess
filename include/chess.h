@@ -75,21 +75,28 @@ public:
 
 class Piece {
 public:
-  Piece(Color color) : _color(color) {}
+  Piece(Color color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1));
+  virtual ~Piece() = default;
 
   inline Color color() const {
     return _color;
   }
 
-  virtual const std::string& name(void);
-  virtual const char& symbol(void);
-private:
+  virtual const std::string& name(void) = 0;
+  virtual const char& symbol(void) = 0;
+  
+  std::shared_ptr<Board> getBoard() const { return _board; }
+  Position2D getPosition() const { return _position; }
+
+protected:
   Color _color;
+  std::shared_ptr<Board> _board; // The board this piece belongs to
+  Position2D _position; // The position of the piece on the board
 };
 
 class King : public Piece {
 public:
-  King(Color color) : Piece(color) {}
+  King(Color color, std::shared_ptr<Board> board, Position2D position);
 
   inline const std::string& name(void) override {
     static const std::string name = "king";
@@ -104,7 +111,7 @@ public:
 
 class Queen : public Piece {
 public:
-  Queen(Color color) : Piece(color) {}
+  Queen(Color color, std::shared_ptr<Board> board, Position2D position);
 
   inline const std::string& name(void) override {
     static const std::string name = "queen";
@@ -119,7 +126,7 @@ public:
 
 class Rook : public Piece {
 public:
-  Rook(Color color) : Piece(color) {}
+  Rook(Color color, std::shared_ptr<Board> board, Position2D position);
 
   inline const std::string& name(void) override {
     static const std::string name = "rook";
@@ -134,7 +141,7 @@ public:
 
 class Bishop : public Piece {
 public:
-  Bishop(Color color) : Piece(color) {}
+  Bishop(Color color, std::shared_ptr<Board> board, Position2D position);
 
   inline const std::string& name(void) override {
     static const std::string name = "bishop";
@@ -149,7 +156,7 @@ public:
 
 class Knight : public Piece {
 public:
-  Knight(Color color) : Piece(color) {}
+  Knight(Color color, std::shared_ptr<Board> board, Position2D position);
 
   inline const std::string& name(void) override {
     static const std::string name = "knight";
@@ -164,7 +171,7 @@ public:
 
 class Pawn : public Piece {
 public:
-  Pawn(Color color) : Piece(color) {}
+  Pawn(Color color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1));
 
   inline const std::string& name(void) override {
     static const std::string name = "pawn";
@@ -179,7 +186,7 @@ public:
 
 class Board {
 public:
-  Board(int N);
+  Board(int N, std::shared_ptr<TimeLine> timeLine);
 
   /**
    * Get the dimension of the board.
@@ -203,12 +210,16 @@ public:
    * @return A shared pointer to the Piece object at the specified position, or nullptr if no piece is present.
    */
   std::shared_ptr<const Piece> getPiece(Position2D position) const;
+
+  std::shared_ptr<TimeLine> getTimeLine() const;
+
 private:
   int _N;
   int _fullTurnNumber;
   int _halfTurnNumber;
   std::shared_ptr<Board> _previousBoard;
   std::vector<std::vector<std::shared_ptr<Piece>>> _pieces;
+  std::shared_ptr<TimeLine> _timeLine; // The timeline this board belongs to
 };
 
 class TimeLine {
@@ -312,7 +323,7 @@ private:
 
 class Constant {
 public:
-  static const int BOARD_SIZE = 8;
+  static const int BOARD_SIZE;
 };
 
 class BoardBuilder {
@@ -322,7 +333,7 @@ public:
    * @return A shared pointer to the constructed Board object.
    * This method initializes a standard chess board with all pieces placed in their starting positions.
    */
-  static std::shared_ptr<Board> buildStandardBoard(void);
+  static std::shared_ptr<Board> buildStandardBoard(std::shared_ptr<TimeLine> timeLine);
 };
 
 } // namespace Chess
