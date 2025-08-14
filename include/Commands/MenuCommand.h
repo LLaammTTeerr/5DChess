@@ -53,3 +53,21 @@ public:
   std::unique_ptr<ICommand> clone() const override;
   CommandType getType() const override;
 };
+
+class VersusPlayCommand : public ICommand {
+private:
+  GameStateModel* _gameStateModel;
+  SceneManager* _sceneManager; // Optional, if you want to notify SceneManager
+public:
+  VersusPlayCommand(GameStateModel* gameStateModel, SceneManager* sceneManager)
+      : _gameStateModel(gameStateModel), _sceneManager(sceneManager) {} 
+  void execute() override;
+  virtual bool canUndo() const override { return false; }
+  virtual bool canRedo() const override { return false; }
+  void undo() override {}
+  void redo() override {} 
+  std::string getName() const override { return "Versus Play Command"; }
+  std::unique_ptr<ICommand> clone() const override;
+  CommandType getType() const override;
+  
+};

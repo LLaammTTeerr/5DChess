@@ -4,6 +4,17 @@
 #include <raylib.h> // Assuming raylib is used for rendering
 void MainMenuScene::init(void) {}
 
+void MainMenuScene::handleInput(void) {
+  // Handle main menu input
+  if (IsKeyPressed(KEY_ENTER)) {
+    std::cout << "Enter pressed in MainMenuScene" << std::endl;
+  }
+  
+  if (IsKeyPressed(KEY_ESCAPE)) {
+    std::cout << "Escape pressed in MainMenuScene" << std::endl;
+  }
+}
+
 void MainMenuScene::update(float deltaTime) {
   std::cout << "Updating MainMenuScene..." << std::endl;
 }

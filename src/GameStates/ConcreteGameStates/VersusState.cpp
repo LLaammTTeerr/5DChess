@@ -18,6 +18,10 @@ std::shared_ptr<MenuComponent> VersusState::createMenu(GameStateModel* gameState
   Back->setCommand(std::make_unique<VersusBackCommand>(gameStateModel, sceneManager)); // Set command for Back
   versusMenu->addItem(Back);
 
+  std::shared_ptr<MenuComponent> Play = std::make_shared<MenuItem>("Play", true);
+  Play->setCommand(std::make_unique<VersusPlayCommand>(gameStateModel, sceneManager)); // Set command for Play
+  versusMenu->addItem(Play);
+  
   return versusMenu;
 }
 

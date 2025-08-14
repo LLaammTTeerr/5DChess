@@ -1,16 +1,17 @@
 #pragma once
 #include "Scene.h"
 #include <string>
+#include "ResourceManager.h"
 
-class MainMenuScene : public Scene {
+class TestingScene : public Scene {
 public:
-  MainMenuScene() = default;
-  ~MainMenuScene() override = default;
+  TestingScene() = default;
+  ~TestingScene() override = default;
 
   void init(void) override;
-  void handleInput(void) override;
   void update(float deltaTime) override;
   void render(void) override;
+  void handleInput(void) override;
   void cleanup(void) override;
 
   bool isActive(void) const override;

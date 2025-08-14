@@ -74,6 +74,7 @@ void SceneManager::update(float deltaTime) {
   else if (!_sceneStack.empty()) {
     auto &currentEntry = _sceneStack.top();
     if (currentEntry->isActive()) {
+      currentEntry->handleInput();
       currentEntry->update(deltaTime);
     }
   }
@@ -85,9 +86,9 @@ void SceneManager::update(float deltaTime) {
   }
   
   // Handle menu toggle (ESC key)
-  // if (IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ESCAPE)) {
-    // toggleMenu();
-  // }
+  if (IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ESCAPE)) {
+    toggleMenu();
+  }
 }
 
 void SceneManager::render() {

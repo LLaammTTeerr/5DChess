@@ -5,6 +5,7 @@ class Scene {
 public:
   virtual ~Scene(void) = default;
   virtual void init(void) = 0;
+  virtual void handleInput(void) = 0;
   virtual void update(float deltaTime) = 0;
   virtual void render() = 0;
   virtual void cleanup() = 0;

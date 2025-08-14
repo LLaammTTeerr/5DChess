@@ -10,6 +10,7 @@ public:
   ~VersusScene() override = default;
 
   void init(void) override;
+  void handleInput(void) override;
   void update(float deltaTime) override;
   void render(void) override;
   void cleanup(void) override;

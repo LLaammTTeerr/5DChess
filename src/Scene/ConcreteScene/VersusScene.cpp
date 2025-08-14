@@ -5,6 +5,17 @@
 #include <raylib.h> // Assuming raylib is used for rendering
 void VersusScene::init(void) {}
 
+void VersusScene::handleInput(void) {
+  // Handle versus scene input
+  if (IsKeyPressed(KEY_ESCAPE)) {
+    std::cout << "Escape pressed in VersusScene - returning to main menu" << std::endl;
+  }
+  
+  if (IsKeyPressed(KEY_SPACE)) {
+    std::cout << "Space pressed in VersusScene - start game" << std::endl;
+  }
+}
+
 void VersusScene::update(float deltaTime) {
   std::cout << "Updating VersusScene..." << std::endl;
 }
