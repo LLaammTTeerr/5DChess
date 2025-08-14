@@ -1,46 +1,111 @@
 #include "chess.h"
 
-std::shared_ptr<TimeLine> Multiverse::createBranch(
-  std::shared_ptr<TimeLine> parent,
-  int forkTurn
-) {
-  auto branch = std::make_shared<TimeLine>(_N, _timeLines.size(), forkTurn, parent);
-  branch->pushBoard(*parent->boardAtTurn(forkTurn));
-  _timeLines.push_back(branch);
-  return branch;
+using namespace Chess;
+
+Board::Board(int N) : _N(N), _fullTurnNumber(0), _halfTurnNumber(0), _previousBoard(nullptr) {
+  _pieces.resize(N, std::vector<std::shared_ptr<Piece>>(N, nullptr));
 }
 
-void Multiverse::addMoveToQueue(const Move& move) {
-  // You can only make a move from the present mark
-  // This mean that the move is make from the latest board of this timeline
-  Board current = *move.fromTimeLine()->latestBoard();
+int Board::dim(void) const {
+  return _N;
+}
 
-  // The move is made from the present mark, so we need to update the board
-  // and the turn number
-  current.setPreviousBoard(move.fromTimeLine()->latestBoard());
-  current.setTurnNumber(current.turnNumber() + 1);
-  current.placePiece(move.from(), nullptr);
+void Board::placePiece(Position2D position, std::shared_ptr<Piece> piece) {
+  assert(position.x() >= 0 && position.x() < _N);
+  assert(position.y() >= 0 && position.y() < _N);
+  _pieces[position.x()][position.y()] = std::move(piece);
+}
 
+std::shared_ptr<const Piece> Board::getPiece(Position2D position) const {
+  assert(position.x() >= 0 && position.x() < _N);
+  assert(position.y() >= 0 && position.y() < _N);
+  return _pieces[position.x()][position.y()];
+}
 
-  // Push to the timeline
-  move.fromTimeLine()->pushBoard(current);
+TimeLine::TimeLine(int N, int ID) : _N(N), _ID(ID), _forkAt(-1), _parent(nullptr), _fullTurnNumber(0), _halfTurnNumber(0) {}
 
-  // If the move is a fork (time travelling to the past), we need to create a branch
-  // from the parent timeline at the target turn
-  if (move.targetTurn() < _present) {
-    // Create a branch from the parent timeline at the target turn
-    std::shared_ptr<TimeLine> branch = createBranch(move.toTimeLine(), move.targetTurn());
+inline int TimeLine::ID(void) const {
+  return _ID;
+}
+
+inline int TimeLine::dim(void) const {
+  return _N;
+}
+
+inline int TimeLine::forkAt(void) const {
+  return _forkAt;
+}
+
+inline int TimeLine::fullTurnNumber(void) const {
+  return _fullTurnNumber;
+}
+
+inline int TimeLine::halfTurnNumber(void) const {
+  return _halfTurnNumber;
+}
+
+inline std::shared_ptr<const TimeLine> TimeLine::parent(void) const {
+  return _parent;
+}
+
+void TimeLine::pushBack(std::shared_ptr<Board> board) {
+  _history.push_back(board);
+}
+
+Game::Game(int N, std::shared_ptr<Board> board) : _N(N), _presentFullTurn(0), _presentHalfTurn(0) {
+  _timeLines.push_back(std::make_shared<TimeLine>(N));
+  _timeLines.back()->pushBack(std::move(board));
+}
+
+Game::Game(std::function<std::shared_ptr<Board>()> boardBuilder) : _presentFullTurn(0), _presentHalfTurn(0) {
+  std::shared_ptr<Board> board = boardBuilder();
+  _timeLines.push_back(std::make_shared<TimeLine>(board->dim()));
+  _timeLines.back()->pushBack(std::move(board));
+}
+
+inline int Game::dim(void) const {
+  return _N;
+}
+
+inline int Game::presentFullTurn(void) const {
+  return _presentFullTurn;
+}
+
+inline int Game::presentHalfTurn(void) const {
+  return _presentHalfTurn;
+}
+
+std::shared_ptr<const TimeLine> Game::makeMove(Move move) {
+  assert(move._fromTurn == _presentFullTurn);
+  assert(move._toTurn <= _presentFullTurn);
+  
+  if (move._fromTurn == move._toTurn) {
     
-    // Place the piece on the branch's latest board
-    branch->latestBoard()->placePiece(move.to(), move.piece());
-  } else {
-    // Edge case where the move is a normal move in the present
-    // We need to ensure that the timeline is updated correctly
-    if (move.fromTimeLine() != move.toTimeLine())
-      move.toTimeLine()->pushBoard();
-    move.toTimeLine()->latestBoard()->placePiece(move.to(), move.piece());
   }
+}
 
-  // Move present mark to the next turn
-  _present = move.targetTurn() + 1;
+std::shared_ptr<Board> BoardBuilder::buildStandardBoard(void) {
+  std::shared_ptr<Board> board = std::make_shared<Board>(Constant::BOARD_SIZE);
+  for (int i = 0; i < Constant::BOARD_SIZE; i += 1) {
+    board->placePiece({i, 1}, std::make_shared<Pawn>(Color::WHITE));
+    board->placePiece({i, 6}, std::make_shared<Pawn>(Color::BLACK));
+  }
+  board->placePiece({0, 0}, std::make_shared<Rook>(Color::WHITE));
+  board->placePiece({1, 0}, std::make_shared<Knight>(Color::WHITE));
+  board->placePiece({2, 0}, std::make_shared<Bishop>(Color::WHITE));
+  board->placePiece({3, 0}, std::make_shared<Queen>(Color::WHITE));
+  board->placePiece({4, 0}, std::make_shared<King>(Color::WHITE));
+  board->placePiece({5, 0}, std::make_shared<Bishop>(Color::WHITE));
+  board->placePiece({6, 0}, std::make_shared<Knight>(Color::WHITE));
+  board->placePiece({7, 0}, std::make_shared<Rook>(Color::WHITE));
+
+  board->placePiece({0, 7}, std::make_shared<Rook>(Color::BLACK));
+  board->placePiece({1, 7}, std::make_shared<Knight>(Color::BLACK));
+  board->placePiece({2, 7}, std::make_shared<Bishop>(Color::BLACK));
+  board->placePiece({3, 7}, std::make_shared<Queen>(Color::BLACK));
+  board->placePiece({4, 7}, std::make_shared<King>(Color::BLACK));
+  board->placePiece({5, 7}, std::make_shared<Bishop>(Color::BLACK));
+  board->placePiece({6, 7}, std::make_shared<Knight>(Color::BLACK));
+  board->placePiece({7, 7}, std::make_shared<Rook>(Color::BLACK));
+  return board;
 }
