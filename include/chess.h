@@ -298,58 +298,57 @@ private:
 
 /// Turn management and state handling
 enum class MovePhase {
-    SELECT_BOARD,
-    SELECT_PIECE,
-    SELECT_DESTINATION,
-    CONFIRM_TURN
+  SELECT_BOARD,
+  SELECT_PIECE,
+  SELECT_DESTINATION,
+  CONFIRM_TURN
 };
 
 struct SelectedPosition {
-    std::shared_ptr<Board> board; // Board where the position is selected
-    Position2D position;  // 2D position on the board (e.g., chess coordinates as float for rendering)
+  std::shared_ptr<Board> board; // Board where the position is selected
+  Position2D position;  // 2D position on the board (e.g., chess coordinates as float for rendering)
 
-    SelectedPosition() : board(nullptr), position(Position2D(-1, -1)) {} // Default constructor
+  SelectedPosition() : board(nullptr), position(Position2D(-1, -1)) {} // Default constructor
 };
 
 // Represents a move in the game, including the source and destination positions
 class Move {
 // public for easy access in TurnState
 public:
-    SelectedPosition from;
-    SelectedPosition to;
-    // Additional fields can be added, e.g., piece type, but keeping simple for now
+  SelectedPosition from;
+  SelectedPosition to;
+  // Additional fields can be added, e.g., piece type, but keeping simple for now
 };
 
 class TurnState {
 private:
-    MovePhase currentPhase;
-    std::vector<Move> currentTurnMoves;  // Accumulates multiple moves in one turn
-    SelectedPosition currentSelection;   // Tracks ongoing selection (board/piece/dest)
-    bool allowMultipleMoves;             // Flag to indicate if multiple moves are possible in this turn
-
+  MovePhase currentPhase;
+  std::vector<Move> currentTurnMoves;  // Accumulates multiple moves in one turn
+  SelectedPosition currentSelection;   // Tracks ongoing selection (board/piece/dest)
+  bool allowMultipleMoves;             // Flag to indicate if multiple moves are possible in this turn
 public:
-    TurnState();
+  TurnState();
 
-    // Reset the turn state for a new turn
-    void resetTurn();
+  // Reset the turn state for a new turn
+  void resetTurn();
 
-    // Advance to the next phase or handle input (placeholder for integration with input handling)
-    void updatePhase(MovePhase newPhase);
+  // Advance to the next phase or handle input (placeholder for integration with input handling)
+  void updatePhase(MovePhase newPhase);
 
-    // Add a completed move to the turn (called when destination is selected)
-    void addMove(const SelectedPosition& from, const SelectedPosition& to);
+  // Add a completed move to the turn (called when destination is selected)
+  void addMove(const SelectedPosition& from, const SelectedPosition& to);
 
-    // Check if the turn can include more moves (based on game rules, placeholder logic)
-    bool canAddMoreMoves() const;
+  // Check if the turn can include more moves (based on game rules, placeholder logic)
+  bool canAddMoreMoves() const;
 
-    // Render the current state overlays/UI using Raylib (assumes camera/board rendering is handled externally)
-    // void render() const;
+  // Render the current state overlays/UI using Raylib (assumes camera/board rendering is handled externally)
+  // void render() const;
 
-    // Getters
-    MovePhase getCurrentPhase() const;
-    const std::vector<Move>& getCurrentTurnMoves() const;
+  // Getters
+  MovePhase getCurrentPhase() const;
+  const std::vector<Move>& getCurrentTurnMoves() const;
 private:
-    void updateAllowedMoves(); // Update allowed moves based on game rules
+  void updateAllowedMoves(); // Update allowed moves based on game rules
 };
 
 class Game {
