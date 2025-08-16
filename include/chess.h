@@ -279,65 +279,6 @@ private:
 //   std::shared_ptr<Piece> _piece;
 // };
 
-class Game {
-public:
-  /**
-   * Constructor for the Game class.
-   * @param N The size of the board.
-   * @param board The initial board configuration.
-   * Please note that this constructor transfers ownership of the board to the game.
-   */
-  Game(int N, std::shared_ptr<Board> board);
-
-  /**
-   * Constructor for the Game class.
-   * @param builderFunction A function that builds the initial board configuration, check out the BoardBuilder class
-   */
-  Game(std::function<std::shared_ptr<Board>(void)> builderFunction);
-
-  /**
-   * Get the dimension of the game.
-   * @return The dimension of the game as an integer.
-   * This method returns the size of the board (N).
-   */
-  inline int dim(void) const;
-
-  /**
-   * Get the current full turn number.
-   * @return The current full turn number as an integer.
-   */
-  inline int presentFullTurn(void) const;
-
-  /**
-   * Get the current half turn number.
-   * @return The current half turn number as an integer.
-   */
-  inline int presentHalfTurn(void) const;
-
-  std::shared_ptr<const TimeLine> makeMove(Move move);
-private:
-  int _N;
-  int _presentFullTurn;
-  int _presentHalfTurn;
-  std::vector<std::shared_ptr<TimeLine>> _timeLines;
-};
-
-class Constant {
-public:
-  static const int BOARD_SIZE;
-};
-
-class BoardBuilder {
-public:
-  /**
-   * Build a standard chess board with pieces in their initial positions.
-   * @return A shared pointer to the constructed Board object.
-   * This method initializes a standard chess board with all pieces placed in their starting positions.
-   */
-  static std::shared_ptr<Board> buildStandardBoard(std::shared_ptr<TimeLine> timeLine);
-};
-
-
 /// Turn management and state handling
 enum class TurnPhase {
     SELECT_BOARD,
@@ -393,5 +334,71 @@ public:
 private:
     void updateAllowedMoves(); // Update allowed moves based on game rules
 };
+
+class Game {
+public:
+  /**
+   * Constructor for the Game class.
+   * @param N The size of the board.
+   * @param board The initial board configuration.
+   * Please note that this constructor transfers ownership of the board to the game.
+   */
+  Game(int N, std::shared_ptr<Board> board);
+
+  /**
+   * Constructor for the Game class.
+   * @param builderFunction A function that builds the initial board configuration, check out the BoardBuilder class
+   */
+  Game(std::function<std::shared_ptr<Board>(void)> builderFunction);
+
+  /**
+   * Get the dimension of the game.
+   * @return The dimension of the game as an integer.
+   * This method returns the size of the board (N).
+   */
+  inline int dim(void) const;
+
+  /**
+   * Get the current full turn number.
+   * @return The current full turn number as an integer.
+   */
+  inline int presentFullTurn(void) const;
+
+  /**
+   * Get the current half turn number.
+   * @return The current half turn number as an integer.
+   */
+  inline int presentHalfTurn(void) const;
+
+  std::shared_ptr<const TimeLine> makeMove(Move move);
+
+  // Apply the completed turn 
+  // One turn might consist of multiple moves
+  // This method applies all moves in the current turn to the game state
+  void applyTurn(TurnState& turnState);
+  
+private:
+  int _N;
+  int _presentFullTurn;
+  int _presentHalfTurn;
+  std::vector<std::shared_ptr<TimeLine>> _timeLines;
+};
+
+class Constant {
+public:
+  static const int BOARD_SIZE;
+};
+
+class BoardBuilder {
+public:
+  /**
+   * Build a standard chess board with pieces in their initial positions.
+   * @return A shared pointer to the constructed Board object.
+   * This method initializes a standard chess board with all pieces placed in their starting positions.
+   */
+  static std::shared_ptr<Board> buildStandardBoard(std::shared_ptr<TimeLine> timeLine);
+};
+
+
 
 } // namespace Chess

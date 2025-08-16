@@ -98,6 +98,15 @@ inline int Game::presentHalfTurn(void) const {
   return _presentHalfTurn;
 }
 
+void Game::applyTurn(TurnState& turnState) {
+  for (const auto& move : turnState.getCurrentTurnMoves()) {
+    // Apply each move to the game state
+    
+    std::shared_ptr<const TimeLine> newTimeLine = makeMove(move);
+    /// @ todo: Implement the logic to apply the move to the game state
+  }
+}
+
 std::shared_ptr<const TimeLine> Game::makeMove(Move move) {
   // assert(move._fromTurn == _presentFullTurn);
   // assert(move._toTurn <= _presentFullTurn);
