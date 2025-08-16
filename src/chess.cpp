@@ -2,6 +2,35 @@
 
 // using namespace Chess;
 namespace Chess {
+
+Vector4D::Vector4D(int x, int y, int z, int w) : _data({x, y, z, w}) {}
+
+inline int Vector4D::x(void) const {
+  return _data[0];
+}
+
+inline int Vector4D::y(void) const {
+  return _data[1];
+}
+
+inline int Vector4D::z(void) const {
+  return _data[2];
+}
+
+inline int Vector4D::w(void) const {
+  return _data[3];
+}
+
+inline int Vector4D::operator * (const Vector4D& other) const {
+  return _data[0] * other._data[0] + _data[1] * other._data[1] +
+         _data[2] * other._data[2] + _data[3] * other._data[3];
+}
+
+inline int Vector4D::operator - (const Vector4D& other) const {
+  return _data[0] - other._data[0] + _data[1] - other._data[1] +
+         _data[2] - other._data[2] + _data[3] - other._data[3];
+}
+
 const int Constant::BOARD_SIZE = 8;
 
 Piece::Piece(PieceColor color, std::shared_ptr<Board> board, Position2D position)
@@ -11,8 +40,8 @@ King::King(PieceColor color, std::shared_ptr<Board> board, Position2D position)
     : Piece(color, board, position) {}
 
 Queen::Queen(PieceColor color, std::shared_ptr<Board> board, Position2D position)
-    : Piece(color, board, position) {}  
-Rook::Rook(PieceColor color, std::shared_ptr<Board> board, Position2D position) 
+    : Piece(color, board, position) {}
+Rook::Rook(PieceColor color, std::shared_ptr<Board> board, Position2D position)
     : Piece(color, board, position) {}
 Bishop::Bishop(PieceColor color, std::shared_ptr<Board> board, Position2D position)
     : Piece(color, board, position) {}
@@ -101,7 +130,7 @@ inline int Game::presentHalfTurn(void) const {
 void Game::applyTurn(TurnState& turnState) {
   for (const auto& move : turnState.getCurrentTurnMoves()) {
     // Apply each move to the game state
-    
+
     std::shared_ptr<const TimeLine> newTimeLine = makeMove(move);
     /// @ todo: Implement the logic to apply the move to the game state
   }
@@ -110,9 +139,9 @@ void Game::applyTurn(TurnState& turnState) {
 std::shared_ptr<const TimeLine> Game::makeMove(Move move) {
   // assert(move._fromTurn == _presentFullTurn);
   // assert(move._toTurn <= _presentFullTurn);
-  
+
   // if (move._fromTurn == move._toTurn) {
-    
+
   // }
 
   return nullptr;
@@ -144,20 +173,20 @@ std::shared_ptr<Board> BoardBuilder::buildStandardBoard(std::shared_ptr<TimeLine
   return board;
 }
 
-TurnState::TurnState() : currentPhase(TurnPhase::SELECT_BOARD), allowMultipleMoves(true), currentSelection() {}
+TurnState::TurnState() : currentPhase(MovePhase::SELECT_BOARD), allowMultipleMoves(true), currentSelection() {}
 
 void TurnState::resetTurn() {
   currentTurnMoves.clear();
 
-  currentPhase = TurnPhase::SELECT_BOARD;
-  
+  currentPhase = MovePhase::SELECT_BOARD;
+
   currentSelection.board = nullptr;
   currentSelection.position = Chess::Position2D(-1, -1);
-  
+
   allowMultipleMoves = true;  // Reset based on game context if needed
 }
 
-void TurnState::updatePhase(TurnPhase newPhase) {
+void TurnState::updatePhase(MovePhase newPhase) {
   currentPhase = newPhase;
 }
 
@@ -170,9 +199,9 @@ void TurnState::updateAllowedMoves() {
 }
 
 void TurnState::addMove(const SelectedPosition& from, const SelectedPosition& to) {
-  Move newMove = {from, to};  
+  Move newMove = {from, to};
   currentTurnMoves.push_back(newMove);
-  updateAllowedMoves(); // Update allowed moves after adding a new move  
+  updateAllowedMoves(); // Update allowed moves after adding a new move
 }
 
 bool TurnState::canAddMoreMoves() const {
@@ -180,7 +209,7 @@ bool TurnState::canAddMoreMoves() const {
 }
 
 
-TurnPhase TurnState::getCurrentPhase() const {
+MovePhase TurnState::getCurrentPhase() const {
   return currentPhase;
 }
 

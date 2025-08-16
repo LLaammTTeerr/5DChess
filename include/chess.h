@@ -8,6 +8,7 @@
 #include <queue>
 #include <cassert>
 #include <functional>
+#include <cstdint>
 
 namespace Chess {
 
@@ -15,6 +16,22 @@ using u8 = uint8_t;
 using u16 = uint16_t;
 using u32 = uint32_t;
 using u64 = uint64_t;
+
+class Vector4D {
+public:
+  Vector4D(int x, int y, int z, int w);
+
+  inline int x(void) const;
+  inline int y(void) const;
+  inline int z(void) const;
+  inline int w(void) const;
+
+  inline int operator * (const Vector4D& other) const;
+
+  inline int operator - (const Vector4D& other) const;
+private:
+  std::array<int, 4> _data;
+};
 
 enum class PieceColor : int {
   PIECEWHITE = 0,
@@ -77,7 +94,7 @@ public:
 
   virtual const std::string& name(void) = 0;
   virtual const char& symbol(void) = 0;
-  
+
   std::shared_ptr<Board> getBoard() const { return _board; }
   Position2D getPosition() const { return _position; }
 
@@ -280,7 +297,7 @@ private:
 // };
 
 /// Turn management and state handling
-enum class TurnPhase {
+enum class MovePhase {
     SELECT_BOARD,
     SELECT_PIECE,
     SELECT_DESTINATION,
@@ -305,7 +322,7 @@ public:
 
 class TurnState {
 private:
-    TurnPhase currentPhase;
+    MovePhase currentPhase;
     std::vector<Move> currentTurnMoves;  // Accumulates multiple moves in one turn
     SelectedPosition currentSelection;   // Tracks ongoing selection (board/piece/dest)
     bool allowMultipleMoves;             // Flag to indicate if multiple moves are possible in this turn
@@ -317,7 +334,7 @@ public:
     void resetTurn();
 
     // Advance to the next phase or handle input (placeholder for integration with input handling)
-    void updatePhase(TurnPhase newPhase);
+    void updatePhase(MovePhase newPhase);
 
     // Add a completed move to the turn (called when destination is selected)
     void addMove(const SelectedPosition& from, const SelectedPosition& to);
@@ -329,7 +346,7 @@ public:
     // void render() const;
 
     // Getters
-    TurnPhase getCurrentPhase() const;
+    MovePhase getCurrentPhase() const;
     const std::vector<Move>& getCurrentTurnMoves() const;
 private:
     void updateAllowedMoves(); // Update allowed moves based on game rules
@@ -372,11 +389,11 @@ public:
 
   std::shared_ptr<const TimeLine> makeMove(Move move);
 
-  // Apply the completed turn 
+  // Apply the completed turn
   // One turn might consist of multiple moves
   // This method applies all moves in the current turn to the game state
   void applyTurn(TurnState& turnState);
-  
+
 private:
   int _N;
   int _presentFullTurn;
