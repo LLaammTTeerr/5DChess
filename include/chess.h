@@ -92,8 +92,8 @@ public:
     return _color;
   }
 
-  virtual const std::string& name(void) = 0;
-  virtual const char& symbol(void) = 0;
+  virtual const std::string& name(void) const = 0;
+  virtual const char& symbol(void) const = 0;
 
   std::shared_ptr<Board> getBoard() const { return _board; }
   Position2D getPosition() const { return _position; }
@@ -108,12 +108,12 @@ class King : public Piece {
 public:
   King(PieceColor color, std::shared_ptr<Board> board, Position2D position);
 
-  inline const std::string& name(void) override {
+  inline const std::string& name(void) const override {
     static const std::string name = "king";
     return name;
   }
 
-  inline const char& symbol(void) override {
+  inline const char& symbol(void) const override {
     static const char symbol = 'K';
     return symbol;
   }
@@ -123,12 +123,12 @@ class Queen : public Piece {
 public:
   Queen(PieceColor color, std::shared_ptr<Board> board, Position2D position);
 
-  inline const std::string& name(void) override {
+  inline const std::string& name(void) const override {
     static const std::string name = "queen";
     return name;
   }
 
-  inline const char& symbol(void) override {
+  inline const char& symbol(void) const override {
     static const char symbol = 'Q';
     return symbol;
   }
@@ -138,12 +138,12 @@ class Rook : public Piece {
 public:
   Rook(PieceColor color, std::shared_ptr<Board> board, Position2D position);
 
-  inline const std::string& name(void) override {
+  inline const std::string& name(void) const override {
     static const std::string name = "rook";
     return name;
   }
 
-  inline const char& symbol(void) override {
+  inline const char& symbol(void) const override {
     static const char symbol = 'R';
     return symbol;
   }
@@ -153,12 +153,12 @@ class Bishop : public Piece {
 public:
   Bishop(PieceColor color, std::shared_ptr<Board> board, Position2D position);
 
-  inline const std::string& name(void) override {
+  inline const std::string& name(void) const override {
     static const std::string name = "bishop";
     return name;
   }
 
-  inline const char& symbol(void) override {
+  inline const char& symbol(void) const override {
     static const char symbol = 'B';
     return symbol;
   }
@@ -168,12 +168,12 @@ class Knight : public Piece {
 public:
   Knight(PieceColor color, std::shared_ptr<Board> board, Position2D position);
 
-  inline const std::string& name(void) override {
+  inline const std::string& name(void) const override {
     static const std::string name = "knight";
     return name;
   }
 
-  inline const char& symbol(void) override {
+  inline const char& symbol(void) const override {
     static const char symbol = 'N';
     return symbol;
   }
@@ -183,12 +183,12 @@ class Pawn : public Piece {
 public:
   Pawn(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1));
 
-  inline const std::string& name(void) override {
+  inline const std::string& name(void) const override {
     static const std::string name = "pawn";
     return name;
   }
 
-  inline const char& symbol(void) override {
+  inline const char& symbol(void) const override {
     static const char symbol = 'P';
     return symbol;
   }

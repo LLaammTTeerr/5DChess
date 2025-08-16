@@ -33,7 +33,9 @@ public:
   Texture2D& getPieceTexture(const std::string& pieceName);
 
   ThemeManager(const ThemeManager&) = delete;
+  ThemeManager(ThemeManager&&) = delete;
   ThemeManager& operator=(const ThemeManager&) = delete;
+  ThemeManager& operator=(ThemeManager&&) = delete;
 private:
   ThemeManager() = default;
   ~ThemeManager() = default;

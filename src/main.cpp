@@ -21,8 +21,7 @@ int main() {
     // app.init();
     // app.update();
     while(!WindowShouldClose()) {
-        BeginDrawing();
-        ClearBackground(RAYWHITE);
+        
 
         // app.update();
         // app.render();
@@ -31,7 +30,12 @@ int main() {
     //     DrawTexture(chessTexture, 100, 100, WHITE);
 
         sceneManager.update(GetFrameTime());
+       
+        BeginDrawing();
+        ClearBackground(RAYWHITE);
+       
         sceneManager.render();
+
         EndDrawing();
     }
 }
