@@ -75,7 +75,7 @@ void MenuController::handleInput() {
             }
         }
     }
-    std::cout << "Input handling complete." << std::endl;
+    std::cout << "Input handling complete." << std::endl; 
 }
 
 

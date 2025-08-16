@@ -99,12 +99,12 @@ inline int Game::presentHalfTurn(void) const {
 }
 
 std::shared_ptr<const TimeLine> Game::makeMove(Move move) {
-  assert(move._fromTurn == _presentFullTurn);
-  assert(move._toTurn <= _presentFullTurn);
+  // assert(move._fromTurn == _presentFullTurn);
+  // assert(move._toTurn <= _presentFullTurn);
   
-  if (move._fromTurn == move._toTurn) {
+  // if (move._fromTurn == move._toTurn) {
     
-  }
+  // }
 
   return nullptr;
 }
@@ -134,5 +134,50 @@ std::shared_ptr<Board> BoardBuilder::buildStandardBoard(std::shared_ptr<TimeLine
   board->placePiece({7, 7}, std::make_shared<Rook>(PieceColor::PIECEBLACK, board, Position2D(7, 7)));
   return board;
 }
+
+TurnState::TurnState() : currentPhase(TurnPhase::SELECT_BOARD), allowMultipleMoves(true), currentSelection() {}
+
+void TurnState::resetTurn() {
+  currentTurnMoves.clear();
+
+  currentPhase = TurnPhase::SELECT_BOARD;
+  
+  currentSelection.board = nullptr;
+  currentSelection.position = Chess::Position2D(-1, -1);
+  
+  allowMultipleMoves = true;  // Reset based on game context if needed
+}
+
+void TurnState::updatePhase(TurnPhase newPhase) {
+  currentPhase = newPhase;
+}
+
+void TurnState::updateAllowedMoves() {
+  if (currentTurnMoves.size() >= 5) {
+    allowMultipleMoves = false; // Example rule: limit to 5 moves per turn
+  } else {
+    allowMultipleMoves = true; // Reset or allow more moves
+  }
+}
+
+void TurnState::addMove(const SelectedPosition& from, const SelectedPosition& to) {
+  Move newMove = {from, to};  
+  currentTurnMoves.push_back(newMove);
+  updateAllowedMoves(); // Update allowed moves after adding a new move  
+}
+
+bool TurnState::canAddMoreMoves() const {
+  return allowMultipleMoves;
+}
+
+
+TurnPhase TurnState::getCurrentPhase() const {
+  return currentPhase;
+}
+
+const std::vector<Move>& TurnState::getCurrentTurnMoves() const {
+  return currentTurnMoves;
+}
+
 
 };
