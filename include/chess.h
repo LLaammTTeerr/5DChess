@@ -353,7 +353,10 @@ struct SelectedPosition {
     SelectedPosition() : board(nullptr), position(Position2D(-1, -1)) {} // Default constructor
 };
 
-struct Move {
+// Represents a move in the game, including the source and destination positions
+class Move {
+// public for easy access in TurnState
+public:
     SelectedPosition from;
     SelectedPosition to;
     // Additional fields can be added, e.g., piece type, but keeping simple for now
