@@ -167,4 +167,4 @@ std::shared_ptr<Board> BoardBuilder::buildStandardBoard(void) {
   return board;
 }
 
-}
+} // namespace Chess

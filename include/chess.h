@@ -101,14 +101,14 @@ public:
    * @return The name of the piece as a string.
    * This method returns the name of the piece, such as "king", "queen", etc.
    */
-  virtual const std::string& name(void) = 0;
+  virtual const std::string& name(void) const = 0;
 
   /**
    * Get the symbol of the piece.
    * @return The symbol of the piece as a character.
    * This method returns a single character that represents the piece, such as 'K' for king, 'Q' for queen, etc.
    */
-  virtual const char& symbol(void) = 0;
+  virtual const char& symbol(void) const = 0;
 
   /**
    * Get the board this piece is on.
