@@ -45,3 +45,5 @@ Makefile
 /build
 /.vscode
 run
+chess
+test.cpp

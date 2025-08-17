@@ -82,26 +82,57 @@ private:
   int _y;
 };
 
-
 class Piece {
 public:
   Piece(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1));
   virtual ~Piece() = default;
 
+  /**
+   * Get the color of the piece.
+   * @return The color of the piece as a PieceColor enum.
+   * This method returns the color of the piece, which can be either white or black.
+   */
   inline PieceColor color() const {
     return _color;
   }
 
+  /**
+   * Get the name of the piece.
+   * @return The name of the piece as a string.
+   * This method returns the name of the piece, such as "king", "queen", etc.
+   */
   virtual const std::string& name(void) const = 0;
+
+  /**
+   * Get the symbol of the piece.
+   * @return The symbol of the piece as a character.
+   * This method returns a single character that represents the piece, such as 'K' for king, 'Q' for queen, etc.
+   */
   virtual const char& symbol(void) const = 0;
 
-  std::shared_ptr<Board> getBoard() const { return _board; }
-  Position2D getPosition() const { return _position; }
+  /**
+   * Get the board this piece is on.
+   * @return A shared pointer to the Board object this piece is on.
+   * This method returns the board that this piece is currently placed on.
+   * If the piece is not on any board, it returns a null pointer.
+   */
+  inline std::shared_ptr<Board> getBoard() const { return _board; }
 
+  /**
+   * Get the position of this piece on the board.
+   * @return The Position2D object representing the piece's position.
+   * This method returns the current position of the piece on the board.
+   * The position is represented as a Position2D object, which contains x and y coordinates
+   * indicating the piece's location on the board.
+   * If the piece is not placed on a board, the position may be invalid (e.g., (-1, -1)).
+   * @note The position is typically zero-indexed, meaning (0, 0)
+   * represents the top-left corner of the board.
+   */
+  inline Position2D getPosition() const { return _position; }
 protected:
   PieceColor _color;
-  std::shared_ptr<Board> _board; // The board this piece belongs to
-  Position2D _position; // The position of the piece on the board
+  std::shared_ptr<Board> _board;
+  Position2D _position;
 };
 
 class King : public Piece {
@@ -278,6 +309,11 @@ public:
    * @param board The board state to be added to the timeline.
    */
   void pushBack(std::shared_ptr<Board> board);
+
+  inline std::shared_ptr<Board> back(void) {
+    assert(!_history.empty());
+    return _history.back();
+  }
 private:
   int _N;
   int _ID;
@@ -298,10 +334,10 @@ private:
 
 /// Turn management and state handling
 enum class MovePhase {
-  SELECT_BOARD,
-  SELECT_PIECE,
-  SELECT_DESTINATION,
-  CONFIRM_TURN
+  SELECT_FROM_BOARD,
+  SELECT_FROM_POSITION,
+  SELECT_TO_BOARD,
+  SELECT_TO_POSITION,
 };
 
 struct SelectedPosition {
@@ -318,37 +354,6 @@ public:
   SelectedPosition from;
   SelectedPosition to;
   // Additional fields can be added, e.g., piece type, but keeping simple for now
-};
-
-class TurnState {
-private:
-  MovePhase currentPhase;
-  std::vector<Move> currentTurnMoves;  // Accumulates multiple moves in one turn
-  SelectedPosition currentSelection;   // Tracks ongoing selection (board/piece/dest)
-  bool allowMultipleMoves;             // Flag to indicate if multiple moves are possible in this turn
-public:
-  TurnState();
-
-  // Reset the turn state for a new turn
-  void resetTurn();
-
-  // Advance to the next phase or handle input (placeholder for integration with input handling)
-  void updatePhase(MovePhase newPhase);
-
-  // Add a completed move to the turn (called when destination is selected)
-  void addMove(const SelectedPosition& from, const SelectedPosition& to);
-
-  // Check if the turn can include more moves (based on game rules, placeholder logic)
-  bool canAddMoreMoves() const;
-
-  // Render the current state overlays/UI using Raylib (assumes camera/board rendering is handled externally)
-  // void render() const;
-
-  // Getters
-  MovePhase getCurrentPhase() const;
-  const std::vector<Move>& getCurrentTurnMoves() const;
-private:
-  void updateAllowedMoves(); // Update allowed moves based on game rules
 };
 
 class Game {
@@ -386,18 +391,30 @@ public:
    */
   inline int presentHalfTurn(void) const;
 
-  std::shared_ptr<const TimeLine> makeMove(Move move);
-
-  // Apply the completed turn
+  /**
+   * Apply the turn state to the game.
+   * @param turnState The TurnState object contain  // Apply the completed turn
   // One turn might consist of multiple moves
-  // This method applies all moves in the current turn to the game state
-  void applyTurn(TurnState& turnState);
+  // This method applies all moves in the current turn to the game stateing the moves to apply.
+   */
+  void applyTurn(void);
 
+  /**
+   * Get the board where the current player can make moves.
+   * @return A vector of shared pointers to the boards where moves can be made.
+   * This method returns a vector of boards that are currently available for making moves.
+   * It can be used to determine which boards are active for the current turn.
+   */
+  std::vector<std::shared_ptr<Board>> getMoveableBoards(void) const;
+  std::vector<SelectedPosition> getMoveablePositions(SelectedPosition selected) const;
+  void makeMove(const Move& move);
+  bool undoable(void) const;
 private:
   int _N;
   int _presentFullTurn;
   int _presentHalfTurn;
   std::vector<std::shared_ptr<TimeLine>> _timeLines;
+  std::vector<Move> _currentTurnMoves;
 };
 
 class Constant {
@@ -412,7 +429,7 @@ public:
    * @return A shared pointer to the constructed Board object.
    * This method initializes a standard chess board with all pieces placed in their starting positions.
    */
-  static std::shared_ptr<Board> buildStandardBoard(std::shared_ptr<TimeLine> timeLine);
+  static std::shared_ptr<Board> buildStandardBoard();
 };
 
 

@@ -127,28 +127,22 @@ inline int Game::presentHalfTurn(void) const {
   return _presentHalfTurn;
 }
 
-void Game::applyTurn(TurnState& turnState) {
-  for (const auto& move : turnState.getCurrentTurnMoves()) {
-    // Apply each move to the game state
-
-    std::shared_ptr<const TimeLine> newTimeLine = makeMove(move);
-    /// @ todo: Implement the logic to apply the move to the game state
+std::vector<std::shared_ptr<Board>> Game::getMoveableBoards(void) const {
+  std::vector<std::shared_ptr<Board>> moveableBoards;
+  for (std::shared_ptr<TimeLine> timeLine: _timeLines) {
+    if (timeLine->fullTurnNumber() == _presentFullTurn && timeLine->halfTurnNumber() == _presentHalfTurn) {
+      moveableBoards.push_back(timeLine->back());
+    }
   }
+  return moveableBoards;
 }
 
-std::shared_ptr<const TimeLine> Game::makeMove(Move move) {
-  // assert(move._fromTurn == _presentFullTurn);
-  // assert(move._toTurn <= _presentFullTurn);
-
-  // if (move._fromTurn == move._toTurn) {
-
-  // }
-
-  return nullptr;
+inline bool Game::undoable(void) const {
+  return _currentTurnMoves.size() > 0;
 }
 
-std::shared_ptr<Board> BoardBuilder::buildStandardBoard(std::shared_ptr<TimeLine> timeLine) {
-  std::shared_ptr<Board> board = std::make_shared<Board>(Constant::BOARD_SIZE, timeLine);
+std::shared_ptr<Board> BoardBuilder::buildStandardBoard(void) {
+  std::shared_ptr<Board> board = std::make_shared<Board>(Constant::BOARD_SIZE, nullptr);
   for (int i = 0; i < Constant::BOARD_SIZE; i += 1) {
     board->placePiece({i, 1}, std::make_shared<Pawn>(PieceColor::PIECEWHITE, board, Position2D(i, 1)));
     board->placePiece({i, 6}, std::make_shared<Pawn>(PieceColor::PIECEBLACK, board, Position2D(i, 6)));
@@ -173,49 +167,4 @@ std::shared_ptr<Board> BoardBuilder::buildStandardBoard(std::shared_ptr<TimeLine
   return board;
 }
 
-TurnState::TurnState() : currentPhase(MovePhase::SELECT_BOARD), allowMultipleMoves(true), currentSelection() {}
-
-void TurnState::resetTurn() {
-  currentTurnMoves.clear();
-
-  currentPhase = MovePhase::SELECT_BOARD;
-
-  currentSelection.board = nullptr;
-  currentSelection.position = Chess::Position2D(-1, -1);
-
-  allowMultipleMoves = true;  // Reset based on game context if needed
-}
-
-void TurnState::updatePhase(MovePhase newPhase) {
-  currentPhase = newPhase;
-}
-
-void TurnState::updateAllowedMoves() {
-  if (currentTurnMoves.size() >= 5) {
-    allowMultipleMoves = false; // Example rule: limit to 5 moves per turn
-  } else {
-    allowMultipleMoves = true; // Reset or allow more moves
-  }
-}
-
-void TurnState::addMove(const SelectedPosition& from, const SelectedPosition& to) {
-  Move newMove = {from, to};
-  currentTurnMoves.push_back(newMove);
-  updateAllowedMoves(); // Update allowed moves after adding a new move
-}
-
-bool TurnState::canAddMoreMoves() const {
-  return allowMultipleMoves;
-}
-
-
-MovePhase TurnState::getCurrentPhase() const {
-  return currentPhase;
-}
-
-const std::vector<Move>& TurnState::getCurrentTurnMoves() const {
-  return currentTurnMoves;
-}
-
-
-};
+} // namespace Chess
