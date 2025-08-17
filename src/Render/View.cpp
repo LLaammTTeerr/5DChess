@@ -79,13 +79,16 @@ void ChessView::moveCamera(Vector2 delta) {
 void ChessView::handleInput() {
     for (auto& boardView : _boardViews) if (boardView) {
         boardView -> handleInput();
+
         if (boardView -> isMouseClickedOnBoard()) {
             _selectedBoardView = boardView;
-            
+
             if (_onMouseBoardClickCallback) {
                 _onMouseBoardClickCallback(_selectedBoardView);
             }
         }
+
+
     }
 
 
@@ -263,4 +266,10 @@ void ChessView::queueUpdateInvalidBoardSelection(std::shared_ptr<BoardView> boar
             _isSelectedBoardViewInvalid = false;
         }
     });  
+}
+
+void ChessView::queueUpdateMoveState(const RenderMoveState& rmoveState) {
+    updateQueue.push_back([this, rmoveState](){
+        if 
+    });
 }

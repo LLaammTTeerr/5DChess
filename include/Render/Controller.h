@@ -5,6 +5,14 @@
 #include "chess.h"
 #include "Render/BoardView.h"
 
+struct RenderMoveState {
+  std::shared_ptr<BoardView> selectedBoardView; // Board where the move is being made
+  Chess::Position2D selectedPosition; // Position on the selected board
+  std::shared_ptr<BoardView> targetBoardView; // Board where the move is being targeted
+  Chess::Position2D targetPosition; // Position on the target board
+  MovePhase currentPhase; // Current phase of the move (selecting from board, position
+};
+
 class ChessModel;
 class ChessView;
 class ChessController {
@@ -28,4 +36,5 @@ private:
   // void handleMoveSubmission();
 
   std::shared_ptr<BoardView> getBoardViewFromModel(std::shared_ptr<Chess::Board> board);
+  RenderMoveState convertModelToRenderState(const MoveState& moveState);
 };

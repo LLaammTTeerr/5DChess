@@ -83,35 +83,26 @@ void BoardView2D::render() const {
 }
 
 
-void BoardView2D::update(float deltaTime) {
-    updateMouseOverBoard();
-}
+void BoardView2D::update(float deltaTime) {}
 
-void BoardView2D::updateMouseOverBoard() {
+bool BoardView2D::isMouseOverBoard() const {
     Vector2 screenMousePos = GetMousePosition();
+    bool isMouseOver = false;
     if (_camera) {
         Vector2 worldMousePos = GetScreenToWorld2D(screenMousePos, *_camera);
-        _isMouseOver = CheckCollisionPointRec(worldMousePos, _area);
+        isMouseOver = CheckCollisionPointRec(worldMousePos, _area);
     } else {
-        _isMouseOver = CheckCollisionPointRec(screenMousePos, _area);
+        isMouseOver = CheckCollisionPointRec(screenMousePos, _area);
     }
+    return isMouseOver;
 }
 
 bool BoardView2D::isMouseClickedOnBoard() const {
-    if (_isMouseOver) {
-        Vector2 mousePos = GetMousePosition();
-        if (_camera) {
-            Vector2 worldMousePos = GetScreenToWorld2D(mousePos, *_camera);
-            return IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(worldMousePos, _area);
-        } else {
-            return IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mousePos, _area);
-        }
-    }
-    return false;
+    return isMouseOverBoard() && IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
 }
 
 void BoardView2D::handleInput() {
-    update(GetFrameTime());
+    // update(GetFrameTime());
 }
 
 void BoardView2D::drawSelectedBoundaries() const {
@@ -125,22 +116,76 @@ void BoardView2D::setSupervisor(ChessView* supervisor) {
     _supervisor = supervisor;
 }
 
-void BoardView3D::setSupervisor(ChessView* supervisor) {
-    _supervisor = supervisor;
+Chess::Position2D BoardView2D::getMouseOverPosition() const {
+    if (isMouseOverBoard()) {
+        Vector2 mousePos = GetMousePosition();
+        if (_camera) {
+            Vector2 worldMousePos = GetScreenToWorld2D(mousePos, *_camera);
+            return Chess::Position2D{
+                static_cast<int>((worldMousePos.x - _area.x) / (_area.width / 8)),
+                static_cast<int>((worldMousePos.y - _area.y) / (_area.height / 8))
+            };
+        } else {
+            return Chess::Position2D{
+                static_cast<int>((mousePos.x - _area.x) / (_area.width / 8)),
+                static_cast<int>((mousePos.y - _area.y) / (_area.height / 8))
+            };
+        }
+    }
+    return Chess::Position2D{-1, -1}; // Invalid position
 }
 
-
-
-BoardView3D::BoardView3D(std::shared_ptr<Chess::Board> board, Texture2D* texture, Vector3 position, Camera3D* camera)
-    : _board(board), _boardTexture(texture), _position(position), _camera(camera) {
-    Mesh mesh = GenMeshPlane(_boardSize, _boardSize, 1, 1);
-    _boardModel = LoadModelFromMesh(mesh);
-    _boardModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = *_boardTexture;
+Chess::Position2D BoardView2D::getMouseClickedPosition() const {
+    if (isMouseClickedOnBoard()) {
+        Vector2 mousePos = GetMousePosition();
+        if (_camera) {
+            Vector2 worldMousePos = GetScreenToWorld2D(mousePos, *_camera);
+            return Chess::Position2D{
+                static_cast<int>((worldMousePos.x - _area.x) / (_area.width / 8)),
+                static_cast<int>((worldMousePos.y - _area.y) / (_area.height / 8))
+            };
+        } else {
+            return Chess::Position2D{
+                static_cast<int>((mousePos.x - _area.x) / (_area.width / 8)),
+                static_cast<int>((mousePos.y - _area.y) / (_area.height / 8))
+            };
+        }
+    }
+    return Chess::Position2D{-1, -1};
 }
 
-BoardView3D::~BoardView3D() {
-    UnloadModel(_boardModel);
+void BoardView2D::render_highlightBoundaries() const {
+    DrawRectangleLinesEx(_area, 2, RED);
 }
+
+void BoardView2D::render_highlightedPositions(std::vector<Chess::Position2D> positions) const {
+    for (const auto& pos : positions) {
+        DrawRectangle(
+            _area.x + pos.x() * _area.width / 8,
+            _area.y + pos.y() * _area.height / 8,
+            _area.width / 8,
+            _area.height / 8,
+            (Color){0, 255, 0, 100} // Semi-transparent green
+        );
+    }
+}
+
+// void BoardView3D::setSupervisor(ChessView* supervisor) {
+//     _supervisor = supervisor;
+// }
+
+
+
+// BoardView3D::BoardView3D(std::shared_ptr<Chess::Board> board, Texture2D* texture, Vector3 position, Camera3D* camera)
+//     : _board(board), _boardTexture(texture), _position(position), _camera(camera) {
+//     Mesh mesh = GenMeshPlane(_boardSize, _boardSize, 1, 1);
+//     _boardModel = LoadModelFromMesh(mesh);
+//     _boardModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = *_boardTexture;
+// }
+
+// BoardView3D::~BoardView3D() {
+//     UnloadModel(_boardModel);
+// }
 
 // void BoardView3D::update(float deltaTime) {
 //     updateMouseOverBoard();
@@ -182,34 +227,34 @@ BoardView3D::~BoardView3D() {
     // EndMode3D();
 // }
 
-void BoardView3D::setBoard(std::shared_ptr<Chess::Board> board) {
-    _board = board;
-}
+// void BoardView3D::setBoard(std::shared_ptr<Chess::Board> board) {
+//     _board = board;
+// }
 
-void BoardView3D::setBoardTexture(Texture2D* texture) {
-    _boardTexture = texture;
-    _boardModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = *texture;
-}
+// void BoardView3D::setBoardTexture(Texture2D* texture) {
+//     _boardTexture = texture;
+//     _boardModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = *texture;
+// }
 
-void BoardView3D::setActive(bool active) {
-    _isActive = active;
-}
+// void BoardView3D::setActive(bool active) {
+//     _isActive = active;
+// }
 
-bool BoardView3D::isActive() const {
-    return _isActive;
-}
+// bool BoardView3D::isActive() const {
+//     return _isActive;
+// }
 
-void BoardView3D::updateHighlightedPositions(const std::vector<Chess::Position2D>& positions) {
-    _highlightedPositions = positions;
-}
+// void BoardView3D::updateHighlightedPositions(const std::vector<Chess::Position2D>& positions) {
+//     _highlightedPositions = positions;
+// }
 
-bool BoardView3D::is3D() const {
-    return true;
-}
+// bool BoardView3D::is3D() const {
+//     return true;
+// }
 
-void BoardView3D::setPosition(Vector3 position) {
-    _position = position;
-}
+// void BoardView3D::setPosition(Vector3 position) {
+//     _position = position;
+// }
 
 // void BoardView3D::updateMouseOverBoard() {
     // Ray ray = GetMouseRay(GetMousePosition(), *_camera);

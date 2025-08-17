@@ -27,7 +27,7 @@ void ChessController::setupModelCallbacks() {
   model.setMoveStateChangedCallback([this]() {
     // Notify the view about the move state change
     auto currentMoveState = model.getCurrentMoveState();
-
+    view.queueUpdateMoveState(convertModelToRenderState(currentMoveState));
   });
 } 
 
@@ -60,4 +60,15 @@ std::shared_ptr<BoardView> ChessController::getBoardViewFromModel(std::shared_pt
         }
     }
     return nullptr; // Not found
+}
+
+RenderMoveState ChessController::convertModelToRenderState(const MoveState& moveState) {
+    RenderMoveState renderState;
+    renderState.selectedBoardView = getBoardViewFromModel(moveState.selectedBoard);
+    renderState.selectedPosition = moveState.selectedPosition;
+    renderState.targetBoardView = getBoardViewFromModel(moveState.targetBoard);
+    renderState.targetPosition = moveState.targetPosition;
+    renderState.currentPhase = moveState.currentPhase;
+
+    return renderState;
 }

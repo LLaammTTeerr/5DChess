@@ -19,53 +19,61 @@ struct TransitionComponent {
 };
 
 
-
 class ChessView {
 private:
+  Vector3 _worldSize;
+public:
+  ChessView(Vector3 _worldSize);
+
+private:
   std::function<void(std::shared_ptr<BoardView>)> _onMouseBoardClickCallback;
+public:
+  virtual void setMouseBoardClickCallback(std::function<void(std::shared_ptr<BoardView>)> callback) { _onMouseBoardClickCallback = callback; };
 
 public:
   virtual void handleInput();
   virtual void update(float deltaTime);
   virtual void render() const;
-
-  virtual std::vector<std::shared_ptr<BoardView>> getBoardViews() const;
-
-  virtual void setMouseBoardClickCallback(std::function<void(std::shared_ptr<BoardView>)> callback) { _onMouseBoardClickCallback = callback; };
   
-  virtual void queueUpdateInvalidBoardSelection(std::shared_ptr<BoardView> boardView);
 
 private:
   std::vector<TransitionComponent> _transitions;  // List of transitions
+public:
+
+private:
   std::vector<std::function<void()>> updateQueue; // Queue for update callbacks
+public:
+  virtual void queueUpdateInvalidBoardSelection(std::shared_ptr<BoardView> boardView);
+  virtual void queueUpdateMoveState(const RenderMoveState& rmoveState);
 
 private:
   std::shared_ptr<BoardView> _selectedBoardView = nullptr; // Currently selected board view
   bool _isSelectedBoardViewInvalid = false;
   Chess::Position2D _selectedPosition = Chess::Position2D(-1, -1); // Currently selected position on the board
-// Own attributes
+
+
 private: 
-  Vector3 _worldSize;
   std::vector<std::shared_ptr<BoardView>> _boardViews; // List of board views
   std::shared_ptr<BoardView> _selectedBoardView = nullptr; // Currently selected board view
-  Camera2D _camera2D;
-  Camera3D _camera3D;
-  bool _use3DRendering = false;
-// Own methods
+
 public:
-  ChessView(Vector3 _worldSize);
-  ~ChessView() = default;
-
-  Camera2D* getCamera2D() { return &_camera2D; }
-  Camera3D* getCamera3D() { return &_camera3D; }
-
   void addBoardView(std::shared_ptr<BoardView> boardView);
   void removeBoardView(std::shared_ptr<BoardView> boardView);
+  virtual std::vector<std::shared_ptr<BoardView>> getBoardViews() const;
 
 private:
+  Camera2D _camera2D;
+  Camera3D _camera3D;
   void ClampCameraToBounds();
   void setZoom(float zoom);
   void setCameraTarget(Vector2 target); 
   void moveCamera(Vector2 delta); 
   void updateCamera(float deltaTime);
+  bool _use3DRendering = false;
+
+public:
+  Camera2D* getCamera2D() { return &_camera2D; }
+  Camera3D* getCamera3D() { return &_camera3D; }
+  ~ChessView() = default;
+  
 };
