@@ -38,8 +38,8 @@ void TestingScene::render() {
   Texture2D& chessBoardTexture = ResourceManager::getInstance().getTexture2D("mainChessBoard");
   // // Create chess game model
   std::shared_ptr<Chess::TimeLine> timeLine = std::make_shared<Chess::TimeLine>(8, 1);
-  std::shared_ptr<Chess::Board> board1 = Chess::BoardBuilder::buildStandardBoard(timeLine);
-  std::shared_ptr<Chess::Board> board2 = Chess::BoardBuilder::buildStandardBoard(timeLine);
+  std::shared_ptr<Chess::Board> board1 = Chess::BoardBuilder::buildStandardBoard();
+  std::shared_ptr<Chess::Board> board2 = Chess::BoardBuilder::buildStandardBoard();
 
   // Create multiple BoardView2D instances to test with GameWorld
   std::shared_ptr<BoardView> boardView1 = std::make_shared<BoardView2D>(board1, &chessBoardTexture);

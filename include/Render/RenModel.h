@@ -1,0 +1,58 @@
+#include "chess.h"
+#include <vector>
+#include <memory>
+
+#pragma once
+
+// class ChessModel;
+// class ChessView;
+// class ChessController;
+enum class MovePhase {
+  SELECT_FROM_BOARD,
+  SELECT_FROM_POSITION,
+  SELECT_TO_BOARD,
+  SELECT_TO_POSITION,
+};
+
+struct MoveState {
+  std::shared_ptr<Chess::Board> selectedBoard; // Board where the move is being made
+  Chess::Position2D selectedPosition; // Position on the selected board
+  std::shared_ptr<Chess::Board> targetBoard; // Board where the move is being targeted
+  Chess::Position2D targetPosition; // Position on the target board
+  MovePhase currentPhase; // Current phase of the move (selecting from board, position
+
+  MoveState()
+      : selectedBoard(nullptr), targetBoard(nullptr), currentPhase(MovePhase::SELECT_FROM_BOARD) {}
+};
+
+class ChessModel {
+private:
+  std::shared_ptr<Chess::Game> _game;
+  MoveState _currentMoveState;
+
+  std::function<void()> _onMoveStateChanged; // Callback for move phase changes
+  std::function<void()> _onGameUpdated; // Callback for game updates
+  std::function<void()> _onTryMove; // Callback for trying to make a move
+
+public:
+  ChessModel(std::shared_ptr<Chess::Game> game);
+
+  // Initialize game state (e.g., set up initial board)
+  void initialize();
+
+  // methods to apply turn and make moves
+  // These methods will be called by the controller to update the game state
+  void makeMove(const Chess::Move& move); 
+  void applyTurn();
+
+  void setMoveStateChangedCallback(std::function<void()> callback) {_onMoveStateChanged = callback; }
+  void setGameUpdatedCallback(std::function<void()> callback) {_onGameUpdated = callback; }
+  void setTryMoveCallback(std::function<void()> callback) {_onTryMove = callback; }
+
+  void notifyMoveStateChanged();
+  void notifyGameUpdated();
+  void notifyTryMove(); // Try to make a move, which is wrapped in MoveState
+
+  void selectBoard(std::shared_ptr<Chess::Board> board);
+  void selectPosition(Chess::Position2D pos);
+};

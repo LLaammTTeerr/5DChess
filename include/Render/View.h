@@ -8,6 +8,18 @@ const extern int BOARD_SIZE; // Assuming BOARD_SIZE is defined somewhere in the 
 const extern int HORIZONTAL_SPACING; // Assuming HORIZONTAL_SPACING is defined somewhere in the project
 const extern int VERTICAL_SPACING; // Assuming VERTICAL_SPACING is defined somewhere in the project
 
+struct TransitionComponent {
+  bool isActive;  // Is animation running?
+  float duration; // Duration of the transition in seconds
+  float elapsedTime; // Time elapsed since the start of the transition
+  std::function<void()> onStart;  // Callback when animation starts
+  std::function<void()> onComplete; // Callback when animation completes
+  std::string name; // Name of the transition for identification
+};
+
+
+
+class ChessView
 
 // interface for board view, this is the interface that converting model data to view data
 // This interface is used to render a single board
@@ -30,6 +42,8 @@ public:
     virtual bool is3D() const = 0;
 
     virtual bool isMouseClickedOnBoard() const = 0;
+    virtual Chess::Position2D getSelectedPosition() const = 0; 
+    virtual void setSupervisor(ChessView* supervisor); 
 };
 
 class BoardView2D : public BoardView {
@@ -50,6 +64,9 @@ private:
 
 
   std::vector<Chess::Position2D> _highlightedPositions; // Positions to highlight
+
+private:
+  ChessView* _supervisor = nullptr;
 
 public:
   BoardView2D(std::shared_ptr<Chess::Board> board, Texture2D* texture);
@@ -79,6 +96,9 @@ private:
   void updateMouseOverBoard(); // update helper
   void drawSelectedBoundaries() const;
   void drawMouseOverBoundaries() const;
+
+public:
+  void setSupervisor(ChessView* supervisor) override; 
 };
 
 class BoardView3D : public BoardView {
@@ -92,7 +112,8 @@ private:
     std::vector<Chess::Position2D> _highlightedPositions;
     float _boardSize = 8.0f; // Size of board in 3D units
     Model _boardModel; // For GPU-accelerated rendering
-
+private:
+    ChessView* _supervisor = nullptr;
 public:
     BoardView3D(std::shared_ptr<Chess::Board> board, Texture2D* texture, Vector3 position, Camera3D* camera);
     ~BoardView3D();
@@ -110,9 +131,14 @@ public:
 
     void setPosition(Vector3 position);
 
+    bool isMouseClickedOnBoard() const override { return 0; };
+
 private:
     void updateMouseOverBoard();
-    bool isMouseClickedOnBoard() const override { return 0; };
+    
+
+public:
+    void setSupervisor(ChessView* supervisor) override;
 };
 
 
@@ -125,12 +151,15 @@ public:
   virtual void handleInput() = 0;
   virtual void render() const = 0;
 
+  /// @brief  get information from the view, this is used to get information about the board
+  /// used to update selected board, selected position, etc.
+  virtual void getInformation() = 0;
   // Callbacks for Controller to handle inputs
-  virtual void setOnMousePositionCallback(std::function<void(Chess::Position2D pos)> callback) = 0;
-  virtual void setOnMouseClickCallback(std::function<void(Vector2 pos)> callback) = 0;
-  // virtual void setOnKeyPressCallback(std::function<void(int key)> callback) = 0;
-  // virtual void setOnBoardSelectCallback(std::function<void(std::shared_ptr<Chess::Board> board)> callback) = 0;
-  // virtual void setOnPositionHighlightCallback(std::function<void(Chess::Position2D pos)> callback) = 0;
+  virtual void setMousePositionCallback(std::function<void(Chess::Position2D pos)> callback) = 0;
+  virtual void setMouseClickCallback(std::function<void(Vector2 pos)> callback) = 0;
+  // virtual void setKeyPressCallback(std::function<void(int key)> callback) = 0;
+  // virtual void setBoardSelectCallback(std::function<void(std::shared_ptr<Chess::Board> board)> callback) = 0;
+  // virtual void setPositionHighlightCallback(std::function<void(Chess::Position2D pos)> callback) = 0;
 };
 
 /// This is the view class for rendering a single board
@@ -151,14 +180,17 @@ public:
   virtual void handleInput() override;
   virtual void update(float deltaTime) override;
   virtual void render() const override;
-
+  virtual void getInformation() override;
   // Callbacks for Controller to handle inputs
-  virtual void setOnMousePositionCallback(std::function<void(Chess::Position2D pos)> callback) override { _onMousePositionCallback = callback; }; // Not applicable for GameWorld
-  virtual void setOnMouseClickCallback(std::function<void(Vector2 pos)> callback) override { _onMouseClickCallback = callback; };
+  virtual void setMousePositionCallback(std::function<void(Chess::Position2D pos)> callback) override { _onMousePositionCallback = callback; }; // Not applicable for GameWorld
+  virtual void setMouseClickCallback(std::function<void(Vector2 pos)> callback) override { _onMouseClickCallback = callback; };
   // virtual void setOnKeyPressCallback(std::function<void(int key)> callback) override { _onKeyPressCallback = callback; };
   // virtual void setOnBoardSelectCallback(std::function<void(std::shared_ptr<Chess::Board> board)> callback) override { _onBoardSelectCallback = callback; };
   // virtual void setOnPositionHighlightCallback(std::function<void(Chess::Position2D pos)> callback) override { _onPositionHighlightCallback = callback; };
 
+private:
+  std::shared_ptr<BoardView> _selectedBoardView = nullptr; // Currently selected board view
+  Chess::Position2D _selectedPosition = Chess::Position2D(-1, -1); // Currently selected position on the board
 // Own attributes
 private: 
   Vector3 _worldSize;
@@ -185,4 +217,10 @@ private:
   void setCameraTarget(Vector2 target); 
   void moveCamera(Vector2 delta); 
   void updateCamera(float deltaTime);
+
+// transition methods
+private:
+  TransitionComponent _tryBoardTransition; // Transition for trying to select a board
+public:
+  void startTryBoardTransition
 };

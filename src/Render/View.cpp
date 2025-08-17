@@ -126,6 +126,14 @@ void BoardView2D::drawMouseOverBoundaries() const {
     DrawRectangleLinesEx(_area, 2, BLUE);
 }
 
+void BoardView2D::setSupervisor(ChessView* supervisor) {
+    _supervisor = supervisor;
+}
+
+void BoardView3D::setSupervisor(ChessView* supervisor) {
+    _supervisor = supervisor;
+}
+
 GameWorld::GameWorld(Vector3 worldSize)
     : _worldSize(worldSize) {
     // Initialize 2D camera
@@ -368,6 +376,10 @@ void GameWorld::removeBoardView(std::shared_ptr<BoardView> boardView) {
     } else {
         std::cerr << "Attempted to remove a null BoardView!" << std::endl;
     }
+}
+
+void GameWorld::getInformation() {
+    
 }
 
 
