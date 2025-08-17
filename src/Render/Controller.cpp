@@ -8,7 +8,9 @@ ChessController::ChessController(ChessModel& m, ChessView& v) : model(m), view(v
 }
 
 void ChessController::setupViewCallbacks() {
-
+  view.setMouseBoardClickCallback([this](std::shared_ptr<BoardView> boardView) {
+      handleSelectedBoard(boardView);
+  });
 }
 
 
@@ -16,11 +18,11 @@ void ChessController::setupModelCallbacks() {
   model.setInvalidBoardSelectionCallback([this]() {
     std::shared_ptr<BoardView> selectedBoardView = getBoardViewFromModel(model.getSelectedBoard());
     if (selectedBoardView) {
-      view.
+      view.queueUpdateInvalidBoardSelection(selectedBoardView);
     }
   });
 
-  
+
 
   model.setMoveStateChangedCallback([this]() {
     // Notify the view about the move state change

@@ -41,7 +41,7 @@ void TestingScene::render() {
   std::shared_ptr<Chess::Board> board1 = Chess::BoardBuilder::buildStandardBoard();
   std::shared_ptr<Chess::Board> board2 = Chess::BoardBuilder::buildStandardBoard();
 
-  // Create multiple BoardView2D instances to test with GameWorld
+  // Create multiple BoardView2D instances to test with ChessView
   std::shared_ptr<BoardView> boardView1 = std::make_shared<BoardView2D>(board1, &chessBoardTexture);
   std::shared_ptr<BoardView> boardView2 = std::make_shared<BoardView2D>(board2, &chessBoardTexture);
     
@@ -58,8 +58,8 @@ void TestingScene::render() {
   boardView1->setActive(true);
   boardView2->setActive(true);
 
-  // Create GameWorld and add board views
-  GameWorld gameWorld(Vector3{2000, 2000, 1});
+  // Create ChessView and add board views
+  ChessView gameWorld(Vector3{2000, 2000, 1});
   gameWorld.addBoardView(boardView1);
   gameWorld.addBoardView(boardView2);
 

@@ -52,15 +52,42 @@ void ChessModel::selectBoard(std::shared_ptr<Chess::Board> board) {
     return; // Only allow selection in the appropriate phases
   }
 
-  // if (_currentMoveState.currentPhase == MovePhase::SELECT_FROM_BOARD) {
-  //   _currentMoveState.selectedBoard = board;
-  //   _currentMoveState.currentPhase = MovePhase::SELECT_FROM_POSITION; // Move to next phase
-  // } else if (_currentMoveState.currentPhase == MovePhase::SELECT_TO_BOARD) {
-  //   _currentMoveState.targetBoard = board;
-  //   _currentMoveState.currentPhase = MovePhase::SELECT_TO_POSITION; // Move to next phase
-  // }
+  if (_currentMoveState.currentPhase == MovePhase::SELECT_FROM_BOARD) {
+    if (!_game->canMakeMoveFromBoard(board)) {
+      notifyInvalidBoardSelection();
+      return;
+    }
 
-  // notifyMoveStateChanged(); // Notify observers that the move state has changed
+    _currentMoveState.selectedBoard = board;
+    _currentMoveState.currentPhase = MovePhase::SELECT_FROM_POSITION; // Move to next phase
+
+  } else if (_currentMoveState.currentPhase == MovePhase::SELECT_TO_BOARD) {
+    std::vector<Chess::SelectedPosition> moveablePositions = _game->getMoveablePositions(
+      Chess::SelectedPosition(board, _currentMoveState.selectedPosition)
+    );
+
+    if (moveablePositions.empty()) {
+      notifyInvalidBoardSelection();
+      return; // No valid positions to move to
+    }
+    // find if the target board is in the moveable positions
+    bool found = false;
+    for (const auto& pos : moveablePositions) {
+      if (pos.board == board) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      notifyInvalidBoardSelection();
+      return; // Target board is not valid for the current move
+    }
+
+    _currentMoveState.targetBoard = board;
+    _currentMoveState.currentPhase = MovePhase::SELECT_TO_POSITION; // Move to next phase
+  }
+
+  notifyMoveStateChanged(); // Notify observers that the move state has changed
 }
 
 void ChessModel::selectPosition(Chess::Position2D pos) {

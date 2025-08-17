@@ -10,7 +10,7 @@ const int VERTICAL_SPACING = 30; // Size of each square on the board
 
 
 
-GameWorld::GameWorld(Vector3 worldSize)
+ChessView::ChessView(Vector3 worldSize)
     : _worldSize(worldSize) {
     // Initialize 2D camera
     _camera2D.target = { worldSize.x / 2, worldSize.y / 2 };
@@ -27,7 +27,7 @@ GameWorld::GameWorld(Vector3 worldSize)
 }
 
 
-void GameWorld::ClampCameraToBounds() {
+void ChessView::ClampCameraToBounds() {
     if (_use3DRendering) {
         _camera3D.position.x = std::max(0.0f, std::min(_camera3D.position.x, _worldSize.x));
         _camera3D.position.y = std::max(1.0f, std::min(_camera3D.position.y, _worldSize.y));
@@ -41,7 +41,7 @@ void GameWorld::ClampCameraToBounds() {
 }
 
 
-void GameWorld::setZoom(float zoom) {
+void ChessView::setZoom(float zoom) {
     if (_use3DRendering) {
         _camera3D.fovy = std::max(10.0f, std::min(zoom, 90.0f)); // Clamp 3D FOV
     } else {
@@ -51,7 +51,7 @@ void GameWorld::setZoom(float zoom) {
 }
 
 
-void GameWorld::setCameraTarget(Vector2 target) {
+void ChessView::setCameraTarget(Vector2 target) {
     if (_use3DRendering) {
         _camera3D.target = { target.x, _camera3D.target.y, target.y };
     } else {
@@ -61,7 +61,7 @@ void GameWorld::setCameraTarget(Vector2 target) {
 }
 
 
-void GameWorld::moveCamera(Vector2 delta) {
+void ChessView::moveCamera(Vector2 delta) {
     if (_use3DRendering) {
         _camera3D.position.x -= delta.x * 0.01f;
         _camera3D.position.z -= delta.y * 0.01f;
@@ -76,11 +76,15 @@ void GameWorld::moveCamera(Vector2 delta) {
 
 
 
-void GameWorld::handleInput() {
+void ChessView::handleInput() {
     for (auto& boardView : _boardViews) if (boardView) {
         boardView -> handleInput();
         if (boardView -> isMouseClickedOnBoard()) {
             _selectedBoardView = boardView;
+            
+            if (_onMouseBoardClickCallback) {
+                _onMouseBoardClickCallback(_selectedBoardView);
+            }
         }
     }
 
@@ -116,7 +120,7 @@ void GameWorld::handleInput() {
 }
 
 
-void GameWorld::updateCamera(float deltaTime) {
+void ChessView::updateCamera(float deltaTime) {
     // Center camera on active board view, if any
     for (const auto& boardView : _boardViews) {
         if (boardView && boardView->isActive()) {
@@ -139,7 +143,7 @@ void GameWorld::updateCamera(float deltaTime) {
     }
 }
 
-void GameWorld::update(float deltaTime) {
+void ChessView::update(float deltaTime) {
     for (auto& boardView : _boardViews) {
         if (boardView) {
             boardView->update(deltaTime);
@@ -151,7 +155,7 @@ void GameWorld::update(float deltaTime) {
 }
 
 
-void GameWorld::render() const {
+void ChessView::render() const {
     if (_use3DRendering) {
         BeginMode3D(_camera3D);
         for (const auto& boardView : _boardViews) {
@@ -197,7 +201,7 @@ void GameWorld::render() const {
 }
 
 
-void GameWorld::addBoardView(std::shared_ptr<BoardView> boardView) {
+void ChessView::addBoardView(std::shared_ptr<BoardView> boardView) {
     if (boardView) {
         _boardViews.push_back(boardView);
         // Set the appropriate camera based on board view type
@@ -221,7 +225,7 @@ void GameWorld::addBoardView(std::shared_ptr<BoardView> boardView) {
 }
 
 
-void GameWorld::removeBoardView(std::shared_ptr<BoardView> boardView) {
+void ChessView::removeBoardView(std::shared_ptr<BoardView> boardView) {
     if (boardView) {
         auto it = std::remove(_boardViews.begin(), _boardViews.end(), boardView);
         if (it != _boardViews.end()) {
@@ -245,23 +249,12 @@ void GameWorld::removeBoardView(std::shared_ptr<BoardView> boardView) {
     }
 }
 
-// void GameWorld::startTransition_SelectedBoard(std::shared_ptr<BoardView> boardView) {
-//     if (boardView) {
-//         _selectedBoardView = boardView;
-//         // Start transition logic here, e.g., fade in/out, zoom, etc.
-//         // This could involve adding a TransitionComponent to _transitions
-//         // For now, just print for debugging
-//         std::cout << "Starting transition to selected board view." << std::endl;
-//     } else {
-//         std::cerr << "Attempted to start transition with a null BoardView!" << std::endl;
-//     }
-// }
 
-std::vector<std::shared_ptr<BoardView>> GameWorld::getBoardViews() const {
+std::vector<std::shared_ptr<BoardView>> ChessView::getBoardViews() const {
     return _boardViews;
 }
 
-void GameWorld::queueUpdateInvalidBoardSelection(std::shared_ptr<BoardView> boardView) {
+void ChessView::queueUpdateInvalidBoardSelection(std::shared_ptr<BoardView> boardView) {
     updateQueue.push_back([this](){
         if (boardView == _selectedBoardView) {
             _isSelectedBoardViewInvalid = true;

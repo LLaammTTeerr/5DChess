@@ -19,57 +19,25 @@ struct TransitionComponent {
 };
 
 
+
 class ChessView {
+private:
+  std::function<void(std::shared_ptr<BoardView>)> _onMouseBoardClickCallback;
+
 public:
-  virtual ~ChessView() = default;
+  virtual void handleInput();
+  virtual void update(float deltaTime);
+  virtual void render() const;
 
-  // workflow : update -> handleInput -> render
-  virtual void update(float deltaTime) = 0;
-  virtual void handleInput() = 0;
-  virtual void render() const = 0;
+  virtual std::vector<std::shared_ptr<BoardView>> getBoardViews() const;
 
-  /// @brief  get information from the view, this is used to get information about the board
-  /// used to update selected board, selected position, etc.
-  virtual std::vector<std::shared_ptr<BoardView>> getBoardViews() const = 0;
-
-  // Callbacks for Controller to handle inputs
-  virtual void setMousePositionCallback(std::function<void(Chess::Position2D pos)> callback) = 0;
-  virtual void setMouseClickCallback(std::function<void(Vector2 pos)> callback) = 0;
-
-
-  // transition methods
-  // virtual void startTransition_SelectedBoard(std::shared_ptr<BoardView> boardView) = 0;
-
-  // update methods
-  // virtual void queueUpdateMoveState() = 0;
-  virtual void queueUpdateInvalidBoardSelection(std::shared_ptr<BoardView> boardView) = 0;
-};
-
-
-
-class GameWorld : public ChessView {
-// inherited methods
-public:
-  virtual void handleInput() override;
-  virtual void update(float deltaTime) override;
-  virtual void render() const override;
-
-  virtual std::vector<std::shared_ptr<BoardView>> getBoardViews() const override;
-
-  // Callbacks for Controller to handle inputs
-  virtual void setMousePositionCallback(std::function<void(Chess::Position2D pos)> callback) override { _onMousePositionCallback = callback; }; // Not applicable for GameWorld
-  virtual void setMouseClickCallback(std::function<void(Vector2 pos)> callback) override { _onMouseClickCallback = callback; };
+  virtual void setMouseBoardClickCallback(std::function<void(std::shared_ptr<BoardView>)> callback) { _onMouseBoardClickCallback = callback; };
   
-  // virtual void startTransition_SelectedBoard(std::shared_ptr<BoardView> boardView) override;
-  
-  // virtual void queueUpdateMoveState() override;
-  virtual void queueUpdateInvalidBoardSelection(std::shared_ptr<BoardView> boardView) override;
+  virtual void queueUpdateInvalidBoardSelection(std::shared_ptr<BoardView> boardView);
+
 private:
   std::vector<TransitionComponent> _transitions;  // List of transitions
   std::vector<std::function<void()>> updateQueue; // Queue for update callbacks
-
-private:
-
 
 private:
   std::shared_ptr<BoardView> _selectedBoardView = nullptr; // Currently selected board view
@@ -85,8 +53,8 @@ private:
   bool _use3DRendering = false;
 // Own methods
 public:
-  GameWorld(Vector3 _worldSize);
-  ~GameWorld() = default;
+  ChessView(Vector3 _worldSize);
+  ~ChessView() = default;
 
   Camera2D* getCamera2D() { return &_camera2D; }
   Camera3D* getCamera3D() { return &_camera3D; }
@@ -100,5 +68,4 @@ private:
   void setCameraTarget(Vector2 target); 
   void moveCamera(Vector2 delta); 
   void updateCamera(float deltaTime);
-
 };

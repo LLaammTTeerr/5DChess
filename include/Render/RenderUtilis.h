@@ -9,6 +9,7 @@ enum class MovePhase {
   SELECT_FROM_POSITION,
   SELECT_TO_BOARD,
   SELECT_TO_POSITION,
+  END_MOVE
 };
 
 
