@@ -249,6 +249,7 @@ void Game::makeMove(Move move) {
   }
 
   std::shared_ptr<Board> newToBoard = move.to.board->getTimeLine()->getBoardByHalfTurn(move.to.board->halfTurnNumber())->createFork(toTimeLine);
+  newToBoard->placePiece(move.to.position, piece);
   toTimeLine->pushBack(newToBoard);
 }
 
