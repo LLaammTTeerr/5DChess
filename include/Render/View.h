@@ -2,6 +2,7 @@
 #include <raylib.h>
 #include <iostream>
 #include "chess.h"
+#include "Render/RenderUtilis.h"
 
 
 const extern int BOARD_SIZE; // Assuming BOARD_SIZE is defined somewhere in the project
@@ -14,9 +15,8 @@ struct TransitionComponent {
   float elapsedTime; // Time elapsed since the start of the transition
   std::function<void()> onStart;  // Callback when animation starts
   std::function<void()> onComplete; // Callback when animation completes
-  std::string name; // Name of the transition for identification
+  std::string name; // Name of the transition for identification  
 };
-
 
 
 class ChessView {
@@ -30,43 +30,50 @@ public:
 
   /// @brief  get information from the view, this is used to get information about the board
   /// used to update selected board, selected position, etc.
-  virtual void getInformation() = 0;
+  virtual std::vector<std::shared_ptr<BoardView>> getBoardViews() const = 0;
+
   // Callbacks for Controller to handle inputs
   virtual void setMousePositionCallback(std::function<void(Chess::Position2D pos)> callback) = 0;
   virtual void setMouseClickCallback(std::function<void(Vector2 pos)> callback) = 0;
-  // virtual void setKeyPressCallback(std::function<void(int key)> callback) = 0;
-  // virtual void setBoardSelectCallback(std::function<void(std::shared_ptr<Chess::Board> board)> callback) = 0;
-  // virtual void setPositionHighlightCallback(std::function<void(Chess::Position2D pos)> callback) = 0;
+
+
+  // transition methods
+  // virtual void startTransition_SelectedBoard(std::shared_ptr<BoardView> boardView) = 0;
+
+  // update methods
+  // virtual void queueUpdateMoveState() = 0;
+  virtual void queueUpdateInvalidBoardSelection(std::shared_ptr<BoardView> boardView) = 0;
 };
 
-/// This is the view class for rendering a single board
-
-// this class convert model data to view data
 
 
 class GameWorld : public ChessView {
-private:
-  std::function<void(Chess::Position2D pos)> _onMousePositionCallback;
-  std::function<void(Vector2 pos)> _onMouseClickCallback;
-  std::function<void(int key)> _onKeyPressCallback;
-  std::function<void(std::shared_ptr<Chess::Board> board)> _onBoardSelectCallback;
-  std::function<void(Chess::Position2D pos)> _onPositionHighlightCallback;
-
 // inherited methods
 public:
   virtual void handleInput() override;
   virtual void update(float deltaTime) override;
   virtual void render() const override;
-  virtual void getInformation() override;
+
+  virtual std::vector<std::shared_ptr<BoardView>> getBoardViews() const override;
+
   // Callbacks for Controller to handle inputs
   virtual void setMousePositionCallback(std::function<void(Chess::Position2D pos)> callback) override { _onMousePositionCallback = callback; }; // Not applicable for GameWorld
   virtual void setMouseClickCallback(std::function<void(Vector2 pos)> callback) override { _onMouseClickCallback = callback; };
-  // virtual void setOnKeyPressCallback(std::function<void(int key)> callback) override { _onKeyPressCallback = callback; };
-  // virtual void setOnBoardSelectCallback(std::function<void(std::shared_ptr<Chess::Board> board)> callback) override { _onBoardSelectCallback = callback; };
-  // virtual void setOnPositionHighlightCallback(std::function<void(Chess::Position2D pos)> callback) override { _onPositionHighlightCallback = callback; };
+  
+  // virtual void startTransition_SelectedBoard(std::shared_ptr<BoardView> boardView) override;
+  
+  // virtual void queueUpdateMoveState() override;
+  virtual void queueUpdateInvalidBoardSelection(std::shared_ptr<BoardView> boardView) override;
+private:
+  std::vector<TransitionComponent> _transitions;  // List of transitions
+  std::vector<std::function<void()>> updateQueue; // Queue for update callbacks
+
+private:
+
 
 private:
   std::shared_ptr<BoardView> _selectedBoardView = nullptr; // Currently selected board view
+  bool _isSelectedBoardViewInvalid = false;
   Chess::Position2D _selectedPosition = Chess::Position2D(-1, -1); // Currently selected position on the board
 // Own attributes
 private: 
@@ -86,7 +93,6 @@ public:
 
   void addBoardView(std::shared_ptr<BoardView> boardView);
   void removeBoardView(std::shared_ptr<BoardView> boardView);
-  void clearBoardViews();
 
 private:
   void ClampCameraToBounds();
@@ -95,9 +101,4 @@ private:
   void moveCamera(Vector2 delta); 
   void updateCamera(float deltaTime);
 
-// transition methods
-private:
-  TransitionComponent _tryBoardTransition; // Transition for trying to select a board
-public:
-  void startTryBoardTransition
 };

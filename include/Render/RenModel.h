@@ -1,18 +1,14 @@
 #include "chess.h"
 #include <vector>
 #include <memory>
+#include "Render/RenderUtilis.h"
 
 #pragma once
 
 // class ChessModel;
 // class ChessView;
 // class ChessController;
-enum class MovePhase {
-  SELECT_FROM_BOARD,
-  SELECT_FROM_POSITION,
-  SELECT_TO_BOARD,
-  SELECT_TO_POSITION,
-};
+
 
 struct MoveState {
   std::shared_ptr<Chess::Board> selectedBoard; // Board where the move is being made
@@ -31,8 +27,8 @@ private:
   MoveState _currentMoveState;
 
   std::function<void()> _onMoveStateChanged; // Callback for move phase changes
-  std::function<void()> _onGameUpdated; // Callback for game updates
-  std::function<void()> _onTryMove; // Callback for trying to make a move
+  std::function<void()> _onInvalidBoardSelection; // Callback for invalid board selection
+  // std::function<void()> _onGameUpdated; // Callback for game updates
 
 public:
   ChessModel(std::shared_ptr<Chess::Game> game);
@@ -46,13 +42,17 @@ public:
   void applyTurn();
 
   void setMoveStateChangedCallback(std::function<void()> callback) {_onMoveStateChanged = callback; }
-  void setGameUpdatedCallback(std::function<void()> callback) {_onGameUpdated = callback; }
-  void setTryMoveCallback(std::function<void()> callback) {_onTryMove = callback; }
+  void setInvalidBoardSelectionCallback(std::function<void()> callback) {_onInvalidBoardSelection = callback; }
+  // void setGameUpdatedCallback(std::function<void()> callback) {_onGameUpdated = callback; }
 
+  void notifyInvalidBoardSelection();
   void notifyMoveStateChanged();
-  void notifyGameUpdated();
-  void notifyTryMove(); // Try to make a move, which is wrapped in MoveState
+  // void notifyGameUpdated();
 
   void selectBoard(std::shared_ptr<Chess::Board> board);
   void selectPosition(Chess::Position2D pos);
+
+  MoveState getCurrentMoveState() const { return _currentMoveState; }
 };
+
+

@@ -77,22 +77,13 @@ void GameWorld::moveCamera(Vector2 delta) {
 
 
 void GameWorld::handleInput() {
-    for (auto& boardView : _boardViews) {
-        if (boardView) {
-            boardView->handleInput();
-            if (boardView->isActive() && _selectedBoardView != boardView) {
-                if (_selectedBoardView) {
-                    _selectedBoardView->setActive(false);
-                }
-                // _selectedBoardView = boardView;
-                // if (_onBoardSelectCallback) {
-                    // _onBoardSelectCallback(boardView->getBoard());
-                // }
-            }
-        } else {
-            std::cerr << "Null BoardView encountered!" << std::endl;
+    for (auto& boardView : _boardViews) if (boardView) {
+        boardView -> handleInput();
+        if (boardView -> isMouseClickedOnBoard()) {
+            _selectedBoardView = boardView;
         }
     }
+
 
     // Handle camera movement
     if (_use3DRendering) {
@@ -254,7 +245,29 @@ void GameWorld::removeBoardView(std::shared_ptr<BoardView> boardView) {
     }
 }
 
-void GameWorld::getInformation() {
-    
+// void GameWorld::startTransition_SelectedBoard(std::shared_ptr<BoardView> boardView) {
+//     if (boardView) {
+//         _selectedBoardView = boardView;
+//         // Start transition logic here, e.g., fade in/out, zoom, etc.
+//         // This could involve adding a TransitionComponent to _transitions
+//         // For now, just print for debugging
+//         std::cout << "Starting transition to selected board view." << std::endl;
+//     } else {
+//         std::cerr << "Attempted to start transition with a null BoardView!" << std::endl;
+//     }
+// }
+
+std::vector<std::shared_ptr<BoardView>> GameWorld::getBoardViews() const {
+    return _boardViews;
 }
 
+void GameWorld::queueUpdateInvalidBoardSelection(std::shared_ptr<BoardView> boardView) {
+    updateQueue.push_back([this](){
+        if (boardView == _selectedBoardView) {
+            _isSelectedBoardViewInvalid = true;
+        }
+        else {
+            _isSelectedBoardViewInvalid = false;
+        }
+    });  
+}

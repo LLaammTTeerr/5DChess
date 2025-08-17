@@ -28,8 +28,6 @@ public:
     virtual std::shared_ptr<Chess::Board> getBoard() const = 0;
     
     virtual void setBoardTexture(Texture2D* texture) = 0;
-    virtual void setActive(bool active) = 0;
-    virtual bool isActive() const = 0;
     virtual void updateHighlightedPositions(const std::vector<Chess::Position2D>& positions) = 0;
     virtual bool is3D() const = 0;
 
@@ -72,9 +70,6 @@ public:
   std::shared_ptr<Chess::Board> getBoard() const override { return _board; }
 
   void setBoardTexture(Texture2D* texture) override { _boardTexture = texture; }
-
-  void setActive(bool active) override { _isActive = active; }
-  bool isActive() const override { return _isActive; }
 
   void updateHighlightedPositions(const std::vector<Chess::Position2D>& positions) override { _highlightedPositions = positions; }
   bool is3D() const override { return false; } // This is a 2D view
@@ -119,8 +114,6 @@ public:
     void setBoard(std::shared_ptr<Chess::Board> board) override;
     std::shared_ptr<Chess::Board> getBoard() const override { return _board; }
     void setBoardTexture(Texture2D* texture) override;
-    void setActive(bool active) override;
-    bool isActive() const override;
     void updateHighlightedPositions(const std::vector<Chess::Position2D>& positions) override;
     bool is3D() const override;
 

@@ -111,9 +111,7 @@ bool BoardView2D::isMouseClickedOnBoard() const {
 }
 
 void BoardView2D::handleInput() {
-    if (_isMouseOver && isMouseClickedOnBoard()) {
-        setActive(true);
-    }
+    update(GetFrameTime());
 }
 
 void BoardView2D::drawSelectedBoundaries() const {

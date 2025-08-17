@@ -1,8 +1,9 @@
 #pragma once
 #include <memory>
 #include <functional>
-
+#include "Render/utilis.h"
 #include "chess.h"
+#include "Render/BoardView.h"
 
 class ChessModel;
 class ChessView;
@@ -25,4 +26,6 @@ private:
   // void handleTargetSelection(const Chess::Board& board, const Chess::Position2D& position);
   // void handleKeyPress(int key);
   // void handleMoveSubmission();
+
+  std::shared_ptr<BoardView> getBoardViewFromModel(std::shared_ptr<Chess::Board> board);
 };

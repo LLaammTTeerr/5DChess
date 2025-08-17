@@ -23,7 +23,13 @@ void ChessModel::applyTurn() {
 
 void ChessModel::makeMove(const Chess::Move& move) {
   _game->makeMove(move);
-  notifyMoveStateChanged(); // Notify observers that a move has been made
+  // notifyMoveStateChanged(); // Notify observers that a move has been made
+}
+
+void ChessModel::notifyInvalidBoardSelection() {
+  if (_onInvalidBoardSelection) {
+    _onInvalidBoardSelection();
+  }
 }
 
 void ChessModel::notifyMoveStateChanged() {
@@ -32,30 +38,32 @@ void ChessModel::notifyMoveStateChanged() {
   }
 }
 
-void ChessModel::notifyGameUpdated() {
-  if (_onGameUpdated) {
-    _onGameUpdated();
-  }
-}
+// void ChessModel::notifyGameUpdated() {
+//   if (_onGameUpdated) {
+//     _onGameUpdated();
+//   }
+// }
 
 void ChessModel::selectBoard(std::shared_ptr<Chess::Board> board) {
   if (_currentMoveState.currentPhase != MovePhase::SELECT_FROM_BOARD &&
       _currentMoveState.currentPhase != MovePhase::SELECT_TO_BOARD) {
+    
+    notifyInvalidBoardSelection(); // Notify observers about invalid selection
     return; // Only allow selection in the appropriate phases
   }
 
-  if (_currentMoveState.currentPhase == MovePhase::SELECT_FROM_BOARD) {
-    _currentMoveState.selectedBoard = board;
-    _currentMoveState.currentPhase = MovePhase::SELECT_FROM_POSITION; // Move to next phase
-  } else if (_currentMoveState.currentPhase == MovePhase::SELECT_TO_BOARD) {
-    _currentMoveState.targetBoard = board;
-    _currentMoveState.currentPhase = MovePhase::SELECT_TO_POSITION; // Move to next phase
-  }
+  // if (_currentMoveState.currentPhase == MovePhase::SELECT_FROM_BOARD) {
+  //   _currentMoveState.selectedBoard = board;
+  //   _currentMoveState.currentPhase = MovePhase::SELECT_FROM_POSITION; // Move to next phase
+  // } else if (_currentMoveState.currentPhase == MovePhase::SELECT_TO_BOARD) {
+  //   _currentMoveState.targetBoard = board;
+  //   _currentMoveState.currentPhase = MovePhase::SELECT_TO_POSITION; // Move to next phase
+  // }
 
-  notifyMoveStateChanged(); // Notify observers that the move state has changed
+  // notifyMoveStateChanged(); // Notify observers that the move state has changed
 }
 
-void ChessModel::selectPosition(Chess::Position2D position) {
+void ChessModel::selectPosition(Chess::Position2D pos) {
   if (_currentMoveState.currentPhase != MovePhase::SELECT_FROM_POSITION &&
       _currentMoveState.currentPhase != MovePhase::SELECT_TO_POSITION) {
     return; // Only allow selection in the appropriate phases
@@ -66,20 +74,10 @@ void ChessModel::selectPosition(Chess::Position2D position) {
     _currentMoveState.currentPhase = MovePhase::SELECT_TO_BOARD; // Move to next phase
   } else if (_currentMoveState.currentPhase == MovePhase::SELECT_TO_POSITION) {
     _currentMoveState.targetPosition = position;
-
-    // Move move = Move(
-    //     _currentMoveState.selectedBoard,
-    //     _currentMoveState.selectedPosition,
-    //     _currentMoveState.targetBoard,
-    //     _currentMoveState.targetPosition
-    // );
-
-
-    notifyTryMove();
   }
 
-  void ChessModel::notifyTryMove() {
-    
-  }
+  notifyMoveStateChanged(); // Notify observers that the move state has changed
 }
+
+
 

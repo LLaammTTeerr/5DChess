@@ -227,3 +227,33 @@ public:
     // }
 };
 
+// Main: Set up Raylib window and run MVC loop
+// int main() {
+//     InitWindow(450, 400, "To-Do List (MVC with Raylib)");
+//     SetTargetFPS(60);
+
+//     TaskModel model;
+//     TaskView view;
+//     TaskController controller(model, view);
+
+
+//     while (!WindowShouldClose()) {
+//         // Handle inputs BEFORE drawing
+//         view.handleInputs(); // Process user inputs
+        
+//         // Process all queued updates in the view
+//         view.processQueuedUpdates();
+        
+//         // Drawing phase - only rendering here
+//         BeginDrawing();
+//         ClearBackground(RAYWHITE);
+        
+//         // Render the current state of tasks
+//         auto displayData = controller.convertToDisplayData(model.getTasks());
+//         view.displayTasks(displayData);
+//         EndDrawing();
+//     }
+
+//     CloseWindow();
+//     return 0;
+// }
