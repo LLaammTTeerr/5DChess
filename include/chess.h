@@ -21,14 +21,31 @@ class Vector4D {
 public:
   Vector4D(int x, int y, int z, int w);
 
-  inline int x(void) const;
-  inline int y(void) const;
-  inline int z(void) const;
-  inline int w(void) const;
+  inline int x(void) const {
+    return _data[0];
+  }
 
-  inline int operator * (const Vector4D& other) const;
+  inline int y(void) const {
+    return _data[1];
+  }
 
-  inline int operator - (const Vector4D& other) const;
+  inline int z(void) const {
+    return _data[2];
+  }
+
+  inline int w(void) const {
+    return _data[3];
+  }
+
+  inline int operator * (const Vector4D& other) const {
+    return _data[0] * other._data[0] + _data[1] * other._data[1] +
+           _data[2] * other._data[2] + _data[3] * other._data[3];
+  }
+
+  inline int operator - (const Vector4D& other) const {
+    return _data[0] - other._data[0] + _data[1] - other._data[1] +
+           _data[2] - other._data[2] + _data[3] - other._data[3];
+  }
 private:
   std::array<int, 4> _data;
 };
@@ -116,7 +133,7 @@ public:
    * This method returns the board that this piece is currently placed on.
    * If the piece is not on any board, it returns a null pointer.
    */
-  inline std::shared_ptr<Board> getBoard() const { return _board; }
+  inline std::shared_ptr<Board> getBoard(void) const { return _board; }
 
   /**
    * Get the position of this piece on the board.
@@ -129,6 +146,14 @@ public:
    * represents the top-left corner of the board.
    */
   inline Position2D getPosition() const { return _position; }
+
+  inline void setPosition(Position2D position) {
+    _position = position;
+  }
+
+  inline void setBoard(std::shared_ptr<Board> board) {
+    _board = board;
+  }
 protected:
   PieceColor _color;
   std::shared_ptr<Board> _board;
@@ -137,7 +162,8 @@ protected:
 
 class King : public Piece {
 public:
-  King(PieceColor color, std::shared_ptr<Board> board, Position2D position);
+  King(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1))
+    : Piece(color, board, position) {};
 
   inline const std::string& name(void) const override {
     static const std::string name = "king";
@@ -152,7 +178,8 @@ public:
 
 class Queen : public Piece {
 public:
-  Queen(PieceColor color, std::shared_ptr<Board> board, Position2D position);
+  Queen(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1))
+    : Piece(color, board, position) {};
 
   inline const std::string& name(void) const override {
     static const std::string name = "queen";
@@ -167,7 +194,8 @@ public:
 
 class Rook : public Piece {
 public:
-  Rook(PieceColor color, std::shared_ptr<Board> board, Position2D position);
+  Rook(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1))
+    : Piece(color, board, position) {};
 
   inline const std::string& name(void) const override {
     static const std::string name = "rook";
@@ -182,7 +210,8 @@ public:
 
 class Bishop : public Piece {
 public:
-  Bishop(PieceColor color, std::shared_ptr<Board> board, Position2D position);
+  Bishop(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1))
+    : Piece(color, board, position) {};
 
   inline const std::string& name(void) const override {
     static const std::string name = "bishop";
@@ -197,7 +226,8 @@ public:
 
 class Knight : public Piece {
 public:
-  Knight(PieceColor color, std::shared_ptr<Board> board, Position2D position);
+  Knight(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1))
+    : Piece(color, board, position) {};
 
   inline const std::string& name(void) const override {
     static const std::string name = "knight";
@@ -212,7 +242,8 @@ public:
 
 class Pawn : public Piece {
 public:
-  Pawn(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1));
+  Pawn(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1))
+    : Piece(color, board, position) {};
 
   inline const std::string& name(void) const override {
     static const std::string name = "pawn";
@@ -225,7 +256,7 @@ public:
   }
 };
 
-class Board {
+class Board : public std::enable_shared_from_this<Board> {
 public:
   Board(int N, std::shared_ptr<TimeLine> timeLine);
 
@@ -234,7 +265,9 @@ public:
    * @return The dimension of the board as an integer.
    * This method returns the size of the board (N).
    */
-  inline int dim(void) const;
+  inline int dim(void) const {
+    return _N;
+  }
 
   /**
    * Place a piece on the board.
@@ -250,10 +283,27 @@ public:
    * @param position The position on the board from which to retrieve the piece.
    * @return A shared pointer to the Piece object at the specified position, or nullptr if no piece is present.
    */
-  std::shared_ptr<const Piece> getPiece(Position2D position) const;
+  std::shared_ptr<Piece> getPiece(Position2D position) const;
 
+  /**
+   * Get the timeline this board belongs to.
+   * @return A shared pointer to the TimeLine object associated with this board.
+   */
   std::shared_ptr<TimeLine> getTimeLine() const;
 
+  /**
+   * Get the full turn number of the board.
+   * @return The full turn number as an integer.
+   */
+  inline int fullTurnNumber(void) const { return _fullTurnNumber; }
+
+  /**
+   * Get the half turn number of the board.
+   * @return The half turn number as an integer.
+   */
+  inline int halfTurnNumber(void) const { return _halfTurnNumber; }
+
+  std::shared_ptr<Board> createFork(std::shared_ptr<TimeLine> timeLine);
 private:
   int _N;
   int _fullTurnNumber;
@@ -263,46 +313,60 @@ private:
   std::shared_ptr<TimeLine> _timeLine; // The timeline this board belongs to
 };
 
-class TimeLine {
+class TimeLine : public std::enable_shared_from_this<TimeLine> {
 public:
-  TimeLine(int N, int ID = 0);
+  TimeLine(int N, int IDX = 0);
 
   /**
    * Get the ID of the timeline.
    * @return The ID of the timeline as an integer.
    */
-  inline int ID(void) const;
+  inline int ID(void) const {
+    return _ID;
+  }
 
   /**
    * Get the dimension of the timeline.
    * @return The dimension of the timeline as an integer.
    * This method returns the size of the board (N).
    */
-  inline int dim(void) const;
+  inline int dim(void) const {
+    return _N;
+  }
 
   /**
    * Get the fork point of the timeline.
    * @return The fork point of the timeline as an integer.
    */
-  inline int forkAt(void) const;
+  inline int forkAt(void) const {
+    return _forkAt;
+  }
 
   /**
    * Get the full turn number of the timeline.
    * @return The full turn number of the timeline as an integer.
    */
-  inline int fullTurnNumber(void) const;
+  inline int fullTurnNumber(void) const {
+    assert(_history.size() > 0);
+    return _history.back()->fullTurnNumber();
+  }
 
   /**
    * Get the half turn number of the timeline.
    * @return The half turn number of the timeline as an integer.
    */
-  inline int halfTurnNumber(void) const;
+  inline int halfTurnNumber(void) const {
+    assert(_history.size() > 0);
+    return _history.back()->halfTurnNumber();
+  }
 
   /**
    * Get the parent timeline of the current timeline.
    * @return A shared pointer to the parent timeline, or nullptr if there is no parent.
    */
-  inline std::shared_ptr<const TimeLine> parent(void) const;
+  inline std::shared_ptr<const TimeLine> parent(void) const {
+    return _parent;
+  }
 
   /**
    * Push a new board state onto the timeline.
@@ -314,30 +378,25 @@ public:
     assert(!_history.empty());
     return _history.back();
   }
+
+  inline std::shared_ptr<Board> getBoardByHalfTurn(int halfTurn) const {
+    int pos = halfTurn - _forkAt;
+    assert(pos >= 0 && pos < _history.size());
+    return _history[pos];
+  }
+
+  std::shared_ptr<TimeLine> createFork(int newID, int forkAt) {
+    std::shared_ptr<TimeLine> forkedTimeLine = std::make_shared<TimeLine>(_N, newID);
+    forkedTimeLine->_forkAt = forkAt;
+    forkedTimeLine->_parent = shared_from_this();
+    return forkedTimeLine;
+  }
 private:
   int _N;
   int _ID;
   int _forkAt;
-  int _fullTurnNumber;
-  int _halfTurnNumber;
   std::vector<std::shared_ptr<Board>> _history;
   std::shared_ptr<TimeLine> _parent;
-};
-
-// class Move {
-// public:
-//   Position2D _from, _to;
-//   int _fromTimeLineID, _toTimeLineID;
-//   int _fromTurn, _toTurn;
-//   std::shared_ptr<Piece> _piece;
-// };
-
-/// Turn management and state handling
-enum class MovePhase {
-  SELECT_FROM_BOARD,
-  SELECT_FROM_POSITION,
-  SELECT_TO_BOARD,
-  SELECT_TO_POSITION,
 };
 
 struct SelectedPosition {
@@ -345,6 +404,11 @@ struct SelectedPosition {
   Position2D position;  // 2D position on the board (e.g., chess coordinates as float for rendering)
 
   SelectedPosition() : board(nullptr), position(Position2D(-1, -1)) {} // Default constructor
+  SelectedPosition(std::shared_ptr<Board> b, Position2D pos) : board(b), position(pos) {}
+
+  inline Vector4D toVector4D(void) const {
+    return Vector4D(position.x(), position.y(), board->fullTurnNumber(), board->getTimeLine()->ID());
+  }
 };
 
 // Represents a move in the game, including the source and destination positions
@@ -359,37 +423,37 @@ public:
 class Game {
 public:
   /**
-   * Constructor for the Game class.
-   * @param N The size of the board.
-   * @param board The initial board configuration.
-   * Please note that this constructor transfers ownership of the board to the game.
+   * Construct a Game object with the specified board size and builder function.
+   * @param N The dimension of the board (N x N).
+   * @param builderFunction A function that builds the initial board state.
+   * This constructor initializes the game with a board of size N and sets up the initial state using the provided builder function.
    */
-  Game(int N, std::shared_ptr<Board> board);
-
-  /**
-   * Constructor for the Game class.
-   * @param builderFunction A function that builds the initial board configuration, check out the BoardBuilder class
-   */
-  Game(std::function<std::shared_ptr<Board>(void)> builderFunction);
+  Game(int N, std::function<std::shared_ptr<Board>(std::shared_ptr<TimeLine>)> builderFunction);
 
   /**
    * Get the dimension of the game.
    * @return The dimension of the game as an integer.
    * This method returns the size of the board (N).
    */
-  inline int dim(void) const;
+  inline int dim(void) const {
+    return _N;
+  }
 
   /**
    * Get the current full turn number.
    * @return The current full turn number as an integer.
    */
-  inline int presentFullTurn(void) const;
+  inline int presentFullTurn(void) const {
+    return _presentFullTurn;
+  }
 
   /**
    * Get the current half turn number.
    * @return The current half turn number as an integer.
    */
-  inline int presentHalfTurn(void) const;
+  inline int presentHalfTurn(void) const {
+    return _presentHalfTurn;
+  }
 
   /**
    * Apply the turn state to the game.
@@ -397,7 +461,7 @@ public:
   // One turn might consist of multiple moves
   // This method applies all moves in the current turn to the game stateing the moves to apply.
    */
-  void applyTurn(void);
+  void submitTurn(void);
 
   /**
    * Get the board where the current player can make moves.
@@ -406,15 +470,54 @@ public:
    * It can be used to determine which boards are active for the current turn.
    */
   std::vector<std::shared_ptr<Board>> getMoveableBoards(void) const;
+
+  /**
+   * Get the positions where the current player can make moves.
+   * @param selected The selected position to check for moveable positions.
+   * @return A vector of SelectedPosition objects representing the moveable positions.
+   * This method returns a vector of positions that are available for making moves based on the selected position.
+   */
   std::vector<SelectedPosition> getMoveablePositions(SelectedPosition selected) const;
-  void makeMove(const Move& move);
-  bool undoable(void) const;
+
+  void makeMove(Move move);
+
+  /**
+   * Check if the current turn can be undone.
+   * @return True if the current turn can be undone, false otherwise.
+   * This method checks if there are any moves in the current turn that can be undone.
+   */
+  bool undoable(void) const {
+    return !_currentTurnMoves.empty();
+  }
+
+  bool canMakeMoveFromBoard(std::shared_ptr<Board> board) const;
 private:
   int _N;
   int _presentFullTurn;
   int _presentHalfTurn;
   std::vector<std::shared_ptr<TimeLine>> _timeLines;
   std::vector<Move> _currentTurnMoves;
+  PieceColor _currentTurnColor;
+
+  std::shared_ptr<Piece> _getPieceByVector4DFullTurn(Vector4D position) const {
+    int x = position.x();
+    int y = position.y();
+    int halfTurn = 2 * position.z() + int(_currentTurnColor);
+    int timeLineID = position.w();
+    assert(timeLineID >= 0 && timeLineID < _timeLines.size());
+    std::shared_ptr<const Board> board = _timeLines[timeLineID]->getBoardByHalfTurn(halfTurn);
+    assert(board != nullptr);
+    assert(x >= 0 && x < board->dim() && y >= 0 && y < board->dim());
+    return board->getPiece(Position2D(x, y));
+  }
+
+  bool _boardExists(int timeLineID, int halfTurn) const {
+    return _timeLines[timeLineID]->getBoardByHalfTurn(halfTurn) != nullptr;
+  }
+
+  void _pushBack(std::shared_ptr<TimeLine> timeLine) {
+    _timeLines.push_back(timeLine);
+  }
 };
 
 class Constant {
@@ -429,7 +532,7 @@ public:
    * @return A shared pointer to the constructed Board object.
    * This method initializes a standard chess board with all pieces placed in their starting positions.
    */
-  static std::shared_ptr<Board> buildStandardBoard();
+  static std::shared_ptr<Board> buildStandardBoard(std::shared_ptr<TimeLine> timeLine);
 };
 
 
