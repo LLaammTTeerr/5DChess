@@ -11,6 +11,10 @@ void ChessController::setupViewCallbacks() {
   view.setMouseBoardClickCallback([this](std::shared_ptr<BoardView> boardView) {
       handleSelectedBoard(boardView);
   });
+
+  view.setPositionClickCallback([this](Chess::Position2D pos) {
+      handleSelectedPosition(pos);
+  });
 }
 
 

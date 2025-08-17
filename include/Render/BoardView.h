@@ -89,15 +89,7 @@ public:
   void setSupervisor(ChessView* supervisor) override; 
 
   void setCamera2D(Camera2D* camera) { _camera = camera; }
-  void setCamera3D(Camera3D* camera) {  }
-
-// private:
-  // void updateMouseOverBoard(); // update helper
-  // void drawSelectedBoundaries() const;
-  // void drawMouseOverBoundaries() const;
-
-public:
-  
+  void setCamera3D(Camera3D* camera) {  }  
 };
 
 // class BoardView3D : public BoardView {

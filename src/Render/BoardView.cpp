@@ -74,12 +74,6 @@ void BoardView2D::render() const {
             (Color){0, 255, 0, 100} // Semi-transparent green
         );
     }
-
-    if (_isActive) {
-        drawSelectedBoundaries();
-    } else if (_isMouseOver) {
-        drawMouseOverBoundaries();
-    }
 }
 
 
@@ -105,12 +99,6 @@ void BoardView2D::handleInput() {
     // update(GetFrameTime());
 }
 
-void BoardView2D::drawSelectedBoundaries() const {
-    DrawRectangleLinesEx(_area, 2, RED);
-}
-void BoardView2D::drawMouseOverBoundaries() const {
-    DrawRectangleLinesEx(_area, 2, BLUE);
-}
 
 void BoardView2D::setSupervisor(ChessView* supervisor) {
     _supervisor = supervisor;

@@ -77,73 +77,94 @@ void ChessView::moveCamera(Vector2 delta) {
 
 
 void ChessView::handleInput() {
+    update(GetFrameTime());
+
     for (auto& boardView : _boardViews) if (boardView) {
-        boardView -> handleInput();
+        boardView->handleInput();
 
         if (boardView -> isMouseClickedOnBoard()) {
             _selectedBoardView = boardView;
-
-            if (_onMouseBoardClickCallback) {
-                _onMouseBoardClickCallback(_selectedBoardView);
+            if (boardView -> getMouseClickedPosition() != Chess::Position2D{-1, -1}) {
+                _selectedPosition = boardView -> getMouseClickedPosition();
             }
         }
-
-
     }
 
+    if (_selectedBoardView == nullptr) return;
 
-    // Handle camera movement
-    if (_use3DRendering) {
-        if (IsKeyDown(KEY_W)) moveCamera({0.0f, 0.0f});
-        if (IsKeyDown(KEY_S)) moveCamera({0.0f, 0.0f});
-        if (IsKeyDown(KEY_A)) moveCamera({-5.0f, 0.0f});
-        if (IsKeyDown(KEY_D)) moveCamera({5.0f, 0.0f});
-        if (IsKeyDown(KEY_Q)) _camera3D.position.y += 5.0f; // Move up
-        if (IsKeyDown(KEY_E)) _camera3D.position.y -= 5.0f; // Move down
-    } else {
-        if (IsKeyDown(KEY_W)) moveCamera({0.0f, -5.0f});
-        if (IsKeyDown(KEY_S)) moveCamera({0.0f, 5.0f});
-        if (IsKeyDown(KEY_A)) moveCamera({-5.0f, 0.0f});
-        if (IsKeyDown(KEY_D)) moveCamera({5.0f, 0.0f});
+    if (_onMouseBoardClickCallback) {
+        _onMouseBoardClickCallback(_selectedBoardView);
     }
 
-    if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
-        Vector2 mouseDelta = GetMouseDelta();
-        moveCamera({-mouseDelta.x, -mouseDelta.y});
+    if (_selectedPosition != Chess::Position2D{-1, -1}) {
+        if (_onPositionClickCallback) {
+            _onPositionClickCallback(_selectedPosition);
+        }
     }
+   
 
-    float wheel = GetMouseWheelMove();
-    if (wheel != 0) {
-        setZoom(_use3DRendering ? _camera3D.fovy : _camera2D.zoom + wheel * 0.1f);
-    }
 
-    if (_onMouseClickCallback && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-        _onMouseClickCallback(GetMousePosition());
+    // // Handle camera movement
+    // if (_use3DRendering) {
+    //     if (IsKeyDown(KEY_W)) moveCamera({0.0f, 0.0f});
+    //     if (IsKeyDown(KEY_S)) moveCamera({0.0f, 0.0f});
+    //     if (IsKeyDown(KEY_A)) moveCamera({-5.0f, 0.0f});
+    //     if (IsKeyDown(KEY_D)) moveCamera({5.0f, 0.0f});
+    //     if (IsKeyDown(KEY_Q)) _camera3D.position.y += 5.0f; // Move up
+    //     if (IsKeyDown(KEY_E)) _camera3D.position.y -= 5.0f; // Move down
+    // } else {
+    //     if (IsKeyDown(KEY_W)) moveCamera({0.0f, -5.0f});
+    //     if (IsKeyDown(KEY_S)) moveCamera({0.0f, 5.0f});
+    //     if (IsKeyDown(KEY_A)) moveCamera({-5.0f, 0.0f});
+    //     if (IsKeyDown(KEY_D)) moveCamera({5.0f, 0.0f});
+    // }
+
+    // if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
+    //     Vector2 mouseDelta = GetMouseDelta();
+    //     moveCamera({-mouseDelta.x, -mouseDelta.y});
+    // }
+
+    // float wheel = GetMouseWheelMove();
+    // if (wheel != 0) {
+    //     setZoom(_use3DRendering ? _camera3D.fovy : _camera2D.zoom + wheel * 0.1f);
+    // }
+
+    // if (_onMouseClickCallback && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+    //     _onMouseClickCallback(GetMousePosition());
+    // }
+}
+
+void ChessView::updateSelectedBoardView() {
+    for (const auto& boardView : _boardViews) {
+        if (boardView->isMouseClickedOnBoard()) {
+            _selectedBoardView = boardView;
+            return;
+        }
     }
 }
 
+void ChessView::updateSelectedPosition() {
+    if (_selectedBoardView && _selectedBoardView->getMouseClickedPosition() != Chess::Position2D{-1, -1}) {
+        _selectedPosition = _selectedBoardView->getMouseClickedPosition();
+    }
+}
 
 void ChessView::updateCamera(float deltaTime) {
     // Center camera on active board view, if any
-    for (const auto& boardView : _boardViews) {
-        if (boardView && boardView->isActive()) {
-            if (boardView->is3D()) {
-                auto boardView3D = std::dynamic_pointer_cast<BoardView3D>(boardView);
-                // if (boardView3D) {
-                //     Vector3 pos = boardView3D->getPosition();
-                //     setCameraTarget({ pos.x, pos.z });
-                // }
-            } else {
-                auto boardView2D = std::dynamic_pointer_cast<BoardView2D>(boardView);
-                if (boardView2D) {
-                    Rectangle area = boardView2D->getArea();
-                    Vector2 boardCenter = { area.x + area.width / 2.0f, area.y + area.height / 2.0f };
-                    setCameraTarget(boardCenter);
-                }
-            }
-            break; // Only target the first active board view
-        }
-    }
+    // for (const auto& boardView : _boardViews) {
+    //     if (boardView->is3D()) {
+    //         // auto boardView3D = std::dynamic_pointer_cast<BoardView3D>(boardView);
+    //         // if (boardView3D) {
+    //         //     Vector3 pos = boardView3D->getPosition();
+    //         //     setCameraTarget({ pos.x, pos.z });
+    //         // }
+    //     } else {
+    //         Rectangle area = boardView->getArea();
+    //         Vector2 boardCenter = { area.x + area.width / 2.0f, area.y + area.height / 2.0f };
+    //         setCameraTarget(boardCenter);
+    //         auto boardView2D = std::dynamic_pointer_cast<BoardView2D>(boardView);
+    //     break; // Only target the first active board view
+    // }
 }
 
 void ChessView::update(float deltaTime) {
@@ -154,7 +175,10 @@ void ChessView::update(float deltaTime) {
             std::cerr << "Null BoardView encountered!" << std::endl;
         }
     }
+    
     updateCamera(deltaTime);
+    // updateSelectedBoardView();
+    // updateSelectedPosition();
 }
 
 
@@ -210,17 +234,9 @@ void ChessView::addBoardView(std::shared_ptr<BoardView> boardView) {
         // Set the appropriate camera based on board view type
         if (boardView->is3D()) {
             _use3DRendering = true;
-            // Cast to BoardView3D to set Camera3D (requires dynamic_cast if setCamera is not in BoardView)
-            auto boardView3D = std::dynamic_pointer_cast<BoardView3D>(boardView);
-            // if (boardView3D) {
-                // boardView3D->setPosition({ boardView3D->getArea().x, 0.0f, boardView3D->getArea().y });
-                // boardView3D->setCamera(getCamera3D());
-            // }
+            boardView -> setCamera3D(getCamera3D());
         } else {
-            auto boardView2D = std::dynamic_pointer_cast<BoardView2D>(boardView);
-            if (boardView2D) {
-                boardView2D->setCamera(getCamera2D());
-            }
+            boardView -> setCamera2D(getCamera2D());
         }
     } else {
         std::cerr << "Attempted to add a null BoardView!" << std::endl;

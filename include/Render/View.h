@@ -4,6 +4,7 @@
 #include "chess.h"
 #include "Render/RenderUtilis.h"
 
+class BoardView;
 
 const extern int BOARD_SIZE; // Assuming BOARD_SIZE is defined somewhere in the project
 const extern int HORIZONTAL_SPACING; // Assuming HORIZONTAL_SPACING is defined somewhere in the project
@@ -27,12 +28,14 @@ public:
 
 private:
   std::function<void(std::shared_ptr<BoardView>)> _onMouseBoardClickCallback;
+  std::function<void(Chess::Position2D)> _onPositionClickCallback;
 public:
   virtual void setMouseBoardClickCallback(std::function<void(std::shared_ptr<BoardView>)> callback) { _onMouseBoardClickCallback = callback; };
+  virtual void setPositionClickCallback(std::function<void(Chess::Position2D)> callback) { _onPositionClickCallback = callback; };
 
-public:
-  virtual void handleInput();
+  public:
   virtual void update(float deltaTime);
+  virtual void handleInput();
   virtual void render() const;
   
 
@@ -48,8 +51,12 @@ public:
 
 private:
   std::shared_ptr<BoardView> _selectedBoardView = nullptr; // Currently selected board view
-  bool _isSelectedBoardViewInvalid = false;
+  virtual void updateSelectedBoardView();
+
   Chess::Position2D _selectedPosition = Chess::Position2D(-1, -1); // Currently selected position on the board
+  virtual void updateSelectedPosition();
+
+  bool _isSelectedBoardViewInvalid = false;
 
 
 private: 
@@ -57,8 +64,8 @@ private:
   std::shared_ptr<BoardView> _selectedBoardView = nullptr; // Currently selected board view
 
 public:
-  void addBoardView(std::shared_ptr<BoardView> boardView);
-  void removeBoardView(std::shared_ptr<BoardView> boardView);
+  virtual void addBoardView(std::shared_ptr<BoardView> boardView);
+  virtual void removeBoardView(std::shared_ptr<BoardView> boardView);
   virtual std::vector<std::shared_ptr<BoardView>> getBoardViews() const;
 
 private:

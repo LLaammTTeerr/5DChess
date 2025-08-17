@@ -30,10 +30,6 @@ private:
 
   void handleSelectedBoard(std::shared_ptr<Chess::Board> board);
   void handleSelectedPosition(Chess::Position2D pos);
-  // void handleMoveSelection(const Chess::Board& board, const Chess::Position2D& position);
-  // void handleTargetSelection(const Chess::Board& board, const Chess::Position2D& position);
-  // void handleKeyPress(int key);
-  // void handleMoveSubmission();
 
   std::shared_ptr<BoardView> getBoardViewFromModel(std::shared_ptr<Chess::Board> board);
   RenderMoveState convertModelToRenderState(const MoveState& moveState);

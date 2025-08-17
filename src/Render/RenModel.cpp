@@ -101,6 +101,7 @@ void ChessModel::selectPosition(Chess::Position2D pos) {
     _currentMoveState.currentPhase = MovePhase::SELECT_TO_BOARD; // Move to next phase
   } else if (_currentMoveState.currentPhase == MovePhase::SELECT_TO_POSITION) {
     _currentMoveState.targetPosition = position;
+    _currentMoveState.currentPhase = MovePhase::END_MOVE;
   }
 
   notifyMoveStateChanged(); // Notify observers that the move state has changed
