@@ -27,12 +27,9 @@ public:
   ChessView(Vector3 _worldSize);
 
 private:
-  std::function<void(std::shared_ptr<BoardView>)> _onMouseBoardClickCallback;
-  std::function<void(Chess::Position2D)> _onPositionClickCallback;
+  std::function<void(Chess::SelectedPosition)> _onSelectedPositionCallback;
 public:
-  virtual void setMouseBoardClickCallback(std::function<void(std::shared_ptr<BoardView>)> callback) { _onMouseBoardClickCallback = callback; };
-  virtual void setPositionClickCallback(std::function<void(Chess::Position2D)> callback) { _onPositionClickCallback = callback; };
-
+  virtual void setSelectedPositionCallback(std::function<void(Chess::SelectedPosition)> callback) { _onSelectedPositionCallback = callback; };
 public:
   virtual void update(float deltaTime);
   virtual void handleInput();
@@ -48,14 +45,11 @@ public:
 private:
   std::vector<std::function<void()>> updateQueue; // Queue for update callbacks
 public:
-  virtual void queueUpdateInvalidBoardSelection();
-  virtual void queueUpdateMoveState(const RenderMoveState& rmoveState);
+  // virtual void queueUpdateInvalidBoardSelection();
+  // virtual void queueUpdateMoveState(const RenderMoveState& rmoveState);
 
 private:
   std::vector<std::shared_ptr<BoardView>> _boardViews; // List of board views
-  std::shared_ptr<BoardView> _selectedBoardView = nullptr; // Currently selected board view
-  Chess::Position2D _selectedPosition = Chess::Position2D(-1, -1); // Currently selected position on the board
-  bool _isSelectedBoardViewInvalid = false;
 
 
 public:

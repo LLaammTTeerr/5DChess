@@ -77,42 +77,28 @@ void ChessView::moveCamera(Vector2 delta) {
 
 
 void ChessView::handleMouseSelection() {
-    std::shared_ptr<BoardView> previousSelectedBoardView = _selectedBoardView;
-    
+    std::shared_ptr<BoardView> selectedBoardView = nullptr;
+    Chess::Position2D selectedPosition(-1, -1);
+
     for (auto& boardView : _boardViews) if (boardView) {
         if (boardView -> isMouseClickedOnBoard()) {
-            _selectedBoardView = boardView;  // Store original reference, not clone
+            selectedBoardView = boardView;  // Store original reference, not clone
             if (boardView -> getMouseClickedPosition() != Chess::Position2D{-1, -1}) {
-                _selectedPosition = boardView -> getMouseClickedPosition();
+                selectedPosition = boardView -> getMouseClickedPosition();
             }
         }
     }
 
-    if (_selectedBoardView) {
-        if (!previousSelectedBoardView) {
-            std::cout << "Selected NEW board\n";
-            /// @brief handle new board selection
-            // if (_onMouseBoardClickCallback) {
-                // _onMouseBoardClickCallback(_selectedBoardView);
-            // }
+    if (selectedBoardView && selectedPosition.x() != -1 && selectedPosition.y() != -1) {
+        std::cout << "Selected position: " << selectedPosition.x() << ", " << selectedPosition.y() << std::endl;
+        Chess::SelectedPosition selectedPos = {
+            selectedBoardView->getBoard(), 
+            selectedPosition
+        };
+        if (_onSelectedPositionCallback) {
+            _onSelectedPositionCallback(selectedPos);
         }
-        else if (previousSelectedBoardView == _selectedBoardView) {
-            if (_selectedPosition.x() != -1 && _selectedPosition.y() != -1) {
-                std::cout << "Selected position: " << _selectedPosition.x() << ", " << _selectedPosition.y() << std::endl;
-                /// @brief handle position selection on SAME board
-                // if (_onPositionClickCallback) {
-                    // _onPositionClickCallback(_selectedPosition);
-                // }
-            }
-        }
-        else {
-            std::cout << "Selected DIFFERENT board\n";
-            /// @brief handle different board selection
-            // if (_onMouseBoardClickCallback) {
-                // _onMouseBoardClickCallback(_selectedBoardView);
-            // }
-        }
-    }
+    } 
 }
 
 void ChessView::handleInput() {
@@ -257,9 +243,6 @@ void ChessView::removeBoardView(std::shared_ptr<BoardView> boardView) {
         auto it = std::remove(_boardViews.begin(), _boardViews.end(), boardView);
         if (it != _boardViews.end()) {
             _boardViews.erase(it, _boardViews.end());
-            if (boardView == _selectedBoardView) {
-                _selectedBoardView = nullptr;
-            }
             // Re-evaluate rendering mode
             _use3DRendering = false;
             for (const auto& view : _boardViews) {
@@ -281,26 +264,23 @@ std::vector<std::shared_ptr<BoardView>> ChessView::getBoardViews() const {
     return _boardViews;
 }
 
-void ChessView::queueUpdateInvalidBoardSelection() {
-    updateQueue.push_back([this](){
-        if (_selectedBoardView) {
-            _isSelectedBoardViewInvalid = true;
-        }
-        else {
-            _isSelectedBoardViewInvalid = false;
-        }
-    });  
-}
+// void ChessView::queueUpdateInvalidBoardSelection() {
+//     updateQueue.push_back([this](){
+//         if (_selectedBoardView) {
+//             _isSelectedBoardViewInvalid = true;
+//         }
+//         else {
+//             _isSelectedBoardViewInvalid = false;
+//         }
+//     });  
+// }
 
-void ChessView::queueUpdateMoveState(const RenderMoveState& rmoveState) {
-    updateQueue.push_back([this, rmoveState](){
-        // if 
-    });
-}
+// void ChessView::queueUpdateMoveState(const RenderMoveState& rmoveState) {
+//     updateQueue.push_back([this, rmoveState](){
+//         // if 
+//     });
+// }
 
 void ChessView::clearBoardViews() {
     _boardViews.clear();
-    _selectedBoardView = nullptr;
-    _selectedPosition = Chess::Position2D(-1, -1);
-    _isSelectedBoardViewInvalid = false;
 }

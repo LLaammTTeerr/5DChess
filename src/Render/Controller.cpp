@@ -20,50 +20,28 @@ void ChessController::handleInput() {
 }
 
 void ChessController::setupViewCallbacks() {
-  view.setMouseBoardClickCallback([this](std::shared_ptr<BoardView> boardView) {
-      handleSelectedBoard(boardView);
-  });
-
-  view.setPositionClickCallback([this](Chess::Position2D pos) {
-      handleSelectedPosition(pos);
+  view.setSelectedPositionCallback([this](Chess::SelectedPosition selectedPosition) {
+    // Handle the selected position from the view
+    handleSelectedPosition(selectedPosition);
   });
 }
 
 
 void ChessController::setupModelCallbacks() {
-  model.setInvalidBoardSelectionCallback([this]() {
-    view.queueUpdateInvalidBoardSelection();
-  });
+  // model.setInvalidBoardSelectionCallback([this]() {
+  //   view.queueUpdateInvalidBoardSelection();
+  // });
 
 
-
-  model.setMoveStateChangedCallback([this]() {
-    // Notify the view about the move state change
-    auto currentMoveState = model.getCurrentMoveState();
-    view.queueUpdateMoveState(convertModelToRenderState(currentMoveState));
-  });
+  // model.setMoveStateChangedCallback([this]() {
+  //   // Notify the view about the move state change
+  //   auto currentMoveState = model.getCurrentMoveState();
+  //   view.queueUpdateMoveState(convertModelToRenderState(currentMoveState));
+  // });
 } 
 
-void ChessController::handleSelectedBoard(std::shared_ptr<BoardView> boardView) {
-    if (!boardView) {
-        std::cerr << "Null BoardView encountered!" << std::endl;
-        return;
-    }
-
-    // Notify the model about the selected board
-    auto board = boardView->getBoard();
-
-    if (!board) {
-        std::cerr << "Selected BoardView has no board!" << std::endl;
-        return;
-    }
-
-
-    model.selectBoard(board);
-}
-
-void ChessController::handleSelectedPosition(Chess::Position2D pos) {
-  model.selectPosition(pos);
+void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPosition) {
+  model.selectPosition(selectedPosition);
 }
 
 std::shared_ptr<BoardView> ChessController::getBoardViewFromModel(std::shared_ptr<Chess::Board> board) {

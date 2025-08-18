@@ -29,7 +29,7 @@ private:
   MoveState _currentMoveState;
 
   std::function<void()> _onMoveStateChanged; // Callback for move phase changes
-  std::function<void()> _onInvalidBoardSelection; // Callback for invalid board selection
+  std::function<void(std::shared_ptr<Chess::Board>)> _onInvalidBoardSelection; // Callback for invalid board selection
   // std::function<void()> _onGameUpdated; // Callback for game updates
 
 public:
@@ -44,15 +44,10 @@ public:
   void applyTurn();
 
   void setMoveStateChangedCallback(std::function<void()> callback) {_onMoveStateChanged = callback; }
-  void setInvalidBoardSelectionCallback(std::function<void()> callback) {_onInvalidBoardSelection = callback; }
+  void setInvalidBoardSelectionCallback(std::function<void(std::shared_ptr<Chess::Board>)> callback) {_onInvalidBoardSelection = callback; }
   // void setGameUpdatedCallback(std::function<void()> callback) {_onGameUpdated = callback; }
 
-  void notifyInvalidBoardSelection();
-  void notifyMoveStateChanged();
-  // void notifyGameUpdated();
-
-  void selectBoard(std::shared_ptr<Chess::Board> board);
-  void selectPosition(Chess::Position2D pos);
+  void selectPosition(Chess::SelectedPosition selectedPosition); 
 
   MoveState getCurrentMoveState() const { return _currentMoveState; }
 
