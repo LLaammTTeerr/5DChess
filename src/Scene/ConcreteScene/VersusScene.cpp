@@ -17,7 +17,7 @@ void VersusScene::handleInput(void) {
 }
 
 void VersusScene::update(float deltaTime) {
-  std::cout << "Updating VersusScene..." << std::endl;
+  // std::cout << "Updating VersusScene..." << std::endl;
 }
 
 void VersusScene::render() {

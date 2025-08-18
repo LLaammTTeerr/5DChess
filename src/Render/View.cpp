@@ -5,7 +5,7 @@
 #include <iostream>
 #include "BoardView.h"
 
-const float BOARD_WORLD_SIZE = 512.0f; // Assuming a standard chess board size
+const float BOARD_WORLD_SIZE = 250.0f; // Assuming a standard chess board size
 const float HORIZONTAL_SPACING = 60.0f; // Size of each square on the board
 const float VERTICAL_SPACING = 60.0f; // Size of each square on the board
 
@@ -101,8 +101,9 @@ void ChessView::handleInput() {
         }
     }
    
-
-
+    // std::cout << "Capture mouse wheel \n";
+    // Handle camera2D zoom based on mouse wheel    
+    
     // // Handle camera movement
     // if (_use3DRendering) {
     //     if (IsKeyDown(KEY_W)) moveCamera({0.0f, 0.0f});
@@ -133,20 +134,6 @@ void ChessView::handleInput() {
     // }
 }
 
-void ChessView::updateSelectedBoardView() {
-    for (const auto& boardView : _boardViews) {
-        if (boardView->isMouseClickedOnBoard()) {
-            _selectedBoardView = boardView;
-            return;
-        }
-    }
-}
-
-void ChessView::updateSelectedPosition() {
-    if (_selectedBoardView && _selectedBoardView->getMouseClickedPosition() != Chess::Position2D{-1, -1}) {
-        _selectedPosition = _selectedBoardView->getMouseClickedPosition();
-    }
-}
 
 void ChessView::updateCamera(float deltaTime) {
     // Center camera on active board view, if any
@@ -163,6 +150,13 @@ void ChessView::updateCamera(float deltaTime) {
             setCameraTarget(boardCenter);
         }
     }
+
+    float wheel = GetMouseWheelMove();
+    if (wheel != 0) {
+        std::cout << "Mouse wheel moved: " << wheel << std::endl;
+        setZoom(_use3DRendering ? _camera3D.fovy + wheel * 0.1f : _camera2D.zoom + wheel * 0.1f);
+    }
+
 }
 
 void ChessView::update(float deltaTime) {

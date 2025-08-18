@@ -16,7 +16,7 @@ void MainMenuScene::handleInput(void) {
 }
 
 void MainMenuScene::update(float deltaTime) {
-  std::cout << "Updating MainMenuScene..." << std::endl;
+  
 }
 
 void MainMenuScene::render() {

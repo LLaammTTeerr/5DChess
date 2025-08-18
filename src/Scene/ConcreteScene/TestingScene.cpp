@@ -30,7 +30,7 @@ void TestingScene::init(void) {
 }
 
 void TestingScene::update(float deltaTime) {
-  std::cout << "Updating TestingScene..." << std::endl;
+  // std::cout << "Updating TestingScene..." << std::endl;
 }
 
 void TestingScene::handleInput() {

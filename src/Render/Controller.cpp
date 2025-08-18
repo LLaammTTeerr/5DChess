@@ -148,7 +148,6 @@ void ChessController::updateBoardView2DsFromModel() {
   auto boardViews = computeBoardView2DsFromModel();
   for (auto& boardView : boardViews) {
     view.addBoardView(boardView);
-    std::cout << "Added BoardView2D with ID: " << boardView->getBoard()->getTimeLine()->ID() << std::endl;
   }
 }
 

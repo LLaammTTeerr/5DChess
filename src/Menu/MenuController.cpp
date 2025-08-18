@@ -40,7 +40,6 @@ void MenuController::updateMenuForCurrentState() {
 
 
 void MenuController::handleInput() {
-    std::cout << "Handling input for current menu..." << std::endl;
     Vector2 mousePosition = GetMousePosition();
     bool mouseClicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
 
@@ -64,7 +63,6 @@ void MenuController::handleInput() {
                 CommandType cmdType = command->getType();
                 command->execute(); // Execute the command
                 
-                std::cout << "hihihihihihihihihihihi" << std::endl;
                 // Handle different command types
                 if (cmdType == CommandType::STATE_CHANGING || cmdType == CommandType::IMMEDIATE) {
                     std::cout << "State-changing command executed, stopping command processing" << std::endl;
@@ -75,7 +73,6 @@ void MenuController::handleInput() {
             }
         }
     }
-    std::cout << "Input handling complete." << std::endl; 
 }
 
 
@@ -88,7 +85,6 @@ void MenuController::draw() const {
     if (_menuView) {
         _menuView -> draw(_currentMenuModel); 
     }
-    std::cout << "Drawing menu for current state: " << _gameStateModel->getCurrentStateName() << std::endl;
 }
 
 IMenuView* MenuController::getMenuView() const {

@@ -36,7 +36,6 @@ public:
 
   void update() {
     if (_menuController) {
-      std::cout << "Updating MenuController..." << std::endl;
       _menuController->update();
     }
   }

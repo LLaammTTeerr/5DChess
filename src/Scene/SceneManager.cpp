@@ -78,7 +78,6 @@ void SceneManager::update(float deltaTime) {
       currentEntry->update(deltaTime);
     }
   }
-  std::cout << "SceneManager update called with deltaTime: " << deltaTime << std::endl;
   
   // Update menu system if active
   if (_menuActive && _menuController) {

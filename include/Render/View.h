@@ -62,8 +62,6 @@ public:
   virtual void addBoardView(std::shared_ptr<BoardView> boardView);
   virtual void removeBoardView(std::shared_ptr<BoardView> boardView);
   virtual std::vector<std::shared_ptr<BoardView>> getBoardViews() const;
-  virtual void updateSelectedBoardView();
-  virtual void updateSelectedPosition();
 
 
 private:

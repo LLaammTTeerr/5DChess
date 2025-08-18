@@ -14,7 +14,6 @@
 // void startGameCommand::execute() {
 //     if (_gameState) {
 //         _gameState->setState(GameStateModel::State::IN_GAME);
-//         std::cout << "Game started." << std::endl;
 //     }
 // }
 
@@ -35,9 +34,9 @@ void VersusCommand::execute() {
         }
 
         _gameStateModel->setState(std::move(newState));
-        std::cout << "Versus mode activated." << std::endl;
+        // std::cout << "Versus mode activated." << std::endl;
     } else {
-        std::cerr << "Error: GameStateModel is not initialized." << std::endl;
+        // std::cerr << "Error: GameStateModel is not initialized." << std::endl;
     }
 }
 
@@ -64,9 +63,9 @@ void VersusBackCommand::execute() {
         }
 
         _gameStateModel->setState(std::move(newState));
-        std::cout << "Returning to Main Menu." << std::endl;
+        // std::cout << "Returning to Main Menu." << std::endl;
     } else {
-        std::cerr << "Error: GameStateModel is not initialized." << std::endl;
+        // std::cerr << "Error: GameStateModel is not initialized." << std::endl;
     }
 }
 
@@ -94,9 +93,9 @@ void VersusPlayCommand::execute() {
         }
 
         _gameStateModel->setState(std::move(newState));
-        std::cout << "Returning to Main Menu." << std::endl;
+        // std::cout << "Returning to Main Menu." << std::endl;
     } else {
-        std::cerr << "Error: GameStateModel is not initialized." << std::endl;
+        // std::cerr << "Error: GameStateModel is not initialized." << std::endl;
     }
 }
 

@@ -47,6 +47,7 @@ void BoardView2D::render() const {
               const std::string& name = piece->name();
               const std::string& color = piece->color() == Chess::PieceColor::PIECEWHITE ? "white" : "black";
               const std::string& pieceName = color + "_" + name;
+              ThemeManager::getInstance().setTheme(std::make_unique<ModernTheme>());
               Texture2D& texture = ThemeManager::getInstance().getPieceTexture(pieceName);
               Vector2 piecePosition = {
                   _area.x + i * _area.width / 8,

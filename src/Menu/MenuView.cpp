@@ -31,7 +31,6 @@ void ButtonMenuView::createItemViews(std::shared_ptr<MenuComponent> menuModel, G
 }
 
 void ButtonMenuView::draw(std::shared_ptr<MenuComponent> menuModel) const {
-    std::cout << "draw " << menuModel->getTitle() << std::endl; // Draw the menu title
     const auto& menuItems = menuModel->getChildren();
     // Draw each item view
     for (size_t i = 0; i < _itemViews.size() && i < menuItems.size(); ++i) {
