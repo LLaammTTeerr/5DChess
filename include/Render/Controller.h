@@ -23,9 +23,14 @@ private:
   void setupViewCallbacks();
   void setupModelCallbacks();
 
+  // Methods to update model state based on user input
   void handleSelectedBoard(std::shared_ptr<BoardView> board);
   void handleSelectedPosition(Chess::Position2D pos);
 
   std::shared_ptr<BoardView> getBoardViewFromModel(std::shared_ptr<Chess::Board> board);
   RenderMoveState convertModelToRenderState(const MoveState& moveState);
+
+private:
+  std::vector<std::shared_ptr<BoardView>> computeBoardView2DsFromModel() const;
+  std::vector<std::shared_ptr<BoardView>> computeBoardView3DsFromModel() const;
 };

@@ -518,6 +518,11 @@ private:
   void _pushBack(std::shared_ptr<TimeLine> timeLine) {
     _timeLines.push_back(timeLine);
   }
+
+public:
+  std::vector<std::shared_ptr<TimeLine>> getTimeLines() const {
+    return _timeLines;
+  }
 };
 
 class Constant {

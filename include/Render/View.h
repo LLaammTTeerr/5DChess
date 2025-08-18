@@ -6,9 +6,9 @@
 
 class BoardView;
 
-const extern int BOARD_SIZE; // Assuming BOARD_SIZE is defined somewhere in the project
-const extern int HORIZONTAL_SPACING; // Assuming HORIZONTAL_SPACING is defined somewhere in the project
-const extern int VERTICAL_SPACING; // Assuming VERTICAL_SPACING is defined somewhere in the project
+const extern float BOARD_WORLD_SIZE; // Assuming BOARD_SIZE is defined somewhere in the project
+const extern float HORIZONTAL_SPACING; // Assuming HORIZONTAL_SPACING is defined somewhere in the project
+const extern float VERTICAL_SPACING; // Assuming VERTICAL_SPACING is defined somewhere in the project
 
 struct TransitionComponent {
   bool isActive;  // Is animation running?
@@ -57,6 +57,7 @@ private:
 
 
 public:
+  // virtual void update
   virtual void addBoardView(std::shared_ptr<BoardView> boardView);
   virtual void removeBoardView(std::shared_ptr<BoardView> boardView);
   virtual std::vector<std::shared_ptr<BoardView>> getBoardViews() const;

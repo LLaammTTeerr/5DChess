@@ -22,6 +22,7 @@ struct MoveState {
         selectedPosition{-1, -1}, targetPosition{-1, -1} {}
 };
 
+/// @brief Adapter class to convert model data to view data
 class ChessModel {
 private:
   std::shared_ptr<Chess::Game> _game;
@@ -54,6 +55,10 @@ public:
   void selectPosition(Chess::Position2D pos);
 
   MoveState getCurrentMoveState() const { return _currentMoveState; }
+
+  std::vector<std::shared_ptr<Chess::TimeLine>> getTimeLines() const {return _game->getTimeLines(); }
+  int getPresentHalfTurn() const { return _game->presentHalfTurn(); }
+  int getPresentFullTurn() const { return _game->presentFullTurn(); }
 };
 
 

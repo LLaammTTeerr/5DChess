@@ -106,4 +106,3 @@ void ChessModel::selectPosition(Chess::Position2D position) {
 }
 
 
-

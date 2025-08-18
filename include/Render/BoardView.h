@@ -58,7 +58,7 @@ private:
   bool _isMouseOver = false; // Whether the mouse is over the board
   
 public:
-  BoardView2D(std::shared_ptr<Chess::Board> board, Texture2D* texture);
+  BoardView2D(std::shared_ptr<Chess::Board> board);
   ~BoardView2D() = default;
   
   void render() const override;

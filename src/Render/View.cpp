@@ -5,9 +5,9 @@
 #include <iostream>
 #include "BoardView.h"
 
-const int BOARD_SIZE = 200; // Assuming a standard chess board size
-const int HORIZONTAL_SPACING = 30; // Size of each square on the board
-const int VERTICAL_SPACING = 30; // Size of each square on the board
+const float BOARD_WORLD_SIZE = 512.0f; // Assuming a standard chess board size
+const float HORIZONTAL_SPACING = 60.0f; // Size of each square on the board
+const float VERTICAL_SPACING = 60.0f; // Size of each square on the board
 
 
 

@@ -5,8 +5,8 @@
 #include "PieceTheme.h"
 #include <iostream>
 
-BoardView2D::BoardView2D(std::shared_ptr<Chess::Board> board, Texture2D* texture)
-    : _board(board), _boardTexture(texture), _camera(nullptr) {
+BoardView2D::BoardView2D(std::shared_ptr<Chess::Board> board)
+    : _board(board), _camera(nullptr) {
     if (!_board) {
         std::cerr << "Board pointer is null!" << std::endl;
     }
