@@ -37,7 +37,9 @@ public:
   virtual void update(float deltaTime);
   virtual void handleInput();
   virtual void render() const;
-  
+
+protected:
+  virtual void handleMouseSelection(); 
 
 private:
   std::vector<TransitionComponent> _transitions;  // List of transitions

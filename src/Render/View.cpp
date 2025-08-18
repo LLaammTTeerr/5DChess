@@ -76,30 +76,52 @@ void ChessView::moveCamera(Vector2 delta) {
 }
 
 
-
-void ChessView::handleInput() {
-    update(GetFrameTime());
-
+void ChessView::handleMouseSelection() {
+    std::shared_ptr<BoardView> previousSelectedBoardView = _selectedBoardView;
+    
     for (auto& boardView : _boardViews) if (boardView) {
         if (boardView -> isMouseClickedOnBoard()) {
-            _selectedBoardView = boardView;
+            _selectedBoardView = boardView;  // Store original reference, not clone
             if (boardView -> getMouseClickedPosition() != Chess::Position2D{-1, -1}) {
                 _selectedPosition = boardView -> getMouseClickedPosition();
             }
         }
     }
 
-    if (_selectedBoardView == nullptr) return;
-
-    if (_onMouseBoardClickCallback) {
-        _onMouseBoardClickCallback(_selectedBoardView);
-    }
-
-    if (_selectedPosition != Chess::Position2D{-1, -1}) {
-        if (_onPositionClickCallback) {
-            _onPositionClickCallback(_selectedPosition);
+    if (_selectedBoardView) {
+        if (!previousSelectedBoardView) {
+            std::cout << "Selected NEW board\n";
+            /// @brief handle new board selection
+            // if (_onMouseBoardClickCallback) {
+                // _onMouseBoardClickCallback(_selectedBoardView);
+            // }
+        }
+        else if (previousSelectedBoardView == _selectedBoardView) {
+            if (_selectedPosition.x() != -1 && _selectedPosition.y() != -1) {
+                std::cout << "Selected position: " << _selectedPosition.x() << ", " << _selectedPosition.y() << std::endl;
+                /// @brief handle position selection on SAME board
+                // if (_onPositionClickCallback) {
+                    // _onPositionClickCallback(_selectedPosition);
+                // }
+            }
+        }
+        else {
+            std::cout << "Selected DIFFERENT board\n";
+            /// @brief handle different board selection
+            // if (_onMouseBoardClickCallback) {
+                // _onMouseBoardClickCallback(_selectedBoardView);
+            // }
         }
     }
+}
+
+void ChessView::handleInput() {
+    /// @brief Handle input for camera movement and zoom
+    update(GetFrameTime());
+
+    /// @brief Handle mouse clicks: selected board and selected position
+    handleMouseSelection();
+    
    
     // std::cout << "Capture mouse wheel \n";
     // Handle camera2D zoom based on mouse wheel    
