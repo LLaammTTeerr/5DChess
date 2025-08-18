@@ -90,7 +90,7 @@ void ChessView::handleMouseSelection() {
     }
 
     if (selectedBoardView && selectedPosition.x() != -1 && selectedPosition.y() != -1) {
-        std::cout << "Selected position: " << selectedPosition.x() << ", " << selectedPosition.y() << std::endl;
+        // std::cout << "Selected position: " << selectedPosition.x() << ", " << selectedPosition.y() << std::endl;
         Chess::SelectedPosition selectedPos = {
             selectedBoardView->getBoard(), 
             selectedPosition
@@ -159,6 +159,7 @@ void ChessView::updateCamera(float deltaTime) {
         }
     }
 
+    // Handle mouse wheel zoom
     float wheel = GetMouseWheelMove();
     if (wheel != 0) {
         std::cout << "Mouse wheel moved: " << wheel << std::endl;
@@ -175,6 +176,7 @@ void ChessView::update(float deltaTime) {
 
 
 void ChessView::render() const {
+
     if (_use3DRendering) {
         BeginMode3D(_camera3D);
         for (const auto& boardView : _boardViews) {
@@ -185,12 +187,14 @@ void ChessView::render() const {
         EndMode3D();
         // Render 2D views on top if mixed
         BeginMode2D(_camera2D);
+
         for (const auto& boardView : _boardViews) {
             if (boardView && !boardView->is3D()) {
                 boardView->render();
             }
             // std::cout << "Rendering BoardView2D" << std::endl;
         }
+        
         EndMode2D();
     } else {
         BeginMode2D(_camera2D);
@@ -201,6 +205,9 @@ void ChessView::render() const {
                 std::cerr << "Null BoardView encountered!" << std::endl;
             }
         }
+
+        render_highlightBoard();
+
         EndMode2D();
     }
 
@@ -283,4 +290,18 @@ std::vector<std::shared_ptr<BoardView>> ChessView::getBoardViews() const {
 
 void ChessView::clearBoardViews() {
     _boardViews.clear();
+}
+
+void ChessView::update_highlightedBoard(const std::vector<std::shared_ptr<BoardView>>& boardViews) {
+    _highlightedBoards = boardViews;
+}
+
+void ChessView::render_highlightBoard() const {
+    for (const auto& boardView : _highlightedBoards) {
+        if (boardView) {
+            boardView->render_highlightBoundaries();
+        } else {
+            std::cerr << "Null BoardView encountered in highlighted boards!" << std::endl;
+        }
+    }
 }

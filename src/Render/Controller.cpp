@@ -5,7 +5,6 @@
 
 ChessController::ChessController(ChessModel& m, ChessView& v) : model(m), view(v) {
     setupViewCallbacks();
-    setupModelCallbacks();
 }
 
 void ChessController::update(float deltaTime) {
@@ -27,21 +26,32 @@ void ChessController::setupViewCallbacks() {
 }
 
 
-void ChessController::setupModelCallbacks() {
-  // model.setInvalidBoardSelectionCallback([this]() {
-  //   view.queueUpdateInvalidBoardSelection();
-  // });
-
-
-  // model.setMoveStateChangedCallback([this]() {
-  //   // Notify the view about the move state change
-  //   auto currentMoveState = model.getCurrentMoveState();
-  //   view.queueUpdateMoveState(convertModelToRenderState(currentMoveState));
-  // });
-} 
-
 void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPosition) {
-  model.selectPosition(selectedPosition);
+  MoveState currentMoveState = model._currentMoveState;
+  if (currentMoveState.currentPhase == MovePhase::SELECT_FROM_BOARD) {
+    // Select the board from which to move
+    // Check if the selected position is valid: can move from the selected position
+    if (!model._game->canMakeMoveFromBoard(selectedPosition.board)) {
+      std::cout << "Invalid selection: cannot make move from the selected board." << std::endl;
+      return; // Invalid selection
+    }
+
+    model.selectFromBoard(selectedPosition.board);
+    addHighlightedBoard(selectedPosition.board);
+    view.update_highlightedBoard(computeHighlightedBoardView2Ds());
+
+  } else if (currentMoveState.currentPhase == MovePhase::SELECT_FROM_POSITION) {
+    // Select the position on the selected board
+    model.selectFromPosition(selectedPosition.position);
+    
+  } else if (currentMoveState.currentPhase == MovePhase::SELECT_TO_BOARD) {
+    // Select the target board for the move
+    model.selectToBoard(selectedPosition.board);
+  } else if (currentMoveState.currentPhase == MovePhase::SELECT_TO_POSITION) {
+    // Select the target position on the target board
+    model.selectToPosition(selectedPosition.position);
+  }
+
 }
 
 std::shared_ptr<BoardView> ChessController::getBoardViewFromModel(std::shared_ptr<Chess::Board> board) {
@@ -93,38 +103,12 @@ std::vector<std::shared_ptr<BoardView>> ChessController::computeBoardView3DsFrom
   return std::vector<std::shared_ptr<BoardView>>(); // Placeholder for 3D board views
 }
 
-  // Map timelines to their indices for Y positioning
-  // std::unordered_map<std::shared_ptr<Chess::TimeLine>, int> timelineToIndex;
-  // for (size_t i = 0; i < timeLines.size(); ++i) {
-  //   timelineToIndex[timeLines[i]] = static_cast<int>(i);
-  // }
-  // For each board view, compute its render area
-  // for (const auto& boardView : view.getBoardViews()) {
-  //   auto board = boardView->getBoard();
-  //   if (!board) continue;
-
-  //   auto timeLine = board->getTimeLine();
-  //   auto it = timelineToIndex.find(timeLine);
-  //   if (it == timelineToIndex.end()) continue;
-
-  //   int tlIndex = it->second;
-  //   int halfTurn = board->halfTurnNumber();
-
-  //   float x = static_cast<float>(halfTurn) * (BOARD_WORLD_SIZE + HORIZONTAL_SPACING);
-  //   float y = static_cast<float>(tlIndex) * (BOARD_WORLD_SIZE + VERTICAL_SPACING);
-
-  //   Rectangle area = {x, y, BOARD_WORLD_SIZE, BOARD_WORLD_SIZE};
-  //   positions.push_back({boardView, area});
-  // }
-
-// }
-
 
 void ChessController::updateBoardView2DsFromModel() {
-  view.clearBoardViews();
+  _currentBoardViews2D = computeBoardView2DsFromModel();
   
-  auto boardViews = computeBoardView2DsFromModel();
-  for (auto& boardView : boardViews) {
+  view.clearBoardViews();
+  for (auto& boardView : _currentBoardViews2D) {
     view.addBoardView(boardView);
   }
 }
@@ -134,3 +118,14 @@ void ChessController::updateBoardView3DsFromModel() {
   // Placeholder for updating 3D board views
   // Currently, this method does nothing as we are not implementing 3D views yet
 }
+
+std::vector<std::shared_ptr<BoardView>> ChessController::computeHighlightedBoardView2Ds() const {
+    std::vector<std::shared_ptr<BoardView>> highlightedViews;
+    for (const auto& boardView : _currentBoardViews2D) {
+      if (boardView && boardView->getBoard() && 
+          std::find(_highlightedBoard.begin(), _highlightedBoard.end(), boardView->getBoard()) != _highlightedBoard.end()) {
+        highlightedViews.push_back(boardView);
+      }
+    }
+    return highlightedViews;
+  }

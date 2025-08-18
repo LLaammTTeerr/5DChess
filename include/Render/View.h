@@ -35,8 +35,15 @@ public:
   virtual void handleInput();
   virtual void render() const;
 
+private:
+  std::vector<std::shared_ptr<BoardView>> _highlightedBoards;
+
 protected:
   virtual void handleMouseSelection(); 
+  virtual void render_highlightBoard() const;
+public:
+  virtual void update_highlightedBoard(const std::vector<std::shared_ptr<BoardView>>& boardViews);
+
 
 private:
   std::vector<TransitionComponent> _transitions;  // List of transitions

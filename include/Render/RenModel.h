@@ -22,32 +22,53 @@ struct MoveState {
         selectedPosition{-1, -1}, targetPosition{-1, -1} {}
 };
 
+class ChessController; // Forward declaration
+
 /// @brief Adapter class to convert model data to view data
 class ChessModel {
 private:
   std::shared_ptr<Chess::Game> _game;
   MoveState _currentMoveState;
 
-  std::function<void()> _onMoveStateChanged; // Callback for move phase changes
-  std::function<void(std::shared_ptr<Chess::Board>)> _onInvalidBoardSelection; // Callback for invalid board selection
-  // std::function<void()> _onGameUpdated; // Callback for game updates
-
 public:
-  ChessModel(std::shared_ptr<Chess::Game> game);
+  friend class ChessController;
+  ChessModel(std::shared_ptr<Chess::Game> game) : _game(game) {
+    // Initialize the turn state if needed
+    initialize();
+  }
 
   // Initialize game state (e.g., set up initial board)
-  void initialize();
+  void initialize() {
+    // This can be empty if the game is already initialized
+    _currentMoveState.currentPhase = MovePhase::SELECT_FROM_BOARD; // Set initial move phase
+  }
 
   // methods to apply turn and make moves
   // These methods will be called by the controller to update the game state
-  void makeMove(const Chess::Move& move); 
-  void applyTurn();
+  void makeMove(const Chess::Move& move) { _game->makeMove(move); }
+  void applyTurn() { _game->submitTurn(); }
 
-  void setMoveStateChangedCallback(std::function<void()> callback) {_onMoveStateChanged = callback; }
-  void setInvalidBoardSelectionCallback(std::function<void(std::shared_ptr<Chess::Board>)> callback) {_onInvalidBoardSelection = callback; }
-  // void setGameUpdatedCallback(std::function<void()> callback) {_onGameUpdated = callback; }
 
-  void selectPosition(Chess::SelectedPosition selectedPosition); 
+  void selectFromBoard(std::shared_ptr<Chess::Board> board) {
+    _currentMoveState.selectedBoard = board;
+    _currentMoveState.currentPhase = MovePhase::SELECT_FROM_POSITION; // Move to next phase
+  }
+
+  void selectFromPosition(Chess::Position2D selectedPosition) {
+    _currentMoveState.selectedPosition = selectedPosition;
+    _currentMoveState.currentPhase = MovePhase::SELECT_TO_BOARD; // Move to next phase
+  }
+
+  void selectToBoard(std::shared_ptr<Chess::Board> board) {
+    _currentMoveState.targetBoard = board;
+    _currentMoveState.currentPhase = MovePhase::SELECT_TO_POSITION; // Move to next phase
+  }
+
+  void selectToPosition(Chess::Position2D selectedPosition) {
+    _currentMoveState.targetPosition = selectedPosition;
+    _currentMoveState.currentPhase = MovePhase::END_MOVE; // Move to end phase
+  }
+
 
   MoveState getCurrentMoveState() const { return _currentMoveState; }
 
