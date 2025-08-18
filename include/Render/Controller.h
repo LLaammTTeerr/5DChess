@@ -32,5 +32,7 @@ private:
 
 private:
   std::vector<std::shared_ptr<BoardView>> computeBoardView2DsFromModel() const;
+  void updateBoardView2DsFromModel();
   std::vector<std::shared_ptr<BoardView>> computeBoardView3DsFromModel() const;
+  void updateBoardView3DsFromModel();
 };

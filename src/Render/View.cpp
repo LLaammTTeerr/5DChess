@@ -149,32 +149,20 @@ void ChessView::updateSelectedPosition() {
 }
 
 void ChessView::updateCamera(float deltaTime) {
+    // Center camera on active board view, if any
     for (const auto& boardView : _boardViews) {
-        if (boardView) {
-            if (boardView->is3D()) {
-                boardView->setCamera3D(&_camera3D);
-            } else {
-                boardView->setCamera2D(&_camera2D);
-            }
+        if (boardView->is3D()) {
+            // auto boardView3D = std::dynamic_pointer_cast<BoardView3D>(boardView);
+            // if (boardView3D) {
+            //     Vector3 pos = boardView3D->getPosition();
+            //     setCameraTarget({ pos.x, pos.z });
+            // }
         } else {
-            std::cerr << "Null BoardView encountered!" << std::endl;
+            Rectangle area = boardView->getArea();
+            Vector2 boardCenter = { area.x + area.width / 2.0f, area.y + area.height / 2.0f };
+            setCameraTarget(boardCenter);
         }
     }
-    // Center camera on active board view, if any
-    // for (const auto& boardView : _boardViews) {
-    //     if (boardView->is3D()) {
-    //         // auto boardView3D = std::dynamic_pointer_cast<BoardView3D>(boardView);
-    //         // if (boardView3D) {
-    //         //     Vector3 pos = boardView3D->getPosition();
-    //         //     setCameraTarget({ pos.x, pos.z });
-    //         // }
-    //     } else {
-    //         Rectangle area = boardView->getArea();
-    //         Vector2 boardCenter = { area.x + area.width / 2.0f, area.y + area.height / 2.0f };
-    //         setCameraTarget(boardCenter);
-    //         auto boardView2D = std::dynamic_pointer_cast<BoardView2D>(boardView);
-    //     break; // Only target the first active board view
-    // }
 }
 
 void ChessView::update(float deltaTime) {
@@ -199,6 +187,7 @@ void ChessView::render() const {
             if (boardView && !boardView->is3D()) {
                 boardView->render();
             }
+            // std::cout << "Rendering BoardView2D" << std::endl;
         }
         EndMode2D();
     } else {
@@ -291,4 +280,11 @@ void ChessView::queueUpdateMoveState(const RenderMoveState& rmoveState) {
     updateQueue.push_back([this, rmoveState](){
         // if 
     });
+}
+
+void ChessView::clearBoardViews() {
+    _boardViews.clear();
+    _selectedBoardView = nullptr;
+    _selectedPosition = Chess::Position2D(-1, -1);
+    _isSelectedBoardViewInvalid = false;
 }

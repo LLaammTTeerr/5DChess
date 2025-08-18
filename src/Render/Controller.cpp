@@ -10,10 +10,12 @@ ChessController::ChessController(ChessModel& m, ChessView& v) : model(m), view(v
 
 void ChessController::update(float deltaTime) {
   // updateBoardViews base on current model state
-
+  updateBoardView2DsFromModel();
+  updateBoardView3DsFromModel();
 }
 
 void ChessController::handleInput() {
+    update(GetFrameTime());
     view.handleInput();
 }
 
@@ -88,20 +90,20 @@ std::vector<std::shared_ptr<BoardView>> ChessController::computeBoardView2DsFrom
   std::vector<std::shared_ptr<BoardView>> boardViews;
   auto timeLines = model.getTimeLines();
 
-
   // create new board views based on the timelines
   for (const auto& timeLine : timeLines) {
-    for (int halfTurn = 0; halfTurn < timeLine->halfTurnNumber(); ++halfTurn) {
-      auto board = timeLine->getBoardByHalfTurn(halfTurn);
+    std::vector<std::shared_ptr<Chess::Board>> boards = timeLine->getBoards();
+    for (auto& board : boards){
       if (board) {
         auto boardView = std::make_shared<BoardView2D>(board);
         boardView->setBoardTexture(&ResourceManager::getInstance().getTexture2D("mainChessBoard"));
         boardView->setRenderArea({
-            static_cast<float>(halfTurn) * (BOARD_WORLD_SIZE + HORIZONTAL_SPACING),
+            static_cast<float>(board->halfTurnNumber()) * (BOARD_WORLD_SIZE + HORIZONTAL_SPACING),
             static_cast<float>(timeLine->ID()) * (BOARD_WORLD_SIZE + VERTICAL_SPACING),
             BOARD_WORLD_SIZE,
             BOARD_WORLD_SIZE
         });
+        boardViews.push_back(boardView);
       }
     }
   }
@@ -138,3 +140,20 @@ std::vector<std::shared_ptr<BoardView>> ChessController::computeBoardView3DsFrom
   // }
 
 // }
+
+
+void ChessController::updateBoardView2DsFromModel() {
+  view.clearBoardViews();
+  
+  auto boardViews = computeBoardView2DsFromModel();
+  for (auto& boardView : boardViews) {
+    view.addBoardView(boardView);
+    std::cout << "Added BoardView2D with ID: " << boardView->getBoard()->getTimeLine()->ID() << std::endl;
+  }
+}
+
+
+void ChessController::updateBoardView3DsFromModel() {
+  // Placeholder for updating 3D board views
+  // Currently, this method does nothing as we are not implementing 3D views yet
+}

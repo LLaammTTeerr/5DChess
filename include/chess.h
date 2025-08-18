@@ -397,6 +397,8 @@ private:
   int _forkAt;
   std::vector<std::shared_ptr<Board>> _history;
   std::shared_ptr<TimeLine> _parent;
+public:
+  std::vector<std::shared_ptr<Board>> getBoards() const { return _history; }
 };
 
 struct SelectedPosition {

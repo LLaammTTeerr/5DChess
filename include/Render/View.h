@@ -58,6 +58,7 @@ private:
 
 public:
   // virtual void update
+  virtual void clearBoardViews();
   virtual void addBoardView(std::shared_ptr<BoardView> boardView);
   virtual void removeBoardView(std::shared_ptr<BoardView> boardView);
   virtual std::vector<std::shared_ptr<BoardView>> getBoardViews() const;
@@ -72,8 +73,8 @@ private:
   void setZoom(float zoom);
   void setCameraTarget(Vector2 target); 
   void moveCamera(Vector2 delta); 
-  void updateCamera(float deltaTime);
-  bool _use3DRendering = false;
+  void updateCamera(float deltaTime); // set camera target based on active board view
+  bool _use3DRendering = false; 
 
 public:
   Camera2D* getCamera2D() { return &_camera2D; }

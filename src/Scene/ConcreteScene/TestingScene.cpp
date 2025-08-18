@@ -14,6 +14,19 @@ void TestingScene::init(void) {
   _chessModel = std::make_shared<ChessModel>(_game);
   _chessView = std::make_shared<ChessView>(Vector3{5000, 5000, 1});
   _chessController = std::make_shared<ChessController>(*_chessModel, *_chessView);
+
+  // auto boardViews = _chessController->computeBoardView2DsFromModel();
+  // for (auto& boardView : boardViews) {
+  //   std::cout << "Adding BoardView with ID: " << boardView->getBoard()->getTimeLine()->ID() << std::endl;
+  // }
+  // _chessController->handleInput();
+  // for (auto timeLine : _chessModel->getTimeLines()) {
+  //   auto board = timeLine->back();
+  //   if (board) {
+  //     std::cout << "TimeLine ID: " << timeLine->ID() << ", Board Full Turn: " << board->fullTurnNumber() << ", Half Turn: " << board->halfTurnNumber() << std::endl;
+  //   }
+  // }
+
 }
 
 void TestingScene::update(float deltaTime) {
@@ -27,7 +40,7 @@ void TestingScene::handleInput() {
 
 void TestingScene::render() {
   ClearBackground(Color{164, 204, 217, 255}); // rgb(164, 204, 217)
-
+  _chessView->render();
   // // Font& font = ResourceManager::getInstance().getFont("public_sans_bold");
   // Texture2D& chessBoardTexture = ResourceManager::getInstance().getTexture2D("mainChessBoard");
   // // // Create chess game model
@@ -95,3 +108,4 @@ void TestingScene::onEnter() { _isActive = true; }
 void TestingScene::onExit() { _isActive = false; }
 
 bool TestingScene::shouldTransition() const { return false; }
+
