@@ -81,8 +81,6 @@ void ChessView::handleInput() {
     update(GetFrameTime());
 
     for (auto& boardView : _boardViews) if (boardView) {
-        boardView->handleInput();
-
         if (boardView -> isMouseClickedOnBoard()) {
             _selectedBoardView = boardView;
             if (boardView -> getMouseClickedPosition() != Chess::Position2D{-1, -1}) {
@@ -151,6 +149,17 @@ void ChessView::updateSelectedPosition() {
 }
 
 void ChessView::updateCamera(float deltaTime) {
+    for (const auto& boardView : _boardViews) {
+        if (boardView) {
+            if (boardView->is3D()) {
+                boardView->setCamera3D(&_camera3D);
+            } else {
+                boardView->setCamera2D(&_camera2D);
+            }
+        } else {
+            std::cerr << "Null BoardView encountered!" << std::endl;
+        }
+    }
     // Center camera on active board view, if any
     // for (const auto& boardView : _boardViews) {
     //     if (boardView->is3D()) {
@@ -169,14 +178,6 @@ void ChessView::updateCamera(float deltaTime) {
 }
 
 void ChessView::update(float deltaTime) {
-    for (auto& boardView : _boardViews) {
-        if (boardView) {
-            boardView->update(deltaTime);
-        } else {
-            std::cerr << "Null BoardView encountered!" << std::endl;
-        }
-    }
-    
     updateCamera(deltaTime);
     // updateSelectedBoardView();
     // updateSelectedPosition();
@@ -231,6 +232,7 @@ void ChessView::render() const {
 
 void ChessView::addBoardView(std::shared_ptr<BoardView> boardView) {
     if (boardView) {
+        boardView -> setSupervisor(this);
         _boardViews.push_back(boardView);
         // Set the appropriate camera based on board view type
         if (boardView->is3D()) {

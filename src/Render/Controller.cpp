@@ -7,6 +7,15 @@ ChessController::ChessController(ChessModel& m, ChessView& v) : model(m), view(v
     setupModelCallbacks();
 }
 
+void ChessController::update(float deltaTime) {
+  // updateBoardViews base on current model state
+  
+}
+
+void ChessController::handleInput() {
+    view.handleInput();
+}
+
 void ChessController::setupViewCallbacks() {
   view.setMouseBoardClickCallback([this](std::shared_ptr<BoardView> boardView) {
       handleSelectedBoard(boardView);

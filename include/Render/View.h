@@ -33,7 +33,7 @@ public:
   virtual void setMouseBoardClickCallback(std::function<void(std::shared_ptr<BoardView>)> callback) { _onMouseBoardClickCallback = callback; };
   virtual void setPositionClickCallback(std::function<void(Chess::Position2D)> callback) { _onPositionClickCallback = callback; };
 
-  public:
+public:
   virtual void update(float deltaTime);
   virtual void handleInput();
   virtual void render() const;

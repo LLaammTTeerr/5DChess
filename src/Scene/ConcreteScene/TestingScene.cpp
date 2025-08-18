@@ -5,8 +5,15 @@
 #include "chess.h"
 #include "Render/View.h"
 
-void TestingScene::init(void) {
+TestingScene::TestingScene() {
+  init();
+}
 
+void TestingScene::init(void) {
+  _game = std::make_shared<Chess::Game>(8, Chess::BoardBuilder::buildStandardBoard);
+  _chessModel = std::make_shared<ChessModel>(_game);
+  _chessView = std::make_shared<ChessView>(Vector3{5000, 5000, 1});
+  _chessController = std::make_shared<ChessController>(*_chessModel, *_chessView);
 }
 
 void TestingScene::update(float deltaTime) {
@@ -14,21 +21,8 @@ void TestingScene::update(float deltaTime) {
 }
 
 void TestingScene::handleInput() {
-  // Handle input for testing scene
-  if (IsKeyPressed(KEY_T)) {
-    std::cout << "T key pressed in TestingScene" << std::endl;
-  }
-  
-  if (IsKeyPressed(KEY_ENTER)) {
-    std::cout << "Enter key pressed in TestingScene" << std::endl;
-  }
-  
-  // Handle mouse input
-  if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-    Vector2 mousePos = GetMousePosition();
-    std::cout << "Mouse clicked at: (" << mousePos.x << ", " << mousePos.y << ")" << std::endl;
-  }
-
+  _chessController->handleInput();
+  // std::cout << "Handling input in TestingScene..." << std::endl;
 }
 
 void TestingScene::render() {

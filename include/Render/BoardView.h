@@ -20,8 +20,6 @@ class ChessView;
 class BoardView {
 public:
     virtual ~BoardView() = default;
-    virtual void update(float deltaTime) = 0;
-    virtual void handleInput() = 0;
 
     virtual void render() const = 0;
     virtual void render_highlightBoundaries() const = 0;
@@ -63,9 +61,6 @@ public:
   BoardView2D(std::shared_ptr<Chess::Board> board, Texture2D* texture);
   ~BoardView2D() = default;
   
-  void update(float deltaTime) override;
-  void handleInput() override;
-
   void render() const override;
   void render_highlightBoundaries() const override;
   void render_highlightedPositions(std::vector<Chess::Position2D> positions) const override;

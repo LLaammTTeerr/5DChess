@@ -76,9 +76,6 @@ void BoardView2D::render() const {
     // }
 }
 
-
-void BoardView2D::update(float deltaTime) {}
-
 bool BoardView2D::isMouseOverBoard() const {
     Vector2 screenMousePos = GetMousePosition();
     bool isMouseOver = false;
@@ -93,10 +90,6 @@ bool BoardView2D::isMouseOverBoard() const {
 
 bool BoardView2D::isMouseClickedOnBoard() const {
     return isMouseOverBoard() && IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
-}
-
-void BoardView2D::handleInput() {
-    // update(GetFrameTime());
 }
 
 

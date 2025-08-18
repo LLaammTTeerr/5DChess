@@ -16,7 +16,8 @@ private:
 
 public:
   ChessController(ChessModel& m, ChessView& v);
-  void handleInput() {};
+  void update(float deltaTime);
+  void handleInput();
 
 private:
   void setupViewCallbacks();

@@ -2,10 +2,13 @@
 #include "Scene.h"
 #include <string>
 #include "ResourceManager.h"
-
+#include "chess.h"
+#include "Render/View.h"
+#include "Render/RenModel.h"
+#include "Render/Controller.h"
 class TestingScene : public Scene {
 public:
-  TestingScene() = default;
+  TestingScene();
   ~TestingScene() override = default;
 
   void init(void) override;
@@ -22,4 +25,11 @@ public:
   void onExit(void) override;
 
   bool shouldTransition(void) const override;
+
+private:
+  std::shared_ptr<Chess::Game> _game;
+  std::shared_ptr<ChessModel> _chessModel;
+  std::shared_ptr<ChessView> _chessView;
+  std::shared_ptr<ChessController> _chessController;
 };
+
