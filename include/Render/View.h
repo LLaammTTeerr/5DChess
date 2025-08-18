@@ -46,27 +46,23 @@ public:
 private:
   std::vector<std::function<void()>> updateQueue; // Queue for update callbacks
 public:
-  virtual void queueUpdateInvalidBoardSelection(std::shared_ptr<BoardView> boardView);
+  virtual void queueUpdateInvalidBoardSelection();
   virtual void queueUpdateMoveState(const RenderMoveState& rmoveState);
 
 private:
-  std::shared_ptr<BoardView> _selectedBoardView = nullptr; // Currently selected board view
-  virtual void updateSelectedBoardView();
-
-  Chess::Position2D _selectedPosition = Chess::Position2D(-1, -1); // Currently selected position on the board
-  virtual void updateSelectedPosition();
-
-  bool _isSelectedBoardViewInvalid = false;
-
-
-private: 
   std::vector<std::shared_ptr<BoardView>> _boardViews; // List of board views
   std::shared_ptr<BoardView> _selectedBoardView = nullptr; // Currently selected board view
+  Chess::Position2D _selectedPosition = Chess::Position2D(-1, -1); // Currently selected position on the board
+  bool _isSelectedBoardViewInvalid = false;
+
 
 public:
   virtual void addBoardView(std::shared_ptr<BoardView> boardView);
   virtual void removeBoardView(std::shared_ptr<BoardView> boardView);
   virtual std::vector<std::shared_ptr<BoardView>> getBoardViews() const;
+  virtual void updateSelectedBoardView();
+  virtual void updateSelectedPosition();
+
 
 private:
   Camera2D _camera2D;

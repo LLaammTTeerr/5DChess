@@ -3,6 +3,7 @@
 #include "raymath.h"
 #include "PieceTheme.h"
 #include <iostream>
+#include "BoardView.h"
 
 const int BOARD_SIZE = 200; // Assuming a standard chess board size
 const int HORIZONTAL_SPACING = 30; // Size of each square on the board
@@ -273,9 +274,9 @@ std::vector<std::shared_ptr<BoardView>> ChessView::getBoardViews() const {
     return _boardViews;
 }
 
-void ChessView::queueUpdateInvalidBoardSelection(std::shared_ptr<BoardView> boardView) {
+void ChessView::queueUpdateInvalidBoardSelection() {
     updateQueue.push_back([this](){
-        if (boardView == _selectedBoardView) {
+        if (_selectedBoardView) {
             _isSelectedBoardViewInvalid = true;
         }
         else {
@@ -286,6 +287,6 @@ void ChessView::queueUpdateInvalidBoardSelection(std::shared_ptr<BoardView> boar
 
 void ChessView::queueUpdateMoveState(const RenderMoveState& rmoveState) {
     updateQueue.push_back([this, rmoveState](){
-        if 
+        // if 
     });
 }

@@ -12,13 +12,11 @@ ChessModel::ChessModel(std::shared_ptr<Chess::Game> game) : _game(game) {
 void ChessModel::initialize() {
   // Initialize game state (e.g., set up initial board)
   // This can be empty if the game is already initialized
-  _currentMovePhase = MovePhase::SELECT_FROM_BOARD; // Set initial move phase
+  _currentMoveState.currentPhase = MovePhase::SELECT_FROM_BOARD; // Set initial move phase
 }
 
 void ChessModel::applyTurn() {
-  // Apply the completed turn using the current turn state
-  _game->applyTurn();
-  notifyGameUpdated(); // Notify observers that the game state has been updated
+  _game->submitTurn();
 } 
 
 void ChessModel::makeMove(const Chess::Move& move) {
@@ -90,7 +88,7 @@ void ChessModel::selectBoard(std::shared_ptr<Chess::Board> board) {
   notifyMoveStateChanged(); // Notify observers that the move state has changed
 }
 
-void ChessModel::selectPosition(Chess::Position2D pos) {
+void ChessModel::selectPosition(Chess::Position2D position) {
   if (_currentMoveState.currentPhase != MovePhase::SELECT_FROM_POSITION &&
       _currentMoveState.currentPhase != MovePhase::SELECT_TO_POSITION) {
     return; // Only allow selection in the appropriate phases

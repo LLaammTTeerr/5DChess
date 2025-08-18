@@ -18,7 +18,8 @@ struct MoveState {
   MovePhase currentPhase; // Current phase of the move (selecting from board, position
 
   MoveState()
-      : selectedBoard(nullptr), targetBoard(nullptr), currentPhase(MovePhase::SELECT_FROM_BOARD) {}
+      : selectedBoard(nullptr), targetBoard(nullptr), currentPhase(MovePhase::SELECT_FROM_BOARD),
+        selectedPosition{-1, -1}, targetPosition{-1, -1} {}
 };
 
 class ChessModel {

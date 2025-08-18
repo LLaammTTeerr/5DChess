@@ -20,10 +20,7 @@ void ChessController::setupViewCallbacks() {
 
 void ChessController::setupModelCallbacks() {
   model.setInvalidBoardSelectionCallback([this]() {
-    std::shared_ptr<BoardView> selectedBoardView = getBoardViewFromModel(model.getSelectedBoard());
-    if (selectedBoardView) {
-      view.queueUpdateInvalidBoardSelection(selectedBoardView);
-    }
+    view.queueUpdateInvalidBoardSelection();
   });
 
 

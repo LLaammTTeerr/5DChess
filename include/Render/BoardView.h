@@ -9,7 +9,7 @@
 
 
 
-class ChessView
+class ChessView;
 
 // interface for board view, this is the interface that converting model data to view data
 // This interface is used to render a single board
@@ -20,7 +20,6 @@ class ChessView
 class BoardView {
 public:
     virtual ~BoardView() = default;
-
     virtual void update(float deltaTime) = 0;
     virtual void handleInput() = 0;
 
@@ -40,7 +39,7 @@ public:
     virtual Chess::Position2D getMouseOverPosition() const = 0; 
     virtual Chess::Position2D getMouseClickedPosition() const = 0;
 
-    virtual void setSupervisor(ChessView* supervisor); 
+    virtual void setSupervisor(ChessView* supervisor) = 0; 
 
     virtual void setRenderArea(Rectangle area) = 0;
     virtual Rectangle getArea() const = 0;
@@ -83,13 +82,13 @@ public:
   Chess::Position2D getMouseOverPosition() const override;
   Chess::Position2D getMouseClickedPosition() const override;
 
-  void setRenderArea(Rectangle area) { _area = area; }
-  Rectangle getArea() const { return _area; }
+  void setRenderArea(Rectangle area) override { _area = area; }
+  Rectangle getArea() const override { return _area; }
 
   void setSupervisor(ChessView* supervisor) override; 
 
-  void setCamera2D(Camera2D* camera) { _camera = camera; }
-  void setCamera3D(Camera3D* camera) {  }  
+  void setCamera2D(Camera2D* camera) override { _camera = camera; }
+  void setCamera3D(Camera3D* camera) override {  }  
 };
 
 // class BoardView3D : public BoardView {

@@ -65,15 +65,15 @@ void BoardView2D::render() const {
     }
 
     // Draw highlighted positions
-    for (const auto& pos : _highlightedPositions) {
-        DrawRectangle(
-            _area.x + pos.x()  * _area.width / 8,
-            _area.y + pos.y() * _area.height / 8,
-            _area.width / 8,
-            _area.height / 8,
-            (Color){0, 255, 0, 100} // Semi-transparent green
-        );
-    }
+    // for (const auto& pos : _highlightedPositions) {
+    //     DrawRectangle(
+    //         _area.x + pos.x()  * _area.width / 8,
+    //         _area.y + pos.y() * _area.height / 8,
+    //         _area.width / 8,
+    //         _area.height / 8,
+    //         (Color){0, 255, 0, 100} // Semi-transparent green
+    //     );
+    // }
 }
 
 
