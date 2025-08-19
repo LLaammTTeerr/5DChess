@@ -21,12 +21,12 @@ class BoardView {
 public:
     virtual ~BoardView() = default;
 
-    virtual void render() const = 0;
+    virtual void render(std::shared_ptr<Chess::Board>) const = 0;
     virtual void render_highlightBoundaries() const = 0;
     virtual void render_highlightedPositions(std::vector<Chess::Position2D> positions) const = 0;
 
-    virtual void setBoard(std::shared_ptr<Chess::Board> board) = 0;
-    virtual std::shared_ptr<Chess::Board> getBoard() const = 0;
+    // virtual void setBoard(std::shared_ptr<Chess::Board> board) = 0;
+    // virtual std::shared_ptr<Chess::Board> getBoard() const = 0;
     virtual void setBoardTexture(Texture2D* texture) = 0;
 
     virtual bool is3D() const = 0;
@@ -46,28 +46,23 @@ public:
     virtual void setCamera3D(Camera3D* camera) = 0;
   
 };
-
+  
 class BoardView2D : public BoardView {
 private:
   ChessView* _supervisor = nullptr;
-  std::shared_ptr<Chess::Board> _board;
-  Texture2D* _boardTexture;
-  Rectangle _area; 
-  Camera2D* _camera;
+  Texture2D* _boardTexture = nullptr;
+  Rectangle _area = {0, 0, 0, 0};
+  Camera2D* _camera = nullptr;
 
   bool _isMouseOver = false; // Whether the mouse is over the board
   
 public:
-  BoardView2D(std::shared_ptr<Chess::Board> board);
+  BoardView2D() = default;
   ~BoardView2D() = default;
-  
-  void render() const override;
+
+  void render(std::shared_ptr<Chess::Board> board) const override;
   void render_highlightBoundaries() const override;
   void render_highlightedPositions(std::vector<Chess::Position2D> positions) const override;
-
-  void setBoard(std::shared_ptr<Chess::Board> board) override { _board = board; }
-  std::shared_ptr<Chess::Board> getBoard() const override { return _board; }
-  void setBoardTexture(Texture2D* texture) override { _boardTexture = texture; }
   
   bool is3D() const override { return false; } // This is a 2D view
 
@@ -76,6 +71,8 @@ public:
 
   Chess::Position2D getMouseOverPosition() const override;
   Chess::Position2D getMouseClickedPosition() const override;
+
+  void setBoardTexture(Texture2D* texture) override { _boardTexture = texture; }
 
   void setRenderArea(Rectangle area) override { _area = area; }
   Rectangle getArea() const override { return _area; }

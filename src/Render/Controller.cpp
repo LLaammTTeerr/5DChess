@@ -1,5 +1,3 @@
-#include "RenModel.h"
-#include "Render/View.h"
 #include "Render/Controller.h"
 #include "ResourceManager.h"
 
@@ -7,10 +5,32 @@ ChessController::ChessController(ChessModel& m, ChessView& v) : model(m), view(v
     setupViewCallbacks();
 }
 
+void ChessController::updateCurrentBoardFromModel() {
+  _currentBoard = computeCurrentBoardFromModel();
+}
+
+
+void ChessController::updateBoardViewFromCurrentBoards() {
+  _currentBoardViews = computeBoardViewFromCurrentBoards(_currentBoardType);
+}
+
+void ChessController::updateNewBoardViewsToView() {
+  view.clearBoardViews();
+  for (const auto& boardView : _currentBoardViews) if (boardView) {
+    view.addBoardView(boardView);
+  } 
+}
+
 void ChessController::update(float deltaTime) {
-  // updateBoardViews base on current model state
-  updateBoardView2DsFromModel();
-  updateBoardView3DsFromModel();
+  updateCurrentBoardFromModel();
+  updateBoardViewFromCurrentBoards();
+  // after updating the board and board views, we need bridge the board to board view
+  _boardToBoardViewMap.clear();
+  for (int i = 0; i < _currentBoard.size() && i < _currentBoardViews.size(); ++i) {
+    _boardToBoardViewMap[_currentBoard[i]] = _currentBoardViews[i];
+    _boardViewToBoardMap[_currentBoardViews[i]] = _currentBoard[i];
+  }
+  updateNewBoardViewsToView();
 }
 
 void ChessController::handleInput() {
@@ -19,8 +39,12 @@ void ChessController::handleInput() {
 }
 
 void ChessController::setupViewCallbacks() {
-  view.setSelectedPositionCallback([this](Chess::SelectedPosition selectedPosition) {
+  view.setSelectedPositionCallback([this](std::pair<std::shared_ptr<BoardView>, Chess::Position2D> selectedPositionPair) {
     // Handle the selected position from the view
+    Chess::SelectedPosition selectedPosition = {
+        _boardViewToBoardMap[selectedPositionPair.first], // Get the board from the BoardView
+        selectedPositionPair.second // Get the position from the pair
+    };
     handleSelectedPosition(selectedPosition);
   });
 }
@@ -38,12 +62,12 @@ void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPos
 
     model.selectFromBoard(selectedPosition.board);
     addHighlightedBoard(selectedPosition.board);
-    view.update_highlightedBoard(computeHighlightedBoardView2Ds());
+    view.update_highlightedBoard(computeHighlightedBoardViews());
 
   } else if (currentMoveState.currentPhase == MovePhase::SELECT_FROM_POSITION) {
     // Select the position on the selected board
     model.selectFromPosition(selectedPosition.position);
-    
+
   } else if (currentMoveState.currentPhase == MovePhase::SELECT_TO_BOARD) {
     // Select the target board for the move
     model.selectToBoard(selectedPosition.board);
@@ -54,78 +78,79 @@ void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPos
 
 }
 
-std::shared_ptr<BoardView> ChessController::getBoardViewFromModel(std::shared_ptr<Chess::Board> board) {
-    for (const auto& boardView : view.getBoardViews()) {
-        if (boardView->getBoard() == board) {
-            return boardView;
-        }
+std::vector<std::shared_ptr<BoardView>> ChessController::computeBoardViewFromCurrentBoards(std::string boardType) const {
+    if (boardType == "2D") {
+        return computeBoardView2DsFromCurrentBoards();
+    } else if (boardType == "3D") {
+        return computeBoardView3DsFromCurrentBoards();
     }
-    return nullptr; // Not found
+    return std::vector<std::shared_ptr<BoardView>>(); // Empty vector for unsupported types
 }
 
-RenderMoveState ChessController::convertModelToRenderState(const MoveState& moveState) {
-    RenderMoveState renderState;
-    renderState.selectedBoardView = getBoardViewFromModel(moveState.selectedBoard);
-    renderState.selectedPosition = moveState.selectedPosition;
-    renderState.targetBoardView = getBoardViewFromModel(moveState.targetBoard);
-    renderState.targetPosition = moveState.targetPosition;
-    renderState.currentPhase = moveState.currentPhase;
+// RenderMoveState ChessController::convertModelToRenderState(const MoveState& moveState) {
+//     RenderMoveState renderState;
+//     renderState.selectedBoardView = getBoardViewFromModel(moveState.selectedBoard);
+//     renderState.selectedPosition = moveState.selectedPosition;
+//     renderState.targetBoardView = getBoardViewFromModel(moveState.targetBoard);
+//     renderState.targetPosition = moveState.targetPosition;
+//     renderState.currentPhase = moveState.currentPhase;
 
-    return renderState;
-}
+//     return renderState;
+// }
 
-std::vector<std::shared_ptr<BoardView>> ChessController::computeBoardView2DsFromModel() const {
-  std::vector<std::shared_ptr<BoardView>> boardViews;
+std::vector<std::shared_ptr<Chess::Board>> ChessController::computeCurrentBoardFromModel() const {
+  std::vector<std::shared_ptr<Chess::Board>> Boards;
+
   auto timeLines = model.getTimeLines();
-
-  // create new board views based on the timelines
   for (const auto& timeLine : timeLines) {
     std::vector<std::shared_ptr<Chess::Board>> boards = timeLine->getBoards();
-    for (auto& board : boards){
+    for (const auto& board : boards) {
       if (board) {
-        auto boardView = std::make_shared<BoardView2D>(board);
-        boardView->setBoardTexture(&ResourceManager::getInstance().getTexture2D("mainChessBoard"));
-        boardView->setRenderArea({
-            static_cast<float>(board->halfTurnNumber()) * (BOARD_WORLD_SIZE + HORIZONTAL_SPACING),
-            static_cast<float>(timeLine->ID()) * (BOARD_WORLD_SIZE + VERTICAL_SPACING),
-            BOARD_WORLD_SIZE,
-            BOARD_WORLD_SIZE
-        });
-        boardViews.push_back(boardView);
+        Boards.push_back(board);
       }
     }
   }
+  return Boards;
+}
 
+std::vector<std::shared_ptr<BoardView>> ChessController::computeBoardView2DsFromCurrentBoards() const {
+  std::vector<std::shared_ptr<BoardView>> boardViews;
+
+  for (const auto& board : _currentBoard) {
+    auto boardView = std::make_shared<BoardView2D>();
+    boardView->setBoardTexture(&ResourceManager::getInstance().getTexture2D("mainChessBoard"));
+    boardView->setRenderArea({
+        static_cast<float>(board->halfTurnNumber()) * (BOARD_WORLD_SIZE + HORIZONTAL_SPACING),
+        static_cast<float>(board->getTimeLine()->ID()) * (BOARD_WORLD_SIZE + VERTICAL_SPACING),
+        BOARD_WORLD_SIZE,
+        BOARD_WORLD_SIZE
+    });
+    boardViews.push_back(boardView);
+  }
+  
   return boardViews;
 }
 
-std::vector<std::shared_ptr<BoardView>> ChessController::computeBoardView3DsFromModel() const {
+std::vector<std::shared_ptr<BoardView>> ChessController::computeBoardView3DsFromCurrentBoards() const {
   return std::vector<std::shared_ptr<BoardView>>(); // Placeholder for 3D board views
 }
 
 
-void ChessController::updateBoardView2DsFromModel() {
-  _currentBoardViews2D = computeBoardView2DsFromModel();
-  
-  view.clearBoardViews();
-  for (auto& boardView : _currentBoardViews2D) {
-    view.addBoardView(boardView);
-  }
-}
 
 
-void ChessController::updateBoardView3DsFromModel() {
-  // Placeholder for updating 3D board views
-  // Currently, this method does nothing as we are not implementing 3D views yet
-}
-
-std::vector<std::shared_ptr<BoardView>> ChessController::computeHighlightedBoardView2Ds() const {
+std::vector<std::shared_ptr<BoardView>> ChessController::computeHighlightedBoardViews() const {
     std::vector<std::shared_ptr<BoardView>> highlightedViews;
-    for (const auto& boardView : _currentBoardViews2D) {
-      if (boardView && boardView->getBoard() && 
-          std::find(_highlightedBoard.begin(), _highlightedBoard.end(), boardView->getBoard()) != _highlightedBoard.end()) {
-        highlightedViews.push_back(boardView);
-      }
+    for (auto& board : _highlightedBoard) {
+        auto it = _boardToBoardViewMap.find(board);
+        if (it != _boardToBoardViewMap.end()) {
+            highlightedViews.push_back(it->second);
+        } else {
+            std::cerr << "BoardView not found for highlighted board!" << std::endl;
+        }
     }
     return highlightedViews;
   }
+
+void ChessController::render() {
+  view.render(_currentBoard);
+}

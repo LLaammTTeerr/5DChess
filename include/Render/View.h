@@ -27,13 +27,13 @@ public:
   ChessView(Vector3 _worldSize);
 
 private:
-  std::function<void(Chess::SelectedPosition)> _onSelectedPositionCallback;
+  std::function<void(std::pair<std::shared_ptr<BoardView>, Chess::Position2D>)> _onSelectedPositionCallback;
 public:
-  virtual void setSelectedPositionCallback(std::function<void(Chess::SelectedPosition)> callback) { _onSelectedPositionCallback = callback; };
+  virtual void setSelectedPositionCallback(std::function<void(std::pair<std::shared_ptr<BoardView>, Chess::Position2D>)> callback) { _onSelectedPositionCallback = callback; };
 public:
   virtual void update(float deltaTime);
   virtual void handleInput();
-  virtual void render() const;
+  virtual void render(std::vector<std::shared_ptr<Chess::Board>> boards) const;
 
 private:
   std::vector<std::shared_ptr<BoardView>> _highlightedBoards;

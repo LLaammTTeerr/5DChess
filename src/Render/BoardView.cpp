@@ -5,16 +5,9 @@
 #include "PieceTheme.h"
 #include <iostream>
 
-BoardView2D::BoardView2D(std::shared_ptr<Chess::Board> board)
-    : _board(board), _camera(nullptr) {
-    if (!_board) {
-        std::cerr << "Board pointer is null!" << std::endl;
-    }
-}
 
-
-void BoardView2D::render() const {
-    if (!_board || !_boardTexture) {
+void BoardView2D::render(std::shared_ptr<Chess::Board> board) const {
+    if (!board || !_boardTexture) {
         std::cerr << "Board or texture not set!" << std::endl;
         return;
     }
@@ -42,7 +35,7 @@ void BoardView2D::render() const {
     for (int i = 0; i < 8; ++i) {
         for (int j = 0; j < 8; ++j) {
             Chess::Position2D pos(i, j);
-            auto piece = _board->getPiece(pos);
+            auto piece = board->getPiece(pos);
             if (piece) {
               const std::string& name = piece->name();
               const std::string& color = piece->color() == Chess::PieceColor::PIECEWHITE ? "white" : "black";
@@ -64,17 +57,6 @@ void BoardView2D::render() const {
             }
         }
     }
-
-    // Draw highlighted positions
-    // for (const auto& pos : _highlightedPositions) {
-    //     DrawRectangle(
-    //         _area.x + pos.x()  * _area.width / 8,
-    //         _area.y + pos.y() * _area.height / 8,
-    //         _area.width / 8,
-    //         _area.height / 8,
-    //         (Color){0, 255, 0, 100} // Semi-transparent green
-    //     );
-    // }
 }
 
 bool BoardView2D::isMouseOverBoard() const {

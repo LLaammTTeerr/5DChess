@@ -90,13 +90,8 @@ void ChessView::handleMouseSelection() {
     }
 
     if (selectedBoardView && selectedPosition.x() != -1 && selectedPosition.y() != -1) {
-        // std::cout << "Selected position: " << selectedPosition.x() << ", " << selectedPosition.y() << std::endl;
-        Chess::SelectedPosition selectedPos = {
-            selectedBoardView->getBoard(), 
-            selectedPosition
-        };
         if (_onSelectedPositionCallback) {
-            _onSelectedPositionCallback(selectedPos);
+            _onSelectedPositionCallback({selectedBoardView, selectedPosition});
         }
     } 
 }
@@ -175,41 +170,42 @@ void ChessView::update(float deltaTime) {
 }
 
 
-void ChessView::render() const {
+void ChessView::render(std::vector<std::shared_ptr<Chess::Board>> boards) const {
 
-    if (_use3DRendering) {
-        BeginMode3D(_camera3D);
-        for (const auto& boardView : _boardViews) {
-            if (boardView && boardView->is3D()) {
-                boardView->render();
-            }
-        }
-        EndMode3D();
-        // Render 2D views on top if mixed
-        BeginMode2D(_camera2D);
+    // if (_use3DRendering) {
+    //     BeginMode3D(_camera3D);
+    //     for (const auto& boardView : _boardViews) {
+    //         if (boardView && boardView->is3D()) {
+    //             boardView->render();
+    //         }
+    //     }
+    //     EndMode3D();
+    //     // Render 2D views on top if mixed
+    //     BeginMode2D(_camera2D);
 
-        for (const auto& boardView : _boardViews) {
-            if (boardView && !boardView->is3D()) {
-                boardView->render();
-            }
-            // std::cout << "Rendering BoardView2D" << std::endl;
-        }
+    //     for (const auto& boardView : _boardViews) {
+    //         if (boardView && !boardView->is3D()) {
+    //             boardView->render();
+    //         }
+    //         // std::cout << "Rendering BoardView2D" << std::endl;
+    //     }
         
-        EndMode2D();
-    } else {
+    //     EndMode2D();
+    // } else {
         BeginMode2D(_camera2D);
-        for (const auto& boardView : _boardViews) {
-            if (boardView) {
-                boardView->render();
+        
+        for (int i = 0; i < boards.size() && i < _boardViews.size(); ++i) {
+            if (_boardViews[i]) {
+                _boardViews[i]->render(boards[i]);
             } else {
-                std::cerr << "Null BoardView encountered!" << std::endl;
+                std::cerr << "Null BoardView encountered at index " << i << "!" << std::endl;
             }
         }
 
         render_highlightBoard();
 
         EndMode2D();
-    }
+    // }
 
     // Draw UI
     Vector2 mousePos = GetMousePosition();

@@ -40,7 +40,7 @@ void TestingScene::handleInput() {
 
 void TestingScene::render() {
   ClearBackground(Color{164, 204, 217, 255}); // rgb(164, 204, 217)
-  _chessView->render();
+  _chessController->render();
   // // Font& font = ResourceManager::getInstance().getFont("public_sans_bold");
   // Texture2D& chessBoardTexture = ResourceManager::getInstance().getTexture2D("mainChessBoard");
   // // // Create chess game model
