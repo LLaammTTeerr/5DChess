@@ -296,7 +296,7 @@ public:
    * Get the full turn number of the board.
    * @return The full turn number as an integer.
    */
-  inline int fullTurnNumber(void) const { return _fullTurnNumber; }
+  inline int fullTurnNumber(void) const { return _halfTurnNumber / 2; }
 
   /**
    * Get the half turn number of the board.
@@ -307,7 +307,6 @@ public:
   std::shared_ptr<Board> createFork(std::shared_ptr<TimeLine> timeLine);
 private:
   int _N;
-  int _fullTurnNumber;
   int _halfTurnNumber;
   std::shared_ptr<Board> _previousBoard;
   std::vector<std::vector<std::shared_ptr<Piece>>> _pieces;
@@ -451,7 +450,7 @@ public:
    * @return The current full turn number as an integer.
    */
   inline int presentFullTurn(void) const {
-    return _presentFullTurn;
+    return _presentHalfTurn / 2;
   }
 
   /**
@@ -512,8 +511,8 @@ public:
   }
 private:
   int _N;
-  int _presentFullTurn;
   int _presentHalfTurn;
+  int _nextHalfTurn;
   std::vector<std::shared_ptr<TimeLine>> _timeLines;
   std::vector<Move> _currentTurnMoves;
   PieceColor _currentTurnColor;
@@ -536,7 +535,7 @@ private:
   }
 
 public:
-  std::vector<std::shared_ptr<TimeLine>> getTimeLines() const {
+  inline std::vector<std::shared_ptr<TimeLine>> getTimeLines(void) const {
     return _timeLines;
   }
 };
