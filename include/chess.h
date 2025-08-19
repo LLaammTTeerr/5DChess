@@ -543,18 +543,58 @@ public:
 class Constant {
 public:
   static const int BOARD_SIZE;
+  static const int BOARD_SIZE_EMIT_BISHOP;
+  static const int BOARD_SIZE_EMIT_KNIGHT;
+  static const int BOARD_SIZE_EMIT_QUEEN;
 };
 
-class BoardBuilder {
+template <typename Derived>
+class IBoardBuilderCRTP {
 public:
-  /**
-   * Build a standard chess board with pieces in their initial positions.
-   * @return A shared pointer to the constructed Board object.
-   * This method initializes a standard chess board with all pieces placed in their starting positions.
-   */
-  static std::shared_ptr<Board> buildStandardBoard(std::shared_ptr<TimeLine> timeLine);
+  static std::shared_ptr<Board> build(std::shared_ptr<TimeLine> timeline) {
+    return Derived::build_impl(timeline);
+  }
+  static int dim() {
+    return Derived::dim_impl();
+  }
 };
 
+class StandardBoardBuilder : public IBoardBuilderCRTP<StandardBoardBuilder> {
+public:
+  static std::shared_ptr<Board> build_impl(std::shared_ptr<TimeLine> timeLine) {
+    std::shared_ptr<Board> board = std::make_shared<Board>(Constant::BOARD_SIZE, timeLine);
+    for (int i = 0; i < Constant::BOARD_SIZE; i += 1) {
+      board->placePiece({i, 1}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
+      board->placePiece({i, 6}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
+    }
+    board->placePiece({0, 0}, std::make_shared<Rook>(PieceColor::PIECEWHITE));
+    board->placePiece({1, 0}, std::make_shared<Knight>(PieceColor::PIECEWHITE));
+    board->placePiece({2, 0}, std::make_shared<Bishop>(PieceColor::PIECEWHITE));
+    board->placePiece({3, 0}, std::make_shared<Queen>(PieceColor::PIECEWHITE));
+    board->placePiece({4, 0}, std::make_shared<King>(PieceColor::PIECEWHITE));
+    board->placePiece({5, 0}, std::make_shared<Bishop>(PieceColor::PIECEWHITE));
+    board->placePiece({6, 0}, std::make_shared<Knight>(PieceColor::PIECEWHITE));
+    board->placePiece({7, 0}, std::make_shared<Rook>(PieceColor::PIECEWHITE));
 
+    board->placePiece({0, 7}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
+    board->placePiece({1, 7}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
+    board->placePiece({2, 7}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
+    board->placePiece({3, 7}, std::make_shared<Queen>(PieceColor::PIECEBLACK));
+    board->placePiece({4, 7}, std::make_shared<King>(PieceColor::PIECEBLACK));
+    board->placePiece({5, 7}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
+    board->placePiece({6, 7}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
+    board->placePiece({7, 7}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
+    return board;
+  }
+
+  static int dim_impl(void) {
+    return Constant::BOARD_SIZE;
+  }
+};
+
+template<class Builder>
+std::shared_ptr<Game> createGame(void) {
+  return std::make_shared<Game>(Builder::dim_impl(), Builder::build_impl);
+}
 
 } // namespace Chess

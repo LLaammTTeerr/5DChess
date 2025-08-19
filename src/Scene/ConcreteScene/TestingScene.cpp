@@ -10,7 +10,7 @@ TestingScene::TestingScene() {
 }
 
 void TestingScene::init(void) {
-  _game = std::make_shared<Chess::Game>(8, Chess::BoardBuilder::buildStandardBoard);
+  _game = Chess::createGame<Chess::StandardBoardBuilder>();
   _chessModel = std::make_shared<ChessModel>(_game);
   _chessView = std::make_shared<ChessView>(Vector3{5000, 5000, 1});
   _chessController = std::make_shared<ChessController>(*_chessModel, *_chessView);
@@ -51,14 +51,14 @@ void TestingScene::render() {
   // // Create multiple BoardView2D instances to test with ChessView
   // std::shared_ptr<BoardView> boardView1 = std::make_shared<BoardView2D>(board1, &chessBoardTexture);
   // std::shared_ptr<BoardView> boardView2 = std::make_shared<BoardView2D>(board2, &chessBoardTexture);
-    
+
   // // Set up render areas for the boards (side by side)
   // auto boardView1_2D = std::static_pointer_cast<BoardView2D>(boardView1);
   // auto boardView2_2D = std::static_pointer_cast<BoardView2D>(boardView2);
-    
+
   // boardView1_2D->setRenderArea(Rectangle{50, 50, 300, 300});
   // boardView2_2D->setRenderArea(Rectangle{400, 50, 300, 300});
-    
+
   // // boardView1 -> render();
   // // boardView2 -> render();
   // // // Activate the boards
@@ -70,12 +70,12 @@ void TestingScene::render() {
   // gameWorld.addBoardView(boardView1);
   // gameWorld.addBoardView(boardView2);
 
-  
+
   // // // Set up callbacks for testing
   // gameWorld.setOnMousePositionCallback([](Chess::Position2D pos) {
   //     std::cout << "Mouse over position: (" << pos.x() << ", " << pos.y() << ")" << std::endl;
   // });
-    
+
   // gameWorld.setOnMouseClickCallback([](Vector2 pos) {
   //     std::cout << "Mouse clicked at: (" << pos.x << ", " << pos.y << ")" << std::endl;
   // });

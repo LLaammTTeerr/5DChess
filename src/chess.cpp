@@ -347,30 +347,4 @@ void Game::submitTurn(void) {
   _nextHalfTurn = INT_MAX;
 }
 
-std::shared_ptr<Board> BoardBuilder::buildStandardBoard(std::shared_ptr<TimeLine> timeLine) {
-  std::shared_ptr<Board> board = std::make_shared<Board>(Constant::BOARD_SIZE, timeLine);
-  for (int i = 0; i < Constant::BOARD_SIZE; i += 1) {
-    board->placePiece({i, 1}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
-    board->placePiece({i, 6}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
-  }
-  board->placePiece({0, 0}, std::make_shared<Rook>(PieceColor::PIECEWHITE));
-  board->placePiece({1, 0}, std::make_shared<Knight>(PieceColor::PIECEWHITE));
-  board->placePiece({2, 0}, std::make_shared<Bishop>(PieceColor::PIECEWHITE));
-  board->placePiece({3, 0}, std::make_shared<Queen>(PieceColor::PIECEWHITE));
-  board->placePiece({4, 0}, std::make_shared<King>(PieceColor::PIECEWHITE));
-  board->placePiece({5, 0}, std::make_shared<Bishop>(PieceColor::PIECEWHITE));
-  board->placePiece({6, 0}, std::make_shared<Knight>(PieceColor::PIECEWHITE));
-  board->placePiece({7, 0}, std::make_shared<Rook>(PieceColor::PIECEWHITE));
-
-  board->placePiece({0, 7}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
-  board->placePiece({1, 7}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
-  board->placePiece({2, 7}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
-  board->placePiece({3, 7}, std::make_shared<Queen>(PieceColor::PIECEBLACK));
-  board->placePiece({4, 7}, std::make_shared<King>(PieceColor::PIECEBLACK));
-  board->placePiece({5, 7}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
-  board->placePiece({6, 7}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
-  board->placePiece({7, 7}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
-  return board;
-}
-
 } // namespace Chess
