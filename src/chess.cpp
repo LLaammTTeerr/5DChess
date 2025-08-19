@@ -186,7 +186,7 @@ std::vector<SelectedPosition> Game::getMoveablePositions(SelectedPosition select
       if (_getPieceByVector4DFullTurn({from.x(), from.y(), from.z(), nw}) != nullptr) {
         break;
       }
-      moveablePositions.emplace_back(selected.board, Position2D(from.x(), from.y()));
+      moveablePositions.emplace_back(getBoard(nw, from.z()), Position2D(from.x(), from.y()));
     }
   }
 
@@ -196,10 +196,16 @@ std::vector<SelectedPosition> Game::getMoveablePositions(SelectedPosition select
     for (const Vector4D& move : knightMoves) {
       if (move.x() >= 0 && move.x() < dim() && move.y() >= 0 && move.y() < dim()) {
         if (boardExists(move.w(), 2 * move.z() + parity)) {
-          moveablePositions.emplace_back(selected.board, Position2D(move.x(), move.y()));
+          moveablePositions.emplace_back(getBoard(move.w(), 2 * move.z() + parity), Position2D(move.x(), move.y()));
         }
       }
     }
+    #ifdef DEBUG
+    for (const SelectedPosition& pos : moveablePositions) {
+      auto pos4D = pos.toVector4D();
+      std::cerr << "Knight move: (" << pos4D.x() << ", " << pos4D.y() << ", " << pos4D.z() << ", " << pos4D.w() << ")\n";
+    }
+    #endif
   }
 
   if (piece->name() == "bishop") {

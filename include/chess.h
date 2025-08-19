@@ -385,8 +385,7 @@ public:
   }
 
   inline std::shared_ptr<Board> getBoardByHalfTurn(int halfTurn) const {
-    int pos = halfTurn - _forkAt - 1;
-    std::cerr << "POS = " << pos << '\n';
+    int pos = halfTurn - _forkAt + 1;
     assert(pos >= 0 && pos < _history.size());
     return _history[pos];
   }
