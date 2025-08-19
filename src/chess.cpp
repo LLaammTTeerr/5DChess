@@ -160,27 +160,27 @@ std::vector<SelectedPosition> Game::getMoveablePositions(SelectedPosition select
     }
 
     for (int nz = from.z() - 1; nz >= 0; nz -= 1) {
-      if (not _boardExists(from.w(), 2 * nz + parity)) {
+      if (not boardExists(from.w(), 2 * nz + parity)) {
         break;
       }
       if (_getPieceByVector4DFullTurn({from.x(), from.y(), nz, from.w()}) != nullptr) {
         break;
       }
-      moveablePositions.emplace_back(selected.board, Position2D(from.x(), from.y()));
+      moveablePositions.emplace_back(getBoard(from.w(), 2 * nz + parity), Position2D(from.x(), from.y()));
     }
 
     for (int nw = from.w() - 1; nw >= 0; nw -= 1) {
-      if (not _boardExists(nw, from.z())) {
+      if (not boardExists(nw, from.z())) {
         break;
       }
       if (_getPieceByVector4DFullTurn({from.x(), from.y(), from.z(), nw}) != nullptr) {
         break;
       }
-      moveablePositions.emplace_back(selected.board, Position2D(from.x(), from.y()));
+      moveablePositions.emplace_back(getBoard(nw, from.z()), Position2D(from.x(), from.y()));
     }
 
     for (int nw = from.w() + 1; nw < _timeLines.size(); nw += 1) {
-      if (not _boardExists(nw, from.z())) {
+      if (not boardExists(nw, from.z())) {
         break;
       }
       if (_getPieceByVector4DFullTurn({from.x(), from.y(), from.z(), nw}) != nullptr) {
@@ -195,7 +195,7 @@ std::vector<SelectedPosition> Game::getMoveablePositions(SelectedPosition select
 
     for (const Vector4D& move : knightMoves) {
       if (move.x() >= 0 && move.x() < dim() && move.y() >= 0 && move.y() < dim()) {
-        if (_boardExists(move.w(), 2 * move.z() + parity)) {
+        if (boardExists(move.w(), 2 * move.z() + parity)) {
           moveablePositions.emplace_back(selected.board, Position2D(move.x(), move.y()));
         }
       }
@@ -218,7 +218,7 @@ std::vector<SelectedPosition> Game::getMoveablePositions(SelectedPosition select
       if (dx == 0 && dy == 0 && dz == 0 && dw == 0) continue;
       Vector4D to = Vector4D(from.x() + dx, from.y() + dy, from.z() + dz, from.w() + dw);
       if (to.x() >= 0 && to.x() < dim() && to.y() >= 0 && to.y() < dim()) {
-        if (_boardExists(to.w(), 2 * to.z() + parity)) {
+        if (boardExists(to.w(), 2 * to.z() + parity)) {
           moveablePositions.emplace_back(selected.board, Position2D(to.x(), to.y()));
         }
       }

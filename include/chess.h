@@ -499,6 +499,18 @@ public:
   }
 
   bool canMakeMoveFromBoard(std::shared_ptr<Board> board) const;
+
+  bool boardExists(int timeLineID, int halfTurn) const {
+    if (timeLineID >= 0 && timeLineID < _timeLines.size()) {
+      int pos = halfTurn - _timeLines[timeLineID]->forkAt() + 1;
+      return pos >= 0 && pos < _timeLines[timeLineID]->size();
+    }
+    return false;
+  }
+
+  std::shared_ptr<Board> getBoard(int timeLineID, int halfTurn) const {
+    return _timeLines[timeLineID]->getBoardByHalfTurn(halfTurn);
+  }
 private:
   int _N;
   int _presentFullTurn;
@@ -519,13 +531,6 @@ private:
     return board->getPiece(Position2D(x, y));
   }
 
-  bool _boardExists(int timeLineID, int halfTurn) const {
-    if (timeLineID >= 0 && timeLineID < _timeLines.size()) {
-      int pos = halfTurn - _timeLines[timeLineID]->forkAt() + 1;
-      return pos >= 0 && pos < _timeLines[timeLineID]->size();
-    }
-    return false;
-  }
 
   void _pushBack(std::shared_ptr<TimeLine> timeLine) {
     _timeLines.push_back(timeLine);
