@@ -9,6 +9,7 @@
 #include <cassert>
 #include <functional>
 #include <cstdint>
+#include <iostream>
 
 namespace Chess {
 
@@ -368,6 +369,10 @@ public:
     return _parent;
   }
 
+  inline int size(void) const {
+    return _history.size();
+  }
+
   /**
    * Push a new board state onto the timeline.
    * @param board The board state to be added to the timeline.
@@ -380,7 +385,7 @@ public:
   }
 
   inline std::shared_ptr<Board> getBoardByHalfTurn(int halfTurn) const {
-    int pos = halfTurn - _forkAt;
+    int pos = halfTurn - _forkAt + 1;
     assert(pos >= 0 && pos < _history.size());
     return _history[pos];
   }
@@ -493,6 +498,18 @@ public:
   }
 
   bool canMakeMoveFromBoard(std::shared_ptr<Board> board) const;
+
+  bool boardExists(int timeLineID, int halfTurn) const {
+    if (timeLineID >= 0 && timeLineID < _timeLines.size()) {
+      int pos = halfTurn - _timeLines[timeLineID]->forkAt() + 1;
+      return pos >= 0 && pos < _timeLines[timeLineID]->size();
+    }
+    return false;
+  }
+
+  std::shared_ptr<Board> getBoard(int timeLineID, int halfTurn) const {
+    return _timeLines[timeLineID]->getBoardByHalfTurn(halfTurn);
+  }
 private:
   int _N;
   int _presentFullTurn;
@@ -513,14 +530,6 @@ private:
     return board->getPiece(Position2D(x, y));
   }
 
-  bool _boardExists(int timeLineID, int halfTurn) const {
-    assert(timeLineID >= 0 && timeLineID < _timeLines.size());
-    try {
-      return _timeLines[timeLineID]->getBoardByHalfTurn(halfTurn) != nullptr;
-    } catch (const std::exception& e) {
-      return false;
-    }
-  }
 
   void _pushBack(std::shared_ptr<TimeLine> timeLine) {
     _timeLines.push_back(timeLine);
