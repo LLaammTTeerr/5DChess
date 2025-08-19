@@ -203,7 +203,7 @@ void ChessView::render(std::vector<std::shared_ptr<Chess::Board>> boards) const 
             }
         }
 
-        render_highlightBoard();
+        
 
         EndMode2D();
     // }
@@ -294,6 +294,12 @@ void ChessView::update_highlightedBoard(const std::vector<std::shared_ptr<BoardV
 }
 
 void ChessView::render_highlightBoard() const {
+    if (_use3DRendering) {
+        // 3D rendering code
+        return;
+    }
+
+    BeginMode2D(_camera2D);
     for (const auto& boardView : _highlightedBoards) {
         if (boardView) {
             boardView->render_highlightBoundaries();
@@ -301,13 +307,22 @@ void ChessView::render_highlightBoard() const {
             std::cerr << "Null BoardView encountered in highlighted boards!" << std::endl;
         }
     }
+    EndMode2D();
 }
 
 void ChessView::update_highlightedPositions(const std::vector<std::pair<std::shared_ptr<BoardView>, Chess::Position2D>>& positions) {
+    if (!positions.empty()) {
+        std::cout << "Updating highlighted positions with " << positions.size() << " entries." << std::endl;
+    }
     _highlightedPositions = positions;
 }
 
 void ChessView::render_highlightedPositions() const {
+    if (_use3DRendering) {
+        // 3D rendering code for highlighted positions
+        return;
+    }
+    BeginMode2D(_camera2D);
     for (const auto& position : _highlightedPositions) {
         if (position.first) {
             position.first->render_highlightedPositions({position.second});
@@ -315,6 +330,7 @@ void ChessView::render_highlightedPositions() const {
             std::cerr << "Null BoardView encountered in highlighted positions!" << std::endl;
         }
     }
+    EndMode2D();
 }
 
 void ChessView::startMoveTransition(

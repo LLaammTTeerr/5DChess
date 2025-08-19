@@ -269,4 +269,6 @@ std::vector<std::shared_ptr<BoardView>> ChessController::computeHighlightedBoard
 
 void ChessController::render() {
   view.render(_currentBoard);
+  view.render_highlightBoard();
+  view.render_highlightedPositions();
 }

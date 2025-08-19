@@ -59,7 +59,7 @@ public:
 private:
   std::vector<std::shared_ptr<BoardView>> _highlightedBoards;
   std::vector<std::pair<std::shared_ptr<BoardView>, Chess::Position2D>> _highlightedPositions;
-protected:
+public:
   virtual void handleMouseSelection(); 
   virtual void render_highlightBoard() const;
   virtual void render_highlightedPositions() const;
