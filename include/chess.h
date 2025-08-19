@@ -514,7 +514,12 @@ private:
   }
 
   bool _boardExists(int timeLineID, int halfTurn) const {
-    return _timeLines[timeLineID]->getBoardByHalfTurn(halfTurn) != nullptr;
+    assert(timeLineID >= 0 && timeLineID < _timeLines.size());
+    try {
+      return _timeLines[timeLineID]->getBoardByHalfTurn(halfTurn) != nullptr;
+    } catch (const std::exception& e) {
+      return false;
+    }
   }
 
   void _pushBack(std::shared_ptr<TimeLine> timeLine) {
