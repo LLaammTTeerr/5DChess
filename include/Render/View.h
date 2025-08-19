@@ -37,13 +37,14 @@ public:
 
 private:
   std::vector<std::shared_ptr<BoardView>> _highlightedBoards;
-
+  std::vector<std::pair<std::shared_ptr<BoardView>, Chess::Position2D>> _highlightedPositions;
 protected:
   virtual void handleMouseSelection(); 
   virtual void render_highlightBoard() const;
+  virtual void render_highlightedPositions() const;
 public:
   virtual void update_highlightedBoard(const std::vector<std::shared_ptr<BoardView>>& boardViews);
-
+  virtual void update_highlightedPositions(const std::vector<std::pair<std::shared_ptr<BoardView>, Chess::Position2D>>& positions);
 
 private:
   std::vector<TransitionComponent> _transitions;  // List of transitions

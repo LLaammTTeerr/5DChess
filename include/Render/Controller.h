@@ -25,6 +25,10 @@ private:
   void resetHighlightedBoard() { _highlightedBoard.clear(); }
   void addHighlightedBoard(std::shared_ptr<Chess::Board> board) { _highlightedBoard.push_back(board); }
 
+  ///@brief highlighted positions
+  std::vector<Chess::SelectedPosition> _highlightedPositions;
+  void resetHighlightedPositions() { _highlightedPositions.clear(); }
+  void addHighlightedPosition(Chess::SelectedPosition position) { _highlightedPositions.push_back(position); }
 
 /// @brief attribute and methods related to view
 private:

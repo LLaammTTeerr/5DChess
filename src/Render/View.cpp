@@ -301,3 +301,17 @@ void ChessView::render_highlightBoard() const {
         }
     }
 }
+
+void ChessView::update_highlightedPositions(const std::vector<std::pair<std::shared_ptr<BoardView>, Chess::Position2D>>& positions) {
+    _highlightedPositions = positions;
+}
+
+void ChessView::render_highlightedPositions() const {
+    for (const auto& position : _highlightedPositions) {
+        if (position.first) {
+            position.first->render_highlightedPositions({position.second});
+        } else {
+            std::cerr << "Null BoardView encountered in highlighted positions!" << std::endl;
+        }
+    }
+}

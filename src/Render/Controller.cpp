@@ -66,7 +66,25 @@ void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPos
 
   } else if (currentMoveState.currentPhase == MovePhase::SELECT_FROM_POSITION) {
     // Select the position on the selected board
-    model.selectFromPosition(selectedPosition.position);
+    std::cout << "Selected position: " << selectedPosition.position.x() << ", " << selectedPosition.position.y() << std::endl;
+    if (selectedPosition.board ->getPiece(selectedPosition.position) == nullptr) {
+      std::cout << "Invalid selection: no piece at the selected position." << std::endl;
+      return; // Invalid selection
+    }
+    std::cout << selectedPosition.board->getPiece(selectedPosition.position)->name() << " selected." << std::endl;
+    model.selectFromPosition(selectedPosition.position); // update model
+
+    std::vector<Chess::SelectedPosition> getMoveablePositions = model._game->getMoveablePositions(selectedPosition);
+    resetHighlightedPositions();
+    addHighlightedPosition(selectedPosition);
+    for (const auto& pos : getMoveablePositions) {
+      addHighlightedPosition(pos);
+    }
+    std::vector<std::pair<std::shared_ptr<BoardView>, Chess::Position2D>> Converted_highlightedPositions;
+    for (const auto& pos : _highlightedPositions) {
+        Converted_highlightedPositions.emplace_back(_boardToBoardViewMap[pos.board], pos.position);
+    }
+    view.update_highlightedPositions(Converted_highlightedPositions);
 
   } else if (currentMoveState.currentPhase == MovePhase::SELECT_TO_BOARD) {
     // Select the target board for the move
