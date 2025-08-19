@@ -9,6 +9,7 @@
 #include <cassert>
 #include <functional>
 #include <cstdint>
+#include <iostream>
 
 namespace Chess {
 
@@ -368,6 +369,10 @@ public:
     return _parent;
   }
 
+  inline int size(void) const {
+    return _history.size();
+  }
+
   /**
    * Push a new board state onto the timeline.
    * @param board The board state to be added to the timeline.
@@ -380,7 +385,8 @@ public:
   }
 
   inline std::shared_ptr<Board> getBoardByHalfTurn(int halfTurn) const {
-    int pos = halfTurn - _forkAt;
+    int pos = halfTurn - _forkAt - 1;
+    std::cerr << "POS = " << pos << '\n';
     assert(pos >= 0 && pos < _history.size());
     return _history[pos];
   }
@@ -514,12 +520,11 @@ private:
   }
 
   bool _boardExists(int timeLineID, int halfTurn) const {
-    assert(timeLineID >= 0 && timeLineID < _timeLines.size());
-    try {
-      return _timeLines[timeLineID]->getBoardByHalfTurn(halfTurn) != nullptr;
-    } catch (const std::exception& e) {
-      return false;
+    if (timeLineID >= 0 && timeLineID < _timeLines.size()) {
+      int pos = halfTurn - _timeLines[timeLineID]->forkAt() + 1;
+      return pos >= 0 && pos < _timeLines[timeLineID]->size();
     }
+    return false;
   }
 
   void _pushBack(std::shared_ptr<TimeLine> timeLine) {

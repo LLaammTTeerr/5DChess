@@ -1,31 +1,32 @@
 #include "MenuComponent.h"
 #include "ICommand.h"
 #include "MenuCommand.h"
+#include <algorithm>
 
 // std::shared_ptr<MenuComponent> MenuItem::clone() const {
 //     auto cloned = std::make_shared<MenuComponent>(*this);
-    
+
 //     // Clone the command if it exists
 //     if (_command) {
 //         cloned->setCommand(_command->clone());
 //     }
-    
+
 //     return cloned;
 // }
 
 // std::shared_ptr<MenuComponent> Menu::clone() const {
 //     auto cloned = std::make_shared<Menu>(*this);
-    
+
 //     // Clone the command if it exists
 //     if (_command) {
 //         cloned->setCommand(_command->clone());
 //     }
-    
+
 //     // Clone children
 //     for (const auto& child : _children) {
 //         cloned->addItem(child->clone());
 //     }
-    
+
 //     return cloned;
 // }
 
@@ -37,7 +38,7 @@ void MenuItem::removeItem(std::shared_ptr<MenuComponent> component) {}
 
 MenuComponent* MenuItem::findItem(const std::string& title) {
     return nullptr; // MenuItem does not have children, so return nullptr
-}   
+}
 
 void MenuItem::setTitle(const std::string& title) {
     _title = title;
@@ -100,7 +101,7 @@ MenuComponent* Menu::findItem(const std::string& title) {
             return component.get();
         }
         MenuComponent* found = component->findItem(title);
-        if (found) {            
+        if (found) {
             return found;
         }
     }

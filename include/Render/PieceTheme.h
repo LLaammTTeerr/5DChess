@@ -1,6 +1,7 @@
 #pragma once
 #include <raylib.h>
 #include <iostream>
+#include <memory>
 
 /* Interface for PieceTheme */
 class IPieceTheme  {
@@ -39,6 +40,6 @@ public:
 private:
   ThemeManager() = default;
   ~ThemeManager() = default;
-std::unique_ptr<IPieceTheme> _theme;
+  std::unique_ptr<IPieceTheme> _theme;
   void ensureInitialized();
 };

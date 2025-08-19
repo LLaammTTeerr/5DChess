@@ -1,5 +1,6 @@
 #include "chess.h"
 #include <stdexcept>
+#include <iostream>
 
 // using namespace Chess;
 namespace Chess {

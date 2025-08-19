@@ -4,6 +4,7 @@
 #include "PieceTheme.h"
 #include <iostream>
 #include "BoardView.h"
+#include <algorithm>
 
 const float BOARD_WORLD_SIZE = 250.0f; // Assuming a standard chess board size
 const float HORIZONTAL_SPACING = 60.0f; // Size of each square on the board
@@ -93,7 +94,7 @@ void ChessView::handleMouseSelection() {
         if (_onSelectedPositionCallback) {
             _onSelectedPositionCallback({selectedBoardView, selectedPosition});
         }
-    } 
+    }
 }
 
 void ChessView::handleInput() {
@@ -102,11 +103,11 @@ void ChessView::handleInput() {
 
     /// @brief Handle mouse clicks: selected board and selected position
     handleMouseSelection();
-    
-   
+
+
     // std::cout << "Capture mouse wheel \n";
-    // Handle camera2D zoom based on mouse wheel    
-    
+    // Handle camera2D zoom based on mouse wheel
+
     // // Handle camera movement
     // if (_use3DRendering) {
     //     if (IsKeyDown(KEY_W)) moveCamera({0.0f, 0.0f});
@@ -189,11 +190,11 @@ void ChessView::render(std::vector<std::shared_ptr<Chess::Board>> boards) const 
     //         }
     //         // std::cout << "Rendering BoardView2D" << std::endl;
     //     }
-        
+
     //     EndMode2D();
     // } else {
         BeginMode2D(_camera2D);
-        
+
         for (int i = 0; i < boards.size() && i < _boardViews.size(); ++i) {
             if (_boardViews[i]) {
                 _boardViews[i]->render(boards[i]);
@@ -275,12 +276,12 @@ std::vector<std::shared_ptr<BoardView>> ChessView::getBoardViews() const {
 //         else {
 //             _isSelectedBoardViewInvalid = false;
 //         }
-//     });  
+//     });
 // }
 
 // void ChessView::queueUpdateMoveState(const RenderMoveState& rmoveState) {
 //     updateQueue.push_back([this, rmoveState](){
-//         // if 
+//         // if
 //     });
 // }
 
