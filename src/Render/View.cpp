@@ -316,3 +316,26 @@ void ChessView::render_highlightedPositions() const {
         }
     }
 }
+
+void ChessView::startMoveTransition(
+    std::shared_ptr<BoardView> fromBoardView,
+    Chess::Position2D fromPosition,
+    std::shared_ptr<BoardView> toBoardView,
+    Chess::Position2D toPosition,
+    float duration,
+    std::function<void()> onComplete
+) {
+    if (fromBoardView && toBoardView) {
+        TransitionComponent transition;
+        transition.fromBoardView = fromBoardView;
+        transition.fromPosition = fromPosition;
+        transition.toBoardView = toBoardView;
+        transition.toPosition = toPosition;
+        transition.duration = duration;
+        transition.onComplete = onComplete;
+
+        _transitions.push_back(transition);
+    } else {
+        std::cerr << "Invalid board views for move transition!" << std::endl;
+    }
+}

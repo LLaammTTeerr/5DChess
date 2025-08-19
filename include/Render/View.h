@@ -17,6 +17,27 @@ struct TransitionComponent {
   std::function<void()> onStart;  // Callback when animation starts
   std::function<void()> onComplete; // Callback when animation completes
   std::string name; // Name of the transition for identification  
+
+  std::shared_ptr<BoardView> fromBoardView; // Board view where the move starts
+  Chess::Position2D fromPosition; // Position on the fromBoardView where the move starts
+  std::shared_ptr<BoardView> toBoardView; // Board view where the move ends
+  Chess::Position2D toPosition; // Position on the toBoardView where the move ends
+
+  TransitionComponent()
+      : isActive(false), duration(0.0f), elapsedTime(0.0f),
+        onStart(nullptr), onComplete(nullptr), name(""),
+        fromBoardView(nullptr), fromPosition{-1, -1},
+        toBoardView(nullptr), toPosition{-1, -1} {}
+
+  virtual void update(float deltaTime) {
+    if (!isActive) return;
+
+    elapsedTime += deltaTime;
+    if (elapsedTime >= duration) {
+      isActive = false;
+      if (onComplete) onComplete();
+    }
+  }
 };
 
 
@@ -49,16 +70,34 @@ public:
 private:
   std::vector<TransitionComponent> _transitions;  // List of transitions
 public:
+  /// @brief Start a transition for adding a new board view
+  /// @param fromBoardView The board view to transition from
+  virtual void startAddBoardViewTransition(std::shared_ptr<BoardView> fromBoardView) {};
 
+  /// @brief Start a transition for moving a piece from one board view to another
+  /// @param fromBoardView The board view to move from
+  /// @param fromPosition The position on the fromBoardView where the move starts
+  /// @param toBoardView The board view to move to
+  /// @param toPosition The position on the toBoardView where the move ends
+  /// @param duration The duration of the transition in seconds
+  /// @param onComplete callback to update model and view after the transition completes
+  /// @note This method will be called by the controller to start the transition
+  virtual void startMoveTransition(
+      std::shared_ptr<BoardView> fromBoardView,
+      Chess::Position2D fromPosition,
+      std::shared_ptr<BoardView> toBoardView,
+      Chess::Position2D toPosition,
+      float duration,
+      std::function<void()> onComplete = nullptr
+  );
 private:
   std::vector<std::function<void()>> updateQueue; // Queue for update callbacks
 public:
-  // virtual void queueUpdateInvalidBoardSelection();
-  // virtual void queueUpdateMoveState(const RenderMoveState& rmoveState);
+
+
 
 private:
   std::vector<std::shared_ptr<BoardView>> _boardViews; // List of board views
-
 
 public:
   // virtual void update

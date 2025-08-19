@@ -20,6 +20,14 @@ struct MoveState {
   MoveState()
       : selectedBoard(nullptr), targetBoard(nullptr), currentPhase(MovePhase::SELECT_FROM_BOARD),
         selectedPosition{-1, -1}, targetPosition{-1, -1} {}
+      
+  void reset() {
+    selectedBoard = nullptr;
+    targetBoard = nullptr;
+    selectedPosition = {-1, -1};
+    targetPosition = {-1, -1};
+    currentPhase = MovePhase::SELECT_FROM_BOARD; // Reset to initial phase
+  }
 };
 
 class ChessController; // Forward declaration
