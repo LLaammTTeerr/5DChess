@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <climits>
+#include <algorithm>
 
 // using namespace Chess;
 namespace Chess {
@@ -9,6 +10,8 @@ Vector4D::Vector4D(int x, int y, int z, int w) : _data({x, y, z, w}) {}
 
 const int Constant::BOARD_SIZE = 8;
 const int Constant::BOARD_SIZE_EMIT_BISHOP = 6;
+const int Constant::BOARD_SIZE_EMIT_KNIGHT = 6;
+const int Constant::BOARD_SIZE_EMIT_QUEEN = 7;
 
 Piece::Piece(PieceColor color, std::shared_ptr<Board> board, Position2D position)
     : _color(color), _board(board), _position(position) {}
@@ -58,13 +61,7 @@ void TimeLine::pushBack(std::shared_ptr<Board> board) {
   _history.push_back(board);
 }
 
-Game::Game(int N, std::function<std::shared_ptr<Board>(std::shared_ptr<TimeLine>)> boardBuilder) : _N(N), _presentHalfTurn(0), _currentTurnColor(PieceColor::PIECEWHITE), _nextHalfTurn(INT_MAX) {
-  _timeLines.push_back(std::make_shared<TimeLine>(N));
-  std::shared_ptr<Board> board = boardBuilder(_timeLines.back());
-  _timeLines.back()->pushBack(std::move(board));
-}
-
-std::vector<std::shared_ptr<Board>> Game::getMoveableBoards(void) const {
+std::vector<std::shared_ptr<Board>> IGame::getMoveableBoards(void) const {
   std::vector<std::shared_ptr<Board>> moveableBoards;
   for (std::shared_ptr<TimeLine> timeLine: _timeLines) {
     if (timeLine->fullTurnNumber() == presentFullTurn() && timeLine->halfTurnNumber() == _presentHalfTurn) {
@@ -74,7 +71,7 @@ std::vector<std::shared_ptr<Board>> Game::getMoveableBoards(void) const {
   return moveableBoards;
 }
 
-bool Game::canMakeMoveFromBoard(std::shared_ptr<Board> board) const {
+bool IGame::canMakeMoveFromBoard(std::shared_ptr<Board> board) const {
   return board
     and board->getTimeLine()->fullTurnNumber() == presentFullTurn()
     and board->getTimeLine()->halfTurnNumber() == _presentHalfTurn;
@@ -125,7 +122,7 @@ std::vector<Vector4D> genKnightMoves(const Vector4D& from) {
   return moves;
 }
 
-std::vector<SelectedPosition> Game::getMoveablePositions(SelectedPosition selected) const {
+std::vector<SelectedPosition> IGame::getMoveablePositions(SelectedPosition selected) const {
   std::shared_ptr<const Piece> piece = selected.board->getPiece(selected.position);
   Vector4D from = selected.toVector4D();
   int parity = int(_currentTurnColor);
@@ -418,7 +415,8 @@ std::vector<SelectedPosition> Game::getMoveablePositions(SelectedPosition select
   return moveablePositions;
 }
 
-void Game::makeMove(Move move) {
+void IGame::makeMove(Move move) {
+  std::vector<int> list;
   std::shared_ptr<Piece> piece = move.from.board->getPiece(move.from.position);
   assert(piece != nullptr);
   assert(piece->color() == _currentTurnColor);
@@ -426,10 +424,11 @@ void Game::makeMove(Move move) {
   std::shared_ptr<Board> newFromBoard = move.from.board->createFork(move.from.board->getTimeLine());
   move.from.board->getTimeLine()->pushBack(newFromBoard);
   newFromBoard->placePiece(move.from.position, nullptr);
+  list.push_back(newFromBoard->getTimeLine()->ID());
   if (move.to.board == move.from.board) {
-    newFromBoard->placePiece(move.to.position, piece);
-    _nextHalfTurn = std::min(_nextHalfTurn, newFromBoard->halfTurnNumber());
-    submitTurn();
+    newFromBoard->placePiece(move.to.position, piece->clone());
+    _nextHalfTurnQueue.push_back(newFromBoard->halfTurnNumber());
+    _undoList.push_back(list);
     return;
   }
 
@@ -439,20 +438,23 @@ void Game::makeMove(Move move) {
 
   if (toTimeLine != move.to.board->getTimeLine()) {
     _timeLines.push_back(toTimeLine);
+    list.push_back(toTimeLine->ID());
   }
 
   std::shared_ptr<Board> newToBoard = move.to.board->getTimeLine()->getBoardByHalfTurn(move.to.board->halfTurnNumber())->createFork(toTimeLine);
   newToBoard->placePiece(move.to.position, piece);
   toTimeLine->pushBack(newToBoard);
 
-  _nextHalfTurn = std::min(_nextHalfTurn, newToBoard->halfTurnNumber());
+  _nextHalfTurnQueue.push_back(newToBoard->halfTurnNumber());
+  _undoList.push_back(list);
 }
 
-void Game::submitTurn(void) {
+void IGame::submitTurn(void) {
   _currentTurnMoves.clear();
   _currentTurnColor = opposite(_currentTurnColor);
-  _presentHalfTurn = _nextHalfTurn;
-  _nextHalfTurn = INT_MAX;
+  _presentHalfTurn = *std::min_element(_nextHalfTurnQueue.begin(), _nextHalfTurnQueue.end());
+  _nextHalfTurnQueue.clear();
+  _undoList.clear();
 }
 
 } // namespace Chess
