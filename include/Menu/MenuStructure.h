@@ -14,7 +14,7 @@
 class TestApp {
 private:
   GameStateModel* _gameState;
-  std::unique_ptr<MenuController> _menuController;
+  std::unique_ptr<NavigationMenuController> _menuController;
   std::shared_ptr<MenuComponent> _menuSystem;
 public:
   TestApp(GameStateModel* gameState) : _gameState(gameState) {}
@@ -30,7 +30,7 @@ public:
     _menuSystem = CompositeMenuFactory(_gameState).createMenuSystem();
     
 
-    _menuController = std::make_unique<MenuController>(_gameState, _menuSystem);
+    _menuController = std::make_unique<NavigationMenuController>(_gameState, _menuSystem);
     _menuController->setViewStrategy(std::make_unique<ButtonMenuView>());
   } 
 

@@ -24,10 +24,10 @@ public:
     virtual std::unique_ptr<GameState> clone() const = 0;
 
     
-    virtual std::shared_ptr<MenuComponent> createMenu(GameStateModel* gameStateModel, SceneManager* sceneManager) = 0;
+    virtual std::shared_ptr<MenuComponent> createNavigationMenu(GameStateModel* gameStateModel, SceneManager* sceneManager) = 0;
     // virtual void renderMenu(std::shared_ptr<MenuComponent> menu) const = 0;
     virtual std::unique_ptr<Scene> createScene() const = 0;
-    virtual std::vector<std::shared_ptr<MenuItemView>> createMenuButtonItemViews(std::shared_ptr<MenuComponent> menu) const = 0;
+    virtual std::vector<std::shared_ptr<MenuItemView>> createNavigationMenuButtonItemViews(std::shared_ptr<MenuComponent> menu) const = 0;
 };
 
 
@@ -51,5 +51,9 @@ public:
     
     // Helper methods for state creation
     static std::unique_ptr<GameState> createState(const std::string& stateName);
-    std::shared_ptr<MenuComponent> createMenuForCurrentState(SceneManager* sceneManager);
+
+    /// @brief create menu to transit between states
+    /// @param sceneManager SceneManager to manage scenes
+    /// @return Shared pointer to the created menu component
+    std::shared_ptr<MenuComponent> createNavigationMenuForCurrentState(SceneManager* sceneManager);
 };

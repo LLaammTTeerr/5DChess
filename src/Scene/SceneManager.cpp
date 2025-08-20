@@ -17,7 +17,7 @@ SceneManager::SceneManager(GameStateModel* gameStateModel)
     // You might want to throw an exception here
     return;
   }
-  initializeMenuSystem();
+  initializeNavigationMenuSystem();
   pushScene(std::make_unique<MainMenuScene>()); // Default scene
   _menuActive = true; // Show menu by default
 }
@@ -80,7 +80,7 @@ void SceneManager::update(float deltaTime) {
   }
   
   // Update menu system if active
-  if (_menuActive && _menuController) {
+  if (_menuActive && _navigationMenuController) {
     updateMenuSystem(deltaTime);
   }
   
@@ -101,7 +101,7 @@ void SceneManager::render() {
   }
   
   // Render menu overlay if active
-  if (_menuActive && _menuController) {
+  if (_menuActive && _navigationMenuController) {
     renderMenuSystem();
   }
 }
@@ -164,7 +164,7 @@ void SceneManager::toggleMenu() {
 }
 
 // // Menu system initialization and management
-void SceneManager::initializeMenuSystem() {
+void SceneManager::initializeNavigationMenuSystem() {
   // GameState should be provided via constructor
   if (!_gameStateModel) {
     std::cerr << "Error: GameState not available for menu system initialization" << std::endl;
@@ -172,28 +172,28 @@ void SceneManager::initializeMenuSystem() {
   }
 
   _gameStateModel->setStateByName("MAIN_MENU");
-  
-  _menuSystem = _gameStateModel->createMenuForCurrentState(this);
-   
+
+  _navigationMenuSystem = _gameStateModel->createNavigationMenuForCurrentState(this);
+
   // Create menu controller
-  _menuController = std::make_shared<MenuController>(_gameStateModel, _menuSystem, this);
+  _navigationMenuController = std::make_shared<NavigationMenuController>(_gameStateModel, _navigationMenuSystem, this);
 
   // Set default view strategy (can be changed later)
-  _menuController->setViewStrategy(std::make_unique<ButtonMenuView>());
+  _navigationMenuController->setViewStrategy(std::make_unique<ButtonMenuView>());
   
   std::cout << "Menu system initialized" << std::endl;
 }
 
 void SceneManager::updateMenuSystem(float deltaTime) {
-  if (_menuController) {
-    _menuController->update();
+  if (_navigationMenuController) {
+    _navigationMenuController->update();
   }
 
 }
 
 void SceneManager::renderMenuSystem() {
-  if (_menuController) {
+  if (_navigationMenuController) {
     // Render menu
-    _menuController->draw();
+    _navigationMenuController->draw();
   }
 }

@@ -11,7 +11,7 @@
 
 
 
-std::shared_ptr<MenuComponent> VersusState::createMenu(GameStateModel* gameStateModel, SceneManager* sceneManager) {
+std::shared_ptr<MenuComponent> VersusState::createNavigationMenu(GameStateModel* gameStateModel, SceneManager* sceneManager) {
   auto versusMenu = std::make_shared<Menu>("Versus Menu", true);
 
   std::shared_ptr<MenuComponent> Back = std::make_shared<MenuItem>("Back", true);
@@ -50,7 +50,7 @@ std::unique_ptr<GameState> VersusState::clone() const {
 //     return std::make_unique<VersusState>();
 // }
 
-std::vector<std::shared_ptr<MenuItemView>> VersusState::createMenuButtonItemViews(std::shared_ptr<MenuComponent> menu) const {
+std::vector<std::shared_ptr<MenuItemView>> VersusState::createNavigationMenuButtonItemViews(std::shared_ptr<MenuComponent> menu) const {
     std::vector<std::shared_ptr<MenuItemView>> itemViews;
 
     int activeItems = 0;

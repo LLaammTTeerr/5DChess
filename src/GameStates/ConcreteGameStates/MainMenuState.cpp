@@ -30,7 +30,7 @@ std::unique_ptr<Scene> MainMenuState::createScene() const {
 }
 
 
-std::shared_ptr<MenuComponent> MainMenuState::createMenu(GameStateModel* gameStateModel, SceneManager* sceneManager) {
+std::shared_ptr<MenuComponent> MainMenuState::createNavigationMenu(GameStateModel* gameStateModel, SceneManager* sceneManager) {
   auto mainMenu = std::make_shared<Menu>("Main Menu", true);
 
   std::shared_ptr<MenuComponent> Versus = std::make_shared<MenuItem>("Versus", true);
@@ -52,7 +52,7 @@ std::shared_ptr<MenuComponent> MainMenuState::createMenu(GameStateModel* gameSta
   return mainMenu;
 }
 
-std::vector<std::shared_ptr<MenuItemView>> MainMenuState::createMenuButtonItemViews(std::shared_ptr<MenuComponent> menu) const {
+std::vector<std::shared_ptr<MenuItemView>> MainMenuState::createNavigationMenuButtonItemViews(std::shared_ptr<MenuComponent> menu) const {
     std::vector<std::shared_ptr<MenuItemView>> itemViews;
 
     int activeItems = 0;

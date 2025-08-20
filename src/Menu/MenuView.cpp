@@ -5,7 +5,7 @@
 
 
 
-void ButtonMenuView::createItemViews(std::shared_ptr<MenuComponent> menuModel, GameState* gameState) {
+void ButtonMenuView::createNavigationItemViews(std::shared_ptr<MenuComponent> menuModel, GameState* gameState) {
     _itemViews.clear(); // Clear existing item views
 
     if (gameState == nullptr) {
@@ -21,7 +21,7 @@ void ButtonMenuView::createItemViews(std::shared_ptr<MenuComponent> menuModel, G
     else {
         _itemViews.clear(); // Clear existing item views
         // Create item views based on the game state
-        auto itemViews = gameState->createMenuButtonItemViews(menuModel);
+        auto itemViews = gameState->createNavigationMenuButtonItemViews(menuModel);
         for (const auto& itemView : itemViews) {
             if (itemView) {
                 _itemViews.push_back(itemView);

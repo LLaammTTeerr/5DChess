@@ -7,39 +7,39 @@
 #include "GameStates/ConcreteGameStates/MainMenuState.h"
 #include "GameStates/ConcreteGameStates/VersusState.h"
 
-MenuController::MenuController(GameStateModel* gameStateModel, std::shared_ptr<MenuComponent> menuSystem, 
+NavigationMenuController::NavigationMenuController(GameStateModel* gameStateModel, std::shared_ptr<MenuComponent> menuSystem, 
                                SceneManager* sceneManager)
     : _gameStateModel(gameStateModel), 
       _lastState(std::make_unique<MainMenuState>()), // Initialize with a default state
-      _menuSystem(menuSystem),
       _sceneManager(sceneManager)
 {
+    _menuSystem = menuSystem; // Assign to the protected member from the base class
     _currentMenuModel = _menuSystem; // Use the shared menu system directly
     _menuView = std::make_unique<ButtonMenuView>(); // Default view strategy
 }
 
-void MenuController::setViewStrategy(std::unique_ptr<IMenuView> view) {
+void NavigationMenuController::setViewStrategy(std::unique_ptr<IMenuView> view) {
     _menuView = std::move(view);
     if (_menuView) {
-        _menuView->createItemViews(_currentMenuModel, _gameStateModel->getCurrentState());
+        _menuView->createNavigationItemViews(_currentMenuModel, _gameStateModel->getCurrentState());
     }
 }
 
 
 
-void MenuController::updateMenuForCurrentState() {
+void NavigationMenuController::updateNavigationMenuForCurrentState() {
    if (_gameStateModel->getCurrentStateName() != _lastState->getName()) {
-        std::shared_ptr<MenuComponent> newMenu = _gameStateModel->getCurrentState()->createMenu(_gameStateModel, _sceneManager);
+        std::shared_ptr<MenuComponent> newMenu = _gameStateModel->getCurrentState()->createNavigationMenu(_gameStateModel, _sceneManager);
         if (newMenu) {
             _currentMenuModel = newMenu; // Update current menu model (both are shared_ptr now)
-            _menuView->createItemViews(_currentMenuModel, _gameStateModel->getCurrentState()); // Update item views for the new menu
+            _menuView->createNavigationItemViews(_currentMenuModel, _gameStateModel->getCurrentState()); // Update item views for the new menu
         }
         _lastState = std::move(_gameStateModel->getCurrentState()->clone()); // Store the last state
     }
 }
 
 
-void MenuController::handleInput() {
+void NavigationMenuController::handleInput() {
     Vector2 mousePosition = GetMousePosition();
     bool mouseClicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
 
@@ -76,17 +76,17 @@ void MenuController::handleInput() {
 }
 
 
-void MenuController::update() {
-    updateMenuForCurrentState();
+void NavigationMenuController::update() {
+    updateNavigationMenuForCurrentState();
     handleInput();
 }
 
-void MenuController::draw() const {
+void NavigationMenuController::draw() const {
     if (_menuView) {
         _menuView -> draw(_currentMenuModel); 
     }
 }
 
-IMenuView* MenuController::getMenuView() const {
+IMenuView* NavigationMenuController::getMenuView() const {
     return _menuView.get();
 }

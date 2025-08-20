@@ -68,9 +68,9 @@ std::unique_ptr<GameState> GameStateModel::createState(const std::string& stateN
 
 
 
-std::shared_ptr<MenuComponent> GameStateModel::createMenuForCurrentState(SceneManager* sceneManager) {
+std::shared_ptr<MenuComponent> GameStateModel::createNavigationMenuForCurrentState(SceneManager* sceneManager) {
     if (_currentState) {
-        return _currentState->createMenu(this, sceneManager);
+        return _currentState->createNavigationMenu(this, sceneManager);
     }
     return nullptr;
 }

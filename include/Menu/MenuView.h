@@ -27,8 +27,8 @@ protected:
   
 public:
   virtual ~IMenuView() = default;
+  virtual void createNavigationItemViews(std::shared_ptr<MenuComponent> menuModel, GameState* gameState) = 0;
   virtual void draw(std::shared_ptr<MenuComponent> menuModel) const = 0;
-  virtual void createItemViews(std::shared_ptr<MenuComponent> menuModel, GameState* gameState) = 0;
 
   // virtual void drawTitle(const std::string& title) const;
   // virtual void drawStatusInfo(const GameStateModel& gameState) const;
@@ -46,9 +46,9 @@ public:
 // Concrete implementation of a menu view
 class ButtonMenuView : public IMenuView {
 public:
-  ~ButtonMenuView() = default;
+  ButtonMenuView() = default;
 
-  void createItemViews(std::shared_ptr<MenuComponent> menuModel, GameState* gameState) override;
+  void createNavigationItemViews(std::shared_ptr<MenuComponent> menuModel, GameState* gameState) override;
   void draw(std::shared_ptr<MenuComponent> menuModel) const override; // { /* Draw button menu */ }
   // void drawTitle(const std::string& title) const override;
 };

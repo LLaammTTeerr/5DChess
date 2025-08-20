@@ -7,7 +7,7 @@
 // Forward declarations
 class Scene;
 class GameStateModel;
-class MenuController;
+class NavigationMenuController;
 class MenuComponent;
 
 class SceneManager {
@@ -45,10 +45,9 @@ public:
 private:
   std::stack<std::unique_ptr<Scene>> _sceneStack;
 
-  // Menu system integration
   GameStateModel* _gameStateModel;
-  std::shared_ptr<MenuController> _menuController;
-  std::shared_ptr<MenuComponent> _menuSystem;
+  std::shared_ptr<NavigationMenuController> _navigationMenuController;
+  std::shared_ptr<MenuComponent> _navigationMenuSystem;
   bool _menuActive = false;
 
   /*
@@ -66,7 +65,7 @@ private:
   std::unique_ptr<Scene> createScene(const std::string &name);
   
   // Menu system helpers
-  void initializeMenuSystem();
+  void initializeNavigationMenuSystem();
   void updateMenuSystem(float deltaTime);
   void renderMenuSystem();
 };
