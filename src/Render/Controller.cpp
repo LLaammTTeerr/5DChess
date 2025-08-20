@@ -72,6 +72,7 @@ void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPos
       return; // Invalid selection
     }
 
+
     /// @brief Step 2: Update the model with the selected board
     model.selectFromBoard(selectedPosition.board);
 
@@ -85,7 +86,8 @@ void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPos
   else if (model._currentMoveState.currentPhase == MovePhase::SELECT_FROM_POSITION) {
     // Select the position on the selected board
     /// Step 1: Check if the selected position is valid
-    if (selectedPosition.board ->getPiece(selectedPosition.position) == nullptr) {
+    if (selectedPosition.board ->getPiece(selectedPosition.position) == nullptr ||
+  selectedPosition.board->getPiece(selectedPosition.position)->color() != model._game->getCurrentTurnColor()) {
       std::cout << "Invalid selection: no piece at the selected position." << std::endl;
       return; // Invalid selection
     }
