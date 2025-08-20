@@ -8,6 +8,7 @@ namespace Chess {
 Vector4D::Vector4D(int x, int y, int z, int w) : _data({x, y, z, w}) {}
 
 const int Constant::BOARD_SIZE = 8;
+const int Constant::BOARD_SIZE_EMIT_BISHOP = 6;
 
 Piece::Piece(PieceColor color, std::shared_ptr<Board> board, Position2D position)
     : _color(color), _board(board), _position(position) {}
@@ -140,61 +141,82 @@ std::vector<SelectedPosition> Game::getMoveablePositions(SelectedPosition select
 
   if (piece->name() == "rook") {
     for (int nx = from.x() + 1; nx < dim(); nx += 1) {
-      if (_getPieceByVector4DFullTurn({nx, from.y(), from.z(), from.w()}) != nullptr) {
+      std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({nx, from.y(), from.z(), from.w()});
+      if (targetPiece != nullptr and targetPiece->color() == _currentTurnColor) {
         break;
       }
       moveablePositions.emplace_back(selected.board, Position2D(nx, from.y()));
+      if (targetPiece != nullptr)
+        break;
     }
 
     for (int nx = from.x() - 1; nx >= 0; nx -= 1) {
-      if (_getPieceByVector4DFullTurn({nx, from.y(), from.z(), from.w()}) != nullptr) {
+      std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({nx, from.y(), from.z(), from.w()});
+      if (targetPiece != nullptr and targetPiece->color() == _currentTurnColor) {
         break;
       }
       moveablePositions.emplace_back(selected.board, Position2D(nx, from.y()));
+      if (targetPiece != nullptr)
+        break;
     }
 
     for (int ny = from.y() + 1; ny < dim(); ny += 1) {
-      if (_getPieceByVector4DFullTurn({from.x(), ny, from.z(), from.w()}) != nullptr) {
+      std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({from.x(), ny, from.z(), from.w()});
+      if (targetPiece != nullptr and targetPiece->color() == _currentTurnColor) {
         break;
       }
       moveablePositions.emplace_back(selected.board, Position2D(from.x(), ny));
+      if (targetPiece != nullptr)
+        break;
     }
 
     for (int ny = from.y() - 1; ny >= 0; ny -= 1) {
-      if (_getPieceByVector4DFullTurn({from.x(), ny, from.z(), from.w()}) != nullptr) {
+      std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({from.x(), ny, from.z(), from.w()});
+      if (targetPiece != nullptr and targetPiece->color() == _currentTurnColor) {
         break;
       }
       moveablePositions.emplace_back(selected.board, Position2D(from.x(), ny));
+      if (targetPiece != nullptr)
+        break;
     }
 
     for (int nz = from.z() - 1; nz >= 0; nz -= 1) {
       if (not boardExists(from.w(), 2 * nz + parity)) {
         break;
       }
-      if (_getPieceByVector4DFullTurn({from.x(), from.y(), nz, from.w()}) != nullptr) {
+      std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({from.x(), from.y(), nz, from.w()});
+      if (targetPiece != nullptr and targetPiece->color() == _currentTurnColor) {
         break;
       }
       moveablePositions.emplace_back(getBoard(from.w(), 2 * nz + parity), Position2D(from.x(), from.y()));
+      if (targetPiece != nullptr)
+        break;
     }
 
     for (int nw = from.w() - 1; nw >= 0; nw -= 1) {
       if (not boardExists(nw, from.z())) {
         break;
       }
-      if (_getPieceByVector4DFullTurn({from.x(), from.y(), from.z(), nw}) != nullptr) {
+      std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({from.x(), from.y(), from.z(), nw});
+      if (targetPiece != nullptr and targetPiece->color() == _currentTurnColor) {
         break;
       }
       moveablePositions.emplace_back(getBoard(nw, from.z()), Position2D(from.x(), from.y()));
+      if (targetPiece != nullptr)
+        break;
     }
 
     for (int nw = from.w() + 1; nw < _timeLines.size(); nw += 1) {
       if (not boardExists(nw, from.z())) {
         break;
       }
-      if (_getPieceByVector4DFullTurn({from.x(), from.y(), from.z(), nw}) != nullptr) {
+      std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({from.x(), from.y(), from.z(), nw});
+      if (targetPiece != nullptr and targetPiece->color() == _currentTurnColor) {
         break;
       }
       moveablePositions.emplace_back(getBoard(nw, from.z()), Position2D(from.x(), from.y()));
+      if (targetPiece != nullptr)
+        break;
     }
   }
 
@@ -212,67 +234,103 @@ std::vector<SelectedPosition> Game::getMoveablePositions(SelectedPosition select
   }
 
   if (piece->name() == "bishop") {
-    for (int d = 1; d < dim(); d += 1) {
-      for (int sx : {-1, +1}) for (int sy : {-1, +1}) {
+    for (int sx : {-1, +1}) for (int sy : {-1, +1}) {
+      for (int d = 1; d < dim(); d += 1) {
         int nx = from.x() + sx * d;
         int ny = from.y() + sy * d;
-        if (nx < 0 || nx >= dim() || ny < 0 || ny >= dim()) continue;
-
+        if (nx < 0 || nx >= dim() || ny < 0 || ny >= dim()) break;
+        std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({nx, ny, from.z(), from.w()});
+        if (targetPiece != nullptr and targetPiece->color() == _currentTurnColor) {
+          break;
+        }
         moveablePositions.emplace_back(selected.board, Position2D(nx, ny));
+        if (targetPiece != nullptr) {
+          break;
+        }
       }
     }
 
-    for (int d = 1; d < dim(); d += 1) {
-      for (int sx : {-1, +1}) {
+    for (int sx : {-1, +1}) {
+      for (int d = 1; d < dim(); d += 1) {
         int nx = from.x() + sx * d;
         int nz = from.z() - d;
-        if (nz < 0) continue;
-        if (nx < 0 || nx >= dim()) continue;
-
+        if (nz < 0) break;
+        if (nx < 0 || nx >= dim()) break;
+        std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({nx, from.y(), nz, from.w()});
+        if (targetPiece != nullptr and targetPiece->color() == _currentTurnColor) {
+          break;
+        }
         moveablePositions.emplace_back(getBoard(from.w(), 2 * nz + parity), Position2D(nx, from.y()));
+        if (targetPiece != nullptr) {
+          break;
+        }
       }
     }
 
-    for (int d = 1; d < dim(); d += 1) {
-      for (int sy : {-1, +1}) {
+    for (int sy : {-1, +1}) {
+      for (int d = 1; d < dim(); d += 1) {
         int ny = from.y() + sy * d;
         int nz = from.z() - d;
-        if (nz < 0) continue;
-        if (ny < 0 || ny >= dim()) continue;
-
+        if (nz < 0) break;
+        if (ny < 0 || ny >= dim()) break;
+        std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({from.x(), ny, nz, from.w()});
+        if (targetPiece != nullptr and targetPiece->color() == _currentTurnColor) {
+          break;
+        }
         moveablePositions.emplace_back(getBoard(from.w(), 2 * nz + parity), Position2D(from.x(), ny));
+        if (targetPiece != nullptr) {
+          break;
+        }
       }
     }
 
-    for (int d = 1; d < dim(); d += 1) {
-      for (int sx : {-1, +1}) for (int sw : {-1, +1}) {
+    for (int sx : {-1, +1}) for (int sw : {-1, +1}) {
+      for (int d = 1; d < dim(); d += 1) {
         int nx = from.x() + sx * d;
         int nw = from.w() + sw * d;
-        if (nx < 0 || nx >= dim()) continue;
-        if (!boardExists(nw, 2 * from.z() + parity)) continue;
-
+        if (nx < 0 || nx >= dim()) break;
+        if (!boardExists(nw, 2 * from.z() + parity)) break;
+        std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({nx, from.y(), from.z(), nw});
+        if (targetPiece != nullptr and targetPiece->color() == _currentTurnColor) {
+          break;
+        }
         moveablePositions.emplace_back(getBoard(nw, 2 * from.z() + 1), Position2D(nx, from.y()));
+        if (targetPiece != nullptr) {
+          break;
+        }
       }
     }
 
-    for (int d = 1; d < dim(); d += 1) {
-      for (int sy : {-1, +1}) for (int sw : {-1, +1}) {
+    for (int sy : {-1, +1}) for (int sw : {-1, +1}) {
+      for (int d = 1; d < dim(); d += 1) {
         int ny = from.y() + sy * d;
         int nw = from.w() + sw * d;
-        if (ny < 0 || ny >= dim()) continue;
-        if (!boardExists(nw, 2 * from.z() + parity)) continue;
-
+        if (ny < 0 || ny >= dim()) break;
+        if (!boardExists(nw, 2 * from.z() + parity)) break;
+        std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({from.x(), ny, from.z(), nw});
+        if (targetPiece != nullptr and targetPiece->color() == _currentTurnColor) {
+          break;
+        }
         moveablePositions.emplace_back(getBoard(nw, 2 * from.z() + 1), Position2D(from.x(), ny));
+        if (targetPiece != nullptr) {
+          break;
+        }
       }
     }
 
-    for (int d = 1; d < selected.board->halfTurnNumber(); d += 1) {
-      for (int sw : {-1, +1}) {
+    for (int sw : {-1, +1}) {
+      for (int d = 1; d < selected.board->halfTurnNumber(); d += 1) {
         int nz = from.z() - d;
         int nw = from.w() + sw * d;
-        if (!boardExists(nw, 2 * nz + parity)) continue;
-
+        if (!boardExists(nw, 2 * nz + parity)) break;
+        std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({from.x(), from.y(), nz, nw});
+        if (targetPiece != nullptr and targetPiece->color() == _currentTurnColor) {
+          break;
+        }
         moveablePositions.emplace_back(getBoard(nw, 2 * nz + 1), Position2D(from.x(), from.y()));
+        if (targetPiece != nullptr) {
+          break;
+        }
       }
     }
   }
@@ -290,6 +348,9 @@ std::vector<SelectedPosition> Game::getMoveablePositions(SelectedPosition select
       Vector4D to = Vector4D(from.x() + dx, from.y() + dy, from.z() + dz, from.w() + dw);
       if (to.x() >= 0 && to.x() < dim() && to.y() >= 0 && to.y() < dim()) {
         if (boardExists(to.w(), 2 * to.z() + parity)) {
+          std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn(to);
+          if (targetPiece == nullptr || targetPiece->color() != _currentTurnColor)
+            continue;
           moveablePositions.emplace_back(getBoard(to.w(), 2 * to.z() + 1), Position2D(to.x(), to.y()));
         }
       }
@@ -298,23 +359,60 @@ std::vector<SelectedPosition> Game::getMoveablePositions(SelectedPosition select
 
   if (piece->name() == "pawn") {
     if (piece->color() == PieceColor::PIECEWHITE) {
-      if (piece->getPosition().y() == 1) {
-        moveablePositions.emplace_back(selected.board, Position2D(from.x(), from.y() + 2));
+      if (piece->getPosition().y() < dim() - 1 and piece->getPosition().x() > 0) {
+        std::shared_ptr<Piece> targetPiece = selected.board->getPiece(Position2D(from.x() - 1, from.y() + 1));
+        if (targetPiece != nullptr and targetPiece->color() == PieceColor::PIECEBLACK) {
+          moveablePositions.emplace_back(selected.board, Position2D(from.x() - 1, from.y() + 1));
+        }
+      }
+      if (piece->getPosition().y() < dim() - 1 and piece->getPosition().x() < dim() - 1) {
+        std::shared_ptr<Piece> targetPiece = selected.board->getPiece(Position2D(from.x() + 1, from.y() + 1));
+        if (targetPiece != nullptr and targetPiece->color() == PieceColor::PIECEBLACK) {
+          moveablePositions.emplace_back(selected.board, Position2D(from.x() + 1, from.y() + 1));
+        }
       }
       if (piece->getPosition().y() < dim() - 1) {
+        std::shared_ptr<Piece> targetPiece = selected.board->getPiece(Position2D(from.x(), from.y() + 1));
+        if (targetPiece != nullptr)
+          goto SKIP_PAWN_MOVE;
         moveablePositions.emplace_back(selected.board, Position2D(from.x(), from.y() + 1));
-        //TODO: PROMOTE
+      }
+
+      if (piece->getPosition().y() == 1) {
+        std::shared_ptr<Piece> targetPiece = selected.board->getPiece(Position2D(from.x(), from.y() + 2));
+        if (targetPiece != nullptr)
+          goto SKIP_PAWN_MOVE;
+        moveablePositions.emplace_back(selected.board, Position2D(from.x(), from.y() + 2));
       }
     }
     if (piece->color() == PieceColor::PIECEBLACK) {
+      if (piece->getPosition().y() > 0 and piece->getPosition().x() > 0) {
+        std::shared_ptr<Piece> targetPiece = selected.board->getPiece(Position2D(from.x() - 1, from.y() - 1));
+        if (targetPiece != nullptr and targetPiece->color() == PieceColor::PIECEWHITE) {
+          moveablePositions.emplace_back(selected.board, Position2D(from.x() - 1, from.y() - 1));
+        }
+      }
+      if (piece->getPosition().y() > 0 and piece->getPosition().x() < dim() - 1) {
+        std::shared_ptr<Piece> targetPiece = selected.board->getPiece(Position2D(from.x() + 1, from.y() - 1));
+        if (targetPiece != nullptr and targetPiece->color() == PieceColor::PIECEWHITE) {
+          moveablePositions.emplace_back(selected.board, Position2D(from.x() + 1, from.y() - 1));
+        }
+      }
       if (piece->getPosition().y() == 6) {
+        std::shared_ptr<Piece> targetPiece = selected.board->getPiece(Position2D(from.x(), from.y() - 2));
+        if (targetPiece != nullptr)
+          goto SKIP_PAWN_MOVE;
         moveablePositions.emplace_back(selected.board, Position2D(from.x(), from.y() - 2));
       }
       if (piece->getPosition().y() > 0) {
+        std::shared_ptr<Piece> targetPiece = selected.board->getPiece(Position2D(from.x(), from.y() - 1));
+        if (targetPiece != nullptr)
+          goto SKIP_PAWN_MOVE;
         moveablePositions.emplace_back(selected.board, Position2D(from.x(), from.y() - 1));
         //TODO: PROMOTE
       }
     }
+    SKIP_PAWN_MOVE:;
   }
 
   return moveablePositions;
@@ -348,8 +446,6 @@ void Game::makeMove(Move move) {
   toTimeLine->pushBack(newToBoard);
 
   _nextHalfTurn = std::min(_nextHalfTurn, newToBoard->halfTurnNumber());
-
-  submitTurn();
 }
 
 void Game::submitTurn(void) {

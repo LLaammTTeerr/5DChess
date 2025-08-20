@@ -592,8 +592,8 @@ public:
 class StandardBoardBuilder : public IBoardBuilderCRTP<StandardBoardBuilder> {
 public:
   static std::shared_ptr<Board> build_impl(std::shared_ptr<TimeLine> timeLine) {
-    std::shared_ptr<Board> board = std::make_shared<Board>(Constant::BOARD_SIZE, timeLine);
-    for (int i = 0; i < Constant::BOARD_SIZE; i += 1) {
+    std::shared_ptr<Board> board = std::make_shared<Board>(dim(), timeLine);
+    for (int i = 0; i < dim(); i += 1) {
       board->placePiece({i, 1}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
       board->placePiece({i, 6}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
     }
@@ -619,6 +619,35 @@ public:
 
   static int dim_impl(void) {
     return Constant::BOARD_SIZE;
+  }
+};
+
+class CustomBoardEmitBishop : public IBoardBuilderCRTP<CustomBoardEmitBishop> {
+public:
+  static std::shared_ptr<Board> build_impl(std::shared_ptr<TimeLine> timeLine) {
+    std::shared_ptr<Board> board = std::make_shared<Board>(dim(), timeLine);
+    for (int i = 0; i < dim(); i += 1) {
+      board->placePiece({i, 1}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
+      board->placePiece({i, 4}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
+    }
+    board->placePiece({0, 0}, std::make_shared<Rook>(PieceColor::PIECEWHITE));
+    board->placePiece({1, 0}, std::make_shared<Knight>(PieceColor::PIECEWHITE));
+    board->placePiece({2, 0}, std::make_shared<Queen>(PieceColor::PIECEWHITE));
+    board->placePiece({3, 0}, std::make_shared<King>(PieceColor::PIECEWHITE));
+    board->placePiece({4, 0}, std::make_shared<Knight>(PieceColor::PIECEWHITE));
+    board->placePiece({5, 0}, std::make_shared<Rook>(PieceColor::PIECEWHITE));
+
+    board->placePiece({0, 5}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
+    board->placePiece({1, 5}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
+    board->placePiece({2, 5}, std::make_shared<Queen>(PieceColor::PIECEBLACK));
+    board->placePiece({3, 5}, std::make_shared<King>(PieceColor::PIECEBLACK));
+    board->placePiece({4, 5}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
+    board->placePiece({5, 5}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
+    return board;
+  }
+
+  static int dim_impl(void) {
+    return Constant::BOARD_SIZE_EMIT_BISHOP;
   }
 };
 
