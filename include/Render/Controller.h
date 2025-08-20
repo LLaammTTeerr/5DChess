@@ -8,7 +8,7 @@
 #include "View.h"
 #include "RenModel.h"
 
-class ChessRenderController {
+class ChessController {
 private:
   ChessModel& model;
   ChessView& view;
@@ -52,7 +52,7 @@ private:
   std::map<std::shared_ptr<Chess::Board>, std::shared_ptr<BoardView>> _boardToBoardViewMap; // Map to store board views by board
   std::map<std::shared_ptr<BoardView>, std::shared_ptr<Chess::Board>> _boardViewToBoardMap; // Map to store boards by board view
 public:
-  ChessRenderController(ChessModel& m, ChessView& v);
+  ChessController(ChessModel& m, ChessView& v);
   void update(float deltaTime);
   void handleInput();
   void render();

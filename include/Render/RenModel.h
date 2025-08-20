@@ -30,7 +30,7 @@ struct MoveState {
   }
 };
 
-class ChessRenderController; // Forward declaration
+class ChessController; // Forward declaration
 
 /// @brief Adapter class to convert model data to view data
 class ChessModel {

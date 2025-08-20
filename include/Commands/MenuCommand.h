@@ -73,13 +73,13 @@ public:
 };
 
 class ChessController; // Forward declaration
-class SubmitMoveCommand  : public Icommand {
+class SubmitMoveCommand  : public ICommand {
 private:
   std::shared_ptr<ChessController> _chessController;
 public:
   SubmitMoveCommand(std::shared_ptr<ChessController> chessController);
   void execute() override;
-  virtual bool canUnod() const override { return false; }
+  virtual bool canUndo() const override { return false; }
   virtual bool canRedo() const override { return false; }
   void undo() override {}
   void redo() override {}

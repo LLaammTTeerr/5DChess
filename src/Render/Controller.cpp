@@ -1,27 +1,27 @@
 #include "Render/Controller.h"
 #include "ResourceManager.h"
 
-ChessRenderController::ChessRenderController(ChessModel& m, ChessView& v) : model(m), view(v) {
+ChessController::ChessController(ChessModel& m, ChessView& v) : model(m), view(v) {
     setupViewCallbacks();
 }
 
-void ChessRenderController::updateCurrentBoardFromModel() {
+void ChessController::updateCurrentBoardFromModel() {
   _currentBoard = computeCurrentBoardFromModel();
 }
 
 
-void ChessRenderController::updateBoardViewFromCurrentBoards() {
+void ChessController::updateBoardViewFromCurrentBoards() {
   _currentBoardViews = computeBoardViewFromCurrentBoards(_currentBoardType);
 }
 
-void ChessRenderController::updateNewBoardViewsToView() {
+void ChessController::updateNewBoardViewsToView() {
   view.clearBoardViews();
   for (const auto& boardView : _currentBoardViews) if (boardView) {
     view.addBoardView(boardView);
   } 
 }
 
-void ChessRenderController::update(float deltaTime) {
+void ChessController::update(float deltaTime) {
   updateCurrentBoardFromModel();
   updateBoardViewFromCurrentBoards();
   // after updating the board and board views, we need bridge the board to board view
@@ -33,12 +33,12 @@ void ChessRenderController::update(float deltaTime) {
   updateNewBoardViewsToView();
 }
 
-void ChessRenderController::handleInput() {
+void ChessController::handleInput() {
     update(GetFrameTime());
     view.handleInput();
 }
 
-void ChessRenderController::setupViewCallbacks() {
+void ChessController::setupViewCallbacks() {
   view.setSelectedPositionCallback([this](std::pair<std::shared_ptr<BoardView>, Chess::Position2D> selectedPositionPair) {
     // Handle the selected position from the view
     Chess::SelectedPosition selectedPosition = {
@@ -50,7 +50,7 @@ void ChessRenderController::setupViewCallbacks() {
 }
 
 
-void ChessRenderController::handleSelectedPosition(Chess::SelectedPosition selectedPosition) {
+void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPosition) {
   /// @brief chose the board to move from
   if (model._currentMoveState.currentPhase == MovePhase::SELECT_FROM_BOARD) {
     // Select the board from which to move
@@ -194,7 +194,7 @@ void ChessRenderController::handleSelectedPosition(Chess::SelectedPosition selec
 
 }
 
-std::vector<std::shared_ptr<BoardView>> ChessRenderController::computeBoardViewFromCurrentBoards(std::string boardType) const {
+std::vector<std::shared_ptr<BoardView>> ChessController::computeBoardViewFromCurrentBoards(std::string boardType) const {
     if (boardType == "2D") {
         return computeBoardView2DsFromCurrentBoards();
     } else if (boardType == "3D") {
@@ -203,7 +203,7 @@ std::vector<std::shared_ptr<BoardView>> ChessRenderController::computeBoardViewF
     return std::vector<std::shared_ptr<BoardView>>(); // Empty vector for unsupported types
 }
 
-// RenderMoveState ChessRenderController::convertModelToRenderState(const MoveState& moveState) {
+// RenderMoveState ChessController::convertModelToRenderState(const MoveState& moveState) {
 //     RenderMoveState renderState;
 //     renderState.selectedBoardView = getBoardViewFromModel(moveState.selectedBoard);
 //     renderState.selectedPosition = moveState.selectedPosition;
@@ -214,7 +214,7 @@ std::vector<std::shared_ptr<BoardView>> ChessRenderController::computeBoardViewF
 //     return renderState;
 // }
 
-std::vector<std::shared_ptr<Chess::Board>> ChessRenderController::computeCurrentBoardFromModel() const {
+std::vector<std::shared_ptr<Chess::Board>> ChessController::computeCurrentBoardFromModel() const {
   std::vector<std::shared_ptr<Chess::Board>> Boards;
 
   auto timeLines = model.getTimeLines();
@@ -229,7 +229,7 @@ std::vector<std::shared_ptr<Chess::Board>> ChessRenderController::computeCurrent
   return Boards;
 }
 
-std::vector<std::shared_ptr<BoardView>> ChessRenderController::computeBoardView2DsFromCurrentBoards() const {
+std::vector<std::shared_ptr<BoardView>> ChessController::computeBoardView2DsFromCurrentBoards() const {
   std::vector<std::shared_ptr<BoardView>> boardViews;
 
   for (const auto& board : _currentBoard) {
@@ -261,14 +261,14 @@ std::vector<std::shared_ptr<BoardView>> ChessRenderController::computeBoardView2
   return boardViews;
 }
 
-std::vector<std::shared_ptr<BoardView>> ChessRenderController::computeBoardView3DsFromCurrentBoards() const {
+std::vector<std::shared_ptr<BoardView>> ChessController::computeBoardView3DsFromCurrentBoards() const {
   return std::vector<std::shared_ptr<BoardView>>(); // Placeholder for 3D board views
 }
 
 
 
 
-std::vector<std::shared_ptr<BoardView>> ChessRenderController::computeHighlightedBoardViews() const {
+std::vector<std::shared_ptr<BoardView>> ChessController::computeHighlightedBoardViews() const {
     std::vector<std::shared_ptr<BoardView>> highlightedViews;
     for (auto& board : _highlightedBoard) {
         auto it = _boardToBoardViewMap.find(board);
@@ -281,6 +281,6 @@ std::vector<std::shared_ptr<BoardView>> ChessRenderController::computeHighlighte
     return highlightedViews;
   }
 
-void ChessRenderController::render() {
+void ChessController::render() {
   view.render();
 }
