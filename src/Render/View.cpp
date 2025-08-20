@@ -5,7 +5,7 @@
 #include <iostream>
 #include "BoardView.h"
 #include <algorithm>
-
+#include <cmath>
 
 
 
@@ -23,6 +23,10 @@ ChessView::ChessView(Vector3 worldSize)
     _camera3D.up = { 0.0f, 1.0f, 0.0f }; // Up vector
     _camera3D.fovy = 45.0f; // Field of view
     _camera3D.projection = CAMERA_PERSPECTIVE; // Perspective projection
+    
+    // Initialize camera state tracking
+    _targetCameraPosition = { worldSize.x / 2.0f, worldSize.y / 2.0f };
+    _autoCenterPosition = { worldSize.x / 2.0f, worldSize.y / 2.0f };
 }
 
 
@@ -62,13 +66,15 @@ void ChessView::setCameraTarget(Vector2 target) {
 
 void ChessView::moveCamera(Vector2 delta) {
     if (_use3DRendering) {
-        _camera3D.position.x -= delta.x * 0.01f;
-        _camera3D.position.z -= delta.y * 0.01f;
-        _camera3D.target.x -= delta.x * 0.01f;
-        _camera3D.target.z -= delta.y * 0.01f;
+        // For 3D camera, use a reasonable multiplier for movement
+        _camera3D.position.x += delta.x;
+        _camera3D.position.z += delta.y;
+        _camera3D.target.x += delta.x;
+        _camera3D.target.z += delta.y;
     } else {
-        _camera2D.target.x -= delta.x * 0.01f;
-        _camera2D.target.y -= delta.y * 0.01f;
+        // For 2D camera, move directly with the delta values
+        _camera2D.target.x += delta.x;
+        _camera2D.target.y += delta.y;
     }
     ClampCameraToBounds();
 }
@@ -101,70 +107,64 @@ void ChessView::handleInput() {
     /// @brief Handle mouse clicks: selected board and selected position
     handleMouseSelection();
 
-
-    // std::cout << "Capture mouse wheel \n";
-    // Handle camera2D zoom based on mouse wheel
-
-    // // Handle camera movement
-    // if (_use3DRendering) {
-    //     if (IsKeyDown(KEY_W)) moveCamera({0.0f, 0.0f});
-    //     if (IsKeyDown(KEY_S)) moveCamera({0.0f, 0.0f});
-    //     if (IsKeyDown(KEY_A)) moveCamera({-5.0f, 0.0f});
-    //     if (IsKeyDown(KEY_D)) moveCamera({5.0f, 0.0f});
-    //     if (IsKeyDown(KEY_Q)) _camera3D.position.y += 5.0f; // Move up
-    //     if (IsKeyDown(KEY_E)) _camera3D.position.y -= 5.0f; // Move down
-    // } else {
-    //     if (IsKeyDown(KEY_W)) moveCamera({0.0f, -5.0f});
-    //     if (IsKeyDown(KEY_S)) moveCamera({0.0f, 5.0f});
-    //     if (IsKeyDown(KEY_A)) moveCamera({-5.0f, 0.0f});
-    //     if (IsKeyDown(KEY_D)) moveCamera({5.0f, 0.0f});
-    // }
-
-    // if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
-    //     Vector2 mouseDelta = GetMouseDelta();
-    //     moveCamera({-mouseDelta.x, -mouseDelta.y});
-    // }
-
-    // float wheel = GetMouseWheelMove();
-    // if (wheel != 0) {
-    //     setZoom(_use3DRendering ? _camera3D.fovy : _camera2D.zoom + wheel * 0.1f);
-    // }
-
-    // if (_onMouseClickCallback && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-    //     _onMouseClickCallback(GetMousePosition());
-    // }
+    /// @brief Handle user camera input (drag, zoom)
+    handleUserCameraInput();
 }
 
 
 void ChessView::updateCamera(float deltaTime) {
-    // Center camera on active board view, if any
-    for (const auto& boardView : _boardViews) {
-        if (boardView->is3D()) {
-            // auto boardView3D = std::dynamic_pointer_cast<BoardView3D>(boardView);
-            // if (boardView3D) {
-            //     Vector3 pos = boardView3D->getPosition();
-            //     setCameraTarget({ pos.x, pos.z });
-            // }
-        } else {
-            Rectangle area = boardView->getArea();
-            Vector2 boardCenter = { area.x + area.width / 2.0f, area.y + area.height / 2.0f };
-            setCameraTarget(boardCenter);
-        }
+    // Update camera state and handle transitions
+    updateCameraState(deltaTime);
+    
+    // Calculate the center position of all board views
+    calculateAutoCenterPosition();
+    
+    switch (_cameraState) {
+        case CameraState::AUTO_CENTERING:
+            // Smoothly move camera to center of all boards
+            _targetCameraPosition = _autoCenterPosition;
+            smoothTransitionToTarget(deltaTime);
+            break;
+            
+        case CameraState::USER_CONTROLLED:
+            // Camera is under user control, just update timeout
+            _timeSinceUserInput += deltaTime;
+            
+            // Check if we should return to auto-centering after timeout
+            if (_timeSinceUserInput >= _userControlTimeout) {
+                Vector2 currentPos = _camera2D.target;
+                float distanceFromCenter = Vector2Distance(currentPos, _autoCenterPosition);
+                
+                if (distanceFromCenter > _maxDistanceFromCenter) {
+                    _cameraState = CameraState::TRANSITIONING;
+                    _targetCameraPosition = _autoCenterPosition;
+                }
+            }
+            break;
+            
+        case CameraState::TRANSITIONING:
+            // Smoothly transition to target position
+            smoothTransitionToTarget(deltaTime);
+            
+            // Check if we've reached the target
+            Vector2 currentPos = _camera2D.target;
+            float distanceToTarget = Vector2Distance(currentPos, _targetCameraPosition);
+            if (distanceToTarget < 10.0f) { // Close enough threshold
+                _cameraState = CameraState::AUTO_CENTERING;
+            }
+            break;
     }
-
-    // Handle mouse wheel zoom
+    
+    // Handle mouse wheel zoom (always available)
     float wheel = GetMouseWheelMove();
     if (wheel != 0) {
         std::cout << "Mouse wheel moved: " << wheel << std::endl;
-        setZoom(_use3DRendering ? _camera3D.fovy + wheel * 0.1f : _camera2D.zoom + wheel * 0.1f);
+        setZoom(_use3DRendering ? _camera3D.fovy + wheel * 5.0f : _camera2D.zoom + wheel * 0.1f);
+        
+        // User input detected, switch to user control temporarily
+        _cameraState = CameraState::USER_CONTROLLED;
+        _timeSinceUserInput = 0.0f;
     }
-
-    // /// Handle mouse drag
-    // if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
-    //     Vector2 mouseDelta = GetMouseDelta();
-    //     moveCamera({-mouseDelta.x, -mouseDelta.y});
-    // }
-    
 }
 
 void ChessView::update(float deltaTime) {
@@ -196,7 +196,19 @@ void ChessView::render() const {
     // Draw UI
     Vector2 mousePos = GetMousePosition();
     Vector2 worldPos = _use3DRendering ? Vector2{0, 0} : GetScreenToWorld2D(mousePos, _camera2D);
+    
+    // Camera state display
+    const char* stateText = "";
+    switch (_cameraState) {
+        case CameraState::AUTO_CENTERING: stateText = "AUTO_CENTERING"; break;
+        case CameraState::USER_CONTROLLED: stateText = "USER_CONTROLLED"; break;
+        case CameraState::TRANSITIONING: stateText = "TRANSITIONING"; break;
+    }
+    
     DrawText("Game World", 10, 10, 20, BLACK);
+    DrawText(TextFormat("Camera State: %s", stateText), 10, 160, 16, BLUE);
+    DrawText(TextFormat("Auto Center: (%.1f, %.1f)", _autoCenterPosition.x, _autoCenterPosition.y), 10, 180, 16, GREEN);
+    
     if (_use3DRendering) {
         DrawText(TextFormat("Camera3D Pos: (%.2f, %.2f, %.2f)", _camera3D.position.x, _camera3D.position.y, _camera3D.position.z), 10, 35, 20, BLACK);
         DrawText(TextFormat("Camera3D Target: (%.2f, %.2f, %.2f)", _camera3D.target.x, _camera3D.target.y, _camera3D.target.z), 10, 60, 20, BLACK);
@@ -338,5 +350,102 @@ void ChessView::startMoveTransition(
         _transitions.push_back(transition);
     } else {
         std::cerr << "Invalid board views for move transition!" << std::endl;
+    }
+}
+
+void ChessView::calculateAutoCenterPosition() {
+    if (_boardViews.empty()) {
+        _autoCenterPosition = { _worldSize.x / 2.0f, _worldSize.y / 2.0f };
+        return;
+    }
+    
+    Vector2 totalCenter = { 0.0f, 0.0f };
+    int validBoardCount = 0;
+    
+    for (const auto& boardView : _boardViews) {
+        if (boardView && !boardView->is3D()) {
+            Rectangle area = boardView->getArea();
+            Vector2 boardCenter = { 
+                area.x + area.width / 2.0f, 
+                area.y + area.height / 2.0f 
+            };
+            totalCenter.x += boardCenter.x;
+            totalCenter.y += boardCenter.y;
+            validBoardCount++;
+        }
+    }
+    
+    if (validBoardCount > 0) {
+        _autoCenterPosition.x = totalCenter.x / validBoardCount;
+        _autoCenterPosition.y = totalCenter.y / validBoardCount;
+    } else {
+        _autoCenterPosition = { _worldSize.x / 2.0f, _worldSize.y / 2.0f };
+    }
+}
+
+void ChessView::updateCameraState(float deltaTime) {
+    // This method can be used for any additional state-specific logic
+    // Currently, most state management is handled in updateCamera()
+}
+
+void ChessView::smoothTransitionToTarget(float deltaTime) {
+    if (_use3DRendering) {
+        // For 3D camera, interpolate position and target
+        Vector3 currentPos = _camera3D.position;
+        Vector3 targetPos = { _targetCameraPosition.x, currentPos.y, _targetCameraPosition.y };
+        
+        _camera3D.position.x = Lerp(currentPos.x, targetPos.x, _cameraTransitionSpeed * deltaTime);
+        _camera3D.position.z = Lerp(currentPos.z, targetPos.z, _cameraTransitionSpeed * deltaTime);
+        _camera3D.target.x = Lerp(_camera3D.target.x, _targetCameraPosition.x, _cameraTransitionSpeed * deltaTime);
+        _camera3D.target.z = Lerp(_camera3D.target.z, _targetCameraPosition.y, _cameraTransitionSpeed * deltaTime);
+    } else {
+        // For 2D camera, interpolate target
+        _camera2D.target.x = Lerp(_camera2D.target.x, _targetCameraPosition.x, _cameraTransitionSpeed * deltaTime);
+        _camera2D.target.y = Lerp(_camera2D.target.y, _targetCameraPosition.y, _cameraTransitionSpeed * deltaTime);
+    }
+    
+    ClampCameraToBounds();
+}
+
+void ChessView::handleUserCameraInput() {
+    bool userInputDetected = false;
+    
+    // Handle keyboard camera movement
+    Vector2 keyboardDelta = { 0.0f, 0.0f };
+    float keyboardSpeed = 300.0f; // Pixels per second
+    
+    if (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP)) keyboardDelta.y -= keyboardSpeed * GetFrameTime();
+    if (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN)) keyboardDelta.y += keyboardSpeed * GetFrameTime();
+    if (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT)) keyboardDelta.x -= keyboardSpeed * GetFrameTime();
+    if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) keyboardDelta.x += keyboardSpeed * GetFrameTime();
+    
+    if (keyboardDelta.x != 0.0f || keyboardDelta.y != 0.0f) {
+        std::cout << "Keyboard movement: (" << keyboardDelta.x << ", " << keyboardDelta.y << ")" << std::endl;
+        moveCamera(keyboardDelta);
+        userInputDetected = true;
+    }
+    
+    // Handle mouse drag
+    if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
+        Vector2 mouseDelta = GetMouseDelta();
+        if (mouseDelta.x != 0.0f || mouseDelta.y != 0.0f) {
+            moveCamera({ -mouseDelta.x, -mouseDelta.y });
+            userInputDetected = true;
+        }
+    }
+    
+    // Handle middle mouse drag (alternative)
+    if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE)) {
+        Vector2 mouseDelta = GetMouseDelta();
+        if (mouseDelta.x != 0.0f || mouseDelta.y != 0.0f) {
+            moveCamera({ -mouseDelta.x, -mouseDelta.y });
+            userInputDetected = true;
+        }
+    }
+    
+    // If user input detected, switch to user control mode
+    if (userInputDetected) {
+        _cameraState = CameraState::USER_CONTROLLED;
+        _timeSinceUserInput = 0.0f;
     }
 }

@@ -104,16 +104,47 @@ public:
   virtual void removeBoardView(std::shared_ptr<BoardView> boardView);
   virtual std::vector<std::shared_ptr<BoardView>> getBoardViews() const;
 
+// Camera state management
+enum class CameraState {
+    AUTO_CENTERING,     // Camera automatically centers on board views
+    USER_CONTROLLED,    // User is manually controlling camera
+    TRANSITIONING       // Camera is smoothly transitioning to target
+};
 
 private:
   Camera2D _camera2D;
   Camera3D _camera3D;
+  
+  // Camera state tracking
+  CameraState _cameraState = CameraState::AUTO_CENTERING;
+  Vector2 _targetCameraPosition;
+  Vector2 _autoCenterPosition;
+  float _cameraTransitionSpeed = 2.0f;
+  float _userControlTimeout = 3.0f; // Time before returning to auto-centering
+  float _timeSinceUserInput = 0.0f;
+  float _maxDistanceFromCenter = 500.0f; // Max distance before auto-centering kicks in
+
   void ClampCameraToBounds();
   void setZoom(float zoom);
   void setCameraTarget(Vector2 target); 
   void moveCamera(Vector2 delta); 
   void updateCamera(float deltaTime); // set camera target based on active board view
-  bool _use3DRendering = false; 
+
+  // New camera methods
+  void calculateAutoCenterPosition();
+  void updateCameraState(float deltaTime);
+  void smoothTransitionToTarget(float deltaTime);  void handleUserCameraInput();
+  
+  bool _use3DRendering = false;
+
+public:
+  // Camera control methods
+  void setCameraState(CameraState state) { _cameraState = state; }
+  CameraState getCameraState() const { return _cameraState; }
+  void setCameraTransitionSpeed(float speed) { _cameraTransitionSpeed = speed; }
+  void setUserControlTimeout(float timeout) { _userControlTimeout = timeout; }
+  void setMaxDistanceFromCenter(float distance) { _maxDistanceFromCenter = distance; }
+  Vector2 getAutoCenterPosition() const { return _autoCenterPosition; }
 
 public:
   Camera2D* getCamera2D() { return &_camera2D; }
