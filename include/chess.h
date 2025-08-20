@@ -564,6 +564,10 @@ public:
   inline std::vector<std::shared_ptr<TimeLine>> getTimeLines(void) const {
     return _timeLines;
   }
+
+  inline PieceColor getCurrentTurnColor(void) const {
+    return _currentTurnColor;
+  }
 };
 
 class Constant {
