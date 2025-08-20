@@ -73,8 +73,8 @@ std::vector<std::shared_ptr<MenuItemView>> TestingState::createMenuButtonItemVie
     }
 
     const float horizontalSpacing = 20.0f; // spacing between items
-    const float itemHeight = 30.0f;
-    const float itemWidth = 100.0f;
+    const float itemHeight = 40.0f;
+    const float itemWidth = 150.0f;
     const Rectangle menuArea = {0, 0, (float)GetScreenWidth(), 100.0f}; // Example menu area
     const float startX = menuArea.x + (menuArea.width - (activeItems * itemWidth + (activeItems - 1) * horizontalSpacing)) / 2;
     const float startY = menuArea.y + (menuArea.height - itemHeight) / 2;
