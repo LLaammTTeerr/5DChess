@@ -105,6 +105,8 @@ public:
   Piece(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1));
   virtual ~Piece() = default;
 
+  virtual std::shared_ptr<Piece> clone() const = 0;
+
   /**
    * Get the color of the piece.
    * @return The color of the piece as a PieceColor enum.
@@ -166,6 +168,10 @@ public:
   King(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1))
     : Piece(color, board, position) {};
 
+  virtual std::shared_ptr<Piece> clone() const override {
+    return std::make_shared<King>(*this);
+  }
+
   inline const std::string& name(void) const override {
     static const std::string name = "king";
     return name;
@@ -181,6 +187,10 @@ class Queen : public Piece {
 public:
   Queen(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1))
     : Piece(color, board, position) {};
+
+  virtual std::shared_ptr<Piece> clone() const override {
+    return std::make_shared<Queen>(*this);
+  }
 
   inline const std::string& name(void) const override {
     static const std::string name = "queen";
@@ -198,6 +208,10 @@ public:
   Rook(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1))
     : Piece(color, board, position) {};
 
+  virtual std::shared_ptr<Piece> clone() const override {
+    return std::make_shared<Rook>(*this);
+  }
+
   inline const std::string& name(void) const override {
     static const std::string name = "rook";
     return name;
@@ -213,6 +227,10 @@ class Bishop : public Piece {
 public:
   Bishop(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1))
     : Piece(color, board, position) {};
+
+  virtual std::shared_ptr<Piece> clone() const override {
+    return std::make_shared<Bishop>(*this);
+  }
 
   inline const std::string& name(void) const override {
     static const std::string name = "bishop";
@@ -230,6 +248,10 @@ public:
   Knight(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1))
     : Piece(color, board, position) {};
 
+  virtual std::shared_ptr<Piece> clone() const override {
+    return std::make_shared<Knight>(*this);
+  }
+
   inline const std::string& name(void) const override {
     static const std::string name = "knight";
     return name;
@@ -245,6 +267,10 @@ class Pawn : public Piece {
 public:
   Pawn(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1))
     : Piece(color, board, position) {};
+
+  virtual std::shared_ptr<Piece> clone() const override {
+    return std::make_shared<Pawn>(*this);
+  }
 
   inline const std::string& name(void) const override {
     static const std::string name = "pawn";
@@ -384,7 +410,7 @@ public:
   }
 
   inline std::shared_ptr<Board> getBoardByHalfTurn(int halfTurn) const {
-    int pos = halfTurn - _forkAt + 1;
+    int pos = halfTurn - _forkAt - 1;
     assert(pos >= 0 && pos < _history.size());
     return _history[pos];
   }
@@ -500,7 +526,7 @@ public:
 
   bool boardExists(int timeLineID, int halfTurn) const {
     if (timeLineID >= 0 && timeLineID < _timeLines.size()) {
-      int pos = halfTurn - _timeLines[timeLineID]->forkAt() + 1;
+      int pos = halfTurn - _timeLines[timeLineID]->forkAt() - 1;
       return pos >= 0 && pos < _timeLines[timeLineID]->size();
     }
     return false;

@@ -1,6 +1,7 @@
 #include "chess.h"
 #include <stdexcept>
 #include <iostream>
+#include <climits>
 
 // using namespace Chess;
 namespace Chess {
@@ -33,8 +34,17 @@ std::shared_ptr<Piece> Board::getPiece(Position2D position) const {
 
 std::shared_ptr<Board> Board::createFork(std::shared_ptr<TimeLine> timeLine) {
   std::shared_ptr<Board> forkedBoard = std::make_shared<Board>(_N, timeLine);
+  for (int x = 0; x < _N; ++x) {
+    for (int y = 0; y < _N; ++y) {
+      std::shared_ptr<Piece> piece = _pieces[x][y];
+      if (piece != nullptr) {
+        forkedBoard->placePiece(Position2D(x, y), std::shared_ptr<Piece>(piece->clone()));
+      }
+    }
+  }
   forkedBoard->_previousBoard = shared_from_this();
-  forkedBoard->_halfTurnNumber = _halfTurnNumber + 1;
+  forkedBoard->_halfTurnNumber += 1;
+  std::cerr << _halfTurnNumber << " -> " << forkedBoard->_halfTurnNumber << std::endl;
   return forkedBoard;
 }
 
@@ -48,7 +58,7 @@ void TimeLine::pushBack(std::shared_ptr<Board> board) {
   _history.push_back(board);
 }
 
-Game::Game(int N, std::function<std::shared_ptr<Board>(std::shared_ptr<TimeLine>)> boardBuilder) : _N(N), _presentHalfTurn(0), _currentTurnColor(PieceColor::PIECEWHITE) {
+Game::Game(int N, std::function<std::shared_ptr<Board>(std::shared_ptr<TimeLine>)> boardBuilder) : _N(N), _presentHalfTurn(0), _currentTurnColor(PieceColor::PIECEWHITE), _nextHalfTurn(INT_MAX) {
   _timeLines.push_back(std::make_shared<TimeLine>(N));
   std::shared_ptr<Board> board = boardBuilder(_timeLines.back());
   _timeLines.back()->pushBack(std::move(board));
@@ -199,12 +209,6 @@ std::vector<SelectedPosition> Game::getMoveablePositions(SelectedPosition select
         }
       }
     }
-    #ifdef DEBUG
-    for (const SelectedPosition& pos : moveablePositions) {
-      auto pos4D = pos.toVector4D();
-      std::cerr << "Knight move: (" << pos4D.x() << ", " << pos4D.y() << ", " << pos4D.z() << ", " << pos4D.w() << ")\n";
-    }
-    #endif
   }
 
   if (piece->name() == "bishop") {
@@ -324,6 +328,12 @@ void Game::makeMove(Move move) {
   std::shared_ptr<Board> newFromBoard = move.from.board->createFork(move.from.board->getTimeLine());
   move.from.board->getTimeLine()->pushBack(newFromBoard);
   newFromBoard->placePiece(move.from.position, nullptr);
+  if (move.to.board == move.from.board) {
+    newFromBoard->placePiece(move.to.position, piece);
+    _nextHalfTurn = std::min(_nextHalfTurn, newFromBoard->halfTurnNumber());
+    submitTurn();
+    return;
+  }
 
   std::shared_ptr<TimeLine> toTimeLine = move.to.board->halfTurnNumber() == move.from.board->halfTurnNumber()
     ? move.to.board->getTimeLine()
@@ -338,12 +348,15 @@ void Game::makeMove(Move move) {
   toTimeLine->pushBack(newToBoard);
 
   _nextHalfTurn = std::min(_nextHalfTurn, newToBoard->halfTurnNumber());
+
+  submitTurn();
 }
 
 void Game::submitTurn(void) {
   _currentTurnMoves.clear();
   _currentTurnColor = opposite(_currentTurnColor);
   _presentHalfTurn = _nextHalfTurn;
+  std::cerr << "Present half turn: " << _presentHalfTurn << std::endl;
   _nextHalfTurn = INT_MAX;
 }
 
