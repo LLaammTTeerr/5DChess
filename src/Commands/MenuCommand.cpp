@@ -8,6 +8,7 @@
 #include "GameStates/ConcreteGameStates/VersusState.h"
 #include "GameStates/ConcreteGameStates/MainMenuState.h"
 #include "GameStates/ConcreteGameStates/TestingState.h"
+#include "Render/Controller.h"
 // startGameCommand::startGameCommand(GameStateModel* gameState)
 //     : _gameState(gameState) {}
 
@@ -107,3 +108,17 @@ std::unique_ptr<ICommand> VersusPlayCommand::clone() const {
 CommandType VersusPlayCommand::getType() const {
     return CommandType::STATE_CHANGING; // This command changes the game state
 }
+
+
+SubmitMoveCommand::SubmitMoveCommand(std::shared_ptr<ChessController> chessController)
+    : _chessController(chessController) {}
+
+void SubmitMoveCommand::execute() {
+    executeCallback(); // Execute the callback if set
+}
+
+
+std::unique_ptr<ICommand> SubmitMoveCommand::clone() const {
+    return std::make_unique<SubmitMoveCommand>(_chessController);
+}
+

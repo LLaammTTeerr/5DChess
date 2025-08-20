@@ -2,7 +2,8 @@
 
 #include <string>
 #include <memory> 
-
+#include <functional>
+#include <vector>
 // Command types for execution flow control
 enum class CommandType {
     STATE_CHANGING,    // Commands that change game state (break execution)
@@ -38,4 +39,20 @@ public:
     
     // Get command type for execution flow control
     virtual CommandType getType() const = 0;
+
+protected:
+    std::function<void()> _callback;
+
+public:
+    // Set a callback to be executed after the command is executed
+    void setCallback(std::function<void()> callback) {
+        _callback = std::move(callback);
+    }
+
+    // Execute the callback if set
+    void executeCallback() const {
+        if (_callback) {
+            _callback();
+        }
+    }
 };

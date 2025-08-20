@@ -30,7 +30,7 @@ struct MoveState {
   }
 };
 
-class ChessController; // Forward declaration
+class ChessRenderController; // Forward declaration
 
 /// @brief Adapter class to convert model data to view data
 class ChessModel {
@@ -39,7 +39,7 @@ private:
   MoveState _currentMoveState;
 
 public:
-  friend class ChessController;
+  friend class ChessRenderController;
   ChessModel(std::shared_ptr<Chess::Game> game) : _game(game) {
     // Initialize the turn state if needed
     initialize();

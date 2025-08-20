@@ -47,7 +47,7 @@ private:
 
   // Menu system integration
   GameStateModel* _gameStateModel;
-  std::unique_ptr<MenuController> _menuController;
+  std::shared_ptr<MenuController> _menuController;
   std::shared_ptr<MenuComponent> _menuSystem;
   bool _menuActive = false;
 

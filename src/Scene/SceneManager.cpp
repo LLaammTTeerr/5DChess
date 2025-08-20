@@ -176,7 +176,7 @@ void SceneManager::initializeMenuSystem() {
   _menuSystem = _gameStateModel->createMenuForCurrentState(this);
    
   // Create menu controller
-  _menuController = std::make_unique<MenuController>(_gameStateModel, _menuSystem, this);
+  _menuController = std::make_shared<MenuController>(_gameStateModel, _menuSystem, this);
 
   // Set default view strategy (can be changed later)
   _menuController->setViewStrategy(std::make_unique<ButtonMenuView>());

@@ -8,6 +8,9 @@
 #include "Menu/MenuItemView.h"
 #include "ResourceManager.h"
 #include "TestingState.h"
+
+#include "Render/Controller.h"
+
 // MainMenuState implementation
 void TestingState::onEnter(GameStateModel* context) {
     std::cout << "Entering Testing State" << std::endl;
@@ -34,10 +37,11 @@ std::shared_ptr<MenuComponent> TestingState::createMenu(GameStateModel* gameStat
   auto mainMenu = std::make_shared<Menu>("Playing", true);
 
   std::shared_ptr<MenuComponent> UndoMove = std::make_shared<MenuItem>("Undo", true);
-
+  
   std::shared_ptr<MenuComponent> Deselect = std::make_shared<MenuItem>("Deselect", true);
 
   std::shared_ptr<MenuComponent> SubmitMove = std::make_shared<MenuItem>("Submit", true);
+//   std::unique_ptr<ICommand> submitMoveCommand = std
 
   mainMenu->addItem(UndoMove);
   mainMenu->addItem(Deselect);

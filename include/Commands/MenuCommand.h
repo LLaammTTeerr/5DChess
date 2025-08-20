@@ -71,3 +71,19 @@ public:
   CommandType getType() const override;
   
 };
+
+class ChessController; // Forward declaration
+class SubmitMoveCommand  : public Icommand {
+private:
+  std::shared_ptr<ChessController> _chessController;
+public:
+  SubmitMoveCommand(std::shared_ptr<ChessController> chessController);
+  void execute() override;
+  virtual bool canUnod() const override { return false; }
+  virtual bool canRedo() const override { return false; }
+  void undo() override {}
+  void redo() override {}
+  std::string getName() const override { return "Submit Move Command"; }
+  std::unique_ptr<ICommand> clone() const override;
+  CommandType getType() const override { return CommandType::IMMEDIATE; }
+};
