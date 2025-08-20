@@ -43,8 +43,7 @@ std::shared_ptr<Board> Board::createFork(std::shared_ptr<TimeLine> timeLine) {
     }
   }
   forkedBoard->_previousBoard = shared_from_this();
-  forkedBoard->_halfTurnNumber += 1;
-  std::cerr << _halfTurnNumber << " -> " << forkedBoard->_halfTurnNumber << std::endl;
+  forkedBoard->_halfTurnNumber = _halfTurnNumber + 1;
   return forkedBoard;
 }
 
@@ -204,7 +203,8 @@ std::vector<SelectedPosition> Game::getMoveablePositions(SelectedPosition select
 
     for (const Vector4D& move : knightMoves) {
       if (move.x() >= 0 && move.x() < dim() && move.y() >= 0 && move.y() < dim()) {
-        if (boardExists(move.w(), 2 * move.z() + parity)) {
+        if (boardExists(move.w(), 2 * move.z() + parity)
+            && (_getPieceByVector4DFullTurn(move) == nullptr || _getPieceByVector4DFullTurn(move)->color() != _currentTurnColor)) {
           moveablePositions.emplace_back(getBoard(move.w(), 2 * move.z() + parity), Position2D(move.x(), move.y()));
         }
       }
@@ -335,7 +335,7 @@ void Game::makeMove(Move move) {
     return;
   }
 
-  std::shared_ptr<TimeLine> toTimeLine = move.to.board->halfTurnNumber() == move.from.board->halfTurnNumber()
+  std::shared_ptr<TimeLine> toTimeLine = move.to.board->halfTurnNumber() == move.to.board->getTimeLine()->halfTurnNumber()
     ? move.to.board->getTimeLine()
     : move.to.board->getTimeLine()->createFork(_timeLines.size(), move.to.board->halfTurnNumber());
 
@@ -356,7 +356,6 @@ void Game::submitTurn(void) {
   _currentTurnMoves.clear();
   _currentTurnColor = opposite(_currentTurnColor);
   _presentHalfTurn = _nextHalfTurn;
-  std::cerr << "Present half turn: " << _presentHalfTurn << std::endl;
   _nextHalfTurn = INT_MAX;
 }
 
