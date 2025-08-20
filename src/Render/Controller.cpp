@@ -254,6 +254,7 @@ std::vector<std::shared_ptr<BoardView>> ChessController::computeBoardView2DsFrom
       }
     }
     boardView->setPiecePositions(piecePositions);
+    boardView->setBoardDim(board->dim());
     boardViews.push_back(boardView);
   }
   

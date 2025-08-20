@@ -6,6 +6,12 @@
 #include <iostream>
 
 
+const float BOARD_WORLD_SIZE = 250.0f; // Assuming a standard chess board size
+const float HORIZONTAL_SPACING = 60.0f; // Size of each square on the board
+const float VERTICAL_SPACING = 60.0f; // Size of each square on the board
+const int STANDARD_BOARD_DIM = 8;
+
+
 void BoardView2D::render() const {
     if (!_boardTexture) {
         std::cerr << "Board texture not set!" << std::endl;
@@ -24,7 +30,7 @@ void BoardView2D::render() const {
 
     DrawTexturePro(
         *_boardTexture,
-        Rectangle{0, 0, static_cast<float>(_boardTexture->width), static_cast<float>(_boardTexture->height)},
+        Rectangle{0, 0, static_cast<float>(_boardTexture->width * float(_boardDim / STANDARD_BOARD_DIM)), static_cast<float>(_boardTexture->height * float(_boardDim / STANDARD_BOARD_DIM))},
         _area,
         Vector2{0, 0},
         0.0f,
@@ -61,13 +67,13 @@ Chess::Position2D BoardView2D::getMouseOverPosition() const {
         if (_camera) {
             Vector2 worldMousePos = GetScreenToWorld2D(mousePos, *_camera);
             return Chess::Position2D{
-                static_cast<int>((worldMousePos.x - _area.x) / (_area.width / 8)),
-                static_cast<int>((worldMousePos.y - _area.y) / (_area.height / 8))
+                static_cast<int>((worldMousePos.x - _area.x) / (_area.width / _boardDim)),
+                static_cast<int>((worldMousePos.y - _area.y) / (_area.height / _boardDim))
             };
         } else {
             return Chess::Position2D{
-                static_cast<int>((mousePos.x - _area.x) / (_area.width / 8)),
-                static_cast<int>((mousePos.y - _area.y) / (_area.height / 8))
+                static_cast<int>((mousePos.x - _area.x) / (_area.width / _boardDim)),
+                static_cast<int>((mousePos.y - _area.y) / (_area.height / _boardDim))
             };
         }
     }
@@ -80,13 +86,13 @@ Chess::Position2D BoardView2D::getMouseClickedPosition() const {
         if (_camera) {
             Vector2 worldMousePos = GetScreenToWorld2D(mousePos, *_camera);
             return Chess::Position2D{
-                static_cast<int>((worldMousePos.x - _area.x) / (_area.width / 8)),
-                static_cast<int>((worldMousePos.y - _area.y) / (_area.height / 8))
+                static_cast<int>((worldMousePos.x - _area.x) / (_area.width / _boardDim)),
+                static_cast<int>((worldMousePos.y - _area.y) / (_area.height / _boardDim))
             };
         } else {
             return Chess::Position2D{
-                static_cast<int>((mousePos.x - _area.x) / (_area.width / 8)),
-                static_cast<int>((mousePos.y - _area.y) / (_area.height / 8))
+                static_cast<int>((mousePos.x - _area.x) / (_area.width / _boardDim)),
+                static_cast<int>((mousePos.y - _area.y) / (_area.height / _boardDim))
             };
         }
     }
@@ -100,10 +106,10 @@ void BoardView2D::render_highlightBoundaries() const {
 void BoardView2D::render_highlightedPositions(std::vector<Chess::Position2D> positions) const {
     for (const auto& pos : positions) {
         DrawRectangle(
-            _area.x + pos.x() * _area.width / 8,
-            _area.y + pos.y() * _area.height / 8,
-            _area.width / 8,
-            _area.height / 8,
+            _area.x + pos.x() * _area.width / _boardDim,
+            _area.y + pos.y() * _area.height / _boardDim,
+            _area.width / _boardDim,
+            _area.height / _boardDim,
             (Color){0, 255, 0, 100} // Semi-transparent green
         );
     }
@@ -114,13 +120,13 @@ void BoardView2D::render_pieces() const {
         ThemeManager::getInstance().setTheme(std::make_unique<ModernTheme>());
         Texture2D& texture = ThemeManager::getInstance().getPieceTexture(pieceName);
         Vector2 piecePosition = {
-            _area.x + pos.x() * _area.width / 8,
-            _area.y + pos.y() * _area.height / 8
+            _area.x + pos.x() * _area.width / _boardDim,
+            _area.y + pos.y() * _area.height / _boardDim
         };
         DrawTexturePro(
                 texture,
                 Rectangle{0, 0, static_cast<float>(texture.width), static_cast<float>(texture.height)},
-                Rectangle{piecePosition.x, piecePosition.y, _area.width / 8, _area.height / 8},
+                Rectangle{piecePosition.x, piecePosition.y, _area.width / _boardDim, _area.height / _boardDim},
                 Vector2{0, 0},
                 0.0f,
                 WHITE

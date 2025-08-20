@@ -6,9 +6,6 @@
 
 class BoardView;
 
-const extern float BOARD_WORLD_SIZE; // Assuming BOARD_SIZE is defined somewhere in the project
-const extern float HORIZONTAL_SPACING; // Assuming HORIZONTAL_SPACING is defined somewhere in the project
-const extern float VERTICAL_SPACING; // Assuming VERTICAL_SPACING is defined somewhere in the project
 
 struct TransitionComponent {
   bool isActive;  // Is animation running?

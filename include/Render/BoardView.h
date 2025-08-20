@@ -7,7 +7,10 @@
 /// This class converts model data to view data
 /// This class will encapsulate both model and view data
 
-
+const extern float BOARD_WORLD_SIZE; // Assuming BOARD_SIZE is defined somewhere in the project
+const extern float HORIZONTAL_SPACING; // Assuming HORIZONTAL_SPACING is defined somewhere in the project
+const extern float VERTICAL_SPACING; // Assuming VERTICAL_SPACING is defined somewhere in the project
+const extern int STANDARD_BOARD_DIM;
 
 class ChessView;
 
@@ -50,8 +53,11 @@ public:
 protected:
   /// Piece position and piece name
   std::vector<std::pair<Chess::Position2D, std::string>> _piecePositions;
+  int _boardDim = 8;
+
 public:
   virtual void render_pieces() const = 0;
+  virtual void setBoardDim(int dim) { _boardDim = dim; } 
 };
   
 class BoardView2D : public BoardView {
