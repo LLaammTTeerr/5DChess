@@ -6,9 +6,9 @@
 #include <iostream>
 
 
-void BoardView2D::render(std::shared_ptr<Chess::Board> board) const {
-    if (!board || !_boardTexture) {
-        std::cerr << "Board or texture not set!" << std::endl;
+void BoardView2D::render() const {
+    if (!_boardTexture) {
+        std::cerr << "Board texture not set!" << std::endl;
         return;
     }
     if (_area.width <= 0 || _area.height <= 0) {
@@ -31,32 +31,7 @@ void BoardView2D::render(std::shared_ptr<Chess::Board> board) const {
         WHITE
     );
 
-    // Draw pieces
-    for (int i = 0; i < 8; ++i) {
-        for (int j = 0; j < 8; ++j) {
-            Chess::Position2D pos(i, j);
-            auto piece = board->getPiece(pos);
-            if (piece) {
-              const std::string& name = piece->name();
-              const std::string& color = piece->color() == Chess::PieceColor::PIECEWHITE ? "white" : "black";
-              const std::string& pieceName = color + "_" + name;
-              ThemeManager::getInstance().setTheme(std::make_unique<ModernTheme>());
-              Texture2D& texture = ThemeManager::getInstance().getPieceTexture(pieceName);
-              Vector2 piecePosition = {
-                  _area.x + i * _area.width / 8,
-                  _area.y + j * _area.height / 8
-              };
-              DrawTexturePro(
-                  texture,
-                  Rectangle{0, 0, static_cast<float>(texture.width), static_cast<float>(texture.height)},
-                  Rectangle{piecePosition.x, piecePosition.y, _area.width / 8, _area.height / 8},
-                  Vector2{0, 0},
-                  0.0f,
-                  WHITE
-              );
-            }
-        }
-    }
+    render_pieces();
 }
 
 bool BoardView2D::isMouseOverBoard() const {
@@ -130,6 +105,25 @@ void BoardView2D::render_highlightedPositions(std::vector<Chess::Position2D> pos
             _area.width / 8,
             _area.height / 8,
             (Color){0, 255, 0, 100} // Semi-transparent green
+        );
+    }
+}
+
+void BoardView2D::render_pieces() const {
+    for (const auto& [pos, pieceName] : _piecePositions) {
+        ThemeManager::getInstance().setTheme(std::make_unique<ModernTheme>());
+        Texture2D& texture = ThemeManager::getInstance().getPieceTexture(pieceName);
+        Vector2 piecePosition = {
+            _area.x + pos.x() * _area.width / 8,
+            _area.y + pos.y() * _area.height / 8
+        };
+        DrawTexturePro(
+                texture,
+                Rectangle{0, 0, static_cast<float>(texture.width), static_cast<float>(texture.height)},
+                Rectangle{piecePosition.x, piecePosition.y, _area.width / 8, _area.height / 8},
+                Vector2{0, 0},
+                0.0f,
+                WHITE
         );
     }
 }

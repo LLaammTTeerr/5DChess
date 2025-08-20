@@ -162,6 +162,12 @@ void ChessView::updateCamera(float deltaTime) {
         setZoom(_use3DRendering ? _camera3D.fovy + wheel * 0.1f : _camera2D.zoom + wheel * 0.1f);
     }
 
+    // /// Handle mouse drag
+    // if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
+    //     Vector2 mouseDelta = GetMouseDelta();
+    //     moveCamera({-mouseDelta.x, -mouseDelta.y});
+    // }
+    
 }
 
 void ChessView::update(float deltaTime) {
@@ -171,7 +177,21 @@ void ChessView::update(float deltaTime) {
 }
 
 
-void ChessView::render(std::vector<std::shared_ptr<Chess::Board>> boards) const {
+void ChessView::render_boardViews() const {
+    BeginMode2D(_camera2D);
+
+    for (const auto& boardView : _boardViews) {
+        if (boardView) {
+            boardView->render();
+        } else {
+            std::cerr << "Null BoardView encountered!" << std::endl;
+        }
+    }
+
+    EndMode2D();
+}
+
+void ChessView::render() const {
 
     // if (_use3DRendering) {
     //     BeginMode3D(_camera3D);
@@ -193,19 +213,10 @@ void ChessView::render(std::vector<std::shared_ptr<Chess::Board>> boards) const 
 
     //     EndMode2D();
     // } else {
-        BeginMode2D(_camera2D);
-
-        for (int i = 0; i < boards.size() && i < _boardViews.size(); ++i) {
-            if (_boardViews[i]) {
-                _boardViews[i]->render(boards[i]);
-            } else {
-                std::cerr << "Null BoardView encountered at index " << i << "!" << std::endl;
-            }
-        }
-
+        // BeginMode2D(_camera2D);
         
 
-        EndMode2D();
+        // EndMode2D();
     // }
 
     // Draw UI

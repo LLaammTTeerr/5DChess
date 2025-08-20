@@ -21,7 +21,7 @@ class BoardView {
 public:
     virtual ~BoardView() = default;
 
-    virtual void render(std::shared_ptr<Chess::Board>) const = 0;
+    virtual void render() const = 0;
     virtual void render_highlightBoundaries() const = 0;
     virtual void render_highlightedPositions(std::vector<Chess::Position2D> positions) const = 0;
 
@@ -44,7 +44,14 @@ public:
 
     virtual void setCamera2D(Camera2D* camera) = 0;
     virtual void setCamera3D(Camera3D* camera) = 0;
-  
+
+    virtual void setPiecePositions(const std::vector<std::pair<Chess::Position2D, std::string>>& piecePositions) = 0;
+
+protected:
+  /// Piece position and piece name
+  std::vector<std::pair<Chess::Position2D, std::string>> _piecePositions;
+public:
+  virtual void render_pieces() const = 0;
 };
   
 class BoardView2D : public BoardView {
@@ -60,10 +67,16 @@ public:
   BoardView2D() = default;
   ~BoardView2D() = default;
 
-  void render(std::shared_ptr<Chess::Board> board) const override;
+  // void render() const override {};
+  void render() const override;
+  void render_pieces() const override;
   void render_highlightBoundaries() const override;
   void render_highlightedPositions(std::vector<Chess::Position2D> positions) const override;
   
+  void setPiecePositions(const std::vector<std::pair<Chess::Position2D, std::string>>& piecePositions) override {
+    _piecePositions = piecePositions;
+  }
+
   bool is3D() const override { return false; } // This is a 2D view
 
   bool isMouseClickedOnBoard() const override;

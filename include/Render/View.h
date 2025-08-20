@@ -54,7 +54,7 @@ public:
 public:
   virtual void update(float deltaTime);
   virtual void handleInput();
-  virtual void render(std::vector<std::shared_ptr<Chess::Board>> boards) const;
+  virtual void render() const;
 
 private:
   std::vector<std::shared_ptr<BoardView>> _highlightedBoards;
@@ -63,6 +63,7 @@ public:
   virtual void handleMouseSelection(); 
   virtual void render_highlightBoard() const;
   virtual void render_highlightedPositions() const;
+  virtual void render_boardViews() const; 
 public:
   virtual void update_highlightedBoard(const std::vector<std::shared_ptr<BoardView>>& boardViews);
   virtual void update_highlightedPositions(const std::vector<std::pair<std::shared_ptr<BoardView>, Chess::Position2D>>& positions);

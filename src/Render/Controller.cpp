@@ -85,7 +85,7 @@ void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPos
     /// Step 3: Update the view with the highlighted positions
     std::vector<Chess::SelectedPosition> getMoveablePositions = model._game->getMoveablePositions(selectedPosition);
     resetHighlightedPositions();
-    addHighlightedPosition(selectedPosition);
+    // addHighlightedPosition(selectedPosition);
     for (const auto& pos : getMoveablePositions) {
       addHighlightedPosition(pos);
     }
@@ -241,6 +241,17 @@ std::vector<std::shared_ptr<BoardView>> ChessController::computeBoardView2DsFrom
         BOARD_WORLD_SIZE,
         BOARD_WORLD_SIZE
     });
+
+    std::vector<std::pair<Chess::Position2D, std::string>> piecePositions;
+    for (int x = 0; x < board->dim(); ++x) {
+      for (int y = 0; y < board->dim(); ++y) {
+        auto piece = board->getPiece(Chess::Position2D(x, y));
+        if (piece) {
+          piecePositions.emplace_back(Chess::Position2D(x, y), (piece->color == Chess::PieceColor::PIECEWHITE ? "white" : "black") + "_" + piece->name());
+        }
+      }
+    }
+    boardView->setPiecePositions(piecePositions);
     boardViews.push_back(boardView);
   }
   
@@ -268,7 +279,9 @@ std::vector<std::shared_ptr<BoardView>> ChessController::computeHighlightedBoard
   }
 
 void ChessController::render() {
-  view.render(_currentBoard);
+  // view.render(_currentBoard);
+  view.render_boardViews();
   view.render_highlightBoard();
   view.render_highlightedPositions();
+  view.render();
 }
