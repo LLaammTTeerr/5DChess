@@ -20,7 +20,7 @@ struct MoveState {
   MoveState()
       : selectedBoard(nullptr), targetBoard(nullptr), currentPhase(MovePhase::SELECT_FROM_BOARD),
         selectedPosition{-1, -1}, targetPosition{-1, -1} {}
-      
+
   void reset() {
     selectedBoard = nullptr;
     targetBoard = nullptr;
@@ -35,12 +35,12 @@ class ChessController; // Forward declaration
 /// @brief Adapter class to convert model data to view data
 class ChessModel {
 private:
-  std::shared_ptr<Chess::Game> _game;
+  std::shared_ptr<Chess::IGame> _game;
   MoveState _currentMoveState;
 
 public:
   friend class ChessController;
-  ChessModel(std::shared_ptr<Chess::Game> game) : _game(game) {
+  ChessModel(std::shared_ptr<Chess::IGame> game) : _game(game) {
     // Initialize the turn state if needed
     initialize();
   }

@@ -10,7 +10,7 @@ TestingScene::TestingScene() {
 }
 
 void TestingScene::init(void) {
-  _game = Chess::createGame<Chess::CustomBoardEmitBishop>();
+  _game = Chess::createGame<Chess::CustomGameEmitQueen>();
   _chessModel = std::make_shared<ChessModel>(_game);
   _chessView = std::make_shared<ChessView>(Vector3{5000, 5000, 1});
   _chessController = std::make_shared<ChessController>(*_chessModel, *_chessView);

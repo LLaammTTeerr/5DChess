@@ -10,6 +10,7 @@
 #include <functional>
 #include <cstdint>
 #include <iostream>
+#include <climits>
 
 namespace Chess {
 
@@ -452,15 +453,10 @@ public:
   // Additional fields can be added, e.g., piece type, but keeping simple for now
 };
 
-class Game {
+class IGame {
 public:
-  /**
-   * Construct a Game object with the specified board size and builder function.
-   * @param N The dimension of the board (N x N).
-   * @param builderFunction A function that builds the initial board state.
-   * This constructor initializes the game with a board of size N and sets up the initial state using the provided builder function.
-   */
-  Game(int N, std::function<std::shared_ptr<Board>(std::shared_ptr<TimeLine>)> builderFunction);
+  IGame(int N) : _N(N), _presentHalfTurn(0), _currentTurnColor(PieceColor::PIECEWHITE), _nextHalfTurn(INT_MAX) {}
+  virtual ~IGame() = default;
 
   /**
    * Get the dimension of the game.
@@ -535,7 +531,7 @@ public:
   std::shared_ptr<Board> getBoard(int timeLineID, int halfTurn) const {
     return _timeLines[timeLineID]->getBoardByHalfTurn(halfTurn);
   }
-private:
+protected:
   int _N;
   int _presentHalfTurn;
   int _nextHalfTurn;
@@ -559,7 +555,6 @@ private:
   void _pushBack(std::shared_ptr<TimeLine> timeLine) {
     _timeLines.push_back(timeLine);
   }
-
 public:
   inline std::vector<std::shared_ptr<TimeLine>> getTimeLines(void) const {
     return _timeLines;
@@ -578,21 +573,10 @@ public:
   static const int BOARD_SIZE_EMIT_QUEEN;
 };
 
-template <typename Derived>
-class IBoardBuilderCRTP {
-public:
-  static std::shared_ptr<Board> build(std::shared_ptr<TimeLine> timeline) {
-    return Derived::build_impl(timeline);
-  }
-  static int dim() {
-    return Derived::dim_impl();
-  }
-};
-
-class StandardBoardBuilder : public IBoardBuilderCRTP<StandardBoardBuilder> {
-public:
-  static std::shared_ptr<Board> build_impl(std::shared_ptr<TimeLine> timeLine) {
-    std::shared_ptr<Board> board = std::make_shared<Board>(dim(), timeLine);
+class StandardGame : public IGame {
+  StandardGame(void) : IGame(Constant::BOARD_SIZE) {
+    _timeLines.push_back(std::make_shared<TimeLine>(dim()));
+    std::shared_ptr<Board> board = std::make_shared<Board>(dim(), _timeLines[0]);
     for (int i = 0; i < dim(); i += 1) {
       board->placePiece({i, 1}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
       board->placePiece({i, 6}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
@@ -614,46 +598,94 @@ public:
     board->placePiece({5, 7}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
     board->placePiece({6, 7}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
     board->placePiece({7, 7}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
-    return board;
-  }
-
-  static int dim_impl(void) {
-    return Constant::BOARD_SIZE;
+    _timeLines[0]->pushBack(board);
   }
 };
 
-class CustomBoardEmitBishop : public IBoardBuilderCRTP<CustomBoardEmitBishop> {
+class CustomGameEmitBishop : public IGame {
 public:
-  static std::shared_ptr<Board> build_impl(std::shared_ptr<TimeLine> timeLine) {
-    std::shared_ptr<Board> board = std::make_shared<Board>(dim(), timeLine);
+  CustomGameEmitBishop(void) : IGame(Constant::BOARD_SIZE_EMIT_BISHOP) {
+    _timeLines.push_back(std::make_shared<TimeLine>(dim()));
+    std::shared_ptr<Board> board = std::make_shared<Board>(dim(), _timeLines[0]);
     for (int i = 0; i < dim(); i += 1) {
       board->placePiece({i, 1}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
       board->placePiece({i, 4}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
     }
     board->placePiece({0, 0}, std::make_shared<Rook>(PieceColor::PIECEWHITE));
-    board->placePiece({1, 0}, std::make_shared<Knight>(PieceColor::PIECEWHITE));
+    board->placePiece({1, 0}, std::make_shared<Bishop>(PieceColor::PIECEWHITE));
     board->placePiece({2, 0}, std::make_shared<Queen>(PieceColor::PIECEWHITE));
     board->placePiece({3, 0}, std::make_shared<King>(PieceColor::PIECEWHITE));
-    board->placePiece({4, 0}, std::make_shared<Knight>(PieceColor::PIECEWHITE));
+    board->placePiece({4, 0}, std::make_shared<Bishop>(PieceColor::PIECEWHITE));
     board->placePiece({5, 0}, std::make_shared<Rook>(PieceColor::PIECEWHITE));
 
     board->placePiece({0, 5}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
-    board->placePiece({1, 5}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
+    board->placePiece({1, 5}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
     board->placePiece({2, 5}, std::make_shared<Queen>(PieceColor::PIECEBLACK));
     board->placePiece({3, 5}, std::make_shared<King>(PieceColor::PIECEBLACK));
-    board->placePiece({4, 5}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
+    board->placePiece({4, 5}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
     board->placePiece({5, 5}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
-    return board;
-  }
-
-  static int dim_impl(void) {
-    return Constant::BOARD_SIZE_EMIT_BISHOP;
+    _timeLines[0]->pushBack(board);
   }
 };
 
-template<class Builder>
-std::shared_ptr<Game> createGame(void) {
-  return std::make_shared<Game>(Builder::dim_impl(), Builder::build_impl);
+class CustomGameEmitKnight : public IGame {
+public:
+  CustomGameEmitKnight(void) : IGame(Constant::BOARD_SIZE_EMIT_KNIGHT) {
+    _timeLines.push_back(std::make_shared<TimeLine>(dim()));
+    std::shared_ptr<Board> board = std::make_shared<Board>(dim(), _timeLines[0]);
+    for (int i = 0; i < dim(); i += 1) {
+      board->placePiece({i, 1}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
+      board->placePiece({i, 4}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
+    }
+    board->placePiece({0, 0}, std::make_shared<Rook>(PieceColor::PIECEWHITE));
+    board->placePiece({1, 0}, std::make_shared<Bishop>(PieceColor::PIECEWHITE));
+    board->placePiece({2, 0}, std::make_shared<Queen>(PieceColor::PIECEWHITE));
+    board->placePiece({3, 0}, std::make_shared<King>(PieceColor::PIECEWHITE));
+    board->placePiece({4, 0}, std::make_shared<Bishop>(PieceColor::PIECEWHITE));
+    board->placePiece({5, 0}, std::make_shared<Rook>(PieceColor::PIECEWHITE));
+
+    board->placePiece({0, 5}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
+    board->placePiece({1, 5}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
+    board->placePiece({2, 5}, std::make_shared<Queen>(PieceColor::PIECEBLACK));
+    board->placePiece({3, 5}, std::make_shared<King>(PieceColor::PIECEBLACK));
+    board->placePiece({4, 5}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
+    board->placePiece({5, 5}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
+    _timeLines[0]->pushBack(board);
+  }
+};
+
+class CustomGameEmitQueen : public IGame {
+public:
+  CustomGameEmitQueen(void) : IGame(Constant::BOARD_SIZE_EMIT_QUEEN) {
+    _timeLines.push_back(std::make_shared<TimeLine>(dim()));
+    std::shared_ptr<Board> board = std::make_shared<Board>(dim(), _timeLines[0]);
+    for (int i = 0; i < dim(); i += 1) {
+      board->placePiece({i, 1}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
+      board->placePiece({i, 5}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
+    }
+    board->placePiece({0, 0}, std::make_shared<Rook>(PieceColor::PIECEWHITE));
+    board->placePiece({1, 0}, std::make_shared<Knight>(PieceColor::PIECEWHITE));
+    board->placePiece({2, 0}, std::make_shared<Bishop>(PieceColor::PIECEWHITE));
+    board->placePiece({3, 0}, std::make_shared<King>(PieceColor::PIECEWHITE));
+    board->placePiece({4, 0}, std::make_shared<Bishop>(PieceColor::PIECEWHITE));
+    board->placePiece({5, 0}, std::make_shared<Knight>(PieceColor::PIECEWHITE));
+    board->placePiece({6, 0}, std::make_shared<Rook>(PieceColor::PIECEWHITE));
+
+    board->placePiece({0, 6}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
+    board->placePiece({1, 6}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
+    board->placePiece({2, 6}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
+    board->placePiece({3, 6}, std::make_shared<King>(PieceColor::PIECEBLACK));
+    board->placePiece({4, 6}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
+    board->placePiece({5, 6}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
+    board->placePiece({6, 6}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
+    _timeLines[0]->pushBack(board);
+  }
+};
+
+template<class T>
+std::shared_ptr<IGame> createGame(void) {
+  static_assert(std::is_base_of<IGame, T>::value, "T must derive from IGame");
+  return std::make_shared<T>();
 }
 
 } // namespace Chess

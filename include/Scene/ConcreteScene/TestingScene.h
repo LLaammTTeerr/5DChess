@@ -27,7 +27,7 @@ public:
   bool shouldTransition(void) const override;
 
 private:
-  std::shared_ptr<Chess::Game> _game;
+  std::shared_ptr<Chess::IGame> _game;
   std::shared_ptr<ChessModel> _chessModel;
   std::shared_ptr<ChessView> _chessView;
   std::shared_ptr<ChessController> _chessController;
