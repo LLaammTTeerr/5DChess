@@ -192,32 +192,9 @@ void ChessView::render_boardViews() const {
 }
 
 void ChessView::render() const {
-
-    // if (_use3DRendering) {
-    //     BeginMode3D(_camera3D);
-    //     for (const auto& boardView : _boardViews) {
-    //         if (boardView && boardView->is3D()) {
-    //             boardView->render();
-    //         }
-    //     }
-    //     EndMode3D();
-    //     // Render 2D views on top if mixed
-    //     BeginMode2D(_camera2D);
-
-    //     for (const auto& boardView : _boardViews) {
-    //         if (boardView && !boardView->is3D()) {
-    //             boardView->render();
-    //         }
-    //         // std::cout << "Rendering BoardView2D" << std::endl;
-    //     }
-
-    //     EndMode2D();
-    // } else {
-        // BeginMode2D(_camera2D);
-        
-
-        // EndMode2D();
-    // }
+    render_boardViews();
+    render_highlightBoard();
+    render_highlightedPositions();
 
     // Draw UI
     Vector2 mousePos = GetMousePosition();

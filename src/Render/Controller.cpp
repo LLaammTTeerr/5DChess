@@ -247,7 +247,9 @@ std::vector<std::shared_ptr<BoardView>> ChessController::computeBoardView2DsFrom
       for (int y = 0; y < board->dim(); ++y) {
         auto piece = board->getPiece(Chess::Position2D(x, y));
         if (piece) {
-          piecePositions.emplace_back(Chess::Position2D(x, y), (piece->color == Chess::PieceColor::PIECEWHITE ? "white" : "black") + "_" + piece->name());
+          const std::string& pieceColor = (piece->color() == Chess::PieceColor::PIECEWHITE) ? "white" : "black";
+          const std::string& pieceName = pieceColor + "_" + piece->name();
+          piecePositions.emplace_back(Chess::Position2D(x, y), pieceName);
         }
       }
     }
@@ -279,9 +281,5 @@ std::vector<std::shared_ptr<BoardView>> ChessController::computeHighlightedBoard
   }
 
 void ChessController::render() {
-  // view.render(_currentBoard);
-  view.render_boardViews();
-  view.render_highlightBoard();
-  view.render_highlightedPositions();
   view.render();
 }
