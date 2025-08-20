@@ -95,7 +95,7 @@ public:
   void undo() override {}
   void redo() override {}
   std::string getName() const override { return "Undo Move Command"; }
-  std::unique_ptr<ICommand> clone() const override { return std::make_unique<UndoMoveCommand>(); }
+  std::unique_ptr<ICommand> clone() const override;
   CommandType getType() const override { return CommandType::NON_STATE; }
 };
 
@@ -109,6 +109,6 @@ public:
   void undo() override {}
   void redo() override {}
   std::string getName() const override { return "Deselect Move Command"; }
-  std::unique_ptr<ICommand> clone() const override { return std::make_unique<DeselectMoveCommand>(); }
+  std::unique_ptr<ICommand> clone() const override;
   CommandType getType() const override { return CommandType::IMMEDIATE; }
 };

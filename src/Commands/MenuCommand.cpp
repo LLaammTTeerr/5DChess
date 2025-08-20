@@ -119,9 +119,22 @@ void SubmitMoveCommand::execute() {
 
 
 std::unique_ptr<ICommand> SubmitMoveCommand::clone() const {
-    return std::make_unique<SubmitMoveCommand>();
+    auto cloned = std::make_unique<SubmitMoveCommand>();
+    cloned->_callback = _callback; // Copy the callback
+    return cloned;
 }
 
+std::unique_ptr<ICommand> UndoMoveCommand::clone() const {
+    auto cloned = std::make_unique<UndoMoveCommand>();
+    cloned->_callback = _callback; // Copy the callback
+    return cloned;
+}
+
+std::unique_ptr<ICommand> DeselectMoveCommand::clone() const {
+    auto cloned = std::make_unique<DeselectMoveCommand>();
+    cloned->_callback = _callback; // Copy the callback
+    return cloned;
+}
 
 void UndoMoveCommand::execute() {
     std::cout << "Undoing last move..." << std::endl;

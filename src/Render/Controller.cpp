@@ -340,6 +340,16 @@ void ChessController::renderInGameMenu() const {
 
 void ChessController::handleUndoMove() {
   std::cout << "Undoing last move..." << std::endl;
+
+  if (!model._game->undoable()) {
+    std::cout << "Cannot undo: no moves to undo." << std::endl;
+    return; // No moves to undo
+  }
+
+  model._game->undo();
+  std::cout << "Last move undone successfully." << std::endl;
+  resetHighlightedBoard();
+  resetHighlightedPositions();
 }
 
 void ChessController::handleSubmitMove() {
@@ -360,4 +370,11 @@ void ChessController::handleSubmitMove() {
 
 void ChessController::handleDeselectPosition() {
   std::cout << "Deselecting position..." << std::endl;
+
+  model._currentMoveState.reset(); // Reset the move state
+  resetHighlightedBoard();
+  resetHighlightedPositions();
+  view.update_highlightedBoard(computeHighlightedBoardViews());
+  view.update_highlightedPositions({}); // Clear highlighted positions
 }
+

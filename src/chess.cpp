@@ -97,7 +97,7 @@ std::shared_ptr<Piece> IGame::_getPieceByVector4DFullTurn(Vector4D position) con
   return board->getPiece(Position2D(x, y));
 }
 
-inline void IGame::undo(void) {
+void IGame::undo(void) {
   assert(undoable());
   assert(_undoList.size());
   // Get the last undo operation
@@ -494,7 +494,6 @@ void IGame::makeMove(Move move) {
     newFromBoard->placePiece(move.to.position, piece->clone());
     _nextHalfTurnQueue.push_back(newFromBoard->halfTurnNumber());
     _undoList.push_back(list);
-    submitTurn();
     return;
   }
 
@@ -513,7 +512,6 @@ void IGame::makeMove(Move move) {
 
   _nextHalfTurnQueue.push_back(newToBoard->halfTurnNumber());
   _undoList.push_back(list);
-  submitTurn();
 }
 
 void IGame::submitTurn(void) {
