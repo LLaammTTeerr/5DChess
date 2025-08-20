@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <climits>
+#include <algorithm>
 
 // using namespace Chess;
 namespace Chess {
@@ -415,6 +416,7 @@ std::vector<SelectedPosition> IGame::getMoveablePositions(SelectedPosition selec
 }
 
 void IGame::makeMove(Move move) {
+  std::vector<int> list;
   std::shared_ptr<Piece> piece = move.from.board->getPiece(move.from.position);
   assert(piece != nullptr);
   assert(piece->color() == _currentTurnColor);
@@ -422,10 +424,11 @@ void IGame::makeMove(Move move) {
   std::shared_ptr<Board> newFromBoard = move.from.board->createFork(move.from.board->getTimeLine());
   move.from.board->getTimeLine()->pushBack(newFromBoard);
   newFromBoard->placePiece(move.from.position, nullptr);
+  list.push_back(newFromBoard->getTimeLine()->ID());
   if (move.to.board == move.from.board) {
-    newFromBoard->placePiece(move.to.position, piece);
-    _nextHalfTurn = std::min(_nextHalfTurn, newFromBoard->halfTurnNumber());
-    submitTurn();
+    newFromBoard->placePiece(move.to.position, piece->clone());
+    _nextHalfTurnQueue.push_back(newFromBoard->halfTurnNumber());
+    _undoList.push_back(list);
     return;
   }
 
@@ -435,20 +438,23 @@ void IGame::makeMove(Move move) {
 
   if (toTimeLine != move.to.board->getTimeLine()) {
     _timeLines.push_back(toTimeLine);
+    list.push_back(toTimeLine->ID());
   }
 
   std::shared_ptr<Board> newToBoard = move.to.board->getTimeLine()->getBoardByHalfTurn(move.to.board->halfTurnNumber())->createFork(toTimeLine);
   newToBoard->placePiece(move.to.position, piece);
   toTimeLine->pushBack(newToBoard);
 
-  _nextHalfTurn = std::min(_nextHalfTurn, newToBoard->halfTurnNumber());
+  _nextHalfTurnQueue.push_back(newToBoard->halfTurnNumber());
+  _undoList.push_back(list);
 }
 
 void IGame::submitTurn(void) {
   _currentTurnMoves.clear();
   _currentTurnColor = opposite(_currentTurnColor);
-  _presentHalfTurn = _nextHalfTurn;
-  _nextHalfTurn = INT_MAX;
+  _presentHalfTurn = *std::min_element(_nextHalfTurnQueue.begin(), _nextHalfTurnQueue.end());
+  _nextHalfTurnQueue.clear();
+  _undoList.clear();
 }
 
 } // namespace Chess

@@ -405,6 +405,11 @@ public:
    */
   void pushBack(std::shared_ptr<Board> board);
 
+  inline void popBack(void) {
+    assert(!_history.empty());
+    _history.pop_back();
+  }
+
   inline std::shared_ptr<Board> back(void) {
     assert(!_history.empty());
     return _history.back();
@@ -455,7 +460,7 @@ public:
 
 class IGame {
 public:
-  IGame(int N) : _N(N), _presentHalfTurn(0), _currentTurnColor(PieceColor::PIECEWHITE), _nextHalfTurn(INT_MAX) {}
+  IGame(int N) : _N(N), _presentHalfTurn(0), _currentTurnColor(PieceColor::PIECEWHITE) {}
   virtual ~IGame() = default;
 
   /**
@@ -534,10 +539,11 @@ public:
 protected:
   int _N;
   int _presentHalfTurn;
-  int _nextHalfTurn;
+  std::vector<int> _nextHalfTurnQueue;
   std::vector<std::shared_ptr<TimeLine>> _timeLines;
   std::vector<Move> _currentTurnMoves;
   PieceColor _currentTurnColor;
+  std::vector<std::vector<int>> _undoList;
 
   std::shared_ptr<Piece> _getPieceByVector4DFullTurn(Vector4D position) const {
     int x = position.x();
@@ -551,13 +557,24 @@ protected:
     return board->getPiece(Position2D(x, y));
   }
 
-
   void _pushBack(std::shared_ptr<TimeLine> timeLine) {
     _timeLines.push_back(timeLine);
   }
 public:
   inline std::vector<std::shared_ptr<TimeLine>> getTimeLines(void) const {
     return _timeLines;
+  }
+
+  void undo(void) {
+    assert(undoable());
+    assert(_undoList.size());
+    // Get the last undo operation
+    std::vector<int> lastUndo = _undoList.back();
+    _undoList.pop_back();
+
+    for (int timeLineID : lastUndo) {
+      _timeLines[timeLineID]->popBack();
+    }
   }
 
   inline PieceColor getCurrentTurnColor(void) const {
