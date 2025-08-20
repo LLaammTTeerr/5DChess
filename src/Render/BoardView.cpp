@@ -30,7 +30,7 @@ void BoardView2D::render() const {
 
     DrawTexturePro(
         *_boardTexture,
-        Rectangle{0, 0, static_cast<float>(_boardTexture->width * float(_boardDim / STANDARD_BOARD_DIM)), static_cast<float>(_boardTexture->height * float(_boardDim / STANDARD_BOARD_DIM))},
+        Rectangle{0, 0, static_cast<float>(_boardTexture->width * float(float(_boardDim) / float(STANDARD_BOARD_DIM))), static_cast<float>(_boardTexture->height * (float(_boardDim) / float(STANDARD_BOARD_DIM)))},
         _area,
         Vector2{0, 0},
         0.0f,
