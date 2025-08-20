@@ -8,10 +8,18 @@
 #include "View.h"
 #include "RenModel.h"
 
+class InGameMenuController;
+class MenuComponent;
 class ChessController {
 private:
   ChessModel& model;
   ChessView& view;
+
+  std::shared_ptr<InGameMenuController> _inGameMenuController;
+  std::shared_ptr<MenuComponent> _inGameMenuSystem;
+private:
+  void initInGameMenu();
+  void renderInGameMenu() const;
 
 /// @brief private attribute and methods related to model
 private:
@@ -51,6 +59,7 @@ private:
 private:
   std::map<std::shared_ptr<Chess::Board>, std::shared_ptr<BoardView>> _boardToBoardViewMap; // Map to store board views by board
   std::map<std::shared_ptr<BoardView>, std::shared_ptr<Chess::Board>> _boardViewToBoardMap; // Map to store boards by board view
+
 public:
   ChessController(ChessModel& m, ChessView& v);
   void update(float deltaTime);
@@ -62,5 +71,8 @@ private:
 
   // Methods to update model state based on user input
   void handleSelectedPosition(Chess::SelectedPosition selectedPosition);
+  void handleUndoMove();
+  void handleSubmitMove();
+  void handleDeselectPosition();
   // RenderMoveState convertModelToRenderState(const MoveState& moveState);
 };

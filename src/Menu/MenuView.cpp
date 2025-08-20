@@ -2,7 +2,7 @@
 #include "MenuComponent.h"
 #include "gameState.h"
 #include "MenuItemView.h"
-
+#include "ResourceManager.h"
 
 
 void ButtonMenuView::createNavigationItemViews(std::shared_ptr<MenuComponent> menuModel, GameState* gameState) {
@@ -14,6 +14,7 @@ void ButtonMenuView::createNavigationItemViews(std::shared_ptr<MenuComponent> me
                 Vector2 position = { 100, static_cast<float>(_itemViews.size() * 50 + 100) }; // Example positioning
                 Vector2 size = { 200, 40 }; // Example size
                 auto itemView = std::make_shared<MenuItemView>(position, size);
+                itemView->setFont(ResourceManager::getInstance().getFont("public_sans_bold"));
                 _itemViews.push_back(itemView);
             }
         }
@@ -37,5 +38,26 @@ void ButtonMenuView::draw(std::shared_ptr<MenuComponent> menuModel) const {
         if (_itemViews[i] && menuItems[i] -> isEnabled()) {
             _itemViews[i] -> draw(menuItems[i]);
         }
+    }
+}
+
+void ButtonMenuView::createInGameItemsViews(int numberOfItems) {
+    _itemViews.clear(); // Clear existing item views
+
+    const float horizontalSpacing = 20.0f; // spacing between items
+    const float itemHeight = 30.0f;
+    const float itemWidth = 150.0f;
+    const Rectangle menuArea = {0, 0, (float)GetScreenWidth(), 100.0f}; // Example menu area
+
+    const float startX = menuArea.x + (menuArea.width - numberOfItems * itemWidth - (numberOfItems - 1) * horizontalSpacing) / 2;
+    const float startY = menuArea.y + (menuArea.height - itemHeight) / 2;
+
+    _itemViews.reserve(numberOfItems); // Reserve space for the specified number of items
+    for (int i = 0; i < numberOfItems; ++i) {
+        Vector2 position = {startX + i * (itemWidth + horizontalSpacing), startY};
+        Vector2 size = {itemWidth, itemHeight};
+        auto itemView = std::make_shared<MenuItemView>(position, size);
+        itemView->setFont(ResourceManager::getInstance().getFont("public_sans_bold"));
+        _itemViews.push_back(itemView);
     }
 }

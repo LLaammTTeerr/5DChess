@@ -10,6 +10,8 @@ class IMenuView;
 class GameStateModel;
 class GameState;
 class SceneManager;
+class ChessView;
+class ChessModel;
 
 class MenuController {
 public:
@@ -31,6 +33,18 @@ protected:
   std::shared_ptr<MenuComponent> _menuSystem; // root menu component
   std::shared_ptr<MenuComponent> _currentMenuModel; 
   std::unique_ptr<IMenuView> _menuView;
+};
+
+class InGameMenuController : public MenuController {
+private:
+  ChessModel* _chessModel;
+  ChessView* _chessView;
+public:
+  InGameMenuController(ChessModel* chessModel, ChessView* chessView, std::shared_ptr<MenuComponent> menuSystem);
+  void setViewStrategy(std::unique_ptr<IMenuView> view) override;
+  void handleInput() override; // Handle user input for in-game menu navigation
+  void update() override; // Update the in-game menu controller
+  void draw() const override; // Draw the in-game menu
 };
 class NavigationMenuController : public MenuController {
 private:

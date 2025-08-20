@@ -28,6 +28,7 @@ protected:
 public:
   virtual ~IMenuView() = default;
   virtual void createNavigationItemViews(std::shared_ptr<MenuComponent> menuModel, GameState* gameState) = 0;
+  virtual void createInGameItemsViews(int numberOfItems) = 0;
   virtual void draw(std::shared_ptr<MenuComponent> menuModel) const = 0;
 
   // virtual void drawTitle(const std::string& title) const;
@@ -49,6 +50,7 @@ public:
   ButtonMenuView() = default;
 
   void createNavigationItemViews(std::shared_ptr<MenuComponent> menuModel, GameState* gameState) override;
+  void createInGameItemsViews(int numberOfItems) override;
   void draw(std::shared_ptr<MenuComponent> menuModel) const override; // { /* Draw button menu */ }
   // void drawTitle(const std::string& title) const override;
 };

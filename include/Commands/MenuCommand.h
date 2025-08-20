@@ -74,10 +74,8 @@ public:
 
 class ChessController; // Forward declaration
 class SubmitMoveCommand  : public ICommand {
-private:
-  std::shared_ptr<ChessController> _chessController;
 public:
-  SubmitMoveCommand(std::shared_ptr<ChessController> chessController);
+  SubmitMoveCommand();
   void execute() override;
   virtual bool canUndo() const override { return false; }
   virtual bool canRedo() const override { return false; }
@@ -85,5 +83,32 @@ public:
   void redo() override {}
   std::string getName() const override { return "Submit Move Command"; }
   std::unique_ptr<ICommand> clone() const override;
+  CommandType getType() const override { return CommandType::IMMEDIATE; }
+};
+
+class UndoMoveCommand : public ICommand {
+public: 
+  UndoMoveCommand() {}
+  void execute() override;
+  virtual bool canUndo() const override { return true; }
+  virtual bool canRedo() const override { return false; }
+  void undo() override {}
+  void redo() override {}
+  std::string getName() const override { return "Undo Move Command"; }
+  std::unique_ptr<ICommand> clone() const override { return std::make_unique<UndoMoveCommand>(); }
+  CommandType getType() const override { return CommandType::NON_STATE; }
+};
+
+
+class DeselectMoveCommand : public ICommand {
+public:
+  DeselectMoveCommand() {}
+  void execute() override { executeCallback(); } // Execute the callback if set
+  virtual bool canUndo() const override { return false; }
+  virtual bool canRedo() const override { return false; }
+  void undo() override {}
+  void redo() override {}
+  std::string getName() const override { return "Deselect Move Command"; }
+  std::unique_ptr<ICommand> clone() const override { return std::make_unique<DeselectMoveCommand>(); }
   CommandType getType() const override { return CommandType::IMMEDIATE; }
 };

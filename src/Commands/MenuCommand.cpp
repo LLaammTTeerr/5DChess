@@ -111,8 +111,7 @@ CommandType VersusPlayCommand::getType() const {
 }
 
 
-SubmitMoveCommand::SubmitMoveCommand(std::shared_ptr<ChessController> chessController)
-    : _chessController(chessController) {}
+SubmitMoveCommand::SubmitMoveCommand() {}
 
 void SubmitMoveCommand::execute() {
     executeCallback(); // Execute the callback if set
@@ -120,6 +119,14 @@ void SubmitMoveCommand::execute() {
 
 
 std::unique_ptr<ICommand> SubmitMoveCommand::clone() const {
-    return std::make_unique<SubmitMoveCommand>(_chessController);
+    return std::make_unique<SubmitMoveCommand>();
+}
+
+
+void UndoMoveCommand::execute() {
+    std::cout << "Undoing last move..." << std::endl;
+    // This command is a placeholder for undo functionality
+    // In a real implementation, you would access the game state and undo the last move
+    executeCallback(); // Execute the callback if set
 }
 

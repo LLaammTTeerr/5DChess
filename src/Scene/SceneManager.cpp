@@ -173,8 +173,8 @@ void SceneManager::initializeNavigationMenuSystem() {
 
   _gameStateModel->setStateByName("MAIN_MENU");
 
-  _navigationMenuSystem = _gameStateModel->createNavigationMenuForCurrentState(this);
 
+  _navigationMenuSystem = _gameStateModel->createNavigationMenuForCurrentState(this);
   // Create menu controller
   _navigationMenuController = std::make_shared<NavigationMenuController>(_gameStateModel, _navigationMenuSystem, this);
 
@@ -188,8 +188,9 @@ void SceneManager::updateMenuSystem(float deltaTime) {
   if (_navigationMenuController) {
     _navigationMenuController->update();
   }
-
 }
+
+
 
 void SceneManager::renderMenuSystem() {
   if (_navigationMenuController) {

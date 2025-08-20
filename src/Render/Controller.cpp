@@ -1,8 +1,17 @@
 #include "Render/Controller.h"
 #include "ResourceManager.h"
+#include "MenuController.h"
+#include "MenuComponent.h"
+#include "MenuCommand.h"
+#include "MenuView.h"
+#include "MenuItemView.h"
+
+
+
 
 ChessController::ChessController(ChessModel& m, ChessView& v) : model(m), view(v) {
     setupViewCallbacks();
+    initInGameMenu();
 }
 
 void ChessController::updateCurrentBoardFromModel() {
@@ -36,6 +45,9 @@ void ChessController::update(float deltaTime) {
 void ChessController::handleInput() {
     update(GetFrameTime());
     view.handleInput();
+    if (_inGameMenuController) {
+        _inGameMenuController->handleInput();
+    }
 }
 
 void ChessController::setupViewCallbacks() {
@@ -266,8 +278,6 @@ std::vector<std::shared_ptr<BoardView>> ChessController::computeBoardView3DsFrom
 }
 
 
-
-
 std::vector<std::shared_ptr<BoardView>> ChessController::computeHighlightedBoardViews() const {
     std::vector<std::shared_ptr<BoardView>> highlightedViews;
     for (auto& board : _highlightedBoard) {
@@ -283,4 +293,71 @@ std::vector<std::shared_ptr<BoardView>> ChessController::computeHighlightedBoard
 
 void ChessController::render() {
   view.render();
+  renderInGameMenu();
+}
+
+
+
+void ChessController::initInGameMenu() {
+   _inGameMenuSystem = std::make_shared<Menu>("In-Game Menu", true);
+  
+  std::shared_ptr<MenuComponent> Undo = std::make_shared<MenuItem>("Undo", true);
+  auto UndoCommand = std::make_unique<UndoMoveCommand>();
+  UndoCommand->setCallback([this](){
+    handleUndoMove(); 
+  });
+  Undo->setCommand(std::move(UndoCommand));
+
+  std::shared_ptr<MenuComponent> Deselect = std::make_shared<MenuItem>("Deselect", true);
+  auto DeselectCommand = std::make_unique<DeselectMoveCommand>();
+  DeselectCommand->setCallback([this](){
+    handleDeselectPosition();
+  });
+  Deselect->setCommand(std::move(DeselectCommand));
+
+  std::shared_ptr<MenuComponent> Submit = std::make_shared<MenuItem>("Submit", true);
+  auto SubmitCommand = std::make_unique<SubmitMoveCommand>();
+  SubmitCommand->setCallback([this](){
+    handleSubmitMove();
+  });
+  Submit->setCommand(std::move(SubmitCommand));
+
+  _inGameMenuSystem->addItem(Undo);
+  _inGameMenuSystem->addItem(Deselect);
+  _inGameMenuSystem->addItem(Submit);
+
+  _inGameMenuController = std::make_shared<InGameMenuController>(&model, &view, _inGameMenuSystem);
+}
+
+
+void ChessController::renderInGameMenu() const {
+  if (_inGameMenuController) {
+    _inGameMenuController->draw();
+  } else {
+    std::cerr << "InGameMenuController is not initialized!" << std::endl;
+  }
+}
+
+void ChessController::handleUndoMove() {
+  std::cout << "Undoing last move..." << std::endl;
+}
+
+void ChessController::handleSubmitMove() {
+  std::cout << "Submitting move..." << std::endl;
+
+  std::vector<std::shared_ptr<Chess::Board>> moveableBoards = model._game -> getMoveableBoards();
+  if (!moveableBoards.empty()) {
+    std::cout << "Can not submit move: there are still moveable boards." << std::endl;
+    return;
+  }
+  else {
+    model._game -> submitTurn();
+    std::cout << "Move submitted successfully." << std::endl;
+    resetHighlightedBoard();
+    resetHighlightedPositions();
+  }
+}
+
+void ChessController::handleDeselectPosition() {
+  std::cout << "Deselecting position..." << std::endl;
 }
