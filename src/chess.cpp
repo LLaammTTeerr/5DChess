@@ -348,7 +348,7 @@ std::vector<SelectedPosition> IGame::getMoveablePositions(SelectedPosition selec
     }
 
     for (int sw : {-1, +1}) {
-      for (int d = 1; d < selected.board->halfTurnNumber(); d += 1) {
+      for (int d = 1; d <= selected.board->fullTurnNumber(); d += 1) {
         int nz = from.z() - d;
         int nw = from.w() + sw * d;
         if (!boardExists(nw, 2 * nz + parity)) break;
@@ -356,7 +356,7 @@ std::vector<SelectedPosition> IGame::getMoveablePositions(SelectedPosition selec
         if (targetPiece != nullptr and targetPiece->color() == _currentTurnColor) {
           break;
         }
-        moveablePositions.emplace_back(getBoard(nw, 2 * nz + 1), Position2D(from.x(), from.y()));
+        moveablePositions.emplace_back(getBoard(nw, 2 * nz + parity), Position2D(from.x(), from.y()));
         if (targetPiece != nullptr) {
           break;
         }
@@ -365,7 +365,40 @@ std::vector<SelectedPosition> IGame::getMoveablePositions(SelectedPosition selec
   }
 
   if (piece->name() == "queen") {
+    for (int mask = 1; mask < (1 << 4); mask += 1) {
+      #define ONBIT(n) ((mask) & (1 << (n)))
+      int maxD = INT_MAX;
+      if (ONBIT(0) || ONBIT(1)) {
+        maxD = std::min(maxD, dim() - 1);
+      }
+      if (ONBIT(2)) {
+        maxD = std::min(maxD, selected.board->fullTurnNumber() + 1);
+      }
+      if (ONBIT(3)) {
+        maxD = std::min(maxD, (int) _timeLines.size());
+      }
+      #undef ONBIT
+      for (int s0 : (mask & 1) ? std::initializer_list<int>{-1, +1} : std::initializer_list<int>{0})
+      for (int s1 : (mask & 2) ? std::initializer_list<int>{-1, +1} : std::initializer_list<int>{0})
+      for (int s2 : (mask & 4) ? std::initializer_list<int>{-1, +1} : std::initializer_list<int>{0})
+      for (int s3 : (mask & 8) ? std::initializer_list<int>{-1, +1} : std::initializer_list<int>{0}) {
+        for (int d = 1; d < maxD; d += 1) {
+          int nx = from.x() + s0 * d;
+          int ny = from.y() + s1 * d;
+          int nz = from.z() + s2 * d;
+          int nw = from.w() + s3 * d;
 
+          if (nx < 0 || nx >= dim() || ny < 0 || ny >= dim()) break;
+          if (!boardExists(nw, 2 * nz + parity)) break;
+          std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({nx, ny, nz, nw});
+          if (targetPiece != nullptr && targetPiece->color() == _currentTurnColor) break;
+
+          std::shared_ptr<Board> targetBoard = getBoard(nw, 2 * nz + parity);
+          moveablePositions.emplace_back(targetBoard, Position2D(nx, ny));
+          if (targetPiece != nullptr) break;
+        }
+      }
+    }
   }
 
   if (piece->name() == "king") {
@@ -458,10 +491,10 @@ void IGame::makeMove(Move move) {
   newFromBoard->placePiece(move.from.position, nullptr);
   list.push_back(newFromBoard->getTimeLine()->ID());
   if (move.to.board == move.from.board) {
-    std::cerr << "HALF TURN = " << _presentHalfTurn << '\n';
     newFromBoard->placePiece(move.to.position, piece->clone());
     _nextHalfTurnQueue.push_back(newFromBoard->halfTurnNumber());
     _undoList.push_back(list);
+    submitTurn();
     return;
   }
 
@@ -480,6 +513,7 @@ void IGame::makeMove(Move move) {
 
   _nextHalfTurnQueue.push_back(newToBoard->halfTurnNumber());
   _undoList.push_back(list);
+  submitTurn();
 }
 
 void IGame::submitTurn(void) {
@@ -501,8 +535,8 @@ StandardGame::StandardGame(void) : IGame(Constant::BOARD_SIZE) {
   board->placePiece({0, 0}, std::make_shared<Rook>(PieceColor::PIECEWHITE));
   board->placePiece({1, 0}, std::make_shared<Knight>(PieceColor::PIECEWHITE));
   board->placePiece({2, 0}, std::make_shared<Bishop>(PieceColor::PIECEWHITE));
-  board->placePiece({3, 0}, std::make_shared<Queen>(PieceColor::PIECEWHITE));
-  board->placePiece({4, 0}, std::make_shared<King>(PieceColor::PIECEWHITE));
+  board->placePiece({3, 0}, std::make_shared<King>(PieceColor::PIECEWHITE));
+  board->placePiece({4, 0}, std::make_shared<Queen>(PieceColor::PIECEWHITE));
   board->placePiece({5, 0}, std::make_shared<Bishop>(PieceColor::PIECEWHITE));
   board->placePiece({6, 0}, std::make_shared<Knight>(PieceColor::PIECEWHITE));
   board->placePiece({7, 0}, std::make_shared<Rook>(PieceColor::PIECEWHITE));
@@ -510,8 +544,8 @@ StandardGame::StandardGame(void) : IGame(Constant::BOARD_SIZE) {
   board->placePiece({0, 7}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
   board->placePiece({1, 7}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
   board->placePiece({2, 7}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
-  board->placePiece({3, 7}, std::make_shared<Queen>(PieceColor::PIECEBLACK));
-  board->placePiece({4, 7}, std::make_shared<King>(PieceColor::PIECEBLACK));
+  board->placePiece({3, 7}, std::make_shared<King>(PieceColor::PIECEBLACK));
+  board->placePiece({4, 7}, std::make_shared<Queen>(PieceColor::PIECEBLACK));
   board->placePiece({5, 7}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
   board->placePiece({6, 7}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
   board->placePiece({7, 7}, std::make_shared<Rook>(PieceColor::PIECEBLACK));

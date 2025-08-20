@@ -571,6 +571,7 @@ public:
 };
 
 class StandardGame : public IGame {
+public:
   StandardGame(void);
 };
 
