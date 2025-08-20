@@ -67,6 +67,7 @@ class Board;
 class TimeLine;
 class Multiverse;
 class Move;
+class RuleEngine;
 
 class Position2D {
 public:
@@ -458,6 +459,11 @@ public:
   // Additional fields can be added, e.g., piece type, but keeping simple for now
 };
 
+class RuleEngine {
+public:
+  bool pawnCanMakeTwoMoveOnFirstTurn = true;
+};
+
 class IGame {
 public:
   IGame(int N) : _N(N), _presentHalfTurn(0), _currentTurnColor(PieceColor::PIECEWHITE) {}
@@ -538,6 +544,7 @@ protected:
   std::vector<Move> _currentTurnMoves;
   PieceColor _currentTurnColor;
   std::vector<std::vector<int>> _undoList;
+  RuleEngine _rule;
 
   std::shared_ptr<Piece> _getPieceByVector4DFullTurn(Vector4D position) const;
   inline void _pushBack(std::shared_ptr<TimeLine> timeLine) {

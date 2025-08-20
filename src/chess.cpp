@@ -407,7 +407,7 @@ std::vector<SelectedPosition> IGame::getMoveablePositions(SelectedPosition selec
         moveablePositions.emplace_back(selected.board, Position2D(from.x(), from.y() + 1));
       }
 
-      if (piece->getPosition().y() == 1) {
+      if (_rule.pawnCanMakeTwoMoveOnFirstTurn and piece->getPosition().y() == 1) {
         std::shared_ptr<Piece> targetPiece = selected.board->getPiece(Position2D(from.x(), from.y() + 2));
         if (targetPiece != nullptr)
           goto SKIP_PAWN_MOVE;
@@ -433,7 +433,7 @@ std::vector<SelectedPosition> IGame::getMoveablePositions(SelectedPosition selec
           goto SKIP_PAWN_MOVE;
         moveablePositions.emplace_back(selected.board, Position2D(from.x(), from.y() - 2));
       }
-      if (piece->getPosition().y() > 0) {
+      if (_rule.pawnCanMakeTwoMoveOnFirstTurn and  piece->getPosition().y() > 0) {
         std::shared_ptr<Piece> targetPiece = selected.board->getPiece(Position2D(from.x(), from.y() - 1));
         if (targetPiece != nullptr)
           goto SKIP_PAWN_MOVE;
@@ -458,6 +458,7 @@ void IGame::makeMove(Move move) {
   newFromBoard->placePiece(move.from.position, nullptr);
   list.push_back(newFromBoard->getTimeLine()->ID());
   if (move.to.board == move.from.board) {
+    std::cerr << "HALF TURN = " << _presentHalfTurn << '\n';
     newFromBoard->placePiece(move.to.position, piece->clone());
     _nextHalfTurnQueue.push_back(newFromBoard->halfTurnNumber());
     _undoList.push_back(list);
@@ -519,6 +520,7 @@ StandardGame::StandardGame(void) : IGame(Constant::BOARD_SIZE) {
 
 const std::string NameOfGame<CustomGameEmitBishop>::value = "Standard Game - No Bishop";
 CustomGameEmitBishop::CustomGameEmitBishop(void) : IGame(Constant::BOARD_SIZE_EMIT_BISHOP) {
+  _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
   _timeLines.push_back(std::make_shared<TimeLine>(dim()));
   std::shared_ptr<Board> board = std::make_shared<Board>(dim(), _timeLines[0]);
   for (int i = 0; i < dim(); i += 1) {
@@ -543,6 +545,7 @@ CustomGameEmitBishop::CustomGameEmitBishop(void) : IGame(Constant::BOARD_SIZE_EM
 
 const std::string NameOfGame<CustomGameEmitKnight>::value = "Standard Game - No Knight";
 CustomGameEmitKnight::CustomGameEmitKnight(void) : IGame(Constant::BOARD_SIZE_EMIT_KNIGHT) {
+  _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
   _timeLines.push_back(std::make_shared<TimeLine>(dim()));
   std::shared_ptr<Board> board = std::make_shared<Board>(dim(), _timeLines[0]);
   for (int i = 0; i < dim(); i += 1) {
@@ -567,6 +570,7 @@ CustomGameEmitKnight::CustomGameEmitKnight(void) : IGame(Constant::BOARD_SIZE_EM
 
 const std::string NameOfGame<CustomGameEmitQueen>::value = "Standard Game - No Queen";
 CustomGameEmitQueen::CustomGameEmitQueen(void) : IGame(Constant::BOARD_SIZE_EMIT_QUEEN) {
+  _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
   _timeLines.push_back(std::make_shared<TimeLine>(dim()));
   std::shared_ptr<Board> board = std::make_shared<Board>(dim(), _timeLines[0]);
   for (int i = 0; i < dim(); i += 1) {
