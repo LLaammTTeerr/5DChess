@@ -1,10 +1,16 @@
 #pragma once
 #include "Scene.h"
+#include "MenuController.h" // Include the full header instead of forward declaration
 #include <string>
+#include <memory>
 
 class GameState;
 
 class VersusScene : public Scene {
+private:
+  std::unique_ptr<VersusMenuController> menuController;
+  std::string selectedGameMode;
+
 public:
   VersusScene() = default;
   ~VersusScene() override = default;
@@ -23,4 +29,10 @@ public:
   void onExit(void) override;
 
   bool shouldTransition(void) const override;
+
+  // Public method for game mode selection
+  void selectGameMode(const std::string& mode);
+
+private:
+  void initializeMenuController();
 };

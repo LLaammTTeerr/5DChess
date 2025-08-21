@@ -187,6 +187,16 @@ float ListMenuView::getScrollHandleHeight() const {
     return fmaxf(20.0f, visibleRatio * scrollbarArea.height);
 }
 
+void ListMenuView::updateScrollbar() {
+    calculateMaxScrollOffset();
+    
+    // Clamp scroll offset to valid range
+    scrollOffset = fmaxf(0.0f, fminf(scrollOffset, maxScrollOffset));
+    
+    // Update scrollbar area dimensions
+    updateScrollbarArea();
+}
+
 void ListMenuView::draw(std::shared_ptr<MenuComponent> menuModel) const {
     const auto& menuItems = menuModel->getChildren();
     

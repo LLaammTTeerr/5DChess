@@ -3,10 +3,10 @@
 #include <memory>
 #include <string>
 #include <iostream>
+#include "MenuView.h" // Include the full header for IMenuView
 
 // forward declaration
 class MenuComponent;
-class IMenuView;
 class GameStateModel;
 class GameState;
 class SceneManager;
@@ -63,4 +63,28 @@ public:
   void draw() const;
 
   IMenuView* getMenuView() const;
+};
+
+class VersusScene; // Forward declaration
+
+class VersusMenuController : public MenuController {
+private:
+  VersusScene* _versusScene;
+  
+public:
+  VersusMenuController(VersusScene* versusScene);
+  void setViewStrategy(std::unique_ptr<IMenuView> view) override;
+  void handleInput() override;
+  void update() override;
+  void draw() const override;
+  
+  // Specific methods for VersusScene menu
+  void createGameModeMenu();
+  void selectGameMode(const std::string& mode);
+  bool isMenuVisible() const;
+  void setMenuVisible(bool visible);
+  
+private:
+  bool _showMenu = true;
+  std::string _selectedGameMode = "None";
 };

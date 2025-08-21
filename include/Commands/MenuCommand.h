@@ -4,6 +4,7 @@
 
 
 class SceneManager; // Forward declaration
+class VersusScene; // Forward declaration
 
 // class startGameCommand : public ICommand {
 // private:
@@ -99,6 +100,25 @@ public:
   CommandType getType() const override { return CommandType::NON_STATE; }
 };
 
+
+class GameModeSelectCommand : public ICommand {
+private:
+  std::string _gameMode;
+  VersusScene* _versusScene;
+  
+public:
+  GameModeSelectCommand(const std::string& gameMode, VersusScene* versusScene)
+      : _gameMode(gameMode), _versusScene(versusScene) {}
+      
+  void execute() override;
+  virtual bool canUndo() const override { return false; }
+  virtual bool canRedo() const override { return false; }
+  void undo() override {}
+  void redo() override {}
+  std::string getName() const override { return "Game Mode Select Command"; }
+  std::unique_ptr<ICommand> clone() const override;
+  CommandType getType() const override { return CommandType::IMMEDIATE; }
+};
 
 class DeselectMoveCommand : public ICommand {
 public:
