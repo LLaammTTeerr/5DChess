@@ -611,6 +611,64 @@ void CameraController::calculateOptimalZoomForNewestBoard(const std::vector<std:
     }
 }
 
+void CameraController::focusOnBoardWithAdaptiveZoom(const std::vector<std::shared_ptr<BoardView>>& boardViews, std::shared_ptr<BoardView> targetBoard) {
+    if (!targetBoard || boardViews.empty()) {
+        return;
+    }
+    
+    // Constants for adaptive zoom
+    const float ZOOM_CUTOFF = 0.8f;      // Below this zoom, trigger adaptive zoom
+    const float COMFORTABLE_ZOOM = 1.8f; // Target zoom for comfortable viewing
+    const float ANIMATION_DURATION = 0.3f; // Smooth transition duration
+    
+    // Get current zoom level
+    float currentZoom = _use3DRendering ? (90.0f / _camera3D.fovy) : _camera2D.zoom; // Convert FOV to zoom-like scale for 3D
+    
+    // Only trigger adaptive zoom if current zoom is below cutoff
+    if (currentZoom >= ZOOM_CUTOFF) {
+        std::cout << "Current zoom (" << currentZoom << ") is above cutoff (" << ZOOM_CUTOFF << "), skipping adaptive zoom" << std::endl;
+        return;
+    }
+    
+    // Get target board center
+    Rectangle targetArea = targetBoard->getArea();
+    Vector2 boardCenter = {
+        targetArea.x + targetArea.width / 2.0f,
+        targetArea.y + targetArea.height / 2.0f
+    };
+    
+    // Set camera target to center of selected board
+    _targetCameraPosition = boardCenter;
+    
+    // Set zoom target for comfortable viewing
+    if (_use3DRendering) {
+        // For 3D: Convert comfortable zoom to FOV
+        _targetZoom = 90.0f / COMFORTABLE_ZOOM; // Inverse relationship
+        _targetZoom = std::max(20.0f, std::min(_targetZoom, 80.0f)); // Clamp FOV
+    } else {
+        // For 2D: Direct zoom value
+        _targetZoom = COMFORTABLE_ZOOM;
+        _targetZoom = std::max(0.5f, std::min(_targetZoom, 3.0f)); // Clamp zoom
+    }
+    
+    // Adjust transition speeds for smooth 0.3s animation
+    float originalTransitionSpeed = _cameraTransitionSpeed;
+    float originalZoomSpeed = _zoomTransitionSpeed;
+    
+    // Calculate speeds needed to complete transition in ANIMATION_DURATION
+    _cameraTransitionSpeed = 3.0f / ANIMATION_DURATION; // Adjust based on typical distance
+    _zoomTransitionSpeed = 8.0f / ANIMATION_DURATION;   // Adjust based on typical zoom change
+    
+    // Force transition to adaptive zoom state
+    _cameraState = CameraState::TRANSITIONING;
+    _timeSinceUserInput = 0.0f;
+    
+    std::cout << "Adaptive zoom triggered! Focusing on board at (" << boardCenter.x << ", " << boardCenter.y 
+              << ") with target zoom: " << _targetZoom << std::endl;
+    
+    // Note: Transition speeds will be restored when user takes control or auto-zoom takes over
+}
+
 void CameraController::updateCameraState(float deltaTime) {
     // This method can be used for any additional state-specific logic
     // Currently, most state management is handled in update()
@@ -709,3 +767,5 @@ void CameraController::renderDebugInfo() const {
     DrawText("Controls: Z=Toggle Auto-Zoom, X=Force Auto-Zoom", 10, 195, 12, LIGHTGRAY);
     DrawText("Mouse: Drag=Pan, Wheel=Zoom", 10, 210, 12, LIGHTGRAY);
 }
+
+

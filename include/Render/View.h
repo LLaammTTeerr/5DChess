@@ -75,6 +75,9 @@ public:
   void focusOnNewestBoard(const std::vector<std::shared_ptr<BoardView>>& boardViews);
   void calculateOptimalZoomForNewestBoard(const std::vector<std::shared_ptr<BoardView>>& boardViews, std::shared_ptr<BoardView> newestBoard);
   
+  // Adaptive zoom for board selection
+  void focusOnBoardWithAdaptiveZoom(const std::vector<std::shared_ptr<BoardView>>& boardViews, std::shared_ptr<BoardView> targetBoard);
+  
   // Auto-zoom control methods
   void setAutoZoomEnabled(bool enabled) { _autoZoomEnabled = enabled; }
   bool isAutoZoomEnabled() const { return _autoZoomEnabled; }
@@ -200,6 +203,11 @@ public:
   
   // Focus camera on newest board
   void focusOnNewestBoard() { _cameraController->focusOnNewestBoard(_boardViews); }
+
+  // Adaptive zoom for board selection
+  void focusOnBoardWithAdaptiveZoom(std::shared_ptr<BoardView> targetBoard) { 
+    _cameraController->focusOnBoardWithAdaptiveZoom(_boardViews, targetBoard); 
+  }
 
   // Auto-zoom control methods (delegate to CameraController)
   void setAutoZoomEnabled(bool enabled) { _cameraController->setAutoZoomEnabled(enabled); }

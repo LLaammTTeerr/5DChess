@@ -84,6 +84,12 @@ void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPos
     addHighlightedBoard(selectedPosition.board);
     view.update_highlightedBoard(computeHighlightedBoardViews());
 
+    /// @brief Step 4: Apply adaptive zoom if board is small (zoom < 0.8)
+    auto selectedBoardView = _boardToBoardViewMap[selectedPosition.board];
+    if (selectedBoardView) {
+      view.focusOnBoardWithAdaptiveZoom(selectedBoardView);
+    }
+
   } 
   /// @brief chose the position to move from
   else if (model._currentMoveState.currentPhase == MovePhase::SELECT_FROM_POSITION) {
