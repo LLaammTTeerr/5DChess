@@ -20,6 +20,7 @@ private:
 private:
   void initInGameMenu();
   void renderInGameMenu() const;
+  void updateMenuButtonStates(); // Update menu button enabled/disabled states based on game state
 
 /// @brief private attribute and methods related to model
 private:

@@ -169,8 +169,6 @@ void ChessView::updateCamera(float deltaTime) {
 
 void ChessView::update(float deltaTime) {
     updateCamera(deltaTime);
-    // updateSelectedBoardView();
-    // updateSelectedPosition();
 }
 
 

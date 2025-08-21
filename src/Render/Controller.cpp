@@ -40,6 +40,9 @@ void ChessController::update(float deltaTime) {
     _boardViewToBoardMap[_currentBoardViews[i]] = _currentBoard[i];
   }
   updateNewBoardViewsToView();
+  
+  // Update menu button states based on current game state
+  updateMenuButtonStates();
 }
 
 void ChessController::handleInput() {
@@ -340,43 +343,75 @@ void ChessController::renderInGameMenu() const {
   }
 }
 
+void ChessController::updateMenuButtonStates() {
+  if (!_inGameMenuSystem) {
+    return; // Menu not initialized yet
+  }
+
+  // Find menu items by title
+  MenuComponent* undoItem = _inGameMenuSystem->findItem("Undo");
+  MenuComponent* submitItem = _inGameMenuSystem->findItem("Submit");
+  MenuComponent* deselectItem = _inGameMenuSystem->findItem("Deselect");
+
+  // Update Undo button: enabled if there are moves to undo
+  if (undoItem) {
+    bool canUndo = model._game->undoable();
+    undoItem->setEnabled(canUndo);
+  }
+
+  // Update Submit button: enabled if there are no moveable boards (turn can be submitted)
+  if (submitItem) {
+    std::vector<std::shared_ptr<Chess::Board>> moveableBoards = model._game->getMoveableBoards();
+    bool canSubmit = moveableBoards.empty();
+    submitItem->setEnabled(canSubmit);
+  }
+
+  // Update Deselect button: enabled if there's a current move state to deselect
+  // (i.e., not in the initial SELECT_FROM_BOARD phase or has selections made)
+  if (deselectItem) {
+    bool canDeselect = model._currentMoveState.currentPhase != MovePhase::SELECT_FROM_BOARD ||
+                       model._currentMoveState.selectedBoard != nullptr;
+    deselectItem->setEnabled(canDeselect);
+  }
+}
+
 void ChessController::handleUndoMove() {
   std::cout << "Undoing last move..." << std::endl;
 
-  if (!model._game->undoable()) {
-    std::cout << "Cannot undo: no moves to undo." << std::endl;
-    return; // No moves to undo
-  }
-
+  // No validity check needed - button is disabled when invalid
   model._game->undo();
   std::cout << "Last move undone successfully." << std::endl;
   resetHighlightedBoard();
   resetHighlightedPositions();
+  
+  // Update menu button states after game state change
+  updateMenuButtonStates();
 }
 
 void ChessController::handleSubmitMove() {
   std::cout << "Submitting move..." << std::endl;
 
-  std::vector<std::shared_ptr<Chess::Board>> moveableBoards = model._game -> getMoveableBoards();
-  if (!moveableBoards.empty()) {
-    std::cout << "Can not submit move: there are still moveable boards." << std::endl;
-    return;
-  }
-  else {
-    model._game -> submitTurn();
-    std::cout << "Move submitted successfully." << std::endl;
-    resetHighlightedBoard();
-    resetHighlightedPositions();
-  }
+  // No validity check needed - button is disabled when invalid
+  model._game->submitTurn();
+  std::cout << "Move submitted successfully." << std::endl;
+  resetHighlightedBoard();
+  resetHighlightedPositions();
+  
+  // Update menu button states after game state change
+  updateMenuButtonStates();
 }
 
 void ChessController::handleDeselectPosition() {
   std::cout << "Deselecting position..." << std::endl;
 
+  // No validity check needed - button is disabled when invalid
   model._currentMoveState.reset(); // Reset the move state
   resetHighlightedBoard();
   resetHighlightedPositions();
   view.update_highlightedBoard(computeHighlightedBoardViews());
   view.update_highlightedPositions({}); // Clear highlighted positions
+  
+  // Update menu button states after game state change
+  updateMenuButtonStates();
 }
 
