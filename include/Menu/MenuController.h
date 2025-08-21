@@ -70,6 +70,7 @@ class VersusScene; // Forward declaration
 class VersusMenuController : public MenuController {
 private:
   VersusScene* _versusScene;
+  int _selectedGameModeIndex = -1; // Track selected game mode index
   
 public:
   VersusMenuController(VersusScene* versusScene);

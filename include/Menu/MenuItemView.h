@@ -12,15 +12,18 @@ private:
     Vector2 position;
     Vector2 size;
     bool isHovered = false;
+    bool isSelected = false;
 
     // Background colors
     Color normalBackgroundColor = {251, 243, 213, 255};// rgb(251, 243, 213)
     Color hoverBackgroundColor = {214, 218, 200, 255}; // rgb(214, 218, 200) 
+    Color selectedBackgroundColor = {100, 149, 237, 255}; // Cornflower blue for selected
     Color disabledBackgroundColor = {156, 175, 170, 255}; // rgb(156, 175, 170)
 
     // Text colors
     Color normalTextColor = {0, 0, 0, 255}; // BLACK
     Color hoverTextColor = {255, 255, 255, 255}; // WHITE
+    Color selectedTextColor = {255, 255, 255, 255}; // WHITE for selected
     Color disabledTextColor = {169, 169, 169, 255}; // DARKGRAY
 
 
@@ -35,6 +38,9 @@ public:
     
     void setHovered(bool hovered) { isHovered = hovered; }
     bool getHovered() const { return isHovered; }
+    
+    void setSelected(bool selected) { isSelected = selected; }
+    bool getSelected() const { return isSelected; }
 
     void draw(std::shared_ptr<MenuComponent> menuComponent) const;
 
@@ -46,10 +52,12 @@ public:
 
     void setNormalBackgroundColor(Color color) { normalBackgroundColor = color; }
     void setHoverBackgroundColor(Color color) { hoverBackgroundColor = color; }
+    void setSelectedBackgroundColor(Color color) { selectedBackgroundColor = color; }
     void setDisabledBackgroundColor(Color color) { disabledBackgroundColor = color; }
     
     void setNormalTextColor(Color color) { normalTextColor = color; }
     void setHoverTextColor(Color color) { hoverTextColor = color; }
+    void setSelectedTextColor(Color color) { selectedTextColor = color; }
     void setDisabledTextColor(Color color) { disabledTextColor = color; }
     
     void setFont(Font f) { font = f; }

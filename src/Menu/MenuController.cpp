@@ -205,7 +205,13 @@ void VersusMenuController::handleInput() {
             
             itemViews[i]->setHovered(isHovered);
             
+            // Set selected state based on the currently selected game mode index
+            itemViews[i]->setSelected(static_cast<int>(i) == _selectedGameModeIndex);
+            
             if (isHovered && mouseClicked) {
+                // Update selected game mode index
+                _selectedGameModeIndex = static_cast<int>(i);
+                
                 // Execute the command for this menu item
                 auto command = menuItems[i]->cloneCommand();
                 if (command) {
@@ -221,6 +227,14 @@ void VersusMenuController::update() {
     if (_menuView) {
         if (auto* listView = dynamic_cast<ListMenuView*>(_menuView.get())) {
             listView->updateScrollbar();
+        }
+        
+        // Update selected state for all menu items
+        const auto& itemViews = _menuView->getItemViews();
+        for (size_t i = 0; i < itemViews.size(); ++i) {
+            if (itemViews[i]) {
+                itemViews[i]->setSelected(static_cast<int>(i) == _selectedGameModeIndex);
+            }
         }
     }
 }
@@ -260,4 +274,15 @@ void VersusMenuController::createGameModeMenu() {
 void VersusMenuController::selectGameMode(const std::string& mode) {
     _selectedGameMode = mode;
     std::cout << "Game mode selected via controller: " << mode << std::endl;
+    
+    // Find and update the selected game mode index
+    if (_menuSystem) {
+        const auto& menuItems = _menuSystem->getChildren();
+        for (size_t i = 0; i < menuItems.size(); ++i) {
+            if (menuItems[i]->getTitle() == mode) {
+                _selectedGameModeIndex = static_cast<int>(i);
+                break;
+            }
+        }
+    }
 }

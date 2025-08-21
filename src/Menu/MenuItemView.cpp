@@ -9,8 +9,21 @@ bool MenuItemView::isPointInside(Vector2 point) const {
 }
 
 void MenuItemView::draw(std::shared_ptr<MenuComponent> menuComponent) const {
-    Color bgColor = menuComponent->isEnabled() ? (isHovered ? hoverBackgroundColor : normalBackgroundColor) : disabledBackgroundColor;
-    Color textColor = menuComponent->isEnabled() ? (isHovered ? hoverTextColor : normalTextColor) : disabledTextColor;
+    Color bgColor, textColor;
+    
+    if (!menuComponent->isEnabled()) {
+        bgColor = disabledBackgroundColor;
+        textColor = disabledTextColor;
+    } else if (isSelected) {
+        bgColor = selectedBackgroundColor;
+        textColor = selectedTextColor;
+    } else if (isHovered) {
+        bgColor = hoverBackgroundColor;
+        textColor = hoverTextColor;
+    } else {
+        bgColor = normalBackgroundColor;
+        textColor = normalTextColor;
+    }
 
     DrawRectangleV(position, size, bgColor);
     DrawRectangleLinesEx({position.x, position.y, size.x, size.y}, 2, BLACK);
