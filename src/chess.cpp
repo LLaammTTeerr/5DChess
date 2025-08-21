@@ -74,6 +74,7 @@ std::vector<std::shared_ptr<Board>> IGame::getMoveableBoards(void) const {
 bool IGame::canMakeMoveFromBoard(std::shared_ptr<Board> board) const {
   return board
     and board->getTimeLine()->fullTurnNumber() == presentFullTurn()
+    and board->halfTurnNumber() == _presentHalfTurn
     and board->getTimeLine()->halfTurnNumber() == _presentHalfTurn;
 }
 
@@ -113,6 +114,9 @@ void IGame::undo(void) {
       _timeLines.pop_back();
     }
   }
+
+  _currentTurnMoves.pop_back();
+  _nextHalfTurnQueue.pop_back();
 }
 
 std::vector<Vector4D> genKnightMoves(const Vector4D& from) {
