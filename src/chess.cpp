@@ -495,6 +495,10 @@ void IGame::makeMove(Move move) {
   std::shared_ptr<Piece> piece = move.from.board->getPiece(move.from.position);
   assert(piece != nullptr);
   assert(piece->color() == _currentTurnColor);
+  if (move.to.board->getPiece(move.to.position)->name() == "king") {
+    assert(move.to.board->getPiece(move.to.position)->color() != _currentTurnColor);
+    _gameWinner = _currentTurnColor;
+  }
   _currentTurnMoves.push_back(move);
   std::shared_ptr<Board> newFromBoard = move.from.board->createFork(move.from.board->getTimeLine());
   move.from.board->getTimeLine()->pushBack(newFromBoard);

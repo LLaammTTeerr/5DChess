@@ -542,6 +542,15 @@ public:
   inline std::shared_ptr<Board> getBoard(int timeLineID, int halfTurn) const {
     return _timeLines[timeLineID]->getBoardByHalfTurn(halfTurn);
   }
+
+  inline bool gameEnd(void) const {
+    return _gameWinner.has_value();
+  }
+
+  inline PieceColor getWinner(void) const {
+    assert(gameEnd());
+    return *_gameWinner;
+  }
 protected:
   int _N;
   int _presentHalfTurn;
@@ -551,6 +560,7 @@ protected:
   PieceColor _currentTurnColor;
   std::vector<std::vector<int>> _undoBuffer;
   RuleEngine _rule;
+  std::optional<PieceColor> _gameWinner;
 
   std::shared_ptr<Piece> _getPieceByVector4DFullTurn(Vector4D position) const;
   inline void _pushBack(std::shared_ptr<TimeLine> timeLine) {
