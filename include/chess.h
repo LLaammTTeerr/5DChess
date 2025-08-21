@@ -494,6 +494,12 @@ public:
     return _presentHalfTurn;
   }
 
+  inline int bufferHalfTurn(void) const {
+    return _currentTurnMoves.size() == 0
+          ? _presentHalfTurn
+          : *std::min_element(_nextHalfTurnBuffer.begin(), _nextHalfTurnBuffer.end());
+  }
+
   /**
    * Apply the turn state to the game.
    * @param turnState The TurnState object contain  // Apply the completed turn
@@ -536,15 +542,25 @@ public:
   inline std::shared_ptr<Board> getBoard(int timeLineID, int halfTurn) const {
     return _timeLines[timeLineID]->getBoardByHalfTurn(halfTurn);
   }
+
+  inline bool gameEnd(void) const {
+    return _gameWinner.has_value();
+  }
+
+  inline PieceColor getWinner(void) const {
+    assert(gameEnd());
+    return *_gameWinner;
+  }
 protected:
   int _N;
   int _presentHalfTurn;
-  std::vector<int> _nextHalfTurnQueue;
+  std::vector<int> _nextHalfTurnBuffer;
   std::vector<std::shared_ptr<TimeLine>> _timeLines;
   std::vector<Move> _currentTurnMoves;
   PieceColor _currentTurnColor;
-  std::vector<std::vector<int>> _undoList;
+  std::vector<std::vector<int>> _undoBuffer;
   RuleEngine _rule;
+  std::optional<PieceColor> _gameWinner;
 
   std::shared_ptr<Piece> _getPieceByVector4DFullTurn(Vector4D position) const;
   inline void _pushBack(std::shared_ptr<TimeLine> timeLine) {
