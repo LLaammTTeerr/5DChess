@@ -104,8 +104,14 @@ void IGame::undo(void) {
   std::vector<int> lastUndo = _undoList.back();
   _undoList.pop_back();
 
+  std::reverse(lastUndo.begin(), lastUndo.end());
+
   for (int timeLineID : lastUndo) {
     _timeLines[timeLineID]->popBack();
+    if (_timeLines[timeLineID]->size() == 0) {
+      assert(_timeLines.size() - 1 == timeLineID);
+      _timeLines.pop_back();
+    }
   }
 }
 
