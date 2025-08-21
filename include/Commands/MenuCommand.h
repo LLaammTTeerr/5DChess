@@ -59,9 +59,10 @@ class VersusPlayCommand : public ICommand {
 private:
   GameStateModel* _gameStateModel;
   SceneManager* _sceneManager; // Optional, if you want to notify SceneManager
+  std::string _selectedGameMode;
 public:
-  VersusPlayCommand(GameStateModel* gameStateModel, SceneManager* sceneManager)
-      : _gameStateModel(gameStateModel), _sceneManager(sceneManager) {} 
+  VersusPlayCommand(GameStateModel* gameStateModel, SceneManager* sceneManager, std::string selectedGameMode)
+      : _gameStateModel(gameStateModel), _sceneManager(sceneManager), _selectedGameMode(selectedGameMode) {}
   void execute() override;
   virtual bool canUndo() const override { return false; }
   virtual bool canRedo() const override { return false; }

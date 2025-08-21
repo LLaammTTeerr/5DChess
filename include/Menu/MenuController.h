@@ -81,10 +81,7 @@ public:
   // Specific methods for VersusScene menu
   void createGameModeMenu();
   void selectGameMode(const std::string& mode);
-  bool isMenuVisible() const;
-  void setMenuVisible(bool visible);
   
 private:
-  bool _showMenu = true;
   std::string _selectedGameMode = "None";
 };

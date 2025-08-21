@@ -14,19 +14,25 @@
 std::shared_ptr<MenuComponent> VersusState::createNavigationMenu(GameStateModel* gameStateModel, SceneManager* sceneManager) {
   auto versusMenu = std::make_shared<Menu>("Versus Menu", true);
 
+  // Always add Back button
   std::shared_ptr<MenuComponent> Back = std::make_shared<MenuItem>("Back", true);
   Back->setCommand(std::make_unique<VersusBackCommand>(gameStateModel, sceneManager)); // Set command for Back
   versusMenu->addItem(Back);
 
-  std::shared_ptr<MenuComponent> Play = std::make_shared<MenuItem>("Play", true);
-  Play->setCommand(std::make_unique<VersusPlayCommand>(gameStateModel, sceneManager)); // Set command for Play
-  versusMenu->addItem(Play);
+  // Only add Play button if game mode is selected
+  if (gameModeSelected) {
+    std::shared_ptr<MenuComponent> Play = std::make_shared<MenuItem>("Play", true);
+    Play->setCommand(std::make_unique<VersusPlayCommand>(gameStateModel, sceneManager, selectedGameMode)); // Set command for Play
+    versusMenu->addItem(Play);
+  }
   
   return versusMenu;
 }
 
 std::unique_ptr<Scene> VersusState::createScene() const {
-    return std::make_unique<VersusScene>();
+    auto scene = std::make_unique<VersusScene>();
+    // Note: Dependencies will be set by SceneManager after scene creation
+    return scene;
 }
 
 // VersusState implementation
@@ -43,7 +49,12 @@ void VersusState::update(GameStateModel* context, float deltaTime) {
 }
 
 std::unique_ptr<GameState> VersusState::clone() const {
-    return std::make_unique<VersusState>();
+    auto cloned = std::make_unique<VersusState>();
+    // Copy the current state
+    cloned->gameModeSelected = this->gameModeSelected;
+    cloned->selectedGameMode = this->selectedGameMode;
+    cloned->menuVersion = this->menuVersion;
+    return cloned;
 }
 
 // std::unique_ptr<GameState> VersusState::createState() const {
@@ -78,4 +89,19 @@ std::vector<std::shared_ptr<MenuItemView>> VersusState::createNavigationMenuButt
         itemViews.push_back(itemView);
     }
     return itemViews;
+}
+
+void VersusState::setGameModeSelected(bool selected, const std::string& mode) {
+    gameModeSelected = selected;
+    if (selected && !mode.empty()) {
+        selectedGameMode = mode;
+        std::cout << "VersusState: Game mode set to " << mode << std::endl;
+    } else {
+        selectedGameMode = "None";
+        std::cout << "VersusState: Game mode cleared" << std::endl;
+    }
+    
+    // Increment menu version to force menu refresh
+    ++menuVersion;
+    std::cout << "VersusState: Menu version incremented to " << menuVersion << std::endl;
 }

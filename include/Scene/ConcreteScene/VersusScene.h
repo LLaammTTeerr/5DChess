@@ -5,15 +5,22 @@
 #include <memory>
 
 class GameState;
+class GameStateModel;
+class SceneManager;
 
 class VersusScene : public Scene {
 private:
   std::unique_ptr<VersusMenuController> menuController;
   std::string selectedGameMode;
+  GameStateModel* gameStateModel = nullptr;
+  SceneManager* sceneManager = nullptr;
 
 public:
   VersusScene() = default;
   ~VersusScene() override = default;
+  
+  // Set dependencies for state communication
+  void setDependencies(GameStateModel* stateModel, SceneManager* sceneMgr);
 
   void init(void) override;
   void handleInput(void) override;

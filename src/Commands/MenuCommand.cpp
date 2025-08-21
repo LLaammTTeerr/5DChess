@@ -84,7 +84,7 @@ CommandType VersusBackCommand::getType() const {
 void VersusPlayCommand::execute() {
     if (_gameStateModel) {
         // Set the game state back to Main Menu
-        std::unique_ptr<GameState> newState = std::make_unique<TestingState>();
+        std::unique_ptr<GameState> newState = std::make_unique<TestingState>(_selectedGameMode);
         
         // Notify SceneManager to change scene
         if (_sceneManager) {
@@ -103,7 +103,9 @@ void VersusPlayCommand::execute() {
 
 std::unique_ptr<ICommand> VersusPlayCommand::clone() const {
     // create a new instance of VersusPlayCommand with the same game state
-    return std::make_unique<VersusPlayCommand>(_gameStateModel, _sceneManager);
+    auto cloned = std::make_unique<VersusPlayCommand>(_gameStateModel, _sceneManager, _selectedGameMode);
+    cloned->_callback = _callback; // Copy the callback
+    return cloned;
 }
 
 CommandType VersusPlayCommand::getType() const {

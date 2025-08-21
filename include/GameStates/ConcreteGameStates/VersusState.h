@@ -13,6 +13,11 @@ class MenuComponent;
 class Scene;
 
 class VersusState : public GameState {
+private:
+    bool gameModeSelected = false;
+    std::string selectedGameMode = "None";
+    mutable int menuVersion = 0; // Increment when menu structure changes
+    
 public:
     void onEnter(GameStateModel* context) override;
     void onExit(GameStateModel* context) override;
@@ -23,4 +28,12 @@ public:
     // virtual void renderMenu(std::shared_ptr<MenuComponent> menu) const override;
     virtual std::unique_ptr<Scene> createScene() const override;
     virtual std::vector<std::shared_ptr<MenuItemView>> createNavigationMenuButtonItemViews(std::shared_ptr<MenuComponent> menu) const override;
+    
+    // Game mode management methods
+    void setGameModeSelected(bool selected, const std::string& mode = "");
+    bool isGameModeSelected() const { return gameModeSelected; }
+    const std::string& getSelectedGameMode() const { return selectedGameMode; }
+    
+    // Menu version for detecting changes
+    int getMenuVersion() const { return menuVersion; }
 };

@@ -8,7 +8,7 @@
 #include "Render/Controller.h"
 class TestingScene : public Scene {
 public:
-  TestingScene();
+  TestingScene(const std::string& gameMode);
   ~TestingScene() override = default;
 
   void init(void) override;
@@ -31,5 +31,6 @@ private:
   std::shared_ptr<ChessModel> _chessModel;
   std::shared_ptr<ChessView> _chessView;
   std::shared_ptr<ChessController> _chessController;
+  std::string _gameModeSelected;
 };
 

@@ -34,6 +34,7 @@ public:
   void hideMenu();
   bool isMenuActive() const;
   void toggleMenu();
+  void forceMenuRefresh(); // Force navigation menu to refresh
   
   // Game state access
   GameStateModel* getGameStateModel() const { return _gameStateModel; }

@@ -29,7 +29,7 @@ std::unique_ptr<GameState> TestingState::clone() const {
 }
 
 std::unique_ptr<Scene> TestingState::createScene() const {
-    return std::make_unique<TestingScene>();
+    return std::make_unique<TestingScene>(_gameModeSelected);
 }
 
 

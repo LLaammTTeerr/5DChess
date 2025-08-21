@@ -5,12 +5,29 @@
 #include "chess.h"
 #include "Render/View.h"
 
-TestingScene::TestingScene() {
+TestingScene::TestingScene(const std::string& gameMode)
+    : _gameModeSelected(gameMode) {
   init();
 }
 
 void TestingScene::init(void) {
-  _game = Chess::createGame<Chess::StandardGame>();
+  if (_gameModeSelected == "StandardGame") {
+    _game = Chess::createGame<Chess::StandardGame>();
+  }
+  else if (_gameModeSelected == "CustomGameEmitBishop") {
+    _game = Chess::createGame<Chess::CustomGameEmitBishop>();
+  }
+  else if (_gameModeSelected == "CustomGameEmitKnight") {
+    _game = Chess::createGame<Chess::CustomGameEmitKnight>();
+  }
+  else if (_gameModeSelected == "CustomGameEmitQueen") {
+    _game = Chess::createGame<Chess::CustomGameEmitQueen>();
+  }
+  else {
+    std::cerr << "Unknown game mode selected: " << _gameModeSelected << std::endl;
+    return; // Exit if the game mode is not recognized
+  }
+
   _chessModel = std::make_shared<ChessModel>(_game);
   _chessView = std::make_shared<ChessView>(Vector3{5000, 5000, 1});
   _chessController = std::make_shared<ChessController>(*_chessModel, *_chessView);

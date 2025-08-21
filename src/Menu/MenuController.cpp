@@ -32,7 +32,26 @@ void NavigationMenuController::setViewStrategy(std::unique_ptr<IMenuView> view) 
 
 
 void NavigationMenuController::updateNavigationMenuForCurrentState() {
+   bool shouldUpdate = false;
+   
+   // Check if state name changed
    if (_gameStateModel->getCurrentStateName() != _lastState->getName()) {
+       shouldUpdate = true;
+   }
+   // Special handling for VersusState - check if menu structure changed
+   else if (auto* versusState = dynamic_cast<VersusState*>(_gameStateModel->getCurrentState())) {
+       if (auto* lastVersusState = dynamic_cast<VersusState*>(_lastState.get())) {
+           // Check if menu version changed (indicates menu structure change)
+           if (versusState->getMenuVersion() != lastVersusState->getMenuVersion()) {
+               shouldUpdate = true;
+               std::cout << "NavigationMenuController: VersusState menu version changed, updating menu" << std::endl;
+           }
+       } else {
+           shouldUpdate = true; // Last state wasn't VersusState
+       }
+   }
+   
+   if (shouldUpdate) {
         std::shared_ptr<MenuComponent> newMenu = _gameStateModel->getCurrentState()->createNavigationMenu(_gameStateModel, _sceneManager);
         if (newMenu) {
             _currentMenuModel = newMenu; // Update current menu model (both are shared_ptr now)
@@ -162,7 +181,7 @@ void VersusMenuController::setViewStrategy(std::unique_ptr<IMenuView> view) {
 }
 
 void VersusMenuController::handleInput() {
-    if (!_showMenu || !_menuView || !_menuSystem) return;
+    if (!_menuView || !_menuSystem) return;
     
     Vector2 mousePos = GetMousePosition();
     bool mouseClicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
@@ -199,7 +218,7 @@ void VersusMenuController::handleInput() {
 
 void VersusMenuController::update() {
     // Update scrollbar if using ListMenuView
-    if (_showMenu && _menuView) {
+    if (_menuView) {
         if (auto* listView = dynamic_cast<ListMenuView*>(_menuView.get())) {
             listView->updateScrollbar();
         }
@@ -207,7 +226,7 @@ void VersusMenuController::update() {
 }
 
 void VersusMenuController::draw() const {
-    if (_showMenu && _menuView && _menuSystem) {
+    if (_menuView && _menuSystem) {
         _menuView->draw(_menuSystem);
     }
 }
@@ -218,7 +237,7 @@ void VersusMenuController::createGameModeMenu() {
     
     // Create game mode menu items
     const std::vector<std::string> gameModes = {
-        "mode1", "mode2", "mode3", "mode4", "mode5", 
+        "StandardGame", "CustomGameEmitBishop", "CustomGameEmitKnight", "CustomGameEmitQueen", "mode5", 
         "mode6", "mode7", "mode8", "mode9", "mode10"
     };
     
@@ -240,14 +259,5 @@ void VersusMenuController::createGameModeMenu() {
 
 void VersusMenuController::selectGameMode(const std::string& mode) {
     _selectedGameMode = mode;
-    _showMenu = false;
     std::cout << "Game mode selected via controller: " << mode << std::endl;
-}
-
-bool VersusMenuController::isMenuVisible() const {
-    return _showMenu;
-}
-
-void VersusMenuController::setMenuVisible(bool visible) {
-    _showMenu = visible;
 }

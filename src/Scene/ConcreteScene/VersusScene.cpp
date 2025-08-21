@@ -3,8 +3,15 @@
 #include "gameState.h"
 #include "MenuController.h"
 #include "MenuView.h"
+#include "GameStates/ConcreteGameStates/VersusState.h"
+#include "Scene/SceneManager.h"
 #include <iostream>
 #include <raylib.h>
+
+void VersusScene::setDependencies(GameStateModel* stateModel, SceneManager* sceneMgr) {
+    gameStateModel = stateModel;
+    sceneManager = sceneMgr;
+}
 
 void VersusScene::init(void) {
   initializeMenuController();
@@ -34,43 +41,35 @@ void VersusScene::update(float deltaTime) {
 }
 
 void VersusScene::render() {
-  if (menuController && menuController->isMenuVisible()) {
-    // Draw the menu background
-    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), {30, 30, 40, 255});
+  if (!menuController) return;
+
+  // Draw the menu background
+  DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), {30, 30, 40, 255});
+  
+  // Draw menu title
+  Font& font = ResourceManager::getInstance().getFont("public_sans_bold");
+  const char* title = "Select Game Mode";
+  float titleFontSize = 48;
+  float spacing = 2;
     
-    // Draw menu title
-    Font& font = ResourceManager::getInstance().getFont("public_sans_bold");
-    const char* title = "Select Game Mode";
-    float titleFontSize = 48;
-    float spacing = 2;
+  Vector2 titleSize = MeasureTextEx(font, title, titleFontSize, spacing);
+  Vector2 titlePosition = {
+    (GetScreenWidth() - titleSize.x) / 2.0f, 50
+  };
+  DrawTextEx(font, title, titlePosition, titleFontSize, spacing, {245, 186, 187, 255});
+
+  // Draw the menu using the controller
+  menuController->draw();
     
-    Vector2 titleSize = MeasureTextEx(font, title, titleFontSize, spacing);
-    Vector2 titlePosition = {
-      (GetScreenWidth() - titleSize.x) / 2.0f,
-      50
-    };
-    DrawTextEx(font, title, titlePosition, titleFontSize, spacing, {245, 186, 187, 255});
-    
-    // Draw the menu using the controller
-    menuController->draw();
-    
-    // Draw instructions
-    const char* instruction = "Use mouse to select a game mode";
-    float instructionFontSize = 20;
-    Vector2 instructionSize = MeasureTextEx(font, instruction, instructionFontSize, spacing);
-    Vector2 instructionPosition = {
-      (GetScreenWidth() - instructionSize.x) / 2.0f,
-      static_cast<float>(GetScreenHeight() - 50)
-    };
-    DrawTextEx(font, instruction, instructionPosition, instructionFontSize, spacing, {200, 200, 200, 255});
-    
-  } else {
-    // Draw the selected game mode info
-    Font& font = ResourceManager::getInstance().getFont("public_sans_bold");    
-    // Draw selected game mode
-    std::string modeText = "Selected Mode: " + selectedGameMode;
-    DrawTextEx(font, modeText.c_str(), {50, 50}, 20, 2, {255, 255, 255, 255});
-  }
+  // Draw instructions
+  const char* instruction = "Use mouse to select a game mode";
+  float instructionFontSize = 20;
+  Vector2 instructionSize = MeasureTextEx(font, instruction, instructionFontSize, spacing);
+  Vector2 instructionPosition = {
+    (GetScreenWidth() - instructionSize.x) / 2.0f,
+    static_cast<float>(GetScreenHeight() - 50)
+  };
+  DrawTextEx(font, instruction, instructionPosition, instructionFontSize, spacing, {200, 200, 200, 255});
 }
 
 void VersusScene::cleanup(void) {}
@@ -98,8 +97,22 @@ void VersusScene::selectGameMode(const std::string& mode) {
   selectedGameMode = mode;
   if (menuController) {
     menuController->selectGameMode(mode);
-    menuController->setMenuVisible(false);
   }
+  
+  // Communicate with VersusState to update menu
+  if (gameStateModel) {
+    auto* currentState = gameStateModel->getCurrentState();
+    if (auto* versusState = dynamic_cast<VersusState*>(currentState)) {
+      versusState->setGameModeSelected(true, mode);
+      
+      // Force menu refresh so the Play button appears
+      if (sceneManager) {
+        sceneManager->forceMenuRefresh();
+        std::cout << "VersusScene: Forced menu refresh after game mode selection" << std::endl;
+      }
+    }
+  }
+  
   std::cout << "Game mode selected: " << mode << std::endl;
 }
 

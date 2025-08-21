@@ -13,7 +13,10 @@ class MenuComponent;
 class Scene;
 
 class TestingState : public GameState {
+private:
+    std::string _gameModeSelected = "None";
 public:
+    TestingState(const std::string& gameMode = "None") : _gameModeSelected(gameMode) {}
     void onEnter(GameStateModel* context) override;
     void onExit(GameStateModel* context) override;
     void update(GameStateModel* context, float deltaTime) override;

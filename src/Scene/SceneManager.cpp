@@ -1,6 +1,7 @@
 #include "SceneManager.h"
 #include "Scene.h"
 #include "MainMenuScene.h"
+#include "VersusScene.h"
 #include "gameState.h"
 #include "MenuController.h"
 #include "MenuView.h"
@@ -32,6 +33,11 @@ SceneManager::~SceneManager() {
 void SceneManager::pushScene(std::unique_ptr<Scene> scene) {
   // Check if the scene was created successfully
   if (scene) {
+    // Inject dependencies for VersusScene
+    if (auto* versusScene = dynamic_cast<VersusScene*>(scene.get())) {
+      versusScene->setDependencies(_gameStateModel, this);
+    }
+    
     // std::cout << "Pushing scene: " << scene->getName() << std::endl;
     _sceneStack.emplace(std::move(scene));
     auto &entry = _sceneStack.top();
@@ -160,6 +166,13 @@ void SceneManager::toggleMenu() {
     hideMenu();
   } else {
     showMenu();
+  }
+}
+
+void SceneManager::forceMenuRefresh() {
+  if (_navigationMenuController) {
+    std::cout << "SceneManager: Forcing navigation menu refresh" << std::endl;
+    _navigationMenuController->updateNavigationMenuForCurrentState();
   }
 }
 
