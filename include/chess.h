@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <iostream>
 #include <climits>
+#include <algorithm>
 
 namespace Chess {
 
@@ -550,6 +551,11 @@ public:
   inline PieceColor getWinner(void) const {
     assert(gameEnd());
     return *_gameWinner;
+  }
+
+  inline std::shared_ptr<Board> getNewBoard(void) const {
+    assert(undoable());
+    return _timeLines[_undoBuffer.back().back()]->back();
   }
 protected:
   int _N;
