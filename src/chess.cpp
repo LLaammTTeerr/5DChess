@@ -100,10 +100,10 @@ std::shared_ptr<Piece> IGame::_getPieceByVector4DFullTurn(Vector4D position) con
 
 void IGame::undo(void) {
   assert(undoable());
-  assert(_undoList.size());
+  assert(_undoBuffer.size());
   // Get the last undo operation
-  std::vector<int> lastUndo = _undoList.back();
-  _undoList.pop_back();
+  std::vector<int> lastUndo = _undoBuffer.back();
+  _undoBuffer.pop_back();
 
   std::reverse(lastUndo.begin(), lastUndo.end());
 
@@ -116,7 +116,7 @@ void IGame::undo(void) {
   }
 
   _currentTurnMoves.pop_back();
-  _nextHalfTurnQueue.pop_back();
+  _nextHalfTurnBuffer.pop_back();
 }
 
 std::vector<Vector4D> genKnightMoves(const Vector4D& from) {
@@ -502,8 +502,8 @@ void IGame::makeMove(Move move) {
   list.push_back(newFromBoard->getTimeLine()->ID());
   if (move.to.board == move.from.board) {
     newFromBoard->placePiece(move.to.position, piece->clone());
-    _nextHalfTurnQueue.push_back(newFromBoard->halfTurnNumber());
-    _undoList.push_back(list);
+    _nextHalfTurnBuffer.push_back(newFromBoard->halfTurnNumber());
+    _undoBuffer.push_back(list);
     return;
   }
 
@@ -520,16 +520,16 @@ void IGame::makeMove(Move move) {
   newToBoard->placePiece(move.to.position, piece);
   toTimeLine->pushBack(newToBoard);
 
-  _nextHalfTurnQueue.push_back(newToBoard->halfTurnNumber());
-  _undoList.push_back(list);
+  _nextHalfTurnBuffer.push_back(newToBoard->halfTurnNumber());
+  _undoBuffer.push_back(list);
 }
 
 void IGame::submitTurn(void) {
   _currentTurnMoves.clear();
   _currentTurnColor = opposite(_currentTurnColor);
-  _presentHalfTurn = *std::min_element(_nextHalfTurnQueue.begin(), _nextHalfTurnQueue.end());
-  _nextHalfTurnQueue.clear();
-  _undoList.clear();
+  _presentHalfTurn = *std::min_element(_nextHalfTurnBuffer.begin(), _nextHalfTurnBuffer.end());
+  _nextHalfTurnBuffer.clear();
+  _undoBuffer.clear();
 }
 
 const std::string NameOfGame<StandardGame>::value = "Standard Game";

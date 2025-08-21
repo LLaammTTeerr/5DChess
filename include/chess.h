@@ -494,6 +494,12 @@ public:
     return _presentHalfTurn;
   }
 
+  inline int bufferHalfTurn(void) const {
+    return _currentTurnMoves.size() == 0
+          ? _presentHalfTurn
+          : *std::min_element(_nextHalfTurnBuffer.begin(), _nextHalfTurnBuffer.end());
+  }
+
   /**
    * Apply the turn state to the game.
    * @param turnState The TurnState object contain  // Apply the completed turn
@@ -539,11 +545,11 @@ public:
 protected:
   int _N;
   int _presentHalfTurn;
-  std::vector<int> _nextHalfTurnQueue;
+  std::vector<int> _nextHalfTurnBuffer;
   std::vector<std::shared_ptr<TimeLine>> _timeLines;
   std::vector<Move> _currentTurnMoves;
   PieceColor _currentTurnColor;
-  std::vector<std::vector<int>> _undoList;
+  std::vector<std::vector<int>> _undoBuffer;
   RuleEngine _rule;
 
   std::shared_ptr<Piece> _getPieceByVector4DFullTurn(Vector4D position) const;
