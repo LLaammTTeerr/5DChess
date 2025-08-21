@@ -207,6 +207,9 @@ void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPos
     resetHighlightedPositions();
     view.update_highlightedBoard(computeHighlightedBoardViews());
     view.update_highlightedPositions({}); // Clear highlighted positions after the move
+    
+    // Focus camera on the newest board with appropriate zoom
+    view.focusOnNewestBoard();
   }
 
 }
@@ -384,6 +387,9 @@ void ChessController::handleUndoMove() {
   resetHighlightedBoard();
   resetHighlightedPositions();
   
+  // Focus camera on the newest board after undo
+  view.focusOnNewestBoard();
+  
   // Update menu button states after game state change
   updateMenuButtonStates();
 }
@@ -396,6 +402,9 @@ void ChessController::handleSubmitMove() {
   std::cout << "Move submitted successfully." << std::endl;
   resetHighlightedBoard();
   resetHighlightedPositions();
+  
+  // Focus camera on the newest board after submitting turn
+  view.focusOnNewestBoard();
   
   // Update menu button states after game state change
   updateMenuButtonStates();
