@@ -28,15 +28,37 @@ void BoardView2D::render() const {
         return;
     }
 
-    DrawTexturePro(
-        *_boardTexture,
-        Rectangle{0, 0, static_cast<float>(_boardTexture->width * float(float(_boardDim) / float(STANDARD_BOARD_DIM))), static_cast<float>(_boardTexture->height * (float(_boardDim) / float(STANDARD_BOARD_DIM)))},
-        _area,
-        Vector2{0, 0},
-        0.0f,
-        WHITE
-    );
+    // DrawTexturePro(
+    //     *_boardTexture,
+    //     Rectangle{0, 0, static_cast<float>(_boardTexture->width * float(float(_boardDim) / float(STANDARD_BOARD_DIM))), static_cast<float>(_boardTexture->height * (float(_boardDim) / float(STANDARD_BOARD_DIM)))},
+    //     _area,
+    //     Vector2{0, 0},
+    //     0.0f,
+    //     WHITE
+    // );
 
+    // DrawRectangle(
+    //     _area.x,
+    //     _area.y,
+    //     _area.width,
+    //     _area.height,
+    //     (Color){243, 233, 220, 255}
+    // );
+    for (int i = 0; i < _boardDim; ++i) {
+        for (int j = 0; j < _boardDim; ++j) {
+            Vector2 position = {
+                _area.x + float(i) * (_area.width / float(1.0 * _boardDim)),
+                _area.y + float(j) * (_area.height / float(1.0 * _boardDim))
+            };
+            DrawRectangle(
+                position.x,
+                position.y,
+                float(_area.width) / float(1.0 * _boardDim),
+                float(_area.height) / float(1.0 * _boardDim),
+                (i + j) % 2 == 0 ? (Color){243, 233, 220, 255} : (Color){248, 178, 89, 255} // Alternate colors
+            );
+        }
+    }
     render_pieces();
 }
 

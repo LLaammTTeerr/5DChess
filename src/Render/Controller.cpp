@@ -409,9 +409,6 @@ void ChessController::handleSubmitMove() {
   resetHighlightedBoard();
   resetHighlightedPositions();
   
-  // Focus camera on the newest board after submitting turn
-  view.focusOnNewestBoard();
-  
   // Update menu button states after game state change
   updateMenuButtonStates();
 }
