@@ -233,27 +233,27 @@ std::vector<SelectedPosition> IGame::getMoveablePositions(SelectedPosition selec
     }
 
     for (int nw = from.w() - 1; nw >= 0; nw -= 1) {
-      if (not boardExists(nw, from.z())) {
+      if (not boardExists(nw, 2 * from.z() + parity)) {
         break;
       }
       std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({from.x(), from.y(), from.z(), nw});
       if (targetPiece != nullptr and targetPiece->color() == _currentTurnColor) {
         break;
       }
-      moveablePositions.emplace_back(getBoard(nw, from.z()), Position2D(from.x(), from.y()));
+      moveablePositions.emplace_back(getBoard(nw, 2 * from.z() + parity), Position2D(from.x(), from.y()));
       if (targetPiece != nullptr)
         break;
     }
 
     for (int nw = from.w() + 1; nw < _timeLines.size(); nw += 1) {
-      if (not boardExists(nw, from.z())) {
+      if (not boardExists(nw, 2 * from.z() + parity)) {
         break;
       }
       std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({from.x(), from.y(), from.z(), nw});
       if (targetPiece != nullptr and targetPiece->color() == _currentTurnColor) {
         break;
       }
-      moveablePositions.emplace_back(getBoard(nw, from.z()), Position2D(from.x(), from.y()));
+      moveablePositions.emplace_back(getBoard(nw, 2 * from.z() + parity), Position2D(from.x(), from.y()));
       if (targetPiece != nullptr)
         break;
     }
@@ -470,18 +470,17 @@ std::vector<SelectedPosition> IGame::getMoveablePositions(SelectedPosition selec
           moveablePositions.emplace_back(selected.board, Position2D(from.x() + 1, from.y() - 1));
         }
       }
-      if (piece->getPosition().y() == 6) {
-        std::shared_ptr<Piece> targetPiece = selected.board->getPiece(Position2D(from.x(), from.y() - 2));
-        if (targetPiece != nullptr)
-          goto SKIP_PAWN_MOVE;
-        moveablePositions.emplace_back(selected.board, Position2D(from.x(), from.y() - 2));
-      }
-      if (_rule.pawnCanMakeTwoMoveOnFirstTurn and  piece->getPosition().y() > 0) {
+      if (piece->getPosition().y() > 0) {
         std::shared_ptr<Piece> targetPiece = selected.board->getPiece(Position2D(from.x(), from.y() - 1));
         if (targetPiece != nullptr)
           goto SKIP_PAWN_MOVE;
         moveablePositions.emplace_back(selected.board, Position2D(from.x(), from.y() - 1));
-        //TODO: PROMOTE
+      }
+      if (_rule.pawnCanMakeTwoMoveOnFirstTurn and piece->getPosition().y() == dim() - 2) {
+        std::shared_ptr<Piece> targetPiece = selected.board->getPiece(Position2D(from.x(), from.y() - 2));
+        if (targetPiece != nullptr)
+          goto SKIP_PAWN_MOVE;
+        moveablePositions.emplace_back(selected.board, Position2D(from.x(), from.y() - 2));
       }
     }
     SKIP_PAWN_MOVE:;

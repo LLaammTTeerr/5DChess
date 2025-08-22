@@ -11,22 +11,12 @@ TestingScene::TestingScene(const std::string& gameMode)
 }
 
 void TestingScene::init(void) {
-  if (_gameModeSelected == "StandardGame") {
-    _game = Chess::createGame<Chess::StandardGame>();
-  }
-  else if (_gameModeSelected == "CustomGameEmitBishop") {
-    _game = Chess::createGame<Chess::CustomGameEmitBishop>();
-  }
-  else if (_gameModeSelected == "CustomGameEmitKnight") {
-    _game = Chess::createGame<Chess::CustomGameEmitKnight>();
-  }
-  else if (_gameModeSelected == "CustomGameEmitQueen") {
-    _game = Chess::createGame<Chess::CustomGameEmitQueen>();
-  }
-  else {
-    std::cerr << "Unknown game mode selected: " << _gameModeSelected << std::endl;
-    return; // Exit if the game mode is not recognized
-  }
+  #define TRY_LOAD_MODE(X) if (_gameModeSelected == Chess::NameOfGame<X>::value) { _game = Chess::createGame<X>(); }
+  TRY_LOAD_MODE(Chess::StandardGame);
+  TRY_LOAD_MODE(Chess::CustomGameEmitBishop);
+  TRY_LOAD_MODE(Chess::CustomGameEmitKnight);
+  TRY_LOAD_MODE(Chess::CustomGameEmitQueen);
+  #undef TRY_LOAD_MODE
 
   _chessModel = std::make_shared<ChessModel>(_game);
   _chessView = std::make_shared<ChessView>(Vector3{5000, 5000, 1});

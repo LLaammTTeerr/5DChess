@@ -11,9 +11,9 @@
 #include "Render/RenModel.h"
 #include "VersusScene.h" // Include VersusScene for VersusMenuController
 
-NavigationMenuController::NavigationMenuController(GameStateModel* gameStateModel, std::shared_ptr<MenuComponent> menuSystem, 
+NavigationMenuController::NavigationMenuController(GameStateModel* gameStateModel, std::shared_ptr<MenuComponent> menuSystem,
                                SceneManager* sceneManager)
-    : _gameStateModel(gameStateModel), 
+    : _gameStateModel(gameStateModel),
       _lastState(std::make_unique<MainMenuState>()), // Initialize with a default state
       _sceneManager(sceneManager)
 {
@@ -33,7 +33,7 @@ void NavigationMenuController::setViewStrategy(std::unique_ptr<IMenuView> view) 
 
 void NavigationMenuController::updateNavigationMenuForCurrentState() {
    bool shouldUpdate = false;
-   
+
    // Check if state name changed
    if (_gameStateModel->getCurrentStateName() != _lastState->getName()) {
        shouldUpdate = true;
@@ -50,7 +50,7 @@ void NavigationMenuController::updateNavigationMenuForCurrentState() {
            shouldUpdate = true; // Last state wasn't VersusState
        }
    }
-   
+
    if (shouldUpdate) {
         std::shared_ptr<MenuComponent> newMenu = _gameStateModel->getCurrentState()->createNavigationMenu(_gameStateModel, _sceneManager);
         if (newMenu) {
@@ -85,7 +85,7 @@ void NavigationMenuController::handleInput() {
             if (command) {
                 CommandType cmdType = command->getType();
                 command->execute(); // Execute the command
-                
+
                 // Handle different command types
                 if (cmdType == CommandType::STATE_CHANGING || cmdType == CommandType::IMMEDIATE) {
                     std::cout << "State-changing command executed, stopping command processing" << std::endl;
@@ -106,7 +106,7 @@ void NavigationMenuController::update() {
 
 void NavigationMenuController::draw() const {
     if (_menuView) {
-        _menuView -> draw(_currentMenuModel); 
+        _menuView -> draw(_currentMenuModel);
     }
 }
 
@@ -182,19 +182,19 @@ void VersusMenuController::setViewStrategy(std::unique_ptr<IMenuView> view) {
 
 void VersusMenuController::handleInput() {
     if (!_menuView || !_menuSystem) return;
-    
+
     Vector2 mousePos = GetMousePosition();
     bool mouseClicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
-    
+
     // Handle scroll input for ListMenuView
     if (auto* listView = dynamic_cast<ListMenuView*>(_menuView.get())) {
         listView->handleScrollInput();
     }
-    
+
     // Handle hover states and clicks
     const auto& itemViews = _menuView->getItemViews();
     const auto& menuItems = _menuSystem->getChildren();
-    
+
     for (size_t i = 0; i < itemViews.size() && i < menuItems.size(); ++i) {
         if (itemViews[i] && menuItems[i]->isEnabled()) {
             Vector2 itemPos, itemSize;
@@ -229,16 +229,16 @@ void VersusMenuController::handleInput() {
             }
             
             bool isHovered = CheckCollisionPointRec(mousePos, itemRect);
-            
+
             itemViews[i]->setHovered(isHovered);
-            
+
             // Set selected state based on the currently selected game mode index
             itemViews[i]->setSelected(static_cast<int>(i) == _selectedGameModeIndex);
-            
+
             if (isHovered && mouseClicked) {
                 // Update selected game mode index
                 _selectedGameModeIndex = static_cast<int>(i);
-                
+
                 // Execute the command for this menu item
                 auto command = menuItems[i]->cloneCommand();
                 if (command) {
@@ -255,7 +255,7 @@ void VersusMenuController::update() {
         if (auto* listView = dynamic_cast<ListMenuView*>(_menuView.get())) {
             listView->updateScrollbar();
         }
-        
+
         // Update selected state for all menu items
         const auto& itemViews = _menuView->getItemViews();
         for (size_t i = 0; i < itemViews.size(); ++i) {
@@ -272,26 +272,36 @@ void VersusMenuController::draw() const {
     }
 }
 
+std::vector<std::string> fetchGameMode(void) {
+  std::vector<std::string> gameModes;
+  #define REGISTER_MODE(X) gameModes.push_back(Chess::NameOfGame<X>::value)
+  REGISTER_MODE(Chess::StandardGame);
+  REGISTER_MODE(Chess::CustomGameEmitBishop);
+  REGISTER_MODE(Chess::CustomGameEmitKnight);
+  REGISTER_MODE(Chess::CustomGameEmitQueen);
+  #undef REGISTER_MODE
+  return gameModes;
+}
+
 void VersusMenuController::createGameModeMenu() {
     // Create the main menu container
     _menuSystem = std::make_shared<Menu>("Game Mode Selection", true);
-    
+
     // Create game mode menu items
-    const std::vector<std::string> gameModes = {
-        "StandardGame", "CustomGameEmitBishop", "CustomGameEmitKnight", "CustomGameEmitQueen", "mode5", 
-        "mode6", "mode7", "mode8", "mode9", "mode10"
-    };
-    
+    static std::vector<std::string> gameModes;
+    if (gameModes.empty())
+      gameModes = fetchGameMode();
+
     for (const auto& mode : gameModes) {
         auto menuItem = std::make_shared<MenuItem>(mode, true);
-        
+
         // Create command for this game mode
         auto command = std::make_unique<GameModeSelectCommand>(mode, _versusScene);
         menuItem->setCommand(std::move(command));
-        
+
         _menuSystem->addItem(menuItem);
     }
-    
+
     // Update menu view if it exists
     if (_menuView) {
         _menuView->createInGameItemsViews(_menuSystem->getChildren().size());
@@ -301,7 +311,7 @@ void VersusMenuController::createGameModeMenu() {
 void VersusMenuController::selectGameMode(const std::string& mode) {
     _selectedGameMode = mode;
     std::cout << "Game mode selected via controller: " << mode << std::endl;
-    
+
     // Find and update the selected game mode index
     if (_menuSystem) {
         const auto& menuItems = _menuSystem->getChildren();
