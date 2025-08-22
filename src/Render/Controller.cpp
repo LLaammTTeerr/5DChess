@@ -44,8 +44,9 @@ void ChessController::update(float deltaTime) {
   }
   updateNewBoardViewsToView();
   
-  // Set game reference in view for timeline arrows
-  view.setGameReference(model.getGame());
+  // Compute and update timeline arrows through proper MVC pattern
+  auto timelineArrowData = computeTimelineArrows();
+  view.updateTimelineArrows(timelineArrowData);
   
   // Update menu button states based on current game state
   updateMenuButtonStates();
@@ -431,5 +432,95 @@ void ChessController::handleDeselectPosition() {
   
   // Update menu button states after game state change
   updateMenuButtonStates();
+}
+
+std::vector<TimelineArrowData> ChessController::computeTimelineArrows() const {
+    std::vector<TimelineArrowData> arrows;
+    
+    // Compute progression arrows (within timelines)
+    auto progressionArrows = computeProgressionArrows();
+    arrows.insert(arrows.end(), progressionArrows.begin(), progressionArrows.end());
+    
+    // Compute branching arrows (between timelines)
+    auto branchingArrows = computeBranchingArrows();
+    arrows.insert(arrows.end(), branchingArrows.begin(), branchingArrows.end());
+    
+    return arrows;
+}
+
+std::vector<TimelineArrowData> ChessController::computeProgressionArrows() const {
+    std::vector<TimelineArrowData> arrows;
+    
+    auto timelines = model.getGame()->getTimeLines();
+    
+    for (const auto& timeline : timelines) {
+        auto boards = timeline->getBoards();
+        
+        // Create arrows between consecutive boards in the timeline
+        for (size_t i = 0; i < boards.size() - 1; ++i) {
+            // Find corresponding board views
+            std::shared_ptr<BoardView> fromBoardView = nullptr;
+            std::shared_ptr<BoardView> toBoardView = nullptr;
+            
+            auto fromIt = _boardToBoardViewMap.find(boards[i]);
+            auto toIt = _boardToBoardViewMap.find(boards[i + 1]);
+            
+            if (fromIt != _boardToBoardViewMap.end() && toIt != _boardToBoardViewMap.end()) {
+                fromBoardView = fromIt->second;
+                toBoardView = toIt->second;
+                
+                if (fromBoardView && toBoardView) {
+                    // Alternate colors based on timeline ID
+                    Color color = (timeline->ID() % 2 == 0) ? BLUE : GREEN;
+                    arrows.emplace_back(fromBoardView, toBoardView, "progression", color);
+                }
+            }
+        }
+    }
+    
+    return arrows;
+}
+
+std::vector<TimelineArrowData> ChessController::computeBranchingArrows() const {
+    std::vector<TimelineArrowData> arrows;
+    
+    auto timelines = model.getGame()->getTimeLines();
+    
+    for (const auto& timeline : timelines) {
+        auto parentTimeline = timeline->parent();
+        if (!parentTimeline) continue; // Skip main timeline
+        
+        // Find the fork point board in parent timeline
+        int forkPoint = timeline->forkAt();
+        std::shared_ptr<Chess::Board> parentBoard = nullptr;
+        
+        try {
+            if (model.getGame()->boardExists(parentTimeline->ID(), forkPoint)) {
+                parentBoard = model.getGame()->getBoard(parentTimeline->ID(), forkPoint);
+            }
+        } catch (...) {
+            continue; // Skip if board doesn't exist
+        }
+        
+        if (!parentBoard || timeline->getBoards().empty()) continue;
+        
+        // Find corresponding board views
+        std::shared_ptr<BoardView> parentBoardView = nullptr;
+        std::shared_ptr<BoardView> childBoardView = nullptr;
+        
+        auto parentIt = _boardToBoardViewMap.find(parentBoard);
+        auto childIt = _boardToBoardViewMap.find(timeline->getBoards()[0]);
+        
+        if (parentIt != _boardToBoardViewMap.end() && childIt != _boardToBoardViewMap.end()) {
+            parentBoardView = parentIt->second;
+            childBoardView = childIt->second;
+            
+            if (parentBoardView && childBoardView) {
+                arrows.emplace_back(parentBoardView, childBoardView, "branch", RED);
+            }
+        }
+    }
+    
+    return arrows;
 }
 

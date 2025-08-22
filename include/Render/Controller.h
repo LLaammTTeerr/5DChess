@@ -8,8 +8,10 @@
 #include "View.h"
 #include "RenModel.h"
 
+// Forward declarations
 class InGameMenuController;
 class MenuComponent;
+struct TimelineArrowData; // Forward declaration for timeline arrows
 class ChessController {
 private:
   ChessModel& model;
@@ -69,6 +71,11 @@ public:
 
 private:
   void setupViewCallbacks();
+
+  // Timeline arrow computation methods
+  std::vector<TimelineArrowData> computeTimelineArrows() const;
+  std::vector<TimelineArrowData> computeProgressionArrows() const;
+  std::vector<TimelineArrowData> computeBranchingArrows() const;
 
   // Methods to update model state based on user input
   void handleSelectedPosition(Chess::SelectedPosition selectedPosition);
