@@ -16,13 +16,13 @@ std::shared_ptr<MenuComponent> VersusState::createNavigationMenu(GameStateModel*
 
   // Always add Back button
   std::shared_ptr<MenuComponent> Back = std::make_shared<MenuItem>("Back", true);
-  Back->setCommand(std::make_unique<VersusBackCommand>(gameStateModel, sceneManager)); // Set command for Back
+  Back->setCommand(createVersusBackCommand(gameStateModel, sceneManager)); // Set command for Back
   versusMenu->addItem(Back);
 
   // Only add Play button if game mode is selected
   if (gameModeSelected) {
     std::shared_ptr<MenuComponent> Play = std::make_shared<MenuItem>("Play", true);
-    Play->setCommand(std::make_unique<VersusPlayCommand>(gameStateModel, sceneManager, selectedGameMode)); // Set command for Play
+    Play->setCommand(createVersusPlayCommand(gameStateModel, sceneManager, selectedGameMode)); // Set command for Play
     versusMenu->addItem(Play);
   }
   

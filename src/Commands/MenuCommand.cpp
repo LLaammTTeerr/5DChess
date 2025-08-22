@@ -10,108 +10,68 @@
 #include "GameStates/ConcreteGameStates/TestingState.h"
 #include "Render/Controller.h"
 
-// startGameCommand::startGameCommand(GameStateModel* gameState)
-//     : _gameState(gameState) {}
-
-// void startGameCommand::execute() {
-//     if (_gameState) {
-//         _gameState->setState(GameStateModel::State::IN_GAME);
-//     }
-// }
-
-// std::unique_ptr<ICommand> startGameCommand::clone() const {
-//     // create a new instance of startGameCommand with the same game state
-//     return std::make_unique<startGameCommand>(_gameState);
-// }
-
-void VersusCommand::execute() {
-    if (_gameStateModel) {
-        std::unique_ptr<GameState> newState = std::make_unique<VersusState>();
-        // Notify SceneManager to change scene
-        if (_sceneManager) {
-            std::unique_ptr<Scene> scene = newState->createScene();
-            if (scene) {
-                _sceneManager->changeScene(std::move(scene));
-            }
-        }
-
-        _gameStateModel->setState(std::move(newState));
-        // std::cout << "Versus mode activated." << std::endl;
-    } else {
-        // std::cerr << "Error: GameStateModel is not initialized." << std::endl;
+// ChangeStateCommand execute implementation
+void ChangeStateCommand::execute() {
+  if (_gameStateModel && _stateFactory) {
+    std::unique_ptr<GameState> newState = _stateFactory();
+    
+    // Notify SceneManager to change scene
+    if (_sceneManager && newState) {
+      std::unique_ptr<Scene> scene = newState->createScene();
+      if (scene) {
+        _sceneManager->changeScene(std::move(scene));
+      }
     }
+
+    _gameStateModel->setState(std::move(newState));
+  }
 }
 
-std::unique_ptr<ICommand> VersusCommand::clone() const {
-    // create a new instance of VersusCommand with the same game state and scene manager
-    return std::make_unique<VersusCommand>(_gameStateModel, _sceneManager);
+// Factory function implementations with proper state creation
+std::unique_ptr<ChangeStateCommand> createVersusCommand(
+    GameStateModel* gameStateModel, SceneManager* sceneManager) {
+  return std::make_unique<ChangeStateCommand>(
+      gameStateModel, sceneManager,
+      std::function<std::unique_ptr<GameState>()>([]() { 
+        return std::make_unique<VersusState>(); 
+      }),
+      "Versus Command"
+  );
 }
 
-CommandType VersusCommand::getType() const {
-    return CommandType::STATE_CHANGING; // This command changes the game state
+std::unique_ptr<ChangeStateCommand> createVersusBackCommand(
+    GameStateModel* gameStateModel, SceneManager* sceneManager) {
+  return std::make_unique<ChangeStateCommand>(
+      gameStateModel, sceneManager,
+      std::function<std::unique_ptr<GameState>()>([]() { 
+        return std::make_unique<MainMenuState>(); 
+      }),
+      "Back Command"
+  );
 }
 
-void VersusBackCommand::execute() {
-    if (_gameStateModel) {
-        // Set the game state back to Main Menu
-        std::unique_ptr<GameState> newState = std::make_unique<MainMenuState>();
-        
-        // Notify SceneManager to change scene
-        if (_sceneManager) {
-            std::unique_ptr<Scene> scene = newState->createScene();
-            if (scene) {
-                _sceneManager->changeScene(std::move(scene));
-            }
-        }
-
-        _gameStateModel->setState(std::move(newState));
-        // std::cout << "Returning to Main Menu." << std::endl;
-    } else {
-        // std::cerr << "Error: GameStateModel is not initialized." << std::endl;
-    }
+std::unique_ptr<ChangeStateCommand> createVersusPlayCommand(
+    GameStateModel* gameStateModel, SceneManager* sceneManager, 
+    const std::string& selectedGameMode) {
+  return std::make_unique<ChangeStateCommand>(
+      gameStateModel, sceneManager,
+      std::function<std::unique_ptr<GameState>()>([selectedGameMode]() { 
+        return std::make_unique<TestingState>(selectedGameMode); 
+      }),
+      "Versus Play Command"
+  );
 }
 
-std::unique_ptr<ICommand> VersusBackCommand::clone() const {
-    // create a new instance of VersusBackCommand with the same game state
-    return std::make_unique<VersusBackCommand>(_gameStateModel, _sceneManager);
+std::unique_ptr<ChangeStateCommand> createBackToVersusCommand(
+    GameStateModel* gameStateModel, SceneManager* sceneManager) {
+  return std::make_unique<ChangeStateCommand>(
+      gameStateModel, sceneManager,
+      std::function<std::unique_ptr<GameState>()>([]() { 
+        return std::make_unique<VersusState>(); 
+      }),
+      "Back to Versus Command"
+  );
 }
-
-CommandType VersusBackCommand::getType() const {
-    return CommandType::STATE_CHANGING; // This command changes the game state
-}
-
-
-void VersusPlayCommand::execute() {
-    if (_gameStateModel) {
-        // Set the game state back to Main Menu
-        std::unique_ptr<GameState> newState = std::make_unique<TestingState>(_selectedGameMode);
-        
-        // Notify SceneManager to change scene
-        if (_sceneManager) {
-            std::unique_ptr<Scene> scene = newState->createScene();
-            if (scene) {
-                _sceneManager->changeScene(std::move(scene));
-            }
-        }
-
-        _gameStateModel->setState(std::move(newState));
-        // std::cout << "Returning to Main Menu." << std::endl;
-    } else {
-        // std::cerr << "Error: GameStateModel is not initialized." << std::endl;
-    }
-}
-
-std::unique_ptr<ICommand> VersusPlayCommand::clone() const {
-    // create a new instance of VersusPlayCommand with the same game state
-    auto cloned = std::make_unique<VersusPlayCommand>(_gameStateModel, _sceneManager, _selectedGameMode);
-    cloned->_callback = _callback; // Copy the callback
-    return cloned;
-}
-
-CommandType VersusPlayCommand::getType() const {
-    return CommandType::STATE_CHANGING; // This command changes the game state
-}
-
 
 SubmitMoveCommand::SubmitMoveCommand() {}
 

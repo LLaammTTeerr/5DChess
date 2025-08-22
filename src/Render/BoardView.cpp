@@ -167,7 +167,7 @@ void BoardView2D::render_highlightPiece(Chess::Position2D piecePosition) const {
         position.y,
         squareWidth,
         squareHeight,
-        (Color){228, 0, 75, 100} // Semi-transparent yellow highlight rgb(228, 0, 75)
+        (Color){228, 0, 75, 100} // Semi-transparent pink highlight rgb(228, 0, 75)
     );
     
     // Draw the piece with a slight glow effect
