@@ -80,6 +80,8 @@ public:
 
   MoveState getCurrentMoveState() const { return _currentMoveState; }
 
+  std::shared_ptr<Chess::IGame> getGame() const { return _game; }
+
   std::vector<std::shared_ptr<Chess::TimeLine>> getTimeLines() const {return _game->getTimeLines(); }
   int getPresentHalfTurn() const { return _game->presentHalfTurn(); }
   int getPresentFullTurn() const { return _game->presentFullTurn(); }

@@ -50,6 +50,12 @@ public:
 
     virtual void setPiecePositions(const std::vector<std::pair<Chess::Position2D, std::string>>& piecePositions) = 0;
 
+    // Timeline arrow support methods
+    virtual void setBoard(std::shared_ptr<Chess::Board> board) = 0;
+    virtual std::shared_ptr<Chess::Board> getBoard() const = 0;
+    virtual Vector2 getBoardCenter() const = 0;
+    virtual float getBoardSize() const = 0;
+
 protected:
   /// Piece position and piece name
   std::vector<std::pair<Chess::Position2D, std::string>> _piecePositions;
@@ -66,6 +72,7 @@ private:
   Texture2D* _boardTexture = nullptr;
   Rectangle _area = {0, 0, 0, 0};
   Camera2D* _camera = nullptr;
+  std::shared_ptr<Chess::Board> _board = nullptr; // Board reference for timeline arrows
 
   bool _isMouseOver = false; // Whether the mouse is over the board
   
@@ -99,7 +106,19 @@ public:
   void setSupervisor(ChessView* supervisor) override; 
 
   void setCamera2D(Camera2D* camera) override { _camera = camera; }
-  void setCamera3D(Camera3D* camera) override {  }  
+  void setCamera3D(Camera3D* camera) override {  }
+  
+  // Timeline arrow support methods implementation
+  void setBoard(std::shared_ptr<Chess::Board> board) override { _board = board; }
+  std::shared_ptr<Chess::Board> getBoard() const override { return _board; }
+  
+  Vector2 getBoardCenter() const override {
+    return Vector2{_area.x + _area.width * 0.5f, _area.y + _area.height * 0.5f};
+  }
+  
+  float getBoardSize() const override {
+    return fminf(_area.width, _area.height);
+  }
 };
 
 // class BoardView3D : public BoardView {

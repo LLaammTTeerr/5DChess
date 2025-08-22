@@ -38,6 +38,28 @@ struct TransitionComponent {
 };
 
 
+// Timeline arrow structures
+struct TimelineArrow {
+  Vector2 startPos;
+  Vector2 endPos;
+  Color color;
+  float thickness;
+  bool isAnimated;
+  float animationOffset; // For animated arrows
+  std::string type; // "progression", "branch", "connection"
+  
+  TimelineArrow() : startPos{0, 0}, endPos{0, 0}, color(BLUE), 
+                   thickness(3.0f), isAnimated(true), animationOffset(0.0f), type("progression") {}
+};
+
+struct ArrowAnimationState {
+  float animationTime;
+  float dashOffset;
+  float pulsePhase;
+  
+  ArrowAnimationState() : animationTime(0.0f), dashOffset(0.0f), pulsePhase(0.0f) {}
+};
+
 class ChessView {
 private:
   Vector3 _worldSize;
@@ -119,5 +141,37 @@ public:
   Camera2D* getCamera2D() { return _cameraController->getCamera2D(); }
   Camera3D* getCamera3D() { return _cameraController->getCamera3D(); }
 
+  // Timeline arrow rendering system
+  std::vector<TimelineArrow> _timelineArrows;
+  ArrowAnimationState _arrowAnimationState;
+  std::shared_ptr<Chess::IGame> _gameRef; // Reference to game for timeline data
+
+public:
+  /// @brief Set the game reference for timeline data
+  virtual void setGameReference(std::shared_ptr<Chess::IGame> game) { _gameRef = game; }
+
+  /// @brief Update timeline arrows based on current game state
+  virtual void updateTimelineArrows();
+
+  /// @brief Render timeline arrows behind the boards
+  virtual void renderTimelineArrows() const;
+
+private:
+  /// @brief Generate arrows for timeline progression
+  virtual void generateProgressionArrows();
+  
+  /// @brief Generate arrows for timeline branching
+  virtual void generateBranchingArrows();
+  
+  /// @brief Calculate arrow position between two board views
+  virtual Vector2 calculateArrowPosition(std::shared_ptr<BoardView> boardView, bool isStart) const;
+  
+  /// @brief Draw a curved arrow between two points
+  virtual void drawCurvedArrow(Vector2 start, Vector2 end, Color color, float thickness, float animationOffset) const;
+  
+  /// @brief Draw an animated dashed line
+  virtual void drawAnimatedDashedLine(Vector2 start, Vector2 end, Color color, float thickness, float dashOffset) const;
+
+public:
   ~ChessView() = default;
 };

@@ -38,8 +38,14 @@ void ChessController::update(float deltaTime) {
   for (int i = 0; i < _currentBoard.size() && i < _currentBoardViews.size(); ++i) {
     _boardToBoardViewMap[_currentBoard[i]] = _currentBoardViews[i];
     _boardViewToBoardMap[_currentBoardViews[i]] = _currentBoard[i];
+    
+    // Set board reference in board view for timeline arrows
+    _currentBoardViews[i]->setBoard(_currentBoard[i]);
   }
   updateNewBoardViewsToView();
+  
+  // Set game reference in view for timeline arrows
+  view.setGameReference(model.getGame());
   
   // Update menu button states based on current game state
   updateMenuButtonStates();
