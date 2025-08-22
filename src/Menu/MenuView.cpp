@@ -118,6 +118,7 @@ void ListMenuView::createNavigationItemViews(std::shared_ptr<MenuComponent> menu
     }
     
     calculateMaxScrollOffset();
+    autoResizeToFitContent();
 }
 
 void ListMenuView::createInGameItemsViews(int numberOfItems) {
@@ -136,6 +137,7 @@ void ListMenuView::createInGameItemsViews(int numberOfItems) {
     }
     
     calculateMaxScrollOffset();
+    autoResizeToFitContent();
 }
 
 void ListMenuView::handleScrollInput() {
@@ -217,6 +219,31 @@ Vector2 ListMenuView::getScrolledItemPosition(size_t index) const {
     
     Vector2 originalPos = _itemViews[index]->getPosition();
     return {originalPos.x, originalPos.y - scrollOffset};
+}
+
+float ListMenuView::calculateRequiredContentHeight() const {
+    if (_itemViews.empty()) {
+        return 0.0f;
+    }
+    
+    return _itemViews.size() * (itemHeight + itemSpacing) - itemSpacing;
+}
+
+void ListMenuView::autoResizeToFitContent() {
+    float requiredHeight = calculateRequiredContentHeight();
+    
+    // Only resize if the required height is less than the current listArea height
+    if (requiredHeight > 0 && requiredHeight < listArea.height) {
+        // Maintain the same x, y, and width, but adjust the height
+        listArea.height = requiredHeight;
+        
+        // Update related components
+        updateScrollbarArea();
+        calculateMaxScrollOffset();
+        
+        // Reset scroll offset since we no longer need scrolling
+        scrollOffset = 0.0f;
+    }
 }
 
 void ListMenuView::draw(std::shared_ptr<MenuComponent> menuModel) const {

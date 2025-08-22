@@ -280,6 +280,13 @@ std::vector<std::string> fetchGameMode(void) {
   REGISTER_MODE(Chess::CustomGameEmitKnight);
   REGISTER_MODE(Chess::CustomGameEmitQueen);
   #undef REGISTER_MODE
+
+  gameModes.push_back("Knight vs. Bishop");
+  gameModes.push_back("Simple Set");
+  gameModes.push_back("Small");
+  gameModes.push_back("Small - Flipped");
+  gameModes.push_back("Small - Centerd");
+  gameModes.push_back("Small - Open");
   return gameModes;
 }
 
@@ -291,6 +298,7 @@ void VersusMenuController::createGameModeMenu() {
     static std::vector<std::string> gameModes;
     if (gameModes.empty())
       gameModes = fetchGameMode();
+
 
     for (const auto& mode : gameModes) {
         auto menuItem = std::make_shared<MenuItem>(mode, true);

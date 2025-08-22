@@ -91,6 +91,10 @@ public:
   // Get the list area rectangle
   Rectangle getListArea() const { return listArea; }
   
+  // Auto-resize functionality
+  void autoResizeToFitContent();
+  float calculateRequiredContentHeight() const;
+  
   // Setters for customization
   void setListArea(Rectangle area) { listArea = area; updateScrollbarArea(); }
   void setItemHeight(float height) { itemHeight = height; }

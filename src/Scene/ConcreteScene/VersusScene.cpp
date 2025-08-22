@@ -44,8 +44,9 @@ void VersusScene::render() {
   if (!menuController) return;
 
   // Draw the menu background
-  DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), {30, 30, 40, 255});
-  
+  // DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), {30, 30, 40, 255});
+  ClearBackground(Color{164, 204, 217, 255});
+
   // Draw menu title
   Font& font = ResourceManager::getInstance().getFont("public_sans_bold");
   const char* title = "Select Game Mode";
@@ -56,7 +57,7 @@ void VersusScene::render() {
   Vector2 titlePosition = {
     (GetScreenWidth() - titleSize.x) / 2.0f, 50
   };
-  DrawTextEx(font, title, titlePosition, titleFontSize, spacing, {245, 186, 187, 255});
+  DrawTextEx(font, title, titlePosition, titleFontSize, spacing, {255, 249, 175, 255}); // rgb(255, 249, 175)
 
   // Draw the menu using the controller
   menuController->draw();
