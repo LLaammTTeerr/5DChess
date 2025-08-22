@@ -201,25 +201,26 @@ void CameraController::calculateAutoCenterPosition(const std::vector<std::shared
         return;
     }
     
-    Vector2 totalCenter = { 0.0f, 0.0f };
+    // Calculate bounding box of all board views
+    float minX = FLT_MAX, minY = FLT_MAX;
+    float maxX = -FLT_MAX, maxY = -FLT_MAX;
     int validBoardCount = 0;
     
     for (const auto& boardView : boardViews) {
         if (boardView && !boardView->is3D()) {
             Rectangle area = boardView->getArea();
-            Vector2 boardCenter = { 
-                area.x + area.width / 2.0f, 
-                area.y + area.height / 2.0f 
-            };
-            totalCenter.x += boardCenter.x;
-            totalCenter.y += boardCenter.y;
+            minX = std::min(minX, area.x);
+            minY = std::min(minY, area.y);
+            maxX = std::max(maxX, area.x + area.width);
+            maxY = std::max(maxY, area.y + area.height);
             validBoardCount++;
         }
     }
     
     if (validBoardCount > 0) {
-        _autoCenterPosition.x = totalCenter.x / validBoardCount;
-        _autoCenterPosition.y = totalCenter.y / validBoardCount;
+        // Set auto center position to the center of the bounding rectangle
+        _autoCenterPosition.x = (minX + maxX) / 2.0f;
+        _autoCenterPosition.y = (minY + maxY) / 2.0f;
     } else {
         _autoCenterPosition = { _worldSize.x / 2.0f, _worldSize.y / 2.0f };
     }
