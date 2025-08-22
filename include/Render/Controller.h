@@ -77,6 +77,9 @@ private:
   std::vector<TimelineArrowData> computeProgressionArrows() const;
   std::vector<TimelineArrowData> computeBranchingArrows() const;
 
+  // Present line computation methods
+  PresentLineData computePresentLine() const;
+
   // Methods to update model state based on user input
   void handleSelectedPosition(Chess::SelectedPosition selectedPosition);
   void handleMouseOverPosition(Chess::SelectedPosition selectedPosition);

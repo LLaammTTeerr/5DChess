@@ -48,6 +48,10 @@ void ChessController::update(float deltaTime) {
   auto timelineArrowData = computeTimelineArrows();
   view.updateTimelineArrows(timelineArrowData);
   
+  // Compute and update present line through proper MVC pattern
+  auto presentLineData = computePresentLine();
+  view.updatePresentLine(presentLineData);
+  
   // Update menu button states based on current game state
   updateMenuButtonStates();
 }
@@ -128,8 +132,13 @@ void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPos
   else if (model._currentMoveState.currentPhase == MovePhase::SELECT_FROM_POSITION) {
     // Select the position on the selected board
     /// Step 1: Check if the selected position is valid
-    if (selectedPosition.board ->getPiece(selectedPosition.position) == nullptr ||
-  selectedPosition.board->getPiece(selectedPosition.position)->color() != model._game->getCurrentTurnColor()) {
+    if (selectedPosition.board ->getPiece(selectedPosition.position) == nullptr) return;
+    // highlight Piece's position
+    std::shared_ptr<BoardView> selectedBoardView = _boardToBoardViewMap[selectedPosition.board];
+    view.update_FromPosition(
+        std::make_pair(selectedBoardView, selectedPosition.position)
+    );
+    if (selectedPosition.board->getPiece(selectedPosition.position)->color() != model._game->getCurrentTurnColor()) {
       std::cout << "Invalid selection: no piece at the selected position." << std::endl;
       return; // Invalid selection
     }
@@ -141,11 +150,7 @@ void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPos
 
     
     /// Step 3: Update the view with the highlighted positions
-    // highlight Piece's position
-    std::shared_ptr<BoardView> selectedBoardView = _boardToBoardViewMap[selectedPosition.board];
-    view.update_FromPosition(
-        std::make_pair(selectedBoardView, selectedPosition.position)
-    );
+    
     std::vector<Chess::SelectedPosition> getMoveablePositions = model._game->getMoveablePositions(selectedPosition);
     resetHighlightedPositions();
     // addHighlightedPosition(selectedPosition);
@@ -582,5 +587,19 @@ std::vector<TimelineArrowData> ChessController::computeBranchingArrows() const {
     }
     
     return arrows;
+}
+
+PresentLineData ChessController::computePresentLine() const {
+    // Get the buffer half turn from the game model
+    int bufferHalfTurn = model.getGame()->bufferHalfTurn();
+    
+    // Create present line data with appropriate styling
+    PresentLineData lineData;
+    lineData.halfTurnPosition = static_cast<float>(bufferHalfTurn);
+    lineData.color = {255, 215, 0, 255};  // Gold color, more subtle than bright yellow
+    lineData.thickness = 15.0f;           // Much thicker base thickness
+    lineData.isVisible = true;            // Always visible
+    
+    return lineData;
 }
 

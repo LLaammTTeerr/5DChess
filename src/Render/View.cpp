@@ -2,6 +2,7 @@
 #include "chess.h"
 #include "raymath.h"
 #include "PieceTheme.h"
+#include "PresentLineRenderer.h"
 #include <iostream>
 #include "BoardView.h"
 #include <algorithm>
@@ -14,6 +15,8 @@ ChessView::ChessView(Vector3 worldSize)
     _cameraController = std::make_unique<CameraController>(worldSize);
     // Initialize arrow renderer
     _arrowRenderer = std::make_unique<TimelineArrowRenderer>();
+    // Initialize present line renderer
+    _presentLineRenderer = std::make_unique<PresentLineRenderer>();
 }
 
 
@@ -73,6 +76,9 @@ void ChessView::update(float deltaTime) {
     
     // Update arrow animations using the renderer
     _arrowRenderer->update(deltaTime);
+    
+    // Update present line animations
+    _presentLineRenderer->update(deltaTime);
 }
 
 
@@ -91,7 +97,10 @@ void ChessView::render_boardViews() const {
 }
 
 void ChessView::render() const {
-    // Render timeline arrows first (behind boards)
+    // Render present line first (behind everything else)
+    renderPresentLine();
+    
+    // Render timeline arrows second (behind boards)
     renderTimelineArrows();
     
     render_boardViews();
@@ -103,13 +112,8 @@ void ChessView::render() const {
     Vector2 mousePos = GetMousePosition();
     Vector2 worldPos = _cameraController->isUsing3DRendering() ? Vector2{0, 0} : GetScreenToWorld2D(mousePos, *_cameraController->getCamera2D());
     
-    DrawText("Game World", 10, 10, 20, BLACK);
-    
     // Delegate debug info rendering to CameraController
-    _cameraController->renderDebugInfo();
-    
-    DrawText(TextFormat("Mouse Screen Pos: (%.2f, %.2f)", mousePos.x, mousePos.y), 10, 110, 20, BLACK);
-    DrawText(TextFormat("Mouse World Pos: (%.2f, %.2f)", worldPos.x, worldPos.y), 10, 135, 20, BLACK);
+    // _cameraController->renderDebugInfo();
 }
 
 
@@ -274,4 +278,12 @@ void ChessView::updateTimelineArrows(const std::vector<TimelineArrowData>& arrow
 
 void ChessView::renderTimelineArrows() const {
     _arrowRenderer->render(_cameraController->getCamera2D(), _cameraController->isUsing3DRendering());
+}
+
+void ChessView::updatePresentLine(const PresentLineData& lineData) {
+    _presentLineRenderer->updatePresentLine(lineData);
+}
+
+void ChessView::renderPresentLine() const {
+    _presentLineRenderer->render(_cameraController->getCamera2D(), _cameraController->isUsing3DRendering(), _boardViews);
 }

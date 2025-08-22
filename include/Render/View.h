@@ -6,6 +6,7 @@
 #include "CameraController.h"
 #include "Render/BoardView.h"
 #include "Render/TimelineArrowRenderer.h"
+#include "Render/PresentLineRenderer.h"
 
 
 struct TransitionComponent {
@@ -107,6 +108,7 @@ private:
   std::vector<std::shared_ptr<BoardView>> _boardViews; // List of board views
   std::unique_ptr<CameraController> _cameraController; // Camera management
   std::unique_ptr<TimelineArrowRenderer> _arrowRenderer; // Timeline arrow rendering
+  std::unique_ptr<PresentLineRenderer> _presentLineRenderer; // Present line rendering
 
 public:
   // virtual void update
@@ -138,6 +140,14 @@ public:
 
   /// @brief Render timeline arrows behind the boards
   virtual void renderTimelineArrows() const;
+
+  // Present line rendering system - delegated to PresentLineRenderer
+public:
+  /// @brief Update present line from Controller-provided data
+  virtual void updatePresentLine(const PresentLineData& lineData);
+
+  /// @brief Render present line behind all boards and arrows
+  virtual void renderPresentLine() const;
 
 public:
   ~ChessView() = default;
