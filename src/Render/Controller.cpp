@@ -113,6 +113,9 @@ void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPos
     /// @brief Step 3: Update the view with the highlighted board
     addHighlightedBoard(selectedPosition.board);
     view.update_highlightedBoard(computeHighlightedBoardViews());
+    view.update_FromPosition(
+        std::make_pair(nullptr, Chess::Position2D(-1, -1))
+    );
 
     /// @brief Step 4: Apply adaptive zoom if board is small (zoom < 0.8)
     auto selectedBoardView = _boardToBoardViewMap[selectedPosition.board];
@@ -135,7 +138,14 @@ void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPos
     /// Step 2: Update the model with the selected position
     model.selectFromPosition(selectedPosition.position); 
 
+
+    
     /// Step 3: Update the view with the highlighted positions
+    // highlight Piece's position
+    std::shared_ptr<BoardView> selectedBoardView = _boardToBoardViewMap[selectedPosition.board];
+    view.update_FromPosition(
+        std::make_pair(selectedBoardView, selectedPosition.position)
+    );
     std::vector<Chess::SelectedPosition> getMoveablePositions = model._game->getMoveablePositions(selectedPosition);
     resetHighlightedPositions();
     // addHighlightedPosition(selectedPosition);
@@ -204,7 +214,7 @@ void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPos
     model.selectToPosition(selectedPosition.position);
     
     /// @brief Step 3. Update the view with transition and make the move
-
+    view.update_FromPosition({nullptr, Chess::Position2D(-1, -1)});
     /// @brief update transition, we will complete it later
     /// Case: move to the same board
     // if (model._currentMoveState.selectedBoard == model._currentMoveState.targetBoard) {
@@ -452,7 +462,7 @@ void ChessController::handleDeselectPosition() {
   resetHighlightedPositions();
   view.update_highlightedBoard(computeHighlightedBoardViews());
   view.update_highlightedPositions({}); // Clear highlighted positions
-  
+  view.update_FromPosition({nullptr, Chess::Position2D(-1, -1)});
   // Update menu button states after game state change
   updateMenuButtonStates();
 }

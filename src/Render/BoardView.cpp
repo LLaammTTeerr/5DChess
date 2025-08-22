@@ -137,9 +137,52 @@ void BoardView2D::render_highlightedPositions(std::vector<Chess::Position2D> pos
     }
 }
 
+void BoardView2D::render_highlightPiece(Chess::Position2D piecePosition) const {
+    if (piecePosition.x() < 0 || piecePosition.y() < 0 || 
+        piecePosition.x() >= _boardDim || piecePosition.y() >= _boardDim) {
+        return;
+    }
+    std::string pieceName;
+    for (auto & piece : _piecePositions) {
+        if (piece.first == piecePosition) {
+            pieceName = piece.second;
+            break;
+        }
+    }
+    if (pieceName.empty()) {
+        return;
+    }
+    Texture2D& texture = ThemeManager::getInstance().getPieceTexture(pieceName);
+    Vector2 position = {
+        _area.x + piecePosition.x() * _area.width / _boardDim,
+        _area.y + piecePosition.y() * _area.height / _boardDim
+    };
+    
+    float squareWidth = _area.width / _boardDim;
+    float squareHeight = _area.height / _boardDim;
+    
+    // Draw a highlight background behind the piece
+    DrawRectangle(
+        position.x,
+        position.y,
+        squareWidth,
+        squareHeight,
+        (Color){228, 0, 75, 100} // Semi-transparent yellow highlight rgb(228, 0, 75)
+    );
+    
+    // Draw the piece with a slight glow effect
+    DrawTexturePro(
+        texture,
+        Rectangle{0, 0, static_cast<float>(texture.width), static_cast<float>(texture.height)},
+        Rectangle{position.x, position.y, squareWidth, squareHeight},
+        Vector2{0, 0},
+        0.0f,
+        WHITE
+    );
+}
+
 void BoardView2D::render_pieces() const {
     for (const auto& [pos, pieceName] : _piecePositions) {
-        ThemeManager::getInstance().setTheme(std::make_unique<ModernTheme>());
         Texture2D& texture = ThemeManager::getInstance().getPieceTexture(pieceName);
         Vector2 piecePosition = {
             _area.x + pos.x() * _area.width / _boardDim,

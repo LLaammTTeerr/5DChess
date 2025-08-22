@@ -63,6 +63,7 @@ protected:
 
 public:
   virtual void render_pieces() const = 0;
+  virtual void render_highlightPiece(Chess::Position2D piecePosition) const = 0;
   virtual void setBoardDim(int dim) { _boardDim = dim; } 
 };
   
@@ -83,6 +84,7 @@ public:
   // void render() const override {};
   void render() const override;
   void render_pieces() const override;
+  void render_highlightPiece(Chess::Position2D piecePosition) const override;
   void render_highlightBoundaries() const override;
   void render_highlightedPositions(std::vector<Chess::Position2D> positions) const override;
   

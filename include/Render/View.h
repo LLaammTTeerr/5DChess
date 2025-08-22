@@ -59,6 +59,7 @@ public:
   virtual void render() const;
 
 private:
+  std::pair<std::shared_ptr<BoardView>, Chess::Position2D> _fromPosition = {nullptr, {-1, -1}}; // use to Highlight piece at fromPosition
   std::vector<std::shared_ptr<BoardView>> _highlightedBoards;
   std::vector<std::pair<std::shared_ptr<BoardView>, Chess::Position2D>> _highlightedPositions;
 public:
@@ -66,8 +67,10 @@ public:
   virtual void handleMouseOver();
   virtual void render_highlightBoard() const;
   virtual void render_highlightedPositions() const;
+  virtual void render_highlightPiece(std::pair<std::shared_ptr<BoardView>, Chess::Position2D> piecePosition) const;
   virtual void render_boardViews() const; 
 public:
+  virtual void update_FromPosition(std::pair<std::shared_ptr<BoardView>, Chess::Position2D> fromPosition); 
   virtual void update_highlightedBoard(const std::vector<std::shared_ptr<BoardView>>& boardViews);
   virtual void update_highlightedPositions(const std::vector<std::pair<std::shared_ptr<BoardView>, Chess::Position2D>>& positions);
 

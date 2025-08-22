@@ -4,7 +4,7 @@
 #include <filesystem>
 #include "Scene/SceneManager.h"
 #include "gameState.h"
-
+#include "PieceTheme.h"
 // #include "Menu/MenuStructure.h"
 
 int main() {
@@ -16,6 +16,7 @@ int main() {
     ResourceManager &resourceManager = ResourceManager::getInstance();
     GameStateModel gameState;
     SceneManager sceneManager(&gameState);
+    ThemeManager::getInstance().setTheme(std::make_unique<ModernTheme>());
 
     // TestApp app;
     // app.init();

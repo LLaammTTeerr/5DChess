@@ -97,6 +97,7 @@ void ChessView::render() const {
     render_boardViews();
     render_highlightBoard();
     render_highlightedPositions();
+    render_highlightPiece(_fromPosition);
 
     // Draw UI
     Vector2 mousePos = GetMousePosition();
@@ -177,6 +178,10 @@ void ChessView::clearBoardViews() {
     _boardViews.clear();
 }
 
+void ChessView::update_FromPosition(std::pair<std::shared_ptr<BoardView>, Chess::Position2D> fromPosition) {
+    _fromPosition = fromPosition;
+}
+
 void ChessView::update_highlightedBoard(const std::vector<std::shared_ptr<BoardView>>& boardViews) {
     _highlightedBoards = boardViews;
 }
@@ -198,12 +203,31 @@ void ChessView::render_highlightBoard() const {
     EndMode2D();
 }
 
+void ChessView::render_highlightPiece(std::pair<std::shared_ptr<BoardView>, Chess::Position2D> piecePosition) const {
+    if (piecePosition.first == nullptr || piecePosition.second.x() < 0 || piecePosition.second.y() < 0) {
+        return;
+    }
+    if (_cameraController->isUsing3DRendering()) {
+        // 3D rendering code for highlighted piece
+        return;
+    }
+
+    BeginMode2D(*_cameraController->getCamera2D());
+    if (piecePosition.first) {
+        piecePosition.first->render_highlightPiece(piecePosition.second);
+    } else {
+        std::cerr << "Null BoardView encountered in highlighted piece!" << std::endl;
+    }
+    EndMode2D();
+}
+
 void ChessView::update_highlightedPositions(const std::vector<std::pair<std::shared_ptr<BoardView>, Chess::Position2D>>& positions) {
     if (!positions.empty()) {
         std::cout << "Updating highlighted positions with " << positions.size() << " entries." << std::endl;
     }
     _highlightedPositions = positions;
 }
+
 
 void ChessView::render_highlightedPositions() const {
     if (_cameraController->isUsing3DRendering()) {
