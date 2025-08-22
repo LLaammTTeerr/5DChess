@@ -289,29 +289,10 @@ void CameraController::calculateOptimalZoom(const std::vector<std::shared_ptr<Bo
     }
 }
 
-void CameraController::focusOnNewestBoard(const std::vector<std::shared_ptr<BoardView>>& boardViews) {
-    if (boardViews.empty()) {
+void CameraController::focusOnNewestBoard(const std::vector<std::shared_ptr<BoardView>>& boardViews, std::shared_ptr<BoardView> newestBoard) {
+    if (boardViews.empty() || !newestBoard) {
         return;
-    }
-    
-    // Find the newest board (assume it's the last one in the vector)
-    std::shared_ptr<BoardView> newestBoard = nullptr;
-    float maxX = -FLT_MAX; // Find rightmost board (newest by timeline position)
-    
-    for (const auto& boardView : boardViews) {
-        if (boardView && !boardView->is3D()) {
-            Rectangle area = boardView->getArea();
-            if (area.x > maxX) {
-                maxX = area.x;
-                newestBoard = boardView;
-            }
-        }
-    }
-    
-    if (!newestBoard) {
-        return;
-    }
-    
+    }    
     // Set camera target to center of newest board
     Rectangle newestArea = newestBoard->getArea();
     Vector2 newestBoardCenter = {

@@ -47,7 +47,7 @@ public:
 public:
   Camera2D* getCamera2D() { return &_camera2D; }
   Camera3D* getCamera3D() { return &_camera3D; }
-  void focusOnNewestBoard(const std::vector<std::shared_ptr<BoardView>>& boardViews);
+  void focusOnNewestBoard(const std::vector<std::shared_ptr<BoardView>>& boardViews, std::shared_ptr<BoardView> newestBoardView = nullptr);
   void focusOnBoardWithAdaptiveZoom(const std::vector<std::shared_ptr<BoardView>>& boardViews, std::shared_ptr<BoardView> targetBoard);
 
   bool isUsing3DRendering() const { return _use3DRendering; }

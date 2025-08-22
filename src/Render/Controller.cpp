@@ -158,6 +158,9 @@ void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPos
     }
     view.update_highlightedPositions(Converted_highlightedPositions);
 
+    if (selectedBoardView) {
+      view.focusOnBoardWithAdaptiveZoom(selectedBoardView);
+    }
   } 
   else if (model._currentMoveState.currentPhase == MovePhase::SELECT_TO_BOARD) {
     /// @brief Step 1: Check if the selected board is valid
@@ -255,7 +258,19 @@ void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPos
     view.update_highlightedPositions({}); // Clear highlighted positions after the move
     
     // Focus camera on the newest board with appropriate zoom
-    view.focusOnNewestBoard();
+    std::shared_ptr<Chess::Board> newestBoard = model._game->getNewBoard();
+    // calculate the position of the newest board view, the boardview of the newest board is not set in this frame
+    // so just calculate the position based on the board's half turn number and time line ID
+    std::shared_ptr<BoardView> newestBoardView = std::make_shared<BoardView2D>();
+    newestBoardView->setBoardTexture(&ResourceManager::getInstance().getTexture2D("mainChessBoard"));
+    newestBoardView->setRenderArea({
+        static_cast<float>(newestBoard->halfTurnNumber()) * (BOARD_WORLD_SIZE + HORIZONTAL_SPACING),
+        static_cast<float>(newestBoard->getTimeLine()->ID()) * (BOARD_WORLD_SIZE + VERTICAL_SPACING),
+        BOARD_WORLD_SIZE,
+        BOARD_WORLD_SIZE
+    });
+    view.focusOnNewestBoard(newestBoardView);
+    // view.focusOnNewestBoard();
   }
 
 }
@@ -434,7 +449,19 @@ void ChessController::handleUndoMove() {
   resetHighlightedPositions();
   
   // Focus camera on the newest board after undo
-  view.focusOnNewestBoard();
+  // Focus camera on the newest board with appropriate zoom
+    std::shared_ptr<Chess::Board> newestBoard = model._game->getNewBoard();
+    // calculate the position of the newest board view, the boardview of the newest board is not set in this frame
+    // so just calculate the position based on the board's half turn number and time line ID
+    std::shared_ptr<BoardView> newestBoardView = std::make_shared<BoardView2D>();
+    newestBoardView->setBoardTexture(&ResourceManager::getInstance().getTexture2D("mainChessBoard"));
+    newestBoardView->setRenderArea({
+        static_cast<float>(newestBoard->halfTurnNumber()) * (BOARD_WORLD_SIZE + HORIZONTAL_SPACING),
+        static_cast<float>(newestBoard->getTimeLine()->ID()) * (BOARD_WORLD_SIZE + VERTICAL_SPACING),
+        BOARD_WORLD_SIZE,
+        BOARD_WORLD_SIZE
+    });
+    view.focusOnNewestBoard(newestBoardView);
   
   // Update menu button states after game state change
   updateMenuButtonStates();

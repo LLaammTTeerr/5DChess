@@ -117,8 +117,10 @@ public:
 
 public:  
   // Focus camera on newest board
-  void focusOnNewestBoard() { _cameraController->focusOnNewestBoard(_boardViews); }
-  
+  void focusOnNewestBoard(std::shared_ptr<BoardView> newestBoardView) { 
+    _cameraController->focusOnNewestBoard(_boardViews, newestBoardView); 
+  }
+
   // Adaptive zoom for board selection
   void focusOnBoardWithAdaptiveZoom(std::shared_ptr<BoardView> targetBoard) { 
     _cameraController->focusOnBoardWithAdaptiveZoom(_boardViews, targetBoard); 
