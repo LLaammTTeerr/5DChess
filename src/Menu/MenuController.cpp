@@ -10,6 +10,7 @@
 #include "Render/Controller.h"
 #include "Render/RenModel.h"
 #include "VersusScene.h" // Include VersusScene for VersusMenuController
+#include <cmath>
 
 NavigationMenuController::NavigationMenuController(GameStateModel* gameStateModel, std::shared_ptr<MenuComponent> menuSystem,
                                SceneManager* sceneManager)
@@ -199,12 +200,12 @@ void VersusMenuController::handleInput() {
         if (itemViews[i] && menuItems[i]->isEnabled()) {
             Vector2 itemPos, itemSize;
             Rectangle itemRect;
-            
+
             // Get correct position accounting for scroll offset in ListMenuView
             if (auto* listView = dynamic_cast<ListMenuView*>(_menuView.get())) {
                 itemPos = listView->getScrolledItemPosition(i);
                 itemSize = itemViews[i]->getSize();
-                
+
                 // Check if item is visible in the list area
                 Rectangle listArea = listView->getListArea();
                 if (itemPos.y + itemSize.y < listArea.y || itemPos.y > listArea.y + listArea.height) {
@@ -213,7 +214,7 @@ void VersusMenuController::handleInput() {
                     itemViews[i]->setSelected(static_cast<int>(i) == _selectedGameModeIndex);
                     continue;
                 }
-                
+
                 // Ensure click area doesn't extend beyond the list area (excluding scrollbar)
                 Rectangle clickableArea = {
                     fmaxf(itemPos.x, listArea.x),
@@ -227,7 +228,7 @@ void VersusMenuController::handleInput() {
                 itemSize = itemViews[i]->getSize();
                 itemRect = {itemPos.x, itemPos.y, itemSize.x, itemSize.y};
             }
-            
+
             bool isHovered = CheckCollisionPointRec(mousePos, itemRect);
 
             itemViews[i]->setHovered(isHovered);
