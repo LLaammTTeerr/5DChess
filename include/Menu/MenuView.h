@@ -85,6 +85,12 @@ public:
   float getScrollHandlePosition() const;
   float getScrollHandleHeight() const;
   
+  // Get item position accounting for scroll offset
+  Vector2 getScrolledItemPosition(size_t index) const;
+  
+  // Get the list area rectangle
+  Rectangle getListArea() const { return listArea; }
+  
   // Setters for customization
   void setListArea(Rectangle area) { listArea = area; updateScrollbarArea(); }
   void setItemHeight(float height) { itemHeight = height; }

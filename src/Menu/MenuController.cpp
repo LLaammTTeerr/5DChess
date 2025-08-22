@@ -197,10 +197,37 @@ void VersusMenuController::handleInput() {
     
     for (size_t i = 0; i < itemViews.size() && i < menuItems.size(); ++i) {
         if (itemViews[i] && menuItems[i]->isEnabled()) {
-            Vector2 itemPos = itemViews[i]->getPosition();
-            Vector2 itemSize = itemViews[i]->getSize();
+            Vector2 itemPos, itemSize;
+            Rectangle itemRect;
             
-            Rectangle itemRect = {itemPos.x, itemPos.y, itemSize.x, itemSize.y};
+            // Get correct position accounting for scroll offset in ListMenuView
+            if (auto* listView = dynamic_cast<ListMenuView*>(_menuView.get())) {
+                itemPos = listView->getScrolledItemPosition(i);
+                itemSize = itemViews[i]->getSize();
+                
+                // Check if item is visible in the list area
+                Rectangle listArea = listView->getListArea();
+                if (itemPos.y + itemSize.y < listArea.y || itemPos.y > listArea.y + listArea.height) {
+                    // Item is not visible, skip interaction
+                    itemViews[i]->setHovered(false);
+                    itemViews[i]->setSelected(static_cast<int>(i) == _selectedGameModeIndex);
+                    continue;
+                }
+                
+                // Ensure click area doesn't extend beyond the list area (excluding scrollbar)
+                Rectangle clickableArea = {
+                    fmaxf(itemPos.x, listArea.x),
+                    fmaxf(itemPos.y, listArea.y),
+                    fminf(itemSize.x, listArea.width - 15.0f), // Account for scrollbar width
+                    fminf(itemSize.y, listArea.y + listArea.height - itemPos.y)
+                };
+                itemRect = clickableArea;
+            } else {
+                itemPos = itemViews[i]->getPosition();
+                itemSize = itemViews[i]->getSize();
+                itemRect = {itemPos.x, itemPos.y, itemSize.x, itemSize.y};
+            }
+            
             bool isHovered = CheckCollisionPointRec(mousePos, itemRect);
             
             itemViews[i]->setHovered(isHovered);

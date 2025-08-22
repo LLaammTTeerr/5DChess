@@ -70,19 +70,16 @@ std::vector<std::shared_ptr<MenuItemView>> VersusState::createNavigationMenuButt
             ++activeItems;
         }
     }
-
-    
-    const float verticalSpacing = 20.0f; // spacing between items
+   
+    const float horizontalSpacing = 20.0f; // spacing between items
     const float itemHeight = 40.0f;
-    const float itemWidth = 200;
-    const Rectangle menuArea = {0, 0, 300, (float)GetScreenHeight()}; // Example menu area
-
-    const float startX = menuArea.x + (menuArea.width - itemWidth) / 2;
-    const float startY = menuArea.y + (menuArea.height - (activeItems * itemHeight + (activeItems - 1) * verticalSpacing)) / 2;
+    const float itemWidth = 200.0f;
+    const float startX = (GetScreenWidth() - activeItems * itemWidth + (activeItems - 1) * horizontalSpacing) / 2.0f;
+    const float startY = 650.0f;
 
     itemViews.reserve(activeItems); // Reserve space for active items
     for (int i = 0; i < activeItems; ++i) {
-        Vector2 position = {startX, startY + i * (itemHeight + verticalSpacing)};
+        Vector2 position = {startX + i * (itemWidth + horizontalSpacing), startY};
         Vector2 size = {itemWidth, itemHeight};
         auto itemView = std::make_shared<MenuItemView>(position, size);
         itemView->setFont(ResourceManager::getInstance().getFont("public_sans_bold"));

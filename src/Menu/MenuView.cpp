@@ -149,15 +149,28 @@ void ListMenuView::handleScrollInput() {
     }
     
     // Handle scrollbar dragging
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && isScrollbarHovered()) {
-        isDragging = true;
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        // Check if clicked on scrollbar area (not just handle)
+        if (CheckCollisionPointRec(mousePos, scrollbarArea)) {
+            isDragging = true;
+            // If clicked on track but not handle, jump to that position
+            if (!isScrollbarHovered()) {
+                float relativeY = mousePos.y - scrollbarArea.y;
+                if (scrollbarArea.height > 0) {
+                    float scrollRatio = relativeY / scrollbarArea.height;
+                    scrollOffset = fmaxf(0.0f, fminf(scrollRatio * maxScrollOffset, maxScrollOffset));
+                }
+            }
+        }
     }
     
     if (isDragging) {
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
             float relativeY = mousePos.y - scrollbarArea.y;
-            float scrollRatio = relativeY / scrollbarArea.height;
-            scrollOffset = fmaxf(0.0f, fminf(scrollRatio * maxScrollOffset, maxScrollOffset));
+            if (scrollbarArea.height > 0) {
+                float scrollRatio = relativeY / scrollbarArea.height;
+                scrollOffset = fmaxf(0.0f, fminf(scrollRatio * maxScrollOffset, maxScrollOffset));
+            }
         } else {
             isDragging = false;
         }
@@ -197,11 +210,17 @@ void ListMenuView::updateScrollbar() {
     updateScrollbarArea();
 }
 
+Vector2 ListMenuView::getScrolledItemPosition(size_t index) const {
+    if (index >= _itemViews.size() || !_itemViews[index]) {
+        return {0, 0};
+    }
+    
+    Vector2 originalPos = _itemViews[index]->getPosition();
+    return {originalPos.x, originalPos.y - scrollOffset};
+}
+
 void ListMenuView::draw(std::shared_ptr<MenuComponent> menuModel) const {
     const auto& menuItems = menuModel->getChildren();
-    
-    // Handle input for scrolling (const_cast is used because input handling doesn't modify the logical state)
-    const_cast<ListMenuView*>(this)->handleScrollInput();
     
     // Draw background
     DrawRectangleRec(listArea, backgroundColor);
