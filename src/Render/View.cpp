@@ -17,6 +17,26 @@ ChessView::ChessView(Vector3 worldSize)
 }
 
 
+
+void ChessView::handleMouseOver() {
+    std::shared_ptr<BoardView> hoveredBoardView = nullptr;
+    Chess::Position2D hoveredPosition(-1, -1);
+
+    for (auto& boardView : _boardViews) {
+        if (boardView && boardView->isMouseOverBoard()) {
+            hoveredBoardView = boardView;
+            hoveredPosition = boardView->getMouseOverPosition();
+            break;  // Stop at the first hovered board
+        }
+    }
+
+    if (hoveredBoardView && hoveredPosition.x() != -1 && hoveredPosition.y() != -1) {
+        if (_onMouseOverPositionCallback) {
+            _onMouseOverPositionCallback({hoveredBoardView, hoveredPosition});
+        }
+    }
+}
+
 void ChessView::handleMouseSelection() {
     std::shared_ptr<BoardView> selectedBoardView = nullptr;
     Chess::Position2D selectedPosition(-1, -1);
@@ -43,7 +63,7 @@ void ChessView::handleInput() {
 
     /// @brief Handle mouse clicks: selected board and selected position
     handleMouseSelection();
-
+    handleMouseOver();
     /// @brief Handle user camera input (delegate to CameraController)
     _cameraController->handleUserInput();
 }

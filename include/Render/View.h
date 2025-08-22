@@ -48,8 +48,11 @@ public:
 
 private:
   std::function<void(std::pair<std::shared_ptr<BoardView>, Chess::Position2D>)> _onSelectedPositionCallback;
+  std::function<void(std::pair<std::shared_ptr<BoardView>, Chess::Position2D>)> _onMouseOverPositionCallback;
+
 public:
   virtual void setSelectedPositionCallback(std::function<void(std::pair<std::shared_ptr<BoardView>, Chess::Position2D>)> callback) { _onSelectedPositionCallback = callback; };
+  virtual void setMouseOverPositionCallback(std::function<void(std::pair<std::shared_ptr<BoardView>, Chess::Position2D>)> callback) { _onMouseOverPositionCallback = callback; };
 public:
   virtual void update(float deltaTime);
   virtual void handleInput();
@@ -60,6 +63,7 @@ private:
   std::vector<std::pair<std::shared_ptr<BoardView>, Chess::Position2D>> _highlightedPositions;
 public:
   virtual void handleMouseSelection(); 
+  virtual void handleMouseOver();
   virtual void render_highlightBoard() const;
   virtual void render_highlightedPositions() const;
   virtual void render_boardViews() const; 

@@ -69,8 +69,31 @@ void ChessController::setupViewCallbacks() {
     };
     handleSelectedPosition(selectedPosition);
   });
+
+  view.setMouseOverPositionCallback([this](std::pair<std::shared_ptr<BoardView>, Chess::Position2D> selectedPositionPair) {
+    // Handle the selected position from the view
+    Chess::SelectedPosition selectedPosition = {
+        _boardViewToBoardMap[selectedPositionPair.first], // Get the board from the BoardView
+        selectedPositionPair.second // Get the position from the pair
+    };
+    handleMouseOverPosition(selectedPosition);
+
+  });
 }
 
+void ChessController::handleMouseOverPosition(Chess::SelectedPosition selectedPosition) {
+  if (model._currentMoveState.currentPhase == MovePhase::SELECT_FROM_BOARD || 
+      model._currentMoveState.currentPhase == MovePhase::SELECT_FROM_POSITION) {
+    // If we are in the phase of selecting a board or position, we can highlight the mouse over position
+    resetHighlightedPositions();
+    addHighlightedPosition(selectedPosition);
+    std::vector<std::pair<std::shared_ptr<BoardView>, Chess::Position2D>> Converted_highlightedPositions;
+    for (const auto& pos : _highlightedPositions) {
+        Converted_highlightedPositions.emplace_back(_boardToBoardViewMap[pos.board], pos.position);
+    }
+    view.update_highlightedPositions(Converted_highlightedPositions);
+  }
+}
 
 void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPosition) {
   /// @brief chose the board to move from
