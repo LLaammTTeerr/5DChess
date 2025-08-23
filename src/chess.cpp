@@ -8,15 +8,10 @@
 namespace Chess {
 Vector4D::Vector4D(int x, int y, int z, int w) : _data({x, y, z, w}) {}
 
-const int Constant::BOARD_SIZE = 8;
-const int Constant::BOARD_SIZE_EMIT_BISHOP = 6;
-const int Constant::BOARD_SIZE_EMIT_KNIGHT = 6;
-const int Constant::BOARD_SIZE_EMIT_QUEEN = 7;
-
 Piece::Piece(PieceColor color, std::shared_ptr<Board> board, Position2D position)
     : _color(color), _board(board), _position(position) {}
 
-Board::Board(int N, std::shared_ptr<TimeLine> timeLine) : _N(N), _halfTurnNumber(0), _previousBoard(nullptr), _timeLine(timeLine) {
+Board::Board(int N, std::shared_ptr<TimeLine> timeLine, int halfTurnNumber) : _N(N), _halfTurnNumber(halfTurnNumber), _previousBoard(nullptr), _timeLine(timeLine) {
   _pieces.resize(N, std::vector<std::shared_ptr<Piece>>(N, nullptr));
 }
 
@@ -55,7 +50,7 @@ std::shared_ptr<TimeLine> Board::getTimeLine() const {
   return _timeLine;
 }
 
-TimeLine::TimeLine(int N, int IDX) : _N(N), _ID(IDX), _forkAt(-1), _parent(nullptr) {}
+TimeLine::TimeLine(int N, int IDX, int forkAt) : _N(N), _ID(IDX), _forkAt(forkAt), _parent(nullptr) {}
 
 void TimeLine::pushBack(std::shared_ptr<Board> board) {
   _history.push_back(board);
@@ -421,9 +416,9 @@ std::vector<SelectedPosition> IGame::getMoveablePositions(SelectedPosition selec
       if (to.x() >= 0 && to.x() < dim() && to.y() >= 0 && to.y() < dim()) {
         if (boardExists(to.w(), 2 * to.z() + parity)) {
           std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn(to);
-          if (targetPiece == nullptr || targetPiece->color() != _currentTurnColor)
+          if (targetPiece == nullptr || targetPiece->color() == _currentTurnColor)
             continue;
-          moveablePositions.emplace_back(getBoard(to.w(), 2 * to.z() + 1), Position2D(to.x(), to.y()));
+          moveablePositions.emplace_back(getBoard(to.w(), 2 * to.z() + parity), Position2D(to.x(), to.y()));
         }
       }
     }
@@ -564,7 +559,7 @@ StandardGame::StandardGame(void) : IGame(Constant::BOARD_SIZE) {
   _timeLines[0]->pushBack(board);
 }
 
-const std::string NameOfGame<CustomGameEmitBishop>::value = "Standard Game - No Bishop";
+const std::string NameOfGame<CustomGameEmitBishop>::value = "Simplify Game - No Bishop";
 CustomGameEmitBishop::CustomGameEmitBishop(void) : IGame(Constant::BOARD_SIZE_EMIT_BISHOP) {
   _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
   _timeLines.push_back(std::make_shared<TimeLine>(dim()));
@@ -589,7 +584,7 @@ CustomGameEmitBishop::CustomGameEmitBishop(void) : IGame(Constant::BOARD_SIZE_EM
   _timeLines[0]->pushBack(board);
 }
 
-const std::string NameOfGame<CustomGameEmitKnight>::value = "Standard Game - No Knight";
+const std::string NameOfGame<CustomGameEmitKnight>::value = "Simplify Game - No Knight";
 CustomGameEmitKnight::CustomGameEmitKnight(void) : IGame(Constant::BOARD_SIZE_EMIT_KNIGHT) {
   _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
   _timeLines.push_back(std::make_shared<TimeLine>(dim()));
@@ -614,7 +609,7 @@ CustomGameEmitKnight::CustomGameEmitKnight(void) : IGame(Constant::BOARD_SIZE_EM
   _timeLines[0]->pushBack(board);
 }
 
-const std::string NameOfGame<CustomGameEmitQueen>::value = "Standard Game - No Queen";
+const std::string NameOfGame<CustomGameEmitQueen>::value = "Simplify Game - No Queen";
 CustomGameEmitQueen::CustomGameEmitQueen(void) : IGame(Constant::BOARD_SIZE_EMIT_QUEEN) {
   _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
   _timeLines.push_back(std::make_shared<TimeLine>(dim()));
@@ -640,5 +635,183 @@ CustomGameEmitQueen::CustomGameEmitQueen(void) : IGame(Constant::BOARD_SIZE_EMIT
   board->placePiece({6, 6}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
   _timeLines[0]->pushBack(board);
 }
+
+const std::string NameOfGame<CustomGameEmitRook>::value = "Simplify Game - No Rook";
+CustomGameEmitRook::CustomGameEmitRook(void) : IGame(Constant::BOARD_SIZE_EMIT_ROOK) {
+  _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
+  _timeLines.push_back(std::make_shared<TimeLine>(dim()));
+  std::shared_ptr<Board> board = std::make_shared<Board>(dim(), _timeLines[0]);
+  for (int i = 0; i < dim(); i += 1) {
+    board->placePiece({i, 1}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
+    board->placePiece({i, 4}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
+  }
+  board->placePiece({0, 0}, std::make_shared<Knight>(PieceColor::PIECEWHITE));
+  board->placePiece({1, 0}, std::make_shared<Bishop>(PieceColor::PIECEWHITE));
+  board->placePiece({2, 0}, std::make_shared<Queen>(PieceColor::PIECEWHITE));
+  board->placePiece({3, 0}, std::make_shared<King>(PieceColor::PIECEWHITE));
+  board->placePiece({4, 0}, std::make_shared<Bishop>(PieceColor::PIECEWHITE));
+  board->placePiece({5, 0}, std::make_shared<Knight>(PieceColor::PIECEWHITE));
+
+  board->placePiece({0, 5}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
+  board->placePiece({1, 5}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
+  board->placePiece({2, 5}, std::make_shared<Queen>(PieceColor::PIECEBLACK));
+  board->placePiece({3, 5}, std::make_shared<King>(PieceColor::PIECEBLACK));
+  board->placePiece({4, 5}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
+  board->placePiece({5, 5}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
+  _timeLines[0]->pushBack(board);
+}
+
+const std::string NameOfGame<CustomGameKVB>::value = "Simplify Game - Knight vs Bishop";
+CustomGameKVB::CustomGameKVB(void) : IGame(Constant::BOARD_SIZE_K_VS_B) {
+  _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
+  _timeLines.push_back(std::make_shared<TimeLine>(dim()));
+  std::shared_ptr<Board> board = std::make_shared<Board>(dim(), _timeLines[0]);
+  for (int i = 0; i < dim(); i += 1) {
+    board->placePiece({i, 1}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
+    board->placePiece({i, 4}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
+  }
+  board->placePiece({0, 0}, std::make_shared<Rook>(PieceColor::PIECEWHITE));
+  board->placePiece({1, 0}, std::make_shared<Bishop>(PieceColor::PIECEWHITE));
+  board->placePiece({2, 0}, std::make_shared<Queen>(PieceColor::PIECEWHITE));
+  board->placePiece({3, 0}, std::make_shared<King>(PieceColor::PIECEWHITE));
+  board->placePiece({4, 0}, std::make_shared<Bishop>(PieceColor::PIECEWHITE));
+  board->placePiece({5, 0}, std::make_shared<Rook>(PieceColor::PIECEWHITE));
+
+  board->placePiece({0, 5}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
+  board->placePiece({1, 5}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
+  board->placePiece({2, 5}, std::make_shared<Queen>(PieceColor::PIECEBLACK));
+  board->placePiece({3, 5}, std::make_shared<King>(PieceColor::PIECEBLACK));
+  board->placePiece({4, 5}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
+  board->placePiece({5, 5}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
+  _timeLines[0]->pushBack(board);
+}
+
+const std::string NameOfGame<MiscGameTimeLineInvasion>::value = "Misc Game - Time Line Invasion";
+MiscGameTimeLineInvasion::MiscGameTimeLineInvasion(void) : IGame(Constant::BOARD_SIZE_TIME_LINE_INVASION) {
+  _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
+  _timeLines.push_back(std::make_shared<TimeLine>(dim(), 0));
+  _timeLines.push_back(std::make_shared<TimeLine>(dim(), 1));
+  std::shared_ptr<Board> board0 = std::make_shared<Board>(dim(), _timeLines[0]);
+  std::shared_ptr<Board> board1 = std::make_shared<Board>(dim(), _timeLines[1]);
+
+  board0->placePiece({0, dim() - 1}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
+  board0->placePiece({1, dim() - 1}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
+  board0->placePiece({2, dim() - 1}, std::make_shared<King>(PieceColor::PIECEBLACK));
+  board0->placePiece({3, dim() - 1}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
+  board0->placePiece({4, dim() - 1}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
+  for (int i = 0; i < dim(); i += 1) {
+    board0->placePiece({i, dim() - 2}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
+    board0->placePiece({i, 0}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
+  }
+
+  board1->placePiece({0, 0}, std::make_shared<Knight>(PieceColor::PIECEWHITE));
+  board1->placePiece({1, 0}, std::make_shared<Bishop>(PieceColor::PIECEWHITE));
+  board1->placePiece({2, 0}, std::make_shared<King>(PieceColor::PIECEWHITE));
+  board1->placePiece({3, 0}, std::make_shared<Rook>(PieceColor::PIECEWHITE));
+  board1->placePiece({4, 0}, std::make_shared<Bishop>(PieceColor::PIECEWHITE));
+  for (int i = 0; i < dim(); i += 1) {
+    board1->placePiece({i, 1}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
+    board1->placePiece({i, dim() - 1}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
+  }
+  _timeLines[0]->pushBack(board0);
+  _timeLines[1]->pushBack(board1);
+}
+
+const std::string NameOfGame<MiscGameTimeLineBattle>::value = "Misc Game - Time Line Battle";
+MiscGameTimeLineBattle::MiscGameTimeLineBattle(void) : IGame(Constant::BOARD_SIZE_TIME_LINE_BATTLE) {
+  _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
+  _timeLines.push_back(std::make_shared<TimeLine>(dim(), 0));
+  _timeLines.push_back(std::make_shared<TimeLine>(dim(), 1));
+  _timeLines.push_back(std::make_shared<TimeLine>(dim(), 2));
+  std::shared_ptr<Board> board0 = std::make_shared<Board>(dim(), _timeLines[0]);
+  std::shared_ptr<Board> board1 = std::make_shared<Board>(dim(), _timeLines[1]);
+  std::shared_ptr<Board> board2 = std::make_shared<Board>(dim(), _timeLines[2]);
+
+  board0->placePiece({0, dim() - 1}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
+  board0->placePiece({1, dim() - 1}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
+  board0->placePiece({2, dim() - 1}, std::make_shared<King>(PieceColor::PIECEBLACK));
+  board0->placePiece({3, dim() - 1}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
+  board0->placePiece({4, dim() - 1}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
+
+  board0->placePiece({0, dim() - 2}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
+  board0->placePiece({1, dim() - 2}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
+  board0->placePiece({2, dim() - 2}, std::make_shared<Queen>(PieceColor::PIECEBLACK));
+  board0->placePiece({3, dim() - 2}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
+  board0->placePiece({4, dim() - 2}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
+
+  for (int i = 0; i < dim(); i += 1) {
+    board0->placePiece({i, dim() - 3}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
+    board0->placePiece({i, 0}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
+  }
+
+  for (int i = 0; i < dim(); i += 1) {
+    board1->placePiece({i, 0}, std::make_shared<Knight>(PieceColor::PIECEWHITE));
+    board1->placePiece({i, 1}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
+
+    board1->placePiece({i, dim() - 1}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
+    board1->placePiece({i, dim() - 2}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
+  }
+
+  board2->placePiece({0, 0}, std::make_shared<Rook>(PieceColor::PIECEWHITE));
+  board2->placePiece({1, 0}, std::make_shared<Rook>(PieceColor::PIECEWHITE));
+  board2->placePiece({2, 0}, std::make_shared<King>(PieceColor::PIECEWHITE));
+  board2->placePiece({3, 0}, std::make_shared<Rook>(PieceColor::PIECEWHITE));
+  board2->placePiece({4, 0}, std::make_shared<Rook>(PieceColor::PIECEWHITE));
+
+  board2->placePiece({0, 1}, std::make_shared<Bishop>(PieceColor::PIECEWHITE));
+  board2->placePiece({1, 1}, std::make_shared<Bishop>(PieceColor::PIECEWHITE));
+  board2->placePiece({2, 1}, std::make_shared<Queen>(PieceColor::PIECEWHITE));
+  board2->placePiece({3, 1}, std::make_shared<Bishop>(PieceColor::PIECEWHITE));
+  board2->placePiece({4, 1}, std::make_shared<Bishop>(PieceColor::PIECEWHITE));
+
+  for (int i = 0; i < dim(); i += 1) {
+    board2->placePiece({i, 2}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
+    board2->placePiece({i, dim() - 1}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
+  }
+
+  _timeLines[0]->pushBack(board0);
+  _timeLines[1]->pushBack(board1);
+  _timeLines[2]->pushBack(board2);
+}
+
+const std::string NameOfGame<MiscGameTimeLineFragment>::value = "Misc Game - Time Line Fragment";
+MiscGameTimeLineFragment::MiscGameTimeLineFragment(void) : IGame(Constant::BOARD_SIZE_TIME_LINE_FRAGMENT) {
+  _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
+  _timeLines.push_back(std::make_shared<TimeLine>(dim(), 0, 0));
+  _timeLines.push_back(std::make_shared<TimeLine>(dim(), 1));
+  std::shared_ptr<Board> board0 = std::make_shared<Board>(dim(), _timeLines[0], 1);
+  std::shared_ptr<Board> board1 = std::make_shared<Board>(dim(), _timeLines[1], 0);
+
+  board0->placePiece({0, dim() - 1}, std::make_shared<King>(PieceColor::PIECEBLACK));
+  board0->placePiece({1, dim() - 1}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
+  board0->placePiece({2, dim() - 1}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
+  board0->placePiece({3, dim() - 1}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
+  board0->placePiece({0, 0}, std::make_shared<Knight>(PieceColor::PIECEWHITE));
+  board0->placePiece({1, 0}, std::make_shared<Bishop>(PieceColor::PIECEWHITE));
+  board0->placePiece({2, 0}, std::make_shared<Rook>(PieceColor::PIECEWHITE));
+  board0->placePiece({3, 0}, std::make_shared<Knight>(PieceColor::PIECEWHITE));
+
+  board1->placePiece({0, 0}, std::make_shared<King>(PieceColor::PIECEWHITE));
+  board1->placePiece({1, 0}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
+  board1->placePiece({2, 0}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
+  board1->placePiece({3, 0}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
+  board1->placePiece({0, dim() - 1}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
+  board1->placePiece({1, dim() - 1}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
+  board1->placePiece({2, dim() - 1}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
+  board1->placePiece({3, dim() - 1}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
+
+  _timeLines[0]->pushBack(board0);
+  _timeLines[1]->pushBack(board1);
+}
+
+const int Constant::BOARD_SIZE = 8;
+const int Constant::BOARD_SIZE_EMIT_BISHOP = 6;
+const int Constant::BOARD_SIZE_EMIT_KNIGHT = 6;
+const int Constant::BOARD_SIZE_EMIT_QUEEN = 7;
+const int Constant::BOARD_SIZE_EMIT_ROOK = 6;
+const int Constant::BOARD_SIZE_K_VS_B = 6;
+const int Constant::BOARD_SIZE_TIME_LINE_INVASION = 5;
+const int Constant::BOARD_SIZE_TIME_LINE_BATTLE = 5;
+const int Constant::BOARD_SIZE_TIME_LINE_FRAGMENT = 4;
 
 } // namespace Chess

@@ -280,14 +280,12 @@ std::vector<std::string> fetchGameMode(void) {
   REGISTER_MODE(Chess::CustomGameEmitBishop);
   REGISTER_MODE(Chess::CustomGameEmitKnight);
   REGISTER_MODE(Chess::CustomGameEmitQueen);
+  REGISTER_MODE(Chess::CustomGameEmitRook);
+  REGISTER_MODE(Chess::CustomGameKVB);
+  REGISTER_MODE(Chess::MiscGameTimeLineInvasion);
+  REGISTER_MODE(Chess::MiscGameTimeLineBattle);
+  REGISTER_MODE(Chess::MiscGameTimeLineFragment);
   #undef REGISTER_MODE
-
-  gameModes.push_back("Knight vs. Bishop");
-  gameModes.push_back("Simple Set");
-  gameModes.push_back("Small");
-  gameModes.push_back("Small - Flipped");
-  gameModes.push_back("Small - Centerd");
-  gameModes.push_back("Small - Open");
   return gameModes;
 }
 
