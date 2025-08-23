@@ -148,7 +148,7 @@ public:
 
   /// @brief Render present line behind all boards and arrows
   virtual void renderPresentLine() const;
-
+  virtual void renderEndGameScreen() const;
 public:
   ~ChessView() = default;
 };

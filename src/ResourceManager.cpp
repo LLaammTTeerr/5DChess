@@ -168,4 +168,6 @@ ResourceManager::ResourceManager() {
 
     _preloadTexture2D("assets/5DChess.png", "welcomeImage");
     _preloadTexture2D("assets/ChessBoardNoBound.png", "mainChessBoard");
+
+    _preloadTexture2D("assets/images/EndGame.png" , "endGameImage");
 }

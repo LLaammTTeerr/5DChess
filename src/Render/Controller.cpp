@@ -31,6 +31,9 @@ void ChessController::updateNewBoardViewsToView() {
 }
 
 void ChessController::update(float deltaTime) {
+  if (model._game->gameEnd()) {
+    return;
+  }
   updateCurrentBoardFromModel();
   updateBoardViewFromCurrentBoards();
   // after updating the board and board views, we need bridge the board to board view
@@ -390,6 +393,10 @@ std::vector<std::shared_ptr<BoardView>> ChessController::computeHighlightedBoard
   }
 
 void ChessController::render() {
+  if (model._game->gameEnd()) {
+    view.renderEndGameScreen();
+    return;
+  }
   view.render();
   renderInGameMenu();
 }

@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cfloat>
+#include "ResourceManager.h"
 
 ChessView::ChessView(Vector3 worldSize)
     : _worldSize(worldSize) {
@@ -286,4 +287,17 @@ void ChessView::updatePresentLine(const PresentLineData& lineData) {
 
 void ChessView::renderPresentLine() const {
     _presentLineRenderer->render(_cameraController->getCamera2D(), _cameraController->isUsing3DRendering(), _boardViews);
+}
+
+
+void ChessView::renderEndGameScreen() const {
+    Texture2D endGameTexture = ResourceManager::getInstance().getTexture2D("endGameImage");
+    DrawTexturePro(
+        endGameTexture,
+        Rectangle{0, 0, static_cast<float>(endGameTexture.width), static_cast<float>(endGameTexture.height)},
+        Rectangle{static_cast<float>(GetScreenWidth())/4.0f, static_cast<float>(GetScreenHeight())/4.0f, static_cast<float>(GetScreenWidth())/2.0f, static_cast<float>(GetScreenHeight()) /2.0f },
+        Vector2{0, 0},
+        0.0f,
+        WHITE
+    );
 }
