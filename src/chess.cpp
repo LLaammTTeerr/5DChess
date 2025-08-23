@@ -290,6 +290,7 @@ std::vector<SelectedPosition> IGame::getMoveablePositions(SelectedPosition selec
         int nz = from.z() - d;
         if (nz < 0) break;
         if (nx < 0 || nx >= dim()) break;
+        if (!boardExists(from.w(), 2 * nz + parity)) break;
         std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({nx, from.y(), nz, from.w()});
         if (targetPiece != nullptr and targetPiece->color() == _currentTurnColor) {
           break;
@@ -307,6 +308,7 @@ std::vector<SelectedPosition> IGame::getMoveablePositions(SelectedPosition selec
         int nz = from.z() - d;
         if (nz < 0) break;
         if (ny < 0 || ny >= dim()) break;
+        if (!boardExists(from.w(), 2 * nz + parity)) break;
         std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({from.x(), ny, nz, from.w()});
         if (targetPiece != nullptr and targetPiece->color() == _currentTurnColor) {
           break;
@@ -512,8 +514,9 @@ void IGame::makeMove(Move move) {
 
   if (toTimeLine != move.to.board->getTimeLine()) {
     _timeLines.push_back(toTimeLine);
-    list.push_back(toTimeLine->ID());
   }
+
+  list.push_back(toTimeLine->ID());
 
   std::shared_ptr<Board> newToBoard = move.to.board->getTimeLine()->getBoardByHalfTurn(move.to.board->halfTurnNumber())->createFork(toTimeLine);
   newToBoard->placePiece(move.to.position, piece);
