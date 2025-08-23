@@ -42,9 +42,8 @@ std::shared_ptr<MenuComponent> MainMenuState::createNavigationMenu(GameStateMode
 
   
   std::shared_ptr<MenuComponent> Puzzles = std::make_shared<MenuItem>("Puzzles", true);
-  std::shared_ptr<MenuComponent> Exit = std::make_shared<MenuItem>("Exit", true); 
-
-  
+  std::shared_ptr<MenuComponent> Exit = std::make_shared<MenuItem>("Exit", true);
+  Exit->setCommand(createExitCommand()); // Set command for Exit
 
   mainMenu->addItem(Versus);
   mainMenu->addItem(Puzzles);

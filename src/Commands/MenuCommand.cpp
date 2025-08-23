@@ -12,6 +12,8 @@
 #include "GameStates/ConcreteGameStates/SettingsState.h"
 #include "Render/Controller.h"
 
+#include "PieceTheme.h"
+
 // ChangeStateCommand execute implementation
 void ChangeStateCommand::execute() {
   if (_gameStateModel && _stateFactory) {
@@ -146,12 +148,15 @@ std::unique_ptr<ICommand> GameModeSelectCommand::clone() const {
 void ThemeSelectCommand::execute() {
     std::cout << "Selected theme: " << _theme << std::endl;
     
-    // Apply theme change through SettingsState if available
-    if (_settingsState) {
-        _settingsState->setTheme(_theme);
+    if (_theme == "Classic") {
+      ThemeManager::getInstance().setTheme(std::make_unique<ClassicTheme>());
     }
-    
-    executeCallback(); // Execute the callback if set
+    else if (_theme == "Modern") {
+      ThemeManager::getInstance().setTheme(std::make_unique<ModernTheme>());
+    }
+    else if (_theme == "Fantasy") {
+      ThemeManager::getInstance().setTheme(std::make_unique<Modern2Theme>());
+    }
 }
 
 std::unique_ptr<ICommand> ThemeSelectCommand::clone() const {
@@ -185,3 +190,10 @@ std::unique_ptr<MusicSelectCommand> createMusicSelectCommand(const std::string& 
     return std::make_unique<MusicSelectCommand>(music, settingsState);
 }
 
+std::unique_ptr<ICommand> ExitCommand::clone() const {
+    return std::make_unique<ExitCommand>();
+}
+
+std::unique_ptr<ICommand> createExitCommand() {
+    return std::make_unique<ExitCommand>();
+}

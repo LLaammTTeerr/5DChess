@@ -2,6 +2,7 @@
 #include "ICommand.h"
 #include "gameState.h"
 #include <functional>
+#include <raylib.h>
 
 // Forward declarations
 class SceneManager;
@@ -183,3 +184,21 @@ public:
   std::unique_ptr<ICommand> clone() const override;
   CommandType getType() const override { return CommandType::IMMEDIATE; }
 };
+
+class ExitCommand : public ICommand {
+public:
+  ExitCommand() = default;
+  void execute() override {
+    // CloseWindow();
+    exit(0);
+  };
+  virtual bool canUndo() const override { return false; }
+  virtual bool canRedo() const override { return false; }
+  void undo() override {}
+  void redo() override {}
+  std::string getName() const override { return "Exit Command"; }
+  std::unique_ptr<ICommand> clone() const override;
+  CommandType getType() const override { return CommandType::IMMEDIATE; }
+};
+
+std::unique_ptr<ICommand> createExitCommand();

@@ -20,6 +20,8 @@ private:
   std::shared_ptr<InGameMenuController> _inGameMenuController;
   std::shared_ptr<MenuComponent> _inGameMenuSystem;
 private:
+  bool _isGameEnd = false;
+private:
   void initInGameMenu();
   void renderInGameMenu() const;
   void updateMenuButtonStates(); // Update menu button enabled/disabled states based on game state

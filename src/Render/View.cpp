@@ -290,14 +290,6 @@ void ChessView::renderPresentLine() const {
 }
 
 
-void ChessView::renderEndGameScreen() const {
-    Texture2D endGameTexture = ResourceManager::getInstance().getTexture2D("endGameImage");
-    DrawTexturePro(
-        endGameTexture,
-        Rectangle{0, 0, static_cast<float>(endGameTexture.width), static_cast<float>(endGameTexture.height)},
-        Rectangle{static_cast<float>(GetScreenWidth())/4.0f, static_cast<float>(GetScreenHeight())/4.0f, static_cast<float>(GetScreenWidth())/2.0f, static_cast<float>(GetScreenHeight()) /2.0f },
-        Vector2{0, 0},
-        0.0f,
-        WHITE
-    );
+void ChessView::renderEndGameScreen(std::string winnerText) const {
+    DrawText(winnerText.c_str(), GetScreenWidth() / 2 - MeasureText(winnerText.c_str(), 20) / 2, GetScreenHeight() / 2 - 10, 20, WHITE);
 }

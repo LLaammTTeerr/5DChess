@@ -31,9 +31,6 @@ void ChessController::updateNewBoardViewsToView() {
 }
 
 void ChessController::update(float deltaTime) {
-  if (model._game->gameEnd()) {
-    return;
-  }
   updateCurrentBoardFromModel();
   updateBoardViewFromCurrentBoards();
   // after updating the board and board views, we need bridge the board to board view
@@ -57,6 +54,11 @@ void ChessController::update(float deltaTime) {
   
   // Update menu button states based on current game state
   updateMenuButtonStates();
+  
+  if (model._game->gameEnd()) {
+    _isGameEnd = true;
+    return;
+  }
 }
 
 void ChessController::handleInput() {
@@ -89,6 +91,9 @@ void ChessController::setupViewCallbacks() {
 }
 
 void ChessController::handleMouseOverPosition(Chess::SelectedPosition selectedPosition) {
+  if (_isGameEnd) {
+    return; // Ignore input if the game has ended
+  }
   if (model._currentMoveState.currentPhase == MovePhase::SELECT_FROM_BOARD || 
       model._currentMoveState.currentPhase == MovePhase::SELECT_FROM_POSITION) {
     // If we are in the phase of selecting a board or position, we can highlight the mouse over position
@@ -289,6 +294,9 @@ void ChessController::handleSelectedToPosition(Chess::SelectedPosition selectedP
 }
 
 void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPosition) {
+  if (_isGameEnd) {
+    return; // Ignore input if the game has ended
+  }
   /// @brief chose the board to move from
   if (model._currentMoveState.currentPhase == MovePhase::SELECT_FROM_BOARD) {
     handleSelectedFromBoard(selectedPosition);
@@ -393,12 +401,14 @@ std::vector<std::shared_ptr<BoardView>> ChessController::computeHighlightedBoard
   }
 
 void ChessController::render() {
-  if (model._game->gameEnd()) {
-    view.renderEndGameScreen();
-    return;
-  }
   view.render();
   renderInGameMenu();
+
+  if (model._game->gameEnd()) {
+    auto winner = model._game->getWinner();
+    std::string winnerText = (winner == Chess::PieceColor::PIECEWHITE) ? "White Wins!" : "Black Wins!";
+    view.renderEndGameScreen(winnerText);
+  }
 }
 
 
@@ -455,14 +465,14 @@ void ChessController::updateMenuButtonStates() {
 
   // Update Undo button: enabled if there are moves to undo
   if (undoItem) {
-    bool canUndo = model._game->undoable();
+    bool canUndo = model._game->undoable() && !model._game->gameEnd();
     undoItem->setEnabled(canUndo);
   }
 
   // Update Submit button: enabled if there are no moveable boards (turn can be submitted)
   if (submitItem) {
     std::vector<std::shared_ptr<Chess::Board>> moveableBoards = model._game->getMoveableBoards();
-    bool canSubmit = moveableBoards.empty();
+    bool canSubmit = moveableBoards.empty() && !model._game->gameEnd();
     submitItem->setEnabled(canSubmit);
   }
 
@@ -470,7 +480,7 @@ void ChessController::updateMenuButtonStates() {
   // (i.e., not in the initial SELECT_FROM_BOARD phase or has selections made)
   if (deselectItem) {
     bool canDeselect = model._currentMoveState.currentPhase != MovePhase::SELECT_FROM_BOARD ||
-                       model._currentMoveState.selectedBoard != nullptr;
+                       model._currentMoveState.selectedBoard != nullptr && !model._game->gameEnd();
     deselectItem->setEnabled(canDeselect);
   }
 }

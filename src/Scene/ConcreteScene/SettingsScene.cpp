@@ -24,12 +24,12 @@ void SettingsScene::init(void) {
     std::shared_ptr<MenuComponent> ModernTheme = std::make_shared<MenuItem>("Modern", true);
     ModernTheme->setCommand(createThemeSelectCommand("Modern"));
     
-    std::shared_ptr<MenuComponent> Modern2Theme = std::make_shared<MenuItem>("Modern2", true);
-    Modern2Theme->setCommand(createThemeSelectCommand("Modern2"));
+    std::shared_ptr<MenuComponent> FantasyTheme = std::make_shared<MenuItem>("Fantasy", true);
+    FantasyTheme->setCommand(createThemeSelectCommand("Fantasy"));
 
     ThemeSection->addItem(ClassicTheme);
     ThemeSection->addItem(ModernTheme);
-    ThemeSection->addItem(Modern2Theme);
+    ThemeSection->addItem(FantasyTheme);
 
     // Add the theme section to the main menu system
     _settingMenuSystem->addItem(ThemeSection);
