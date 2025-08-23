@@ -418,7 +418,7 @@ std::vector<SelectedPosition> IGame::getMoveablePositions(SelectedPosition selec
       if (to.x() >= 0 && to.x() < dim() && to.y() >= 0 && to.y() < dim()) {
         if (boardExists(to.w(), 2 * to.z() + parity)) {
           std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn(to);
-          if (targetPiece == nullptr || targetPiece->color() == _currentTurnColor)
+          if (targetPiece and targetPiece->color() == _currentTurnColor)
             continue;
           moveablePositions.emplace_back(getBoard(to.w(), 2 * to.z() + parity), Position2D(to.x(), to.y()));
         }

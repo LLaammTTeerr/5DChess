@@ -1,6 +1,7 @@
 #pragma once
 #include "Scene.h"
 #include <string>
+#include <memory>
 
 class SettingMenuController;
 class MenuComponent;
