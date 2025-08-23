@@ -48,26 +48,65 @@ void CameraController::handleUserInput() {
         std::cout << "Manual auto-zoom triggered!" << std::endl;
     }
     
-    // Handle mouse dragging for camera panning
-    if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+    // Handle mouse dragging for camera panning - with anti-accidental measures
+    if (IsMouseButtonDown(MOUSE_LEFT_BUTTON) && shouldAllowCameraControl()) {
         Vector2 mouseDelta = GetMouseDelta();
-        if (Vector2Length(mouseDelta) > 0.1f) {
-            moveCamera(Vector2Scale(mouseDelta, -1.0f / _camera2D.zoom));
-            // User input detected, switch to user control
+        float deltaLength = Vector2Length(mouseDelta);
+        
+        // Require significant movement to prevent accidental camera control
+        const float MIN_DRAG_THRESHOLD = 5.0f;  // Minimum pixels of movement
+        const float MIN_DRAG_TIME = 0.1f;       // Minimum time of continuous dragging
+        
+        if (deltaLength > MIN_DRAG_THRESHOLD) {
+            if (!_isDragging) {
+                _isDragging = true;
+                _dragTime = 0.0f;
+            } else {
+                _dragTime += GetFrameTime();
+            }
+            
+            // Only switch to user control after sustained dragging
+            if (_dragTime >= MIN_DRAG_TIME && deltaLength > 1.0f) {
+                moveCamera(Vector2Scale(mouseDelta, -1.0f / _camera2D.zoom));
+                // User input detected, switch to user control
+                _cameraState = CameraState::USER_CONTROLLED;
+                _timeSinceUserInput = 0.0f;
+            }
+        }
+    } else {
+        // Reset dragging state when mouse is released or camera control not allowed
+        _isDragging = false;
+        _dragTime = 0.0f;
+    }
+    
+    // Handle mouse wheel zoom - with anti-accidental measures
+    float wheel = GetMouseWheelMove();
+    if (wheel != 0 && shouldAllowCameraControl()) {
+        // Require more significant wheel movement to prevent accidental zoom control
+        const float MIN_WHEEL_THRESHOLD = 0.5f;  // Minimum wheel movement
+        
+        _accumulatedWheel += wheel;
+        _wheelResetTimer = 0.2f; // Reset accumulated wheel after 0.2 seconds of no input
+        
+        // Only apply zoom if accumulated wheel movement is significant
+        if (std::abs(_accumulatedWheel) >= MIN_WHEEL_THRESHOLD) {
+            std::cout << "Mouse wheel moved: " << _accumulatedWheel << ", current zoom: " << _camera2D.zoom << std::endl;
+            setZoom(_use3DRendering ? _camera3D.fovy + _accumulatedWheel * 5.0f : _camera2D.zoom + _accumulatedWheel * 0.1f);
+            
+            // User input detected, switch to user control temporarily
             _cameraState = CameraState::USER_CONTROLLED;
             _timeSinceUserInput = 0.0f;
+            
+            _accumulatedWheel = 0.0f; // Reset after applying
         }
     }
     
-    // Handle mouse wheel zoom (this is also called from the update method)
-    float wheel = GetMouseWheelMove();
-    if (wheel != 0) {
-        std::cout << "Mouse wheel moved: " << wheel << ", current zoom: " << _camera2D.zoom << std::endl;
-        setZoom(_use3DRendering ? _camera3D.fovy + wheel * 5.0f : _camera2D.zoom + wheel * 0.1f);
-        
-        // User input detected, switch to user control temporarily
-        _cameraState = CameraState::USER_CONTROLLED;
-        _timeSinceUserInput = 0.0f;
+    // Reset accumulated wheel if no input for a while
+    if (_wheelResetTimer > 0.0f) {
+        _wheelResetTimer -= GetFrameTime();
+        if (_wheelResetTimer <= 0.0f) {
+            _accumulatedWheel = 0.0f;
+        }
     }
 }
 
@@ -542,6 +581,15 @@ void CameraController::renderDebugInfo() const {
     // Instructions
     DrawText("Controls: Z=Toggle Auto-Zoom, X=Force Auto-Zoom", 10, 195, 12, LIGHTGRAY);
     DrawText("Mouse: Drag=Pan, Wheel=Zoom", 10, 210, 12, LIGHTGRAY);
+}
+
+bool CameraController::shouldAllowCameraControl() const {
+    // Add conditions here that would prevent camera control
+    // For example: during piece movement, menu interactions, etc.
+    
+    // For now, always allow but with the anti-accidental measures
+    // This can be extended later to check game state
+    return true;
 }
 
 

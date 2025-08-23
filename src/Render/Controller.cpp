@@ -99,9 +99,7 @@ void ChessController::handleMouseOverPosition(Chess::SelectedPosition selectedPo
   }
 }
 
-void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPosition) {
-  /// @brief chose the board to move from
-  if (model._currentMoveState.currentPhase == MovePhase::SELECT_FROM_BOARD) {
+void ChessController::handleSelectedFromBoard(Chess::SelectedPosition selectedPosition) {
     // Select the board from which to move
     /// @brief Step 1: Check if the selected board is valid
     if (!model._game->canMakeMoveFromBoard(selectedPosition.board)) {
@@ -126,11 +124,10 @@ void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPos
     if (selectedBoardView) {
       view.focusOnBoardWithAdaptiveZoom(selectedBoardView);
     }
+}
 
-  } 
-  /// @brief chose the position to move from
-  else if (model._currentMoveState.currentPhase == MovePhase::SELECT_FROM_POSITION) {
-    // Select the position on the selected board
+void ChessController::handleSelectedFromPosition(Chess::SelectedPosition selectedPosition) {
+   // Select the position on the selected board
     /// Step 1: Check if the selected position is valid
     if (selectedPosition.board ->getPiece(selectedPosition.position) == nullptr) return;
     // highlight Piece's position
@@ -166,9 +163,11 @@ void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPos
     if (selectedBoardView) {
       view.focusOnBoardWithAdaptiveZoom(selectedBoardView);
     }
-  } 
-  else if (model._currentMoveState.currentPhase == MovePhase::SELECT_TO_BOARD) {
-    /// @brief Step 1: Check if the selected board is valid
+}
+
+void ChessController::handleSelectedToBoard(Chess::SelectedPosition selectedPosition) {
+    // Select the target board to which to move
+   /// @brief Step 1: Check if the selected board is valid
     if (selectedPosition.board == nullptr) {
       std::cout << "Invalid selection: no target board selected." << std::endl;
       return; // Invalid selection
@@ -196,10 +195,18 @@ void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPos
     /// @brief Step 3: Update the view with the highlighted board
     addHighlightedBoard(selectedPosition.board);
     view.update_highlightedBoard(computeHighlightedBoardViews());
+}
 
-
-  } else if (model._currentMoveState.currentPhase == MovePhase::SELECT_TO_POSITION) {
-    // Select the target position on the target board
+void ChessController::handleSelectedToPosition(Chess::SelectedPosition selectedPosition) {
+ // Select the target position on the target board
+  if (selectedPosition.board == nullptr) {
+      std::cout << "Invalid selection: no target board selected." << std::endl;
+      return; // Invalid selection
+    }
+    if (selectedPosition.position == Chess::Position2D(-1, -1)) {
+      std::cout << "Invalid selection: no target position selected." << std::endl;
+      return; // Invalid selection
+    }
     /// @brief Step 1: Check if the selected position is valid
     std::vector<Chess::SelectedPosition> getMoveablePositions = 
       model._game->getMoveablePositions(Chess::SelectedPosition(
@@ -276,8 +283,25 @@ void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPos
     });
     view.focusOnNewestBoard(newestBoardView);
     // view.focusOnNewestBoard();
-  }
+}
 
+void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPosition) {
+  /// @brief chose the board to move from
+  if (model._currentMoveState.currentPhase == MovePhase::SELECT_FROM_BOARD) {
+    handleSelectedFromBoard(selectedPosition);
+    handleSelectedFromPosition(selectedPosition);
+  } 
+  /// @brief chose the position to move from
+  else if (model._currentMoveState.currentPhase == MovePhase::SELECT_FROM_POSITION) {
+    handleSelectedFromPosition(selectedPosition);
+  } 
+  else if (model._currentMoveState.currentPhase == MovePhase::SELECT_TO_BOARD) {
+    handleSelectedToBoard(selectedPosition);
+    handleSelectedToPosition(selectedPosition);
+  } 
+  else if (model._currentMoveState.currentPhase == MovePhase::SELECT_TO_POSITION) {
+    handleSelectedToPosition(selectedPosition);
+  }
 }
 
 std::vector<std::shared_ptr<BoardView>> ChessController::computeBoardViewFromCurrentBoards(std::string boardType) const {
@@ -453,20 +477,6 @@ void ChessController::handleUndoMove() {
   resetHighlightedBoard();
   resetHighlightedPositions();
   
-  // Focus camera on the newest board after undo
-  // Focus camera on the newest board with appropriate zoom
-    std::shared_ptr<Chess::Board> newestBoard = model._game->getNewBoard();
-    // calculate the position of the newest board view, the boardview of the newest board is not set in this frame
-    // so just calculate the position based on the board's half turn number and time line ID
-    std::shared_ptr<BoardView> newestBoardView = std::make_shared<BoardView2D>();
-    newestBoardView->setBoardTexture(&ResourceManager::getInstance().getTexture2D("mainChessBoard"));
-    newestBoardView->setRenderArea({
-        static_cast<float>(newestBoard->halfTurnNumber()) * (BOARD_WORLD_SIZE + HORIZONTAL_SPACING),
-        static_cast<float>(newestBoard->getTimeLine()->ID()) * (BOARD_WORLD_SIZE + VERTICAL_SPACING),
-        BOARD_WORLD_SIZE,
-        BOARD_WORLD_SIZE
-    });
-    view.focusOnNewestBoard(newestBoardView);
   
   // Update menu button states after game state change
   updateMenuButtonStates();

@@ -83,6 +83,12 @@ private:
   // Methods to update model state based on user input
   void handleSelectedPosition(Chess::SelectedPosition selectedPosition);
   void handleMouseOverPosition(Chess::SelectedPosition selectedPosition);
+  
+  void handleSelectedFromBoard(Chess::SelectedPosition selectedPosition);
+  void handleSelectedFromPosition(Chess::SelectedPosition selectedPosition);
+  void handleSelectedToBoard(Chess::SelectedPosition selectedPosition);
+  void handleSelectedToPosition(Chess::SelectedPosition selectedPosition);
+
   void handleUndoMove();
   void handleSubmitMove();
   void handleDeselectPosition();

@@ -37,6 +37,15 @@ private:
   float _zoomTransitionSpeed = 1.5f; // Speed of zoom transitions
   bool _autoZoomEnabled = true; // Whether auto-zoom is enabled
 
+  // Anti-accidental input tracking
+  bool _isDragging = false;
+  float _dragTime = 0.0f;
+  float _accumulatedWheel = 0.0f;
+  float _wheelResetTimer = 0.0f;
+
+  // Helper method to check if camera should be user-controllable
+  bool shouldAllowCameraControl() const;
+
 public:
   CameraController(Vector3 worldSize);
   
