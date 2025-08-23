@@ -80,10 +80,13 @@ public:
 
 private:
   int _selectedSettingIndex = -1; // Track selected setting index
+  int _selectedPieceThemeIndex = -1; // Track selected piece theme index
 private:
   std::shared_ptr<MenuComponent> _workerMenu = nullptr;
   std::shared_ptr<ButtonMenuView> _workerMenuView = nullptr;
   void computeWorkerMenuView();
+
+  void renderPreviewPieceTheme() const;
 };
 
 class VersusScene; // Forward declaration

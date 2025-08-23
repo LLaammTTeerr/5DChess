@@ -12,6 +12,7 @@
 #include "VersusScene.h" // Include VersusScene for VersusMenuController
 #include <cmath>
 #include "ResourceManager.h"
+#include "PieceTheme.h"
 
 NavigationMenuController::NavigationMenuController(GameStateModel* gameStateModel, std::shared_ptr<MenuComponent> menuSystem,
                                SceneManager* sceneManager)
@@ -382,6 +383,7 @@ void SettingMenuController::handleInput() {
             workerItemViews[i]->setHovered(isHovered);
 
             if (isHovered && mouseClicked) {
+                _selectedPieceThemeIndex = static_cast<int>(i);
                 auto command = workerMenuItems[i]->cloneCommand();
                 if (command) {
                     command->execute(); // Execute the command
@@ -442,7 +444,20 @@ void SettingMenuController::update() {
     if (selectedIndex >= 0 && selectedIndex < (int)(ItemViews.size())) {
         ItemViews[selectedIndex]->setSelected(true);
     }
-}
+
+    if (_workerMenu) {
+        auto workerItemViews = _workerMenuView->getItemViews();
+        for (auto itemView : workerItemViews) {
+            if (itemView) {
+                itemView->setSelected(false);
+            }
+        }
+        int selectedPieceIndex = _selectedPieceThemeIndex;
+        if (selectedPieceIndex >= 0 && selectedPieceIndex < (int)(workerItemViews.size())) {
+            workerItemViews[selectedPieceIndex]->setSelected(true);
+        }
+    }
+} 
 
 void SettingMenuController::draw() const {
     if (_menuView) {
@@ -451,4 +466,33 @@ void SettingMenuController::draw() const {
     if (_workerMenuView && _workerMenu) {
         _workerMenuView->draw(_workerMenu);
     }
+
+    if (_workerMenu && _selectedPieceThemeIndex >= 0) {
+        renderPreviewPieceTheme();
+    }
+}
+
+void SettingMenuController::renderPreviewPieceTheme() const {
+    Texture2D& previewPiece = ThemeManager::getInstance().getPieceTexture("white_pawn");
+    DrawTexturePro(previewPiece, 
+                       {0, 0, (float)previewPiece.width, (float)previewPiece.height}, 
+                       {300, 300, 100.0f, 100.0f},
+                       {0, 0}, 
+                       0.0f, 
+                       WHITE);
+
+    Texture2D& previewPiece2 = ThemeManager::getInstance().getPieceTexture("black_king");
+    DrawTexturePro(previewPiece2, 
+                       {0, 0, (float)previewPiece2.width, (float)previewPiece2.height}, 
+                       {450, 300, 100.0f, 100.0f},
+                       {0, 0}, 
+                       0.0f, 
+                       WHITE);  
+    Texture2D& previewPiece3 = ThemeManager::getInstance().getPieceTexture("white_queen");
+    DrawTexturePro(previewPiece3, 
+                       {0, 0, (float)previewPiece3.width, (float)previewPiece3.height}, 
+                       {600, 300, 100.0f, 100.0f},
+                       {0, 0}, 
+                       0.0f, 
+                       WHITE);
 }
