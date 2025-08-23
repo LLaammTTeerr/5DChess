@@ -16,6 +16,11 @@ void TestingScene::init(void) {
   TRY_LOAD_MODE(Chess::CustomGameEmitBishop);
   TRY_LOAD_MODE(Chess::CustomGameEmitKnight);
   TRY_LOAD_MODE(Chess::CustomGameEmitQueen);
+  TRY_LOAD_MODE(Chess::CustomGameEmitRook);
+  TRY_LOAD_MODE(Chess::CustomGameKVB);
+  TRY_LOAD_MODE(Chess::MiscGameTimeLineInvasion);
+  TRY_LOAD_MODE(Chess::MiscGameTimeLineBattle);
+  TRY_LOAD_MODE(Chess::MiscGameTimeLineFragment);
   #undef TRY_LOAD_MODE
 
   _chessModel = std::make_shared<ChessModel>(_game);

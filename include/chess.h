@@ -288,7 +288,7 @@ public:
 
 class Board : public std::enable_shared_from_this<Board> {
 public:
-  Board(int N, std::shared_ptr<TimeLine> timeLine);
+  Board(int N, std::shared_ptr<TimeLine> timeLine, int halfTurnNumber = 0);
 
   /**
    * Get the dimension of the board.
@@ -344,7 +344,7 @@ private:
 
 class TimeLine : public std::enable_shared_from_this<TimeLine> {
 public:
-  TimeLine(int N, int IDX = 0);
+  TimeLine(int N, int IDX = 0, int forkAt = -1);
 
   /**
    * Get the ID of the timeline.
@@ -590,6 +590,11 @@ public:
   static const int BOARD_SIZE_EMIT_BISHOP;
   static const int BOARD_SIZE_EMIT_KNIGHT;
   static const int BOARD_SIZE_EMIT_QUEEN;
+  static const int BOARD_SIZE_EMIT_ROOK;
+  static const int BOARD_SIZE_K_VS_B;
+  static const int BOARD_SIZE_TIME_LINE_INVASION;
+  static const int BOARD_SIZE_TIME_LINE_BATTLE;
+  static const int BOARD_SIZE_TIME_LINE_FRAGMENT;
 };
 
 class StandardGame : public IGame {
@@ -610,6 +615,31 @@ public:
 class CustomGameEmitQueen : public IGame {
 public:
   CustomGameEmitQueen(void);
+};
+
+class CustomGameEmitRook : public IGame {
+public:
+  CustomGameEmitRook(void);
+};
+
+class CustomGameKVB : public IGame {
+public:
+  CustomGameKVB(void);
+};
+
+class MiscGameTimeLineInvasion : public IGame {
+public:
+  MiscGameTimeLineInvasion(void);
+};
+
+class MiscGameTimeLineBattle : public IGame {
+public:
+  MiscGameTimeLineBattle(void);
+};
+
+class MiscGameTimeLineFragment : public IGame {
+public:
+  MiscGameTimeLineFragment(void);
 };
 
 template<class T>
@@ -636,5 +666,24 @@ template<> struct NameOfGame<CustomGameEmitQueen> {
   static const std::string value;
 };
 
+template<> struct NameOfGame<CustomGameEmitRook> {
+  static const std::string value;
+};
+
+template <> struct NameOfGame<CustomGameKVB> {
+  static const std::string value;
+};
+
+template <> struct NameOfGame<MiscGameTimeLineInvasion> {
+  static const std::string value;
+};
+
+template<> struct NameOfGame<MiscGameTimeLineBattle> {
+  static const std::string value;
+};
+
+template<> struct NameOfGame<MiscGameTimeLineFragment> {
+  static const std::string value;
+};
 
 } // namespace Chess
