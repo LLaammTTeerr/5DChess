@@ -11,6 +11,7 @@
 #include "Render/RenModel.h"
 #include "VersusScene.h" // Include VersusScene for VersusMenuController
 #include <cmath>
+#include "ResourceManager.h"
 
 NavigationMenuController::NavigationMenuController(GameStateModel* gameStateModel, std::shared_ptr<MenuComponent> menuSystem,
                                SceneManager* sceneManager)
@@ -124,7 +125,7 @@ InGameMenuController::InGameMenuController(ChessModel* chessModel, ChessView* ch
 void InGameMenuController::setViewStrategy(std::unique_ptr<IMenuView> view) {
     _menuView = std::move(view);
     if (_menuView) {
-        int numberOfItems = 3; // Deslect, Undo, Submit
+        int numberOfItems = _menuSystem->getChildren().size(); // Deslect, Undo, Submit
         _menuView->createInGameItemsViews(numberOfItems);
     }
 }
@@ -330,5 +331,126 @@ void VersusMenuController::selectGameMode(const std::string& mode) {
                 break;
             }
         }
+    }
+}
+
+SettingMenuController::SettingMenuController(std::shared_ptr<MenuComponent> menuSystem) {
+    _menuSystem = menuSystem;
+    _currentMenuModel = _menuSystem;
+    setViewStrategy(std::make_unique<ButtonMenuView>());
+}
+
+void SettingMenuController::setViewStrategy(std::unique_ptr<IMenuView> view) {
+    _menuView = std::move(view);
+    if (_menuView) {
+        int numberOfItems = _currentMenuModel->getChildren().size();
+        _menuView->createSettingsMenuItemViews(numberOfItems);
+    }
+}
+
+void SettingMenuController::updateNavigationMenuForCurrentState() {
+    // Settings menu is static, no dynamic updates needed
+}
+
+void SettingMenuController::handleInput() {
+    Vector2 mousePosition = GetMousePosition();
+    bool mouseClicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+
+    if (!_menuView) {
+        std::cout << "InGameMenuView is not set." << std::endl;
+        return; // No view strategy set
+    }
+
+    const std::vector<std::shared_ptr<MenuItemView>>& itemViews = _menuView->getItemViews();
+    const auto& menuItems = _menuSystem->getChildren();
+
+    for (size_t i = 0; i < itemViews.size() && i < menuItems.size(); ++i) {
+        bool isHovered = itemViews[i]->isPointInside(mousePosition) && menuItems[i]->isEnabled();
+        itemViews[i]->setHovered(isHovered);
+
+        if (isHovered && mouseClicked) {
+            if (i != _selectedSettingIndex) {
+                _selectedSettingIndex = static_cast<int>(i);
+            }
+        }
+    }
+
+    if (_workerMenu) {
+        const std::vector<std::shared_ptr<MenuItemView>>& workerItemViews = _workerMenuView->getItemViews();
+        const auto& workerMenuItems = _workerMenu->getChildren();
+
+        for (size_t i = 0; i < workerItemViews.size() && i < workerMenuItems.size(); ++i) {
+            bool isHovered = workerItemViews[i]->isPointInside(mousePosition) && workerMenuItems[i]->isEnabled();
+            workerItemViews[i]->setHovered(isHovered);
+
+            if (isHovered && mouseClicked) {
+                auto command = workerMenuItems[i]->cloneCommand();
+                if (command) {
+                    command->execute(); // Execute the command
+                }
+            }
+        }
+    }
+}
+
+void SettingMenuController::computeWorkerMenuView() {
+    if (_workerMenu) {
+        int numberOfItems = _workerMenu->getChildren().size();
+        if (!_workerMenuView) {
+            _workerMenuView = std::make_shared<ButtonMenuView>();
+        }
+
+        std::vector<std::shared_ptr<MenuItemView>> itemViews;
+        const float verticalSpacing = 20.0f; // spacing between items
+        const float itemHeight = 40.0f;
+        const float itemWidth = 200;
+        const float menuWidth = (_selectedSettingIndex == 0) ? 300.0f : float(GetScreenWidth());
+        const float menuY = (_selectedSettingIndex == 0) ? 0.0f : 100.0f;
+        const Rectangle menuArea = {0, menuY, menuWidth, (float)GetScreenHeight()}; // Example menu area
+
+        const float startX = menuArea.x + (menuArea.width - itemWidth) / 2;
+        const float startY = menuArea.y + (menuArea.height - (numberOfItems * itemHeight + (numberOfItems - 1) * verticalSpacing)) / 2;
+
+        itemViews.reserve(numberOfItems); // Reserve space for active items
+        for (int i = 0; i < numberOfItems; ++i) {
+            Vector2 position = {startX, startY + i * (itemHeight + verticalSpacing)};
+            Vector2 size = {itemWidth, itemHeight};
+            auto itemView = std::make_shared<MenuItemView>(position, size);
+            itemView->setFont(ResourceManager::getInstance().getFont("public_sans_bold"));
+            itemViews.push_back(itemView);
+        }
+        _workerMenuView->setItemViews(itemViews);
+
+    }
+}
+
+void SettingMenuController::update() {
+    if (_selectedSettingIndex >= 0 && _selectedSettingIndex < (int)(_menuSystem->getChildren().size())) {
+        if (_workerMenu != _menuSystem->getChildren()[_selectedSettingIndex]) {
+            _workerMenu = _menuSystem->getChildren()[_selectedSettingIndex];
+            std::cout << "Selected setting changed to: " << _workerMenu->getTitle() << std::endl;
+            computeWorkerMenuView();            
+        }
+    }
+
+
+    auto ItemViews = _menuView->getItemViews();
+    for (auto itemView : ItemViews) {
+        if (itemView) {
+            itemView->setSelected(false);
+        }
+    }
+    int selectedIndex = _selectedSettingIndex;
+    if (selectedIndex >= 0 && selectedIndex < (int)(ItemViews.size())) {
+        ItemViews[selectedIndex]->setSelected(true);
+    }
+}
+
+void SettingMenuController::draw() const {
+    if (_menuView) {
+        _menuView->draw(_menuSystem);
+    }
+    if (_workerMenuView && _workerMenu) {
+        _workerMenuView->draw(_workerMenu);
     }
 }

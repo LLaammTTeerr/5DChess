@@ -19,6 +19,7 @@ public:
   
   // Set the view strategy for the menu and create item views immediately
   virtual void setViewStrategy(std::unique_ptr<IMenuView> view) = 0;
+  virtual void setCurrentMenu(std::shared_ptr<MenuComponent> menu) { _currentMenuModel = menu; }
 
   // Handle user input for menu navigation
   virtual void handleInput() = 0;
@@ -63,6 +64,26 @@ public:
   void draw() const;
 
   IMenuView* getMenuView() const;
+};
+
+class SettingMenuController : public MenuController {
+public:
+  SettingMenuController(std::shared_ptr<MenuComponent> menuSystem);
+  void setViewStrategy(std::unique_ptr<IMenuView> view); 
+  void updateNavigationMenuForCurrentState();
+
+  void handleInput(); // Handle user input for menu navigation
+  void update();
+  void draw() const;
+
+  IMenuView* getMenuView() const;
+
+private:
+  int _selectedSettingIndex = -1; // Track selected setting index
+private:
+  std::shared_ptr<MenuComponent> _workerMenu = nullptr;
+  std::shared_ptr<ButtonMenuView> _workerMenuView = nullptr;
+  void computeWorkerMenuView();
 };
 
 class VersusScene; // Forward declaration

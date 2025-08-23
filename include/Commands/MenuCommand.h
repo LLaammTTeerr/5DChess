@@ -69,9 +69,23 @@ std::unique_ptr<ChangeStateCommand> createVersusPlayCommand(
     GameStateModel* gameStateModel, SceneManager* sceneManager, 
     const std::string& selectedGameMode);
 
-std::unique_ptr<ChangeStateCommand> createBackToVersusCommand(
+std::unique_ptr<ChangeStateCommand> createSettingsCommand(
     GameStateModel* gameStateModel, SceneManager* sceneManager);
 
+std::unique_ptr<ChangeStateCommand> createSettingsBackCommand(
+    GameStateModel* gameStateModel, SceneManager* sceneManager);
+
+// Forward declarations for settings commands
+class SettingsState;
+class ThemeSelectCommand;
+class MusicSelectCommand;
+
+std::unique_ptr<ThemeSelectCommand> createThemeSelectCommand(const std::string& theme, SettingsState* settingsState = nullptr);
+std::unique_ptr<MusicSelectCommand> createMusicSelectCommand(const std::string& music, SettingsState* settingsState = nullptr);
+
+std::unique_ptr<ChangeStateCommand> createBackToVersusCommand(
+    GameStateModel* gameStateModel, SceneManager* sceneManager);
+   
 class ChessController; // Forward declaration
 class SubmitMoveCommand  : public ICommand {
 public:
@@ -128,6 +142,44 @@ public:
   void undo() override {}
   void redo() override {}
   std::string getName() const override { return "Deselect Move Command"; }
+  std::unique_ptr<ICommand> clone() const override;
+  CommandType getType() const override { return CommandType::IMMEDIATE; }
+};
+
+class ThemeSelectCommand : public ICommand {
+private:
+  std::string _theme;
+  SettingsState* _settingsState;
+  
+public:
+  ThemeSelectCommand(const std::string& theme, SettingsState* settingsState = nullptr) 
+      : _theme(theme), _settingsState(settingsState) {}
+      
+  void execute() override;
+  virtual bool canUndo() const override { return false; }
+  virtual bool canRedo() const override { return false; }
+  void undo() override {}
+  void redo() override {}
+  std::string getName() const override { return "Theme Select Command"; }
+  std::unique_ptr<ICommand> clone() const override;
+  CommandType getType() const override { return CommandType::IMMEDIATE; }
+};
+
+class MusicSelectCommand : public ICommand {
+private:
+  std::string _music;
+  SettingsState* _settingsState;
+  
+public:
+  MusicSelectCommand(const std::string& music, SettingsState* settingsState = nullptr) 
+      : _music(music), _settingsState(settingsState) {}
+      
+  void execute() override;
+  virtual bool canUndo() const override { return false; }
+  virtual bool canRedo() const override { return false; }
+  void undo() override {}
+  void redo() override {}
+  std::string getName() const override { return "Music Select Command"; }
   std::unique_ptr<ICommand> clone() const override;
   CommandType getType() const override { return CommandType::IMMEDIATE; }
 };

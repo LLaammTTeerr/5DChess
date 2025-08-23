@@ -4,10 +4,12 @@
 #include "Scene/ConcreteScene/VersusScene.h"
 #include "Scene/ConcreteScene/MainMenuScene.h"
 #include "Scene/ConcreteScene/TestingScene.h"
+#include "Scene/ConcreteScene/SettingsScene.h"
 
 #include "GameStates/ConcreteGameStates/VersusState.h"
 #include "GameStates/ConcreteGameStates/MainMenuState.h"
 #include "GameStates/ConcreteGameStates/TestingState.h"
+#include "GameStates/ConcreteGameStates/SettingsState.h"
 #include "Render/Controller.h"
 
 // ChangeStateCommand execute implementation
@@ -73,6 +75,28 @@ std::unique_ptr<ChangeStateCommand> createBackToVersusCommand(
   );
 }
 
+std::unique_ptr<ChangeStateCommand> createSettingsCommand(
+    GameStateModel* gameStateModel, SceneManager* sceneManager) {
+  return std::make_unique<ChangeStateCommand>(
+      gameStateModel, sceneManager,
+      std::function<std::unique_ptr<GameState>()>([]() { 
+        return std::make_unique<SettingsState>(); 
+      }),
+      "Settings Command"
+  );
+}
+
+std::unique_ptr<ChangeStateCommand> createSettingsBackCommand(
+    GameStateModel* gameStateModel, SceneManager* sceneManager) {
+  return std::make_unique<ChangeStateCommand>(
+      gameStateModel, sceneManager,
+      std::function<std::unique_ptr<GameState>()>([]() { 
+        return std::make_unique<MainMenuState>(); 
+      }),
+      "Settings Back Command"
+  );
+}
+
 SubmitMoveCommand::SubmitMoveCommand() {}
 
 void SubmitMoveCommand::execute() {
@@ -117,5 +141,47 @@ std::unique_ptr<ICommand> GameModeSelectCommand::clone() const {
     auto cloned = std::make_unique<GameModeSelectCommand>(_gameMode, _versusScene);
     cloned->_callback = _callback; // Copy the callback
     return cloned;
+}
+
+void ThemeSelectCommand::execute() {
+    std::cout << "Selected theme: " << _theme << std::endl;
+    
+    // Apply theme change through SettingsState if available
+    if (_settingsState) {
+        _settingsState->setTheme(_theme);
+    }
+    
+    executeCallback(); // Execute the callback if set
+}
+
+std::unique_ptr<ICommand> ThemeSelectCommand::clone() const {
+    auto cloned = std::make_unique<ThemeSelectCommand>(_theme, _settingsState);
+    cloned->_callback = _callback; // Copy the callback
+    return cloned;
+}
+
+void MusicSelectCommand::execute() {
+    std::cout << "Selected music: " << _music << std::endl;
+    
+    // Apply music change through SettingsState if available
+    if (_settingsState) {
+        _settingsState->setMusic(_music);
+    }
+    
+    executeCallback(); // Execute the callback if set
+}
+
+std::unique_ptr<ICommand> MusicSelectCommand::clone() const {
+    auto cloned = std::make_unique<MusicSelectCommand>(_music, _settingsState);
+    cloned->_callback = _callback; // Copy the callback
+    return cloned;
+}
+
+std::unique_ptr<ThemeSelectCommand> createThemeSelectCommand(const std::string& theme, SettingsState* settingsState) {
+    return std::make_unique<ThemeSelectCommand>(theme, settingsState);
+}
+
+std::unique_ptr<MusicSelectCommand> createMusicSelectCommand(const std::string& music, SettingsState* settingsState) {
+    return std::make_unique<MusicSelectCommand>(music, settingsState);
 }
 

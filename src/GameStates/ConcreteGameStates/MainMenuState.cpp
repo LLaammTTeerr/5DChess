@@ -36,9 +36,12 @@ std::shared_ptr<MenuComponent> MainMenuState::createNavigationMenu(GameStateMode
   std::shared_ptr<MenuComponent> Versus = std::make_shared<MenuItem>("Versus", true);
   Versus->setCommand(createVersusCommand(gameStateModel, sceneManager)); // Set command for Versus
 
-  std::shared_ptr<MenuComponent> Puzzles = std::make_shared<MenuItem>("Puzzles", true);
   std::shared_ptr<MenuComponent> Guide = std::make_shared<MenuItem>("Guide", true);
   std::shared_ptr<MenuComponent> Settings = std::make_shared<MenuItem>("Settings", true);
+  Settings->setCommand(createSettingsCommand(gameStateModel, sceneManager)); // Set command for Settings
+
+  
+  std::shared_ptr<MenuComponent> Puzzles = std::make_shared<MenuItem>("Puzzles", true);
   std::shared_ptr<MenuComponent> Exit = std::make_shared<MenuItem>("Exit", true); 
 
   

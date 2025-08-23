@@ -29,11 +29,13 @@ public:
   virtual ~IMenuView() = default;
   virtual void createNavigationItemViews(std::shared_ptr<MenuComponent> menuModel, GameState* gameState) = 0;
   virtual void createInGameItemsViews(int numberOfItems) = 0;
+  virtual void createSettingsMenuItemViews(int numberOfItems) = 0;
   virtual void draw(std::shared_ptr<MenuComponent> menuModel) const = 0;
 
   // virtual void drawTitle(const std::string& title) const;
   // virtual void drawStatusInfo(const GameStateModel& gameState) const;
 
+  virtual void setItemViews(const std::vector<std::shared_ptr<MenuItemView>>& views) { _itemViews = views; }
   std::vector<std::shared_ptr<MenuItemView>>& getItemViews() { return _itemViews; }
   const std::vector<std::shared_ptr<MenuItemView>>& getItemViews() const { return _itemViews; }
 
@@ -51,6 +53,7 @@ public:
 
   void createNavigationItemViews(std::shared_ptr<MenuComponent> menuModel, GameState* gameState) override;
   void createInGameItemsViews(int numberOfItems) override;
+  void createSettingsMenuItemViews(int numberOfItems) override;
   void draw(std::shared_ptr<MenuComponent> menuModel) const override; // { /* Draw button menu */ }
   // void drawTitle(const std::string& title) const override;
 };
@@ -76,6 +79,7 @@ public:
   
   void createNavigationItemViews(std::shared_ptr<MenuComponent> menuModel, GameState* gameState) override;
   void createInGameItemsViews(int numberOfItems) override;
+  void createSettingsMenuItemViews(int numberOfItems) override {};
   void draw(std::shared_ptr<MenuComponent> menuModel) const override;
   
   // Scrolling methods
