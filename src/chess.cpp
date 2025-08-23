@@ -534,7 +534,7 @@ void IGame::submitTurn(void) {
   _undoBuffer.clear();
 }
 
-const std::string NameOfGame<StandardGame>::value = "Standard Game";
+const std::string NameOfGame<StandardGame>::value = "Standard";
 StandardGame::StandardGame(void) : IGame(Constant::BOARD_SIZE) {
   _timeLines.push_back(std::make_shared<TimeLine>(dim()));
   std::shared_ptr<Board> board = std::make_shared<Board>(dim(), _timeLines[0]);
@@ -562,7 +562,7 @@ StandardGame::StandardGame(void) : IGame(Constant::BOARD_SIZE) {
   _timeLines[0]->pushBack(board);
 }
 
-const std::string NameOfGame<CustomGameEmitBishop>::value = "Simplify Game - No Bishop";
+const std::string NameOfGame<CustomGameEmitBishop>::value = "Simplify - No Bishop";
 CustomGameEmitBishop::CustomGameEmitBishop(void) : IGame(Constant::BOARD_SIZE_EMIT_BISHOP) {
   _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
   _timeLines.push_back(std::make_shared<TimeLine>(dim()));
@@ -587,7 +587,7 @@ CustomGameEmitBishop::CustomGameEmitBishop(void) : IGame(Constant::BOARD_SIZE_EM
   _timeLines[0]->pushBack(board);
 }
 
-const std::string NameOfGame<CustomGameEmitKnight>::value = "Simplify Game - No Knight";
+const std::string NameOfGame<CustomGameEmitKnight>::value = "Simplify - No Knight";
 CustomGameEmitKnight::CustomGameEmitKnight(void) : IGame(Constant::BOARD_SIZE_EMIT_KNIGHT) {
   _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
   _timeLines.push_back(std::make_shared<TimeLine>(dim()));
@@ -612,7 +612,7 @@ CustomGameEmitKnight::CustomGameEmitKnight(void) : IGame(Constant::BOARD_SIZE_EM
   _timeLines[0]->pushBack(board);
 }
 
-const std::string NameOfGame<CustomGameEmitQueen>::value = "Simplify Game - No Queen";
+const std::string NameOfGame<CustomGameEmitQueen>::value = "Simplify - No Queen";
 CustomGameEmitQueen::CustomGameEmitQueen(void) : IGame(Constant::BOARD_SIZE_EMIT_QUEEN) {
   _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
   _timeLines.push_back(std::make_shared<TimeLine>(dim()));
@@ -639,7 +639,7 @@ CustomGameEmitQueen::CustomGameEmitQueen(void) : IGame(Constant::BOARD_SIZE_EMIT
   _timeLines[0]->pushBack(board);
 }
 
-const std::string NameOfGame<CustomGameEmitRook>::value = "Simplify Game - No Rook";
+const std::string NameOfGame<CustomGameEmitRook>::value = "Simplify - No Rook";
 CustomGameEmitRook::CustomGameEmitRook(void) : IGame(Constant::BOARD_SIZE_EMIT_ROOK) {
   _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
   _timeLines.push_back(std::make_shared<TimeLine>(dim()));
@@ -664,7 +664,7 @@ CustomGameEmitRook::CustomGameEmitRook(void) : IGame(Constant::BOARD_SIZE_EMIT_R
   _timeLines[0]->pushBack(board);
 }
 
-const std::string NameOfGame<CustomGameKVB>::value = "Simplify Game - Knight vs Bishop";
+const std::string NameOfGame<CustomGameKVB>::value = "Simplify - Knight vs Bishop";
 CustomGameKVB::CustomGameKVB(void) : IGame(Constant::BOARD_SIZE_K_VS_B) {
   _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
   _timeLines.push_back(std::make_shared<TimeLine>(dim()));
@@ -689,7 +689,7 @@ CustomGameKVB::CustomGameKVB(void) : IGame(Constant::BOARD_SIZE_K_VS_B) {
   _timeLines[0]->pushBack(board);
 }
 
-const std::string NameOfGame<MiscGameTimeLineInvasion>::value = "Misc Game - Time Line Invasion";
+const std::string NameOfGame<MiscGameTimeLineInvasion>::value = "Misc - Time Line Invasion";
 MiscGameTimeLineInvasion::MiscGameTimeLineInvasion(void) : IGame(Constant::BOARD_SIZE_TIME_LINE_INVASION) {
   _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
   _timeLines.push_back(std::make_shared<TimeLine>(dim(), 0));
@@ -720,7 +720,7 @@ MiscGameTimeLineInvasion::MiscGameTimeLineInvasion(void) : IGame(Constant::BOARD
   _timeLines[1]->pushBack(board1);
 }
 
-const std::string NameOfGame<MiscGameTimeLineBattle>::value = "Misc Game - Time Line Battle";
+const std::string NameOfGame<MiscGameTimeLineBattle>::value = "Misc - Time Line Battle";
 MiscGameTimeLineBattle::MiscGameTimeLineBattle(void) : IGame(Constant::BOARD_SIZE_TIME_LINE_BATTLE) {
   _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
   _timeLines.push_back(std::make_shared<TimeLine>(dim(), 0));
@@ -777,7 +777,7 @@ MiscGameTimeLineBattle::MiscGameTimeLineBattle(void) : IGame(Constant::BOARD_SIZ
   _timeLines[2]->pushBack(board2);
 }
 
-const std::string NameOfGame<MiscGameTimeLineFragment>::value = "Misc Game - Time Line Fragment";
+const std::string NameOfGame<MiscGameTimeLineFragment>::value = "Misc - Time Line Fragment";
 MiscGameTimeLineFragment::MiscGameTimeLineFragment(void) : IGame(Constant::BOARD_SIZE_TIME_LINE_FRAGMENT) {
   _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
   _timeLines.push_back(std::make_shared<TimeLine>(dim(), 0, 0));
