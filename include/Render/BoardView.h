@@ -2,6 +2,7 @@
 #include <raylib.h>
 #include <iostream>
 #include "chess.h"
+#include <cmath>
 
 ///@brief This is the view class for rendering a single board
 /// This class converts model data to view data
@@ -37,10 +38,10 @@ public:
     virtual bool isMouseClickedOnBoard() const = 0;
     virtual bool isMouseOverBoard() const = 0;
 
-    virtual Chess::Position2D getMouseOverPosition() const = 0; 
+    virtual Chess::Position2D getMouseOverPosition() const = 0;
     virtual Chess::Position2D getMouseClickedPosition() const = 0;
 
-    virtual void setSupervisor(ChessView* supervisor) = 0; 
+    virtual void setSupervisor(ChessView* supervisor) = 0;
 
     virtual void setRenderArea(Rectangle area) = 0;
     virtual Rectangle getArea() const = 0;
@@ -64,9 +65,9 @@ protected:
 public:
   virtual void render_pieces() const = 0;
   virtual void render_highlightPiece(Chess::Position2D piecePosition) const = 0;
-  virtual void setBoardDim(int dim) { _boardDim = dim; } 
+  virtual void setBoardDim(int dim) { _boardDim = dim; }
 };
-  
+
 class BoardView2D : public BoardView {
 private:
   ChessView* _supervisor = nullptr;
@@ -76,7 +77,7 @@ private:
   std::shared_ptr<Chess::Board> _board = nullptr; // Board reference for timeline arrows
 
   bool _isMouseOver = false; // Whether the mouse is over the board
-  
+
 public:
   BoardView2D() = default;
   ~BoardView2D() = default;
@@ -87,7 +88,7 @@ public:
   void render_highlightPiece(Chess::Position2D piecePosition) const override;
   void render_highlightBoundaries() const override;
   void render_highlightedPositions(std::vector<Chess::Position2D> positions) const override;
-  
+
   void setPiecePositions(const std::vector<std::pair<Chess::Position2D, std::string>>& piecePositions) override {
     _piecePositions = piecePositions;
   }
@@ -105,19 +106,19 @@ public:
   void setRenderArea(Rectangle area) override { _area = area; }
   Rectangle getArea() const override { return _area; }
 
-  void setSupervisor(ChessView* supervisor) override; 
+  void setSupervisor(ChessView* supervisor) override;
 
   void setCamera2D(Camera2D* camera) override { _camera = camera; }
   void setCamera3D(Camera3D* camera) override {  }
-  
+
   // Timeline arrow support methods implementation
   void setBoard(std::shared_ptr<Chess::Board> board) override { _board = board; }
   std::shared_ptr<Chess::Board> getBoard() const override { return _board; }
-  
+
   Vector2 getBoardCenter() const override {
     return Vector2{_area.x + _area.width * 0.5f, _area.y + _area.height * 0.5f};
   }
-  
+
   float getBoardSize() const override {
     return fminf(_area.width, _area.height);
   }
@@ -156,7 +157,7 @@ public:
 
 // private:
 //     void updateMouseOverBoard();
-    
+
 
 // public:
 //     void setSupervisor(ChessView* supervisor) override;
