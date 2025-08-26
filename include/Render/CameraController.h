@@ -26,7 +26,7 @@ private:
   Vector2 _targetCameraPosition;
   Vector2 _autoCenterPosition;
   float _cameraTransitionSpeed = 2.0f;
-  float _userControlTimeout = 2.0f; // Time before returning to auto-centering
+  float _userControlTimeout = 10.0f; // Time before returning to auto-centering
   float _timeSinceUserInput = 0.0f;
   float _maxDistanceFromCenter = 500.0f; // Max distance before auto-centering kicks in
 
