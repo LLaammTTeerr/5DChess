@@ -500,6 +500,12 @@ void IGame::makeMove(Move move) {
   std::shared_ptr<Board> newFromBoard = move.from.board->createFork(move.from.board->getTimeLine());
   move.from.board->getTimeLine()->pushBack(newFromBoard);
   newFromBoard->placePiece(move.from.position, nullptr);
+  if (move.to.position.y() == 0 and piece->name() == "pawn" and piece->color() == PieceColor::PIECEBLACK) {
+    piece = std::make_shared<Queen>(PieceColor::PIECEBLACK);
+  }
+  if (move.to.position.y() == dim() - 1 and piece->name() == "pawn" and piece->color() == PieceColor::PIECEWHITE) {
+    piece = std::make_shared<Queen>(PieceColor::PIECEWHITE);
+  }
   list.push_back(newFromBoard->getTimeLine()->ID());
   if (move.to.board == move.from.board) {
     newFromBoard->placePiece(move.to.position, piece->clone());
@@ -519,7 +525,7 @@ void IGame::makeMove(Move move) {
   list.push_back(toTimeLine->ID());
 
   std::shared_ptr<Board> newToBoard = move.to.board->getTimeLine()->getBoardByHalfTurn(move.to.board->halfTurnNumber())->createFork(toTimeLine);
-  newToBoard->placePiece(move.to.position, piece);
+  newToBoard->placePiece(move.to.position, piece->clone());
   toTimeLine->pushBack(newToBoard);
 
   _nextHalfTurnBuffer.push_back(newToBoard->halfTurnNumber());
