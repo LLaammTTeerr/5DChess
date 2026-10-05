@@ -157,6 +157,9 @@ void ThemeSelectCommand::execute() {
     else if (_theme == "Fantasy") {
       ThemeManager::getInstance().setTheme(std::make_unique<Modern2Theme>());
     }
+    else if (_theme == "Pixel") {
+      ThemeManager::getInstance().setTheme(std::make_unique<PixelTheme>());
+    }
 }
 
 std::unique_ptr<ICommand> ThemeSelectCommand::clone() const {

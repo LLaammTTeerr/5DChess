@@ -25,7 +25,6 @@ public:
     std::vector<std::shared_ptr<MenuItemView>> createNavigationMenuButtonItemViews(std::shared_ptr<MenuComponent> menu) const override;
     
     // Settings management methods
-    void setTheme(const std::string& theme);
     void setMusic(const std::string& music);
     std::string getSelectedTheme() const { return selectedTheme; }
     std::string getSelectedMusic() const { return selectedMusic; }

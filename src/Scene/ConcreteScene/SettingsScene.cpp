@@ -1,5 +1,6 @@
 #include "SettingsScene.h"
 #include "ResourceManager.h"
+#include "Render/UITheme.h"
 #include <iostream>
 #include <raylib.h>
 #include "MenuComponent.h"
@@ -27,9 +28,13 @@ void SettingsScene::init(void) {
     std::shared_ptr<MenuComponent> FantasyTheme = std::make_shared<MenuItem>("Fantasy", true);
     FantasyTheme->setCommand(createThemeSelectCommand("Fantasy"));
 
+    std::shared_ptr<MenuComponent> PixelTheme = std::make_shared<MenuItem>("Pixel", true);
+    PixelTheme->setCommand(createThemeSelectCommand("Pixel"));
+
     ThemeSection->addItem(ClassicTheme);
     ThemeSection->addItem(ModernTheme);
     ThemeSection->addItem(FantasyTheme);
+    ThemeSection->addItem(PixelTheme);
 
     // Add the theme section to the main menu system
     _settingMenuSystem->addItem(ThemeSection);
@@ -88,19 +93,10 @@ void SettingsScene::update(float deltaTime) {
 }
 
 void SettingsScene::render() {
-    ClearBackground(Color{164, 204, 217, 255}); // Same background as other scenes
-    
-    // Draw title
-    Font& font = ResourceManager::getInstance().getFont("public_sans_bold");
-    const char* title = "Settings";
-    float titleFontSize = 48;
-    float spacing = 2;
-    
-    Vector2 titleSize = MeasureTextEx(font, title, titleFontSize, spacing);
-    Vector2 titlePosition = {
-        (GetScreenWidth() - titleSize.x) / 2.0f, 50
-    };
-    DrawTextEx(font, title, titlePosition, titleFontSize, spacing, {255, 249, 175, 255});
+    ClearBackground(UI::Color::bg);
+    UI::Cursor::beginFrame();
+
+    UI::drawSceneTitle("Settings");
 
     // Render the menu system
     if (_settingsMenuController) {

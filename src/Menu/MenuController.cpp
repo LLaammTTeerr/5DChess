@@ -401,7 +401,7 @@ void SettingMenuController::computeWorkerMenuView() {
 
         std::vector<std::shared_ptr<MenuItemView>> itemViews;
         const float verticalSpacing = 20.0f; // spacing between items
-        const float itemHeight = 40.0f;
+        const float itemHeight = UI::Space::buttonHeight;
         const float itemWidth = 200;
         const float menuWidth = (_selectedSettingIndex == 0) ? 300.0f : float(GetScreenWidth());
         const float menuY = (_selectedSettingIndex == 0) ? 0.0f : 100.0f;
@@ -415,7 +415,6 @@ void SettingMenuController::computeWorkerMenuView() {
             Vector2 position = {startX, startY + i * (itemHeight + verticalSpacing)};
             Vector2 size = {itemWidth, itemHeight};
             auto itemView = std::make_shared<MenuItemView>(position, size);
-            itemView->setFont(ResourceManager::getInstance().getFont("public_sans_bold"));
             itemViews.push_back(itemView);
         }
         _workerMenuView->setItemViews(itemViews);

@@ -25,6 +25,11 @@ public:
   Texture2D& getTexture(const std::string& pieceName) override;
 };
 
+/* Original pixel-art creature pieces (assets/images/Theme_3) */
+class PixelTheme : public IPieceTheme {
+public:
+  Texture2D& getTexture(const std::string& pieceName) override;
+};
 
 // singleton class to manage themes
 class ThemeManager {

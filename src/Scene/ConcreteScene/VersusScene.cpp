@@ -1,5 +1,6 @@
 #include "VersusScene.h"
 #include "ResourceManager.h"
+#include "Render/UITheme.h"
 #include "gameState.h"
 #include "MenuController.h"
 #include "MenuView.h"
@@ -43,34 +44,18 @@ void VersusScene::update(float deltaTime) {
 void VersusScene::render() {
   if (!menuController) return;
 
-  // Draw the menu background
-  // DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), {30, 30, 40, 255});
-  ClearBackground(Color{164, 204, 217, 255});
+  ClearBackground(UI::Color::bg);
+  UI::Cursor::beginFrame();
 
-  // Draw menu title
-  Font& font = ResourceManager::getInstance().getFont("public_sans_bold");
-  const char* title = "Select Game Mode";
-  float titleFontSize = 48;
-  float spacing = 2;
-    
-  Vector2 titleSize = MeasureTextEx(font, title, titleFontSize, spacing);
-  Vector2 titlePosition = {
-    (GetScreenWidth() - titleSize.x) / 2.0f, 50
-  };
-  DrawTextEx(font, title, titlePosition, titleFontSize, spacing, {255, 249, 175, 255}); // rgb(255, 249, 175)
+  UI::drawSceneTitle("Select Game Mode");
 
   // Draw the menu using the controller
   menuController->draw();
-    
+
   // Draw instructions
-  const char* instruction = "Use mouse to select a game mode";
-  float instructionFontSize = 20;
-  Vector2 instructionSize = MeasureTextEx(font, instruction, instructionFontSize, spacing);
-  Vector2 instructionPosition = {
-    (GetScreenWidth() - instructionSize.x) / 2.0f,
-    static_cast<float>(GetScreenHeight() - 50)
-  };
-  DrawTextEx(font, instruction, instructionPosition, instructionFontSize, spacing, {200, 200, 200, 255});
+  UI::drawTextCentered(UI::Fonts::body(), "Use mouse to select a game mode",
+                       GetScreenWidth() / 2.0f, static_cast<float>(GetScreenHeight()) - 44.0f,
+                       UI::Font::body, UI::Color::textMuted);
 }
 
 void VersusScene::cleanup(void) {}
@@ -122,15 +107,15 @@ void VersusScene::initializeMenuController() {
   
   // Create the ListMenuView with custom positioning
   Rectangle menuArea = {
-    (float)(GetScreenWidth() / 2 - 150),  // Center horizontally
-    150,                                   // Start below the title
-    300,                                   // Width
-    400                                    // Height
+    (float)(GetScreenWidth() / 2 - 210),  // Center horizontally
+    130,                                   // Start below the title
+    420,                                   // Width
+    (float)(GetScreenHeight() - 130 - 150) // Leave room for the Back / Play row
   };
   
   auto listMenuView = std::make_unique<ListMenuView>(menuArea);
-  listMenuView->setItemHeight(50.0f);
-  listMenuView->setItemSpacing(10.0f);
+  listMenuView->setItemHeight(UI::Space::buttonHeight + 4.0f);
+  listMenuView->setItemSpacing(UI::Space::sm + 4.0f);
   listMenuView->setScrollbarWidth(20.0f);
   
   // Set the view strategy and create the menu

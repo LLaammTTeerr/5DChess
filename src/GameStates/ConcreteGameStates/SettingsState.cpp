@@ -51,8 +51,8 @@ std::vector<std::shared_ptr<MenuItemView>> SettingsState::createNavigationMenuBu
         }
     }
 
-    const float verticalSpacing = 20.0f;
-    const float itemHeight = 40.0f;
+    const float verticalSpacing = UI::Space::md;
+    const float itemHeight = UI::Space::buttonHeight;
     const float itemWidth = 200;
     const Rectangle menuArea = {0, 0, 250, 50};
 
@@ -64,26 +64,9 @@ std::vector<std::shared_ptr<MenuItemView>> SettingsState::createNavigationMenuBu
         Vector2 position = {startX, startY + i * (itemHeight + verticalSpacing)};
         Vector2 size = {itemWidth, itemHeight};
         auto itemView = std::make_shared<MenuItemView>(position, size);
-        itemView->setFont(ResourceManager::getInstance().getFont("public_sans_bold"));
         itemViews.push_back(itemView);
     }
     return itemViews;
-}
-
-void SettingsState::setTheme(const std::string& theme) {
-    selectedTheme = theme;
-    
-    // Apply the theme change
-    if (theme == "Classic") {
-        ThemeManager::getInstance().setTheme(std::make_unique<ClassicTheme>());
-    } else if (theme == "Modern") {
-        ThemeManager::getInstance().setTheme(std::make_unique<ModernTheme>());
-    } else if (theme == "Modern2") {
-        ThemeManager::getInstance().setTheme(std::make_unique<Modern2Theme>());
-    }
-    
-    std::cout << "Theme changed to: " << theme << std::endl;
-    ++menuVersion;
 }
 
 void SettingsState::setMusic(const std::string& music) {

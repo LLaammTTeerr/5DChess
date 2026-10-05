@@ -51,8 +51,8 @@ std::vector<std::shared_ptr<MenuItemView>> TestingState::createNavigationMenuBut
         }
     }
 
-    const float verticalSpacing = 20.0f; // spacing between items
-    const float itemHeight = 40.0f;
+    const float verticalSpacing = UI::Space::md;
+    const float itemHeight = UI::Space::buttonHeight;
     const float itemWidth = 200;
     const Rectangle menuArea = {0, 0, 250, 50}; // Example menu area
 
@@ -64,7 +64,6 @@ std::vector<std::shared_ptr<MenuItemView>> TestingState::createNavigationMenuBut
         Vector2 position = {startX, startY + i * (itemHeight + verticalSpacing)};
         Vector2 size = {itemWidth, itemHeight};
         auto itemView = std::make_shared<MenuItemView>(position, size);
-        itemView->setFont(ResourceManager::getInstance().getFont("public_sans_bold"));
         itemViews.push_back(itemView);
     }
     return itemViews;

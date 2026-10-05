@@ -76,6 +76,8 @@ void SceneManager::update(float deltaTime) {
       bool mouseOverMenu = _menuActive && _navigationMenuController && _navigationMenuController->isMouseOverMenu();
       if (!mouseOverMenu) {
         currentEntry->handleInput();
+      } else {
+        currentEntry->onPointerBlocked();
       }
       currentEntry->update(deltaTime);
     }

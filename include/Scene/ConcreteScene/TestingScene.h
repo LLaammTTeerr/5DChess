@@ -15,6 +15,7 @@ public:
   void update(float deltaTime) override;
   void render(void) override;
   void handleInput(void) override;
+  void onPointerBlocked(void) override;
   void cleanup(void) override;
 
   bool isActive(void) const override;

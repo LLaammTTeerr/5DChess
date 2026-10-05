@@ -2,6 +2,7 @@
 #include <memory>
 #include <functional>
 #include <map>
+#include <algorithm>
 #include "Render/RenderUtilis.h"
 #include "chess.h"
 #include "Render/BoardView.h"
@@ -24,7 +25,9 @@ private:
 private:
   void initInGameMenu();
   void renderInGameMenu() const;
-  void updateMenuButtonStates(); // Update menu button enabled/disabled states based on game state
+  void updateMenuButtonStates();
+  std::vector<std::shared_ptr<Chess::Board>> _moveableBoards; // refreshed by updateMenuButtonStates()
+  HudData computeHud() const; // Update menu button enabled/disabled states based on game state
 
 /// @brief private attribute and methods related to model
 private:
@@ -69,6 +72,7 @@ public:
   ChessController(ChessModel& m, ChessView& v);
   void update(float deltaTime);
   void handleInput();
+  void clearHover() { view.clearHover(); }
   void render();
 
 private:

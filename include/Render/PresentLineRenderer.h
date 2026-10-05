@@ -31,7 +31,7 @@ private:
     std::pair<float, float> calculateLineBounds(const std::vector<std::shared_ptr<BoardView>>& boardViews) const;
 
     /// @brief Draw animated present line with subtle effects
-    void drawAnimatedPresentLine(float x, float yStart, float yEnd, Color color, float thickness, float animationOffset) const;
+    void drawAnimatedPresentLine(float x, float yStart, float yEnd, Color color, float thickness, float animationOffset, float zoom) const;
 
 private:
     PresentLineData _lineData;

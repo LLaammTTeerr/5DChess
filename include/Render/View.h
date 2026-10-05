@@ -1,6 +1,7 @@
 #pragma once
 #include <raylib.h>
 #include <iostream>
+#include <string>
 #include "chess.h"
 #include "Render/RenderUtilis.h"
 #include "CameraController.h"
@@ -8,6 +9,14 @@
 #include "Render/TimelineArrowRenderer.h"
 #include "Render/PresentLineRenderer.h"
 
+
+/// @brief Screen-space HUD content supplied by the controller
+struct HudData {
+  bool whiteToMove = true;
+  int fullTurn = 1;        // 1-based full-turn number shown to the player
+  int timelineCount = 1;
+  std::string hint;        // e.g. "Select a board"
+};
 
 class ChessView {
 private:
@@ -26,13 +35,20 @@ public:
   virtual void update(float deltaTime);
   /// @param pointerBlocked true when the mouse is over UI drawn on top (no board selection/hover)
   virtual void handleInput(bool pointerBlocked = false);
+  void clearHover() { _hoverPosition = {nullptr, {-1, -1}}; }
   virtual void render() const;
 
 private:
   std::pair<std::shared_ptr<BoardView>, Chess::Position2D> _fromPosition = {nullptr, {-1, -1}}; // use to Highlight piece at fromPosition
   std::vector<std::shared_ptr<BoardView>> _highlightedBoards;
   std::vector<std::pair<std::shared_ptr<BoardView>, Chess::Position2D>> _highlightedPositions;
+  std::pair<std::shared_ptr<BoardView>, Chess::Position2D> _hoverPosition = {nullptr, {-1, -1}};
+  HudData _hud;
 public:
+  virtual void render_hoverSquare() const;
+  virtual void updateHud(const HudData& hud) { _hud = hud; }
+  /// @brief Top-centre status pill and bottom controls bar (screen space, unaffected by the camera)
+  virtual void renderHud() const;
   virtual void handleMouseSelection(); 
   virtual void handleMouseOver();
   virtual void render_highlightBoard() const;
@@ -85,6 +101,7 @@ public:
 
   /// @brief Render present line behind all boards and arrows
   virtual void renderPresentLine() const;
+  /// @param winnerText e.g. "White wins!" - drawn on a scrim with a centred card
   virtual void renderEndGameScreen(std::string winnerText) const;
 public:
   ~ChessView() = default;

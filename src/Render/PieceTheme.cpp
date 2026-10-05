@@ -16,6 +16,11 @@ Texture2D& Modern2Theme::getTexture(const std::string& pieceName) {
     return resourceManager.getTexture2D(pieceName + "_2");
 }
 
+Texture2D& PixelTheme::getTexture(const std::string& pieceName) {
+    ResourceManager& resourceManager = ResourceManager::getInstance();
+    return resourceManager.getTexture2D(pieceName + "_3");
+}
+
 void ThemeManager::ensureInitialized() {
     if (!_theme) {
         // Default to ClassicTheme if no theme is set

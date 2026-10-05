@@ -6,6 +6,7 @@
 #include <raylib.h>
 #include "gameState.h"
 #include "MenuItemView.h"
+#include "Render/UITheme.h"
 
 // Forward declarations
 class MenuComponent;
@@ -16,12 +17,6 @@ class GameState;
 class IMenuView {
 protected:
   std::vector<std::shared_ptr<MenuItemView>> _itemViews;
-  
-  // Common styling properties
-  Color backgroundColor = RAYWHITE;
-  Color titleColor = DARKBLUE;
-  Font titleFont = GetFontDefault();
-  int titleFontSize = 40;
   
 public:
   virtual ~IMenuView() = default;
@@ -41,12 +36,6 @@ public:
   virtual void setItemViews(const std::vector<std::shared_ptr<MenuItemView>>& views) { _itemViews = views; }
   std::vector<std::shared_ptr<MenuItemView>>& getItemViews() { return _itemViews; }
   const std::vector<std::shared_ptr<MenuItemView>>& getItemViews() const { return _itemViews; }
-
-  // Common styling setters
-  void setBackgroundColor(Color color) { backgroundColor = color; }
-  void setTitleColor(Color color) { titleColor = color; }
-  void setTitleFont(Font font) { titleFont = font; }
-  void setTitleFontSize(int size) { titleFontSize = size; }
 };
 
 // Concrete implementation of a menu view
@@ -63,18 +52,18 @@ public:
 class ListMenuView : public IMenuView {
 private:
   float scrollOffset = 0.0f;
-  float itemHeight = 40.0f;
-  float itemSpacing = 5.0f;
+  float itemHeight = UI::Space::buttonHeight + 4.0f;
+  float itemSpacing = UI::Space::sm + 4.0f;
   float scrollbarWidth = 15.0f;
   Rectangle listArea;
   Rectangle scrollbarArea;
   bool isDragging = false;
   float maxScrollOffset = 0.0f;
   
-  // Scrollbar styling
-  Color scrollbarBackgroundColor = {200, 200, 200, 255};
-  Color scrollbarHandleColor = {120, 120, 120, 255};
-  Color scrollbarHandleHoverColor = {80, 80, 80, 255};
+  // Scrollbar styling (tokens)
+  Color scrollbarBackgroundColor = UI::Color::surfaceAlt;
+  Color scrollbarHandleColor = UI::Color::border;
+  Color scrollbarHandleHoverColor = UI::Color::textMuted;
 
 public:
   ListMenuView(Rectangle area = {50, 100, 300, 400});

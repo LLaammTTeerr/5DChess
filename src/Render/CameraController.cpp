@@ -34,6 +34,16 @@ CameraController::CameraController(Vector3 worldSize) : _worldSize(worldSize), _
     _autoCenterPosition = { worldSize.x / 2.0f, worldSize.y / 2.0f };
 }
 
+Vector2 CameraController::safeAreaSize() const {
+    return { std::max(100.0f, GetScreenWidth() - _insetLeft - _insetRight),
+             std::max(100.0f, GetScreenHeight() - _insetTop - _insetBottom) };
+}
+
+// Place the camera's screen anchor at the centre of the safe area so targets centre there
+void CameraController::applySafeAreaOffset() {
+    _camera2D.offset = { _insetLeft + safeAreaSize().x / 2.0f, _insetTop + safeAreaSize().y / 2.0f };
+}
+
 void CameraController::handleUserInput() {
     // Handle keyboard input for camera controls
     if (IsKeyPressed(KEY_Z)) {
@@ -150,6 +160,7 @@ void CameraController::moveCamera(Vector2 delta) {
 }
 
 void CameraController::update(float deltaTime, const std::vector<std::shared_ptr<BoardView>>& boardViews) {
+    applySafeAreaOffset();
     // Keep the pan limits in sync with where the boards actually are
     updateWorldBounds(boardViews);
     
@@ -322,8 +333,8 @@ void CameraController::calculateOptimalZoom(const std::vector<std::shared_ptr<Bo
     float totalHeight = maxY - minY;
     
     // Get screen dimensions
-    float screenWidth = static_cast<float>(GetScreenWidth());
-    float screenHeight = static_cast<float>(GetScreenHeight());
+    float screenWidth = safeAreaSize().x;
+    float screenHeight = safeAreaSize().y;
     
     if (_use3DRendering) {
         // For 3D, calculate FOV based on content distance
@@ -338,7 +349,7 @@ void CameraController::calculateOptimalZoom(const std::vector<std::shared_ptr<Bo
         _targetZoom = std::max(20.0f, std::min(targetFOV * 1.2f, 60.0f));
     } else {
         // For 2D, calculate zoom levels needed to fit content with some padding
-        float padding = 50.0f; // Reduced padding for more aggressive zoom
+        float padding = 24.0f; // inside the safe area
         float zoomX = (screenWidth - padding * 2) / totalWidth;
         float zoomY = (screenHeight - padding * 2) / totalHeight;
         
@@ -346,7 +357,7 @@ void CameraController::calculateOptimalZoom(const std::vector<std::shared_ptr<Bo
         float optimalZoom = std::min(zoomX, zoomY);
         
         // Ensure we have a reasonable zoom that's different from current
-        optimalZoom = std::max(0.3f, std::min(optimalZoom, 2.5f));
+        optimalZoom = std::max(0.12f, std::min(optimalZoom, 2.5f));
         
         // Set target zoom (not clamped to auto-zoom range yet)
         _targetZoom = optimalZoom;
@@ -426,8 +437,8 @@ void CameraController::calculateOptimalZoomForNewestBoard(const std::vector<std:
     float totalWidth = maxX - minX;
     float totalHeight = maxY - minY;
     
-    float screenWidth = static_cast<float>(GetScreenWidth());
-    float screenHeight = static_cast<float>(GetScreenHeight());
+    float screenWidth = safeAreaSize().x;
+    float screenHeight = safeAreaSize().y;
     
     if (_use3DRendering) {
         float maxDimension = std::max(totalWidth, totalHeight);
@@ -435,12 +446,12 @@ void CameraController::calculateOptimalZoomForNewestBoard(const std::vector<std:
         float targetFOV = 2.0f * atanf(maxDimension / (2.0f * cameraDistance)) * (180.0f / PI);
         _targetZoom = std::max(20.0f, std::min(targetFOV * 1.3f, 60.0f));
     } else {
-        float padding = 80.0f; // Extra padding to see context around newest board
+        float padding = 24.0f; // inside the safe area
         float zoomX = (screenWidth - padding * 2) / totalWidth;
         float zoomY = (screenHeight - padding * 2) / totalHeight;
         
         float optimalZoom = std::min(zoomX, zoomY);
-        optimalZoom = std::max(0.4f, std::min(optimalZoom, 2.0f));
+        optimalZoom = std::max(0.12f, std::min(optimalZoom, 2.0f));
         
         _targetZoom = optimalZoom;
         
@@ -487,6 +498,9 @@ void CameraController::focusOnBoardWithAdaptiveZoom(const std::vector<std::share
     } else {
         // For 2D: Direct zoom value
         _targetZoom = COMFORTABLE_ZOOM;
+        // Never zoom so far that the board spills out of the safe area
+        Vector2 safe = safeAreaSize();
+        _targetZoom = std::min({_targetZoom, (safe.x - 48.0f) / targetArea.width, (safe.y - 48.0f) / targetArea.height});
         _targetZoom = std::max(0.5f, std::min(_targetZoom, 3.0f)); // Clamp zoom
     }
     

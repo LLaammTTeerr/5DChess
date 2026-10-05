@@ -164,6 +164,32 @@ ResourceManager::ResourceManager() {
     _preloadTexture2D("assets/images/Theme_2/white_queen.png", "white_queen_2");
     _preloadTexture2D("assets/images/Theme_2/white_rook.png", "white_rook_2");
 
+    /* Theme 3 (Pixel): point filtering keeps the sprite pixels crisp when scaled */
+    _preloadTexture2D("assets/images/Theme_3/black_bishop.png", "black_bishop_3");
+    SetTextureFilter(_textures["assets/images/Theme_3/black_bishop.png"], TEXTURE_FILTER_POINT);
+    _preloadTexture2D("assets/images/Theme_3/black_king.png", "black_king_3");
+    SetTextureFilter(_textures["assets/images/Theme_3/black_king.png"], TEXTURE_FILTER_POINT);
+    _preloadTexture2D("assets/images/Theme_3/black_knight.png", "black_knight_3");
+    SetTextureFilter(_textures["assets/images/Theme_3/black_knight.png"], TEXTURE_FILTER_POINT);
+    _preloadTexture2D("assets/images/Theme_3/black_pawn.png", "black_pawn_3");
+    SetTextureFilter(_textures["assets/images/Theme_3/black_pawn.png"], TEXTURE_FILTER_POINT);
+    _preloadTexture2D("assets/images/Theme_3/black_queen.png", "black_queen_3");
+    SetTextureFilter(_textures["assets/images/Theme_3/black_queen.png"], TEXTURE_FILTER_POINT);
+    _preloadTexture2D("assets/images/Theme_3/black_rook.png", "black_rook_3");
+    SetTextureFilter(_textures["assets/images/Theme_3/black_rook.png"], TEXTURE_FILTER_POINT);
+    _preloadTexture2D("assets/images/Theme_3/white_bishop.png", "white_bishop_3");
+    SetTextureFilter(_textures["assets/images/Theme_3/white_bishop.png"], TEXTURE_FILTER_POINT);
+    _preloadTexture2D("assets/images/Theme_3/white_king.png", "white_king_3");
+    SetTextureFilter(_textures["assets/images/Theme_3/white_king.png"], TEXTURE_FILTER_POINT);
+    _preloadTexture2D("assets/images/Theme_3/white_knight.png", "white_knight_3");
+    SetTextureFilter(_textures["assets/images/Theme_3/white_knight.png"], TEXTURE_FILTER_POINT);
+    _preloadTexture2D("assets/images/Theme_3/white_pawn.png", "white_pawn_3");
+    SetTextureFilter(_textures["assets/images/Theme_3/white_pawn.png"], TEXTURE_FILTER_POINT);
+    _preloadTexture2D("assets/images/Theme_3/white_queen.png", "white_queen_3");
+    SetTextureFilter(_textures["assets/images/Theme_3/white_queen.png"], TEXTURE_FILTER_POINT);
+    _preloadTexture2D("assets/images/Theme_3/white_rook.png", "white_rook_3");
+    SetTextureFilter(_textures["assets/images/Theme_3/white_rook.png"], TEXTURE_FILTER_POINT);
+
 
     _preloadFont("assets/fonts/PublicSans-Regular.ttf", "public_sans_regular");
     _preloadFont("assets/fonts/PublicSans-Bold.ttf", "public_sans_bold");

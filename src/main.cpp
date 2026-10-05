@@ -5,6 +5,7 @@
 #include "Scene/SceneManager.h"
 #include "gameState.h"
 #include "PieceTheme.h"
+#include "Render/UITheme.h"
 
 int main() {
     SetConfigFlags(FLAG_MSAA_4X_HINT);
@@ -24,7 +25,7 @@ int main() {
         sceneManager.update(GetFrameTime());
        
         BeginDrawing();
-        ClearBackground(RAYWHITE);
+        ClearBackground(UI::Color::bg);
        
         sceneManager.render();
 
@@ -32,6 +33,7 @@ int main() {
     }
 
     // Release GPU resources while the GL context is still alive
+    UI::Fonts::unloadAll();
     resourceManager.unloadAll();
     CloseWindow();
     return 0;

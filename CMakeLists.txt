@@ -16,6 +16,7 @@ endif()
 
 option(FDCHESS_BUILD_GAME "Build the raylib game executable" ON)
 option(FDCHESS_BUILD_TESTS "Build the unit/property test suite" ON)
+option(FDCHESS_BUILD_TOOLS "Build developer tools (theme_preview screenshot tool; not installed)" OFF)
 option(FDCHESS_SANITIZE "Build with AddressSanitizer + UndefinedBehaviorSanitizer" OFF)
 
 if(FDCHESS_SANITIZE AND NOT MSVC)
@@ -87,6 +88,11 @@ if(FDCHESS_BUILD_GAME)
   set(CPACK_GENERATOR ZIP)
   set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY ON)
   include(CPack)
+endif()
+
+# --- Developer tools (optional, never installed/packaged) ----------------------
+if(FDCHESS_BUILD_TOOLS AND FDCHESS_BUILD_GAME)
+  add_subdirectory(tools)
 endif()
 
 # --- Tests --------------------------------------------------------------------

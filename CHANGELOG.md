@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Pixel piece theme (original pixel-art creatures) and its generator script (`scripts/gen_pixel_theme.py`).
+- Restyled UI: colour and typography tokens, button states, in-game HUD with turn/timeline count and hints, controls bar, end-game overlay, clearer selection, legal-move and capture highlights.
+- `theme_preview` developer tool (`-DFDCHESS_BUILD_TOOLS=ON`).
+
+### Changed
+- The camera keeps boards clear of the HUD.
+- The present line is a thin line.
+
+### Fixed
+- Theme names in Settings were mapped inconsistently.
+- Fonts are now unloaded before the window closes.
+- Stale hover tint on the board while the pointer is over the navigation menu.
+
 ## [0.1.0] - 2026-10-05
 
 ### Added

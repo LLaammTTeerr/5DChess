@@ -1,5 +1,6 @@
 #include "MainMenuScene.h"
 #include "ResourceManager.h"
+#include "Render/UITheme.h"
 #include <iostream>
 #include <raylib.h> // Assuming raylib is used for rendering
 void MainMenuScene::init(void) {}
@@ -20,13 +21,12 @@ void MainMenuScene::update(float deltaTime) {
 }
 
 void MainMenuScene::render() {
-  ClearBackground(Color{164, 204, 217, 255}); // rgb(164, 204, 217)
+  ClearBackground(UI::Color::bg);
+  UI::Cursor::beginFrame();
   Texture2D& welcomeBackground = ResourceManager::getInstance().getTexture2D("welcomeImage");
   DrawTexturePro(welcomeBackground, {0, 0, (float)welcomeBackground.width, (float)welcomeBackground.height},
                  {300, 0, (float)GetScreenWidth() - 300, (float)GetScreenHeight()},
                  {0, 0}, 0.0f, WHITE); // Draw the background image covering the whole screen
-
-  Font& font = ResourceManager::getInstance().getFont("public_sans_bold");
 }
 
 void MainMenuScene::cleanup(void) {}

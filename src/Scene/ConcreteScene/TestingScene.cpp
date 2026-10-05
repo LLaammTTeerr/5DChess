@@ -1,5 +1,6 @@
 #include "TestingScene.h"
 #include "ResourceManager.h"
+#include "Render/UITheme.h"
 #include <iostream>
 #include <raylib.h> // Assuming raylib is used for rendering
 #include "chess.h"
@@ -32,13 +33,18 @@ void TestingScene::update(float deltaTime) {
   _chessController->update(deltaTime);
 }
 
+void TestingScene::onPointerBlocked() {
+  _chessController->clearHover();
+}
+
 void TestingScene::handleInput() {
   _chessController->handleInput();
   // std::cout << "Handling input in TestingScene..." << std::endl;
 }
 
 void TestingScene::render() {
-  ClearBackground(Color{164, 204, 217, 255}); // rgb(164, 204, 217)
+  ClearBackground(UI::Color::bg);
+  UI::Cursor::beginFrame();
   _chessController->render();
 }
 

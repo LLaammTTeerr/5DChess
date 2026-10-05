@@ -23,6 +23,10 @@ private:
   Vector2 _boundsMin = { 0.0f, 0.0f };
   Vector2 _boundsMax = { 0.0f, 0.0f };
   bool _use3DRendering = false;
+  // Screen-space safe area (px) kept clear of HUD/buttons when fitting/centring content
+  float _insetTop = 0.0f, _insetRight = 0.0f, _insetBottom = 0.0f, _insetLeft = 0.0f;
+  Vector2 safeAreaSize() const;
+  void applySafeAreaOffset();
   
   // Camera state tracking
   CameraState _cameraState = CameraState::AUTO_CENTERING;
@@ -61,6 +65,11 @@ public:
   Camera3D* getCamera3D() { return &_camera3D; }
   void focusOnNewestBoard(const std::vector<std::shared_ptr<BoardView>>& boardViews, std::shared_ptr<BoardView> newestBoardView = nullptr);
   void focusOnBoardWithAdaptiveZoom(const std::vector<std::shared_ptr<BoardView>>& boardViews, std::shared_ptr<BoardView> targetBoard);
+
+  // Screen-space insets (pixels) reserved for UI; fit/auto-zoom/focus place content in the remaining area
+  void setViewportInsets(float top, float right, float bottom, float left) {
+    _insetTop = top; _insetRight = right; _insetBottom = bottom; _insetLeft = left;
+  }
 
   bool isUsing3DRendering() const { return _use3DRendering; }
   void setUsing3DRendering(bool use3D) { _use3DRendering = use3D; }

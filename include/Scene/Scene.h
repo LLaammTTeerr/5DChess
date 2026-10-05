@@ -19,6 +19,9 @@ public:
   virtual void onEnter(void) = 0;
   virtual void onExit(void) = 0;
 
+  // Called instead of handleInput() while the pointer is over an overlay (e.g. the nav menu)
+  virtual void onPointerBlocked(void) {}
+
   virtual bool shouldTransition(void) const { return false; }
 
 protected:

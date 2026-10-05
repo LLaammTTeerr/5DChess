@@ -28,6 +28,7 @@ public:
     virtual void render() const = 0;
     virtual void render_highlightBoundaries() const = 0;
     virtual void render_highlightedPositions(std::vector<Chess::Position2D> positions) const = 0;
+    virtual void render_hoverSquare(Chess::Position2D position) const = 0;
 
     virtual void setBoardTexture(Texture2D* texture) = 0;
 
@@ -64,6 +65,12 @@ public:
   virtual void render_pieces() const = 0;
   virtual void render_highlightPiece(Chess::Position2D piecePosition) const = 0;
   virtual void setBoardDim(int dim) { _boardDim = dim; }
+
+  /// True when the current player may still move from this board (drawn with an accent border)
+  virtual void setMoveable(bool moveable) { _moveable = moveable; }
+  virtual bool isMoveable() const { return _moveable; }
+protected:
+  bool _moveable = false;
 };
 
 class BoardView2D : public BoardView {
@@ -76,6 +83,9 @@ private:
 
   bool _isMouseOver = false; // Whether the mouse is over the board
 
+  /// World-space thickness that appears as `px` screen pixels at the current zoom
+  float worldThickness(float px) const;
+
 public:
   BoardView2D() = default;
   ~BoardView2D() = default;
@@ -85,6 +95,7 @@ public:
   void render_highlightPiece(Chess::Position2D piecePosition) const override;
   void render_highlightBoundaries() const override;
   void render_highlightedPositions(std::vector<Chess::Position2D> positions) const override;
+  void render_hoverSquare(Chess::Position2D position) const override;
 
   void setPiecePositions(const std::vector<std::pair<Chess::Position2D, std::string>>& piecePositions) override {
     _piecePositions = piecePositions;

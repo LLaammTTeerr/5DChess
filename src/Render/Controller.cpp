@@ -5,6 +5,7 @@
 #include "MenuCommand.h"
 #include "MenuView.h"
 #include "MenuItemView.h"
+#include "Render/UITheme.h"
 
 
 
@@ -55,7 +56,17 @@ void ChessController::update(float deltaTime) {
   
   // Update menu button states based on current game state
   updateMenuButtonStates();
-  
+
+  // Boards the current player may still move from get an accent border
+  for (const auto& board : _currentBoard) {
+    auto it = _boardToBoardViewMap.find(board);
+    if (it == _boardToBoardViewMap.end() || !it->second) continue;
+    bool moveable = !model._game->gameEnd() &&
+        std::find(_moveableBoards.begin(), _moveableBoards.end(), board) != _moveableBoards.end();
+    it->second->setMoveable(moveable);
+  }
+  view.updateHud(computeHud());
+
   if (model._game->gameEnd()) {
     _isGameEnd = true;
     return;
@@ -93,20 +104,8 @@ void ChessController::setupViewCallbacks() {
 }
 
 void ChessController::handleMouseOverPosition(Chess::SelectedPosition selectedPosition) {
-  if (_isGameEnd) {
-    return; // Ignore input if the game has ended
-  }
-  if (model._currentMoveState.currentPhase == MovePhase::SELECT_FROM_BOARD || 
-      model._currentMoveState.currentPhase == MovePhase::SELECT_FROM_POSITION) {
-    // If we are in the phase of selecting a board or position, we can highlight the mouse over position
-    resetHighlightedPositions();
-    addHighlightedPosition(selectedPosition);
-    std::vector<std::pair<std::shared_ptr<BoardView>, Chess::Position2D>> Converted_highlightedPositions;
-    for (const auto& pos : _highlightedPositions) {
-        Converted_highlightedPositions.emplace_back(_boardToBoardViewMap[pos.board], pos.position);
-    }
-    view.update_highlightedPositions(Converted_highlightedPositions);
-  }
+  // The hover square is tracked and drawn by ChessView (accent @ 25%); nothing to do in the model.
+  (void)selectedPosition;
 }
 
 bool ChessController::handleSelectedFromBoard(Chess::SelectedPosition selectedPosition) {
@@ -383,11 +382,12 @@ std::vector<std::shared_ptr<BoardView>> ChessController::computeHighlightedBoard
 
 void ChessController::render() {
   view.render();
+  view.renderHud();
   renderInGameMenu();
 
   if (model._game->gameEnd()) {
     auto winner = model._game->getWinner();
-    std::string winnerText = (winner == Chess::PieceColor::PIECEWHITE) ? "White Wins!" : "Black Wins!";
+    std::string winnerText = (winner == Chess::PieceColor::PIECEWHITE) ? "White wins!" : "Black wins!";
     view.renderEndGameScreen(winnerText);
   }
 }
@@ -434,6 +434,25 @@ void ChessController::renderInGameMenu() const {
   }
 }
 
+HudData ChessController::computeHud() const {
+  HudData hud;
+  hud.whiteToMove = model._game->getCurrentTurnColor() == Chess::PieceColor::PIECEWHITE;
+  hud.fullTurn = model._game->presentFullTurn() + 1;
+  hud.timelineCount = static_cast<int>(model._game->getTimeLines().size());
+  if (model._game->gameEnd()) {
+    hud.hint = "";
+  } else if (_moveableBoards.empty()) {
+    hud.hint = "Submit your turn";
+  } else {
+    switch (model._currentMoveState.currentPhase) {
+      case MovePhase::SELECT_FROM_BOARD: hud.hint = "Select a board"; break;
+      case MovePhase::SELECT_FROM_POSITION: hud.hint = "Select a piece"; break;
+      default: hud.hint = "Select a target"; break;
+    }
+  }
+  return hud;
+}
+
 void ChessController::updateMenuButtonStates() {
   if (!_inGameMenuSystem) {
     return; // Menu not initialized yet
@@ -452,8 +471,8 @@ void ChessController::updateMenuButtonStates() {
 
   // Update Submit button: enabled if there are no moveable boards (turn can be submitted)
   if (submitItem) {
-    std::vector<std::shared_ptr<Chess::Board>> moveableBoards = model._game->getMoveableBoards();
-    bool canSubmit = moveableBoards.empty() && !model._game->gameEnd();
+    _moveableBoards = model._game->getMoveableBoards();
+    bool canSubmit = _moveableBoards.empty() && !model._game->gameEnd();
     submitItem->setEnabled(canSubmit);
   }
 
@@ -545,7 +564,7 @@ std::vector<TimelineArrowData> ChessController::computeProgressionArrows() const
                 
                 if (fromBoardView && toBoardView) {
                     // Alternate colors based on timeline ID
-                    Color color = (timeline->ID() % 2 == 0) ? BLUE : GREEN;
+                    Color color = UI::Color::timelineArrow;
                     arrows.emplace_back(fromBoardView, toBoardView, "progression", color);
                 }
             }
@@ -590,7 +609,7 @@ std::vector<TimelineArrowData> ChessController::computeBranchingArrows() const {
             childBoardView = childIt->second;
             
             if (parentBoardView && childBoardView) {
-                arrows.emplace_back(parentBoardView, childBoardView, "branch", RED);
+                arrows.emplace_back(parentBoardView, childBoardView, "branch", UI::Color::branchArrow);
             }
         }
     }
@@ -605,8 +624,8 @@ PresentLineData ChessController::computePresentLine() const {
     // Create present line data with appropriate styling
     PresentLineData lineData;
     lineData.halfTurnPosition = static_cast<float>(bufferHalfTurn);
-    lineData.color = {255, 215, 0, 255};  // Gold color, more subtle than bright yellow
-    lineData.thickness = 15.0f;           // Much thicker base thickness
+    lineData.color = UI::Color::presentLine;
+    lineData.thickness = 3.0f;            // screen pixels (renderer divides by zoom)
     lineData.isVisible = true;            // Always visible
     
     return lineData;

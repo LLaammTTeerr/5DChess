@@ -3,6 +3,8 @@
 #include "chess.h"
 #include "raymath.h"
 #include "PieceTheme.h"
+#include "Render/UITheme.h"
+#include <algorithm>
 #include <iostream>
 
 
@@ -39,11 +41,23 @@ void BoardView2D::render() const {
                 position.y,
                 float(_area.width) / float(1.0 * _boardDim),
                 float(_area.height) / float(1.0 * _boardDim),
-                (i + j) % 2 == 0 ? Color{243, 233, 220, 255} : Color{248, 178, 89, 255} // Alternate colors
+                (i + j) % 2 == 0 ? UI::Color::squareLight : UI::Color::squareDark // Alternate colors
             );
         }
     }
     render_pieces();
+
+    // Border: accent for boards the current player may still move from, neutral otherwise
+    if (_moveable) {
+        DrawRectangleLinesEx(_area, worldThickness(3.0f), UI::withAlpha(UI::Color::accent, 170));
+    } else {
+        DrawRectangleLinesEx(_area, worldThickness(2.0f), UI::Color::border);
+    }
+}
+
+float BoardView2D::worldThickness(float px) const {
+    const float zoom = (_camera && _camera->zoom > 0.01f) ? _camera->zoom : 1.0f;
+    return px / zoom; // constant on screen
 }
 
 bool BoardView2D::isMouseOverBoard() const {
@@ -106,19 +120,36 @@ Chess::Position2D BoardView2D::getMouseClickedPosition() const {
 }
 
 void BoardView2D::render_highlightBoundaries() const {
-    DrawRectangleLinesEx(_area, 2, RED);
+    DrawRectangleLinesEx(_area, worldThickness(4.0f), UI::Color::selected);
 }
 
 void BoardView2D::render_highlightedPositions(std::vector<Chess::Position2D> positions) const {
+    const float sw = _area.width / _boardDim;
+    const float sh = _area.height / _boardDim;
     for (const auto& pos : positions) {
-        DrawRectangle(
-            _area.x + pos.x() * _area.width / _boardDim,
-            _area.y + pos.y() * _area.height / _boardDim,
-            _area.width / _boardDim,
-            _area.height / _boardDim,
-            Color{0, 255, 0, 100} // Semi-transparent green
-        );
+        const float x = _area.x + pos.x() * sw;
+        const float y = _area.y + pos.y() * sh;
+        const Vector2 center = {x + sw / 2, y + sh / 2};
+        const bool occupied = std::any_of(_piecePositions.begin(), _piecePositions.end(),
+                                          [&](const auto& p) { return p.first == pos; });
+        if (occupied) {
+            // Capture: ring around the enemy piece
+            DrawRing(center, sw * 0.40f, sw * 0.46f, 0, 360, 36, UI::Color::capture);
+        } else {
+            // Legal empty target: sage dot
+            DrawCircleV(center, sw * 0.17f, UI::withAlpha(UI::Color::legalTarget, 220));
+        }
     }
+}
+
+void BoardView2D::render_hoverSquare(Chess::Position2D pos) const {
+    if (pos.x() < 0 || pos.y() < 0 || pos.x() >= _boardDim || pos.y() >= _boardDim) return;
+    DrawRectangle(
+        _area.x + pos.x() * _area.width / _boardDim,
+        _area.y + pos.y() * _area.height / _boardDim,
+        _area.width / _boardDim,
+        _area.height / _boardDim,
+        UI::Color::hover);
 }
 
 void BoardView2D::render_highlightPiece(Chess::Position2D piecePosition) const {
@@ -126,43 +157,15 @@ void BoardView2D::render_highlightPiece(Chess::Position2D piecePosition) const {
         piecePosition.x() >= _boardDim || piecePosition.y() >= _boardDim) {
         return;
     }
-    std::string pieceName;
-    for (auto & piece : _piecePositions) {
-        if (piece.first == piecePosition) {
-            pieceName = piece.second;
-            break;
-        }
-    }
-    if (pieceName.empty()) {
-        return;
-    }
-    Texture2D& texture = ThemeManager::getInstance().getPieceTexture(pieceName);
-    Vector2 position = {
-        _area.x + piecePosition.x() * _area.width / _boardDim,
-        _area.y + piecePosition.y() * _area.height / _boardDim
-    };
-    
-    float squareWidth = _area.width / _boardDim;
-    float squareHeight = _area.height / _boardDim;
-    
-    // Draw a highlight background behind the piece
-    DrawRectangle(
-        position.x,
-        position.y,
-        squareWidth,
-        squareHeight,
-        Color{228, 0, 75, 100} // Semi-transparent pink highlight rgb(228, 0, 75)
-    );
-    
-    // Draw the piece with a slight glow effect
-    DrawTexturePro(
-        texture,
-        Rectangle{0, 0, static_cast<float>(texture.width), static_cast<float>(texture.height)},
-        Rectangle{position.x, position.y, squareWidth, squareHeight},
-        Vector2{0, 0},
-        0.0f,
-        WHITE
-    );
+    const float squareWidth = _area.width / _boardDim;
+    const float squareHeight = _area.height / _boardDim;
+    const Rectangle square = {
+        _area.x + piecePosition.x() * squareWidth,
+        _area.y + piecePosition.y() * squareHeight,
+        squareWidth, squareHeight};
+    // Selected piece: accent tint plus a 3 px accent outline (pieces are drawn underneath)
+    DrawRectangleRec(square, UI::Color::hover);
+    DrawRectangleLinesEx(square, worldThickness(UI::Space::outline), UI::Color::selected);
 }
 
 void BoardView2D::render_pieces() const {

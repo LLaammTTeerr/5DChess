@@ -12,10 +12,9 @@ void ButtonMenuView::createNavigationItemViews(std::shared_ptr<MenuComponent> me
     if (gameState == nullptr) {
         for (const auto& child : menuModel->getChildren()) {
             if (child) {
-                Vector2 position = { 100, static_cast<float>(_itemViews.size() * 50 + 100) }; // Example positioning
-                Vector2 size = { 200, 40 }; // Example size
+                Vector2 position = { 100, static_cast<float>(_itemViews.size() * (UI::Space::buttonHeight + UI::Space::buttonSpacing) + 100) }; // Example positioning
+                Vector2 size = { 200, UI::Space::buttonHeight };
                 auto itemView = std::make_shared<MenuItemView>(position, size);
-                itemView->setFont(ResourceManager::getInstance().getFont("public_sans_bold"));
                 _itemViews.push_back(itemView);
             }
         }
@@ -38,6 +37,8 @@ void ButtonMenuView::draw(std::shared_ptr<MenuComponent> menuModel) const {
     for (size_t i = 0; i < _itemViews.size() && i < menuItems.size(); ++i) {
         // Disabled items are still drawn (greyed out by MenuItemView) but are not clickable
         if (_itemViews[i]) {
+            // Submit is the primary action of the in-game row: filled accent when enabled
+            if (menuItems[i]->getTitle() == "Submit") _itemViews[i]->setPrimary(true);
             _itemViews[i] -> draw(menuItems[i]);
         }
     }
@@ -46,20 +47,20 @@ void ButtonMenuView::draw(std::shared_ptr<MenuComponent> menuModel) const {
 void ButtonMenuView::createInGameItemsViews(int numberOfItems) {
     _itemViews.clear(); // Clear existing item views
 
-    const float horizontalSpacing = 20.0f; // spacing between items
-    const float itemHeight = 30.0f;
-    const float itemWidth = 150.0f;
-    const Rectangle menuArea = {0, 0, (float)GetScreenWidth(), 100.0f}; // Example menu area
+    // Action row sits just below the HUD pill (drawn at the top centre by ChessView)
+    const float horizontalSpacing = UI::Space::buttonSpacing;
+    const float itemHeight = UI::Space::buttonHeight;
+    const float itemWidth = 130.0f;
+    const Rectangle menuArea = {0, 0, (float)GetScreenWidth(), 100.0f};
 
     const float startX = menuArea.x + (menuArea.width - numberOfItems * itemWidth - (numberOfItems - 1) * horizontalSpacing) / 2;
-    const float startY = menuArea.y + (menuArea.height - itemHeight) / 2;
+    const float startY = UI::Layout::actionRowY;
 
     _itemViews.reserve(numberOfItems); // Reserve space for the specified number of items
     for (int i = 0; i < numberOfItems; ++i) {
         Vector2 position = {startX + i * (itemWidth + horizontalSpacing), startY};
         Vector2 size = {itemWidth, itemHeight};
         auto itemView = std::make_shared<MenuItemView>(position, size);
-        itemView->setFont(ResourceManager::getInstance().getFont("public_sans_bold"));
         _itemViews.push_back(itemView);
     }
 }
@@ -67,9 +68,9 @@ void ButtonMenuView::createInGameItemsViews(int numberOfItems) {
 void ButtonMenuView::createSettingsMenuItemViews(int numberOfItems) {
      _itemViews.clear(); // Clear existing item views
 
-    const float horizontalSpacing = 20.0f; // spacing between items
-    const float itemHeight = 30.0f;
-    const float itemWidth = 150.0f;
+    const float horizontalSpacing = UI::Space::buttonSpacing + UI::Space::sm;
+    const float itemHeight = UI::Space::buttonHeight;
+    const float itemWidth = 160.0f;
     const Rectangle menuArea = {0, 150, (float)GetScreenWidth(), itemHeight}; // Example menu area
 
     const float startX = menuArea.x + (menuArea.width - numberOfItems * itemWidth - (numberOfItems - 1) * horizontalSpacing) / 2;
@@ -80,7 +81,6 @@ void ButtonMenuView::createSettingsMenuItemViews(int numberOfItems) {
         Vector2 position = {startX + i * (itemWidth + horizontalSpacing), startY};
         Vector2 size = {itemWidth, itemHeight};
         auto itemView = std::make_shared<MenuItemView>(position, size);
-        itemView->setFont(ResourceManager::getInstance().getFont("public_sans_bold"));
         _itemViews.push_back(itemView);
     }
 }
@@ -117,7 +117,6 @@ void ListMenuView::createNavigationItemViews(std::shared_ptr<MenuComponent> menu
                 };
                 Vector2 size = { listArea.width - scrollbarWidth - 20.0f, itemHeight };
                 auto itemView = std::make_shared<MenuItemView>(position, size);
-                itemView->setFont(ResourceManager::getInstance().getFont("public_sans_bold"));
                 _itemViews.push_back(itemView);
             }
         }
@@ -154,7 +153,6 @@ void ListMenuView::createInGameItemsViews(int numberOfItems) {
         };
         Vector2 size = { listArea.width - scrollbarWidth - 20.0f, itemHeight };
         auto itemView = std::make_shared<MenuItemView>(position, size);
-        itemView->setFont(ResourceManager::getInstance().getFont("public_sans_bold"));
         _itemViews.push_back(itemView);
     }
     
@@ -271,9 +269,6 @@ void ListMenuView::autoResizeToFitContent() {
 void ListMenuView::draw(std::shared_ptr<MenuComponent> menuModel) const {
     const auto& menuItems = menuModel->getChildren();
     
-    // Draw background
-    DrawRectangleRec(listArea, backgroundColor);
-    DrawRectangleLinesEx(listArea, 2.0f, DARKGRAY);
     
     // Begin scissor mode for clipping
     BeginScissorMode((int)listArea.x, (int)listArea.y, (int)listArea.width - (int)scrollbarWidth, (int)listArea.height);
@@ -303,8 +298,7 @@ void ListMenuView::draw(std::shared_ptr<MenuComponent> menuModel) const {
     // Draw scrollbar if needed
     if (maxScrollOffset > 0) {
         // Draw scrollbar background
-        DrawRectangleRec(scrollbarArea, scrollbarBackgroundColor);
-        DrawRectangleLinesEx(scrollbarArea, 1.0f, GRAY);
+        DrawRectangleRounded(scrollbarArea, 1.0f, 6, scrollbarBackgroundColor);
         
         // Draw scrollbar handle
         Rectangle handleRect = {
@@ -315,7 +309,6 @@ void ListMenuView::draw(std::shared_ptr<MenuComponent> menuModel) const {
         };
         
         Color handleColor = isScrollbarHovered() ? scrollbarHandleHoverColor : scrollbarHandleColor;
-        DrawRectangleRec(handleRect, handleColor);
-        DrawRectangleLinesEx(handleRect, 1.0f, DARKGRAY);
+        DrawRectangleRounded(handleRect, 1.0f, 6, handleColor);
     }
 }
