@@ -6,8 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Replaced the background music and sound effects with CC0 / public-domain assets (credits in `assets/CREDITS.md`); the web build now has audio.
+
 ### Added
-- WebAssembly (Emscripten) build with a custom HTML shell, and a GitHub Pages deploy workflow that publishes it on each release. The web build has no background music and no Exit menu item.
+- WebAssembly (Emscripten) build with a custom HTML shell, and a GitHub Pages deploy workflow that publishes it on each release. The web build has no Exit menu item.
 - Audio: `AudioManager` singleton with streamed background music (Settings -> Music, default Off, global across scenes), sound effects for moves, captures, game won and menu clicks, and a Sound effects on/off toggle. No-ops without an audio device; music starts after the first click (browser autoplay policy).
 
 ## [0.2.0] - 2026-10-05

@@ -85,7 +85,7 @@ emcmake cmake -S . -B build-web -DCMAKE_BUILD_TYPE=Release -DFDCHESS_BUILD_TESTS
 cmake --build build-web -j
 python3 -m http.server 8765 -d build-web   # then open http://localhost:8765/5dchess.html
 ```
-Only the assets the game loads are bundled; `assets/backgroundmusic` is excluded. Releases are deployed to GitHub Pages by `.github/workflows/pages.yml`.
+Only the assets the game loads are bundled (including the audio). Releases are deployed to GitHub Pages by `.github/workflows/pages.yml`.
 
 ### CMake options
 
@@ -246,6 +246,10 @@ theme_preview <Classic|Modern|Fantasy|Pixel> <Standard|Battle|Invasion|Fragment>
 ## License
 
 This project is part of an academic assignment for Object-Oriented Programming course.
+
+## Credits
+
+The sound effects and music are CC0 / public domain; fonts are under the SIL Open Font License. See [assets/CREDITS.md](assets/CREDITS.md) for the full list of sources and licences.
 
 ## Acknowledgments
 

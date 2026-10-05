@@ -83,13 +83,17 @@ if(FDCHESS_BUILD_GAME)
 
   if(EMSCRIPTEN)
     # Web build: only the assets the game loads are embedded into the virtual
-    # filesystem. assets/backgroundmusic is deliberately left out (size and
-    # licensing), as are files the code never loads (buttons/, backgroundimage/,
-    # unused fonts, per-theme cancel icons, ...).
+    # filesystem: sound effects and the (small, CC0) background music, but not
+    # files the code never loads (buttons/, backgroundimage/, unused fonts,
+    # per-theme cancel icons, ...).
     set(WEB_ASSETS
       chess.png 5DChess.png ChessBoardNoBound.png images/EndGame.png
       fonts/PublicSans-Regular.ttf fonts/PublicSans-Bold.ttf fonts/Montserrat-Bold.ttf
-      fonts/Nunito-VariableFont_wght.ttf fonts/intelone-mono-font-family-regular.ttf)
+      fonts/Nunito-VariableFont_wght.ttf fonts/intelone-mono-font-family-regular.ttf
+      soundeffect/move.ogg soundeffect/capture.ogg soundeffect/castle.ogg soundeffect/check.ogg
+      soundeffect/promote.ogg soundeffect/game-won.ogg soundeffect/game-drawn.ogg soundeffect/click.ogg
+      backgroundmusic/calm-piano-vaporware.ogg backgroundmusic/slow-piano-intermission.ogg
+      backgroundmusic/solo-piano-4.ogg)
     foreach(theme 0 1 2 3)
       foreach(color black white)
         foreach(piece bishop king knight pawn queen rook)

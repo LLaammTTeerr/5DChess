@@ -4,14 +4,14 @@
 namespace {
 const char* sfxFile(Sfx s) {
     switch (s) {
-        case Sfx::Move:    return "assets/soundeffect/move-self.wav";
-        case Sfx::Capture: return "assets/soundeffect/capture.wav";
-        case Sfx::Castle:  return "assets/soundeffect/castle.wav";
-        case Sfx::Click:   return "assets/soundeffect/clicky.wav";
-        case Sfx::Draw:    return "assets/soundeffect/game-draw.wav";
-        case Sfx::Win:     return "assets/soundeffect/game-win-long.wav";
-        case Sfx::Check:   return "assets/soundeffect/move-check.wav";
-        case Sfx::Promote: return "assets/soundeffect/promote.wav";
+        case Sfx::Move:    return "assets/soundeffect/move.ogg";
+        case Sfx::Capture: return "assets/soundeffect/capture.ogg";
+        case Sfx::Castle:  return "assets/soundeffect/castle.ogg";
+        case Sfx::Click:   return "assets/soundeffect/click.ogg";
+        case Sfx::Draw:    return "assets/soundeffect/game-drawn.ogg";
+        case Sfx::Win:     return "assets/soundeffect/game-won.ogg";
+        case Sfx::Check:   return "assets/soundeffect/check.ogg";
+        case Sfx::Promote: return "assets/soundeffect/promote.ogg";
         default:           return "";
     }
 }
@@ -24,12 +24,9 @@ AudioManager& AudioManager::instance() {
 
 const std::vector<AudioManager::Track>& AudioManager::tracks() {
     static const std::vector<Track> list = {
-        {"Beethoven Fur Elise", "assets/backgroundmusic/Beethoven Fur Elise.mp3"},
-        {"Canon in D", "assets/backgroundmusic/Canon in D Pachelbel.mp3"},
-        {"Dance of Sugar Plum", "assets/backgroundmusic/Tchaikovsky Dance of the Sugar Plum Fairy.mp3"},
-        {"Star Sky", "assets/backgroundmusic/Two Steps From Hell  Star Sky.mp3"},
-        {"Victory", "assets/backgroundmusic/Two Steps From Hell  Victory.mp3"},
-        {"Glorious Morning", "assets/backgroundmusic/Waterflame  Glorious Morning Extended.mp3"},
+        {"Calm Piano", "assets/backgroundmusic/calm-piano-vaporware.ogg"},
+        {"Slow Piano Intermission", "assets/backgroundmusic/slow-piano-intermission.ogg"},
+        {"Solo Piano", "assets/backgroundmusic/solo-piano-4.ogg"},
     };
     return list;
 }
