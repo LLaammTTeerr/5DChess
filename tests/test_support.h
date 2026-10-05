@@ -40,6 +40,8 @@ public:
     for (int h = 0; h < count; ++h) line->pushBack(std::make_shared<Board>(dim(), id, h));
   }
 
+  void setTurnColor(PieceColor color) { _currentTurnColor = color; }
+
   std::shared_ptr<Board> boardAt(int timeLineID, int halfTurn) const {
     return timeLine(timeLineID)->getBoardByHalfTurn(halfTurn);
   }

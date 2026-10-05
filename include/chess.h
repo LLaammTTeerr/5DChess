@@ -536,6 +536,9 @@ public:
     bool reductions = true;
     /** Switches of the individual reductions (test knobs, see src/chess.cpp F3, F4, F5, phase 1). */
     bool commutation = true, irrelevant = true, forwardCheck = true, cheapFirst = true;
+    /** Nodes before the first restart with a new ranking (doubles after every restart); a test knob so that restart()
+     *  and arrange() run on small positions too. */
+    long long restartLimit = 20000;
   };
 
   explicit TurnSearch(const IGame& game);
@@ -744,6 +747,12 @@ public:
     assert(undoable());
     return timeLine(_undoBuffer.back().back())->back();
   }
+  /**
+   * Bumped by every change of the played state (makeMove, undo, submitTurn, a finished result search), so that callers
+   * can cache derived answers (canSubmit(), mandatoryBoards(), checkingAttacks()) until it changes. It does not see
+   * edits made to the boards behind the game's back (test sandboxes).
+   */
+  inline unsigned long long stateVersion(void) const { return _stateVersion; }
 protected:
   int _N;
   int _presentHalfTurn;
@@ -759,6 +768,7 @@ protected:
   int _origMin = INT_MAX;
   int _origMax = INT_MIN;
   bool _setupDone = false;
+  unsigned long long _stateVersion = 0;
 
   std::vector<SelectedPosition> _movesFor(PieceColor mover, SelectedPosition selected) const;
   std::vector<Threat> _threatsAgainst(PieceColor victim, bool firstOnly) const;

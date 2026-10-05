@@ -27,6 +27,13 @@ private:
   void renderInGameMenu() const;
   void updateMenuButtonStates();
   std::vector<std::shared_ptr<Chess::Board>> _moveableBoards; // refreshed by updateMenuButtonStates()
+  /// canSubmit() and "no mandatory board left" are not free (a threat search over the multiverse), and the HUD and the
+  /// menu ask every frame: cache them until the game's stateVersion() changes.
+  struct TurnStatus { bool canSubmit = false; bool mandatoryEmpty = true; };
+  const TurnStatus& turnStatus() const;
+  mutable TurnStatus _turnStatus;
+  mutable const Chess::IGame* _turnStatusGame = nullptr;
+  mutable unsigned long long _turnStatusVersion = 0;
   HudData computeHud() const; // Update menu button enabled/disabled states based on game state
 
 /// @brief private attribute and methods related to model

@@ -472,6 +472,17 @@ void ChessController::renderInGameMenu() const {
   }
 }
 
+const ChessController::TurnStatus& ChessController::turnStatus() const {
+  const Chess::IGame* game = model._game.get();
+  if (_turnStatusGame != game || _turnStatusVersion != game->stateVersion()) {
+    _turnStatus.canSubmit = game->canSubmit();
+    _turnStatus.mandatoryEmpty = game->mandatoryBoards().empty();
+    _turnStatusGame = game;
+    _turnStatusVersion = game->stateVersion();
+  }
+  return _turnStatus;
+}
+
 HudData ChessController::computeHud() const {
   HudData hud;
   hud.whiteToMove = model._game->getCurrentTurnColor() == Chess::PieceColor::PIECEWHITE;
@@ -481,9 +492,9 @@ HudData ChessController::computeHud() const {
     hud.hint = "";
   } else if (model._game->resultPending()) {
     hud.hint = "Checking position...";
-  } else if (model._game->canSubmit()) {
+  } else if (turnStatus().canSubmit) {
     hud.hint = "Submit your turn";
-  } else if (model._game->mandatoryBoards().empty() && model._game->undoable()) {
+  } else if (turnStatus().mandatoryEmpty && model._game->undoable()) {
     hud.hint = "Your king would be capturable";
   } else {
     switch (model._currentMoveState.currentPhase) {
@@ -514,7 +525,7 @@ void ChessController::updateMenuButtonStates() {
   // Update Submit button: enabled once the turn is complete and legal (engine rule: canSubmit)
   if (submitItem) {
     _moveableBoards = model._game->getMoveableBoards();
-    submitItem->setEnabled(model._game->canSubmit());
+    submitItem->setEnabled(turnStatus().canSubmit);
   }
 
   // Update Deselect button: enabled if there's a current move state to deselect
@@ -549,7 +560,7 @@ void ChessController::handleUndoMove() {
 }
 
 void ChessController::handleSubmitMove() {
-  if (!model._game->canSubmit()) return;
+  if (!turnStatus().canSubmit) return;
   std::cout << "Submitting move..." << std::endl;
   view.finishAnimations();
 

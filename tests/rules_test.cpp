@@ -549,3 +549,18 @@ TEST_CASE("movement vectors: king, rook, bishop and queen move forward in time")
   CHECK(contains(qm, queen.boardAt(1, 2), 1, 1));       // (dx, dy, dz, dw) = (1, 1, 1, 1)
   CHECK(contains(qm, queen.boardAt(2, 4), 2, 2));       // twice that: not capped by the board's own turn number
 }
+
+TEST_CASE("the UI-facing move list never offers a king capture; the state version changes with every move") {
+  Sandbox game(4, 1);
+  game.place(0, 0, 0, make<Rook>(PieceColor::PIECEWHITE));
+  game.place(0, 0, 3, make<King>(PieceColor::PIECEBLACK));
+  game.place(0, 3, 0, make<Pawn>(PieceColor::PIECEBLACK));
+  CHECK_FALSE(contains(movesAt(game, game.tip(0), 0, 0), game.tip(0), 0, 3));
+  CHECK(contains(movesAt(game, game.tip(0), 0, 0), game.tip(0), 3, 0)); // other captures stay
+  const auto v0 = game.stateVersion();
+  game.makeMove(mv(game.tip(0), 0, 0, 1, 0));
+  const auto v1 = game.stateVersion();
+  CHECK(v1 != v0);
+  game.undo();
+  CHECK(game.stateVersion() != v1);
+}

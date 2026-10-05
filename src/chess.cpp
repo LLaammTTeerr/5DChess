@@ -135,6 +135,7 @@ void IGame::undo(void) {
   }
 
   _currentTurnMoves.pop_back();
+  ++_stateVersion;
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -383,7 +384,16 @@ std::vector<SelectedPosition> IGame::_movesFor(PieceColor mover, SelectedPositio
 }
 
 std::vector<SelectedPosition> IGame::getMoveablePositions(SelectedPosition selected) const {
-  return _movesFor(_currentTurnColor, selected);
+  std::vector<SelectedPosition> moves = _movesFor(_currentTurnColor, selected);
+  // Never offer a king capture (makeMove forbids it): a legal game cannot reach a position where it is possible. The
+  // internal threat generation (_threatsAgainst) uses _movesFor directly and does see king captures.
+  moves.erase(std::remove_if(moves.begin(), moves.end(),
+                             [](const SelectedPosition& to) {
+                               auto piece = to.board->getPiece(to.position);
+                               return piece != nullptr and piece->type() == PieceType::King;
+                             }),
+              moves.end());
+  return moves;
 }
 
 std::shared_ptr<Piece> makePiece(PieceType type, PieceColor color) {
@@ -443,6 +453,7 @@ void IGame::makeMove(Move move, PieceType promotion) {
     newFromBoard->placePiece(move.to.position, arriving);
     timeLine(fromTimeLineId)->pushBack(newFromBoard);
     _undoBuffer.push_back(list);
+    ++_stateVersion;
     return;
   }
   timeLine(fromTimeLineId)->pushBack(newFromBoard);
@@ -462,6 +473,7 @@ void IGame::makeMove(Move move, PieceType promotion) {
   newToBoard->placePiece(move.to.position, arriving);
   toTimeLine->pushBack(newToBoard);
   _undoBuffer.push_back(list);
+  ++_stateVersion;
 }
 
 int IGame::allocateTimeLineId(PieceColor mover) const {
@@ -478,7 +490,8 @@ IGame::IGame(const IGame& other)
     _result(other._result),
     _origMin(other._origMin),
     _origMax(other._origMax),
-    _setupDone(other._setupDone) {
+    _setupDone(other._setupDone),
+    _stateVersion(other._stateVersion) {
   for (const auto& [id, tl] : other._timeLines) {
     _timeLines.emplace(id, std::make_shared<TimeLine>(*tl)); // copies the board vector; Boards are shared (immutable)
   }
@@ -1124,6 +1137,16 @@ struct TurnSearch::Impl {
   }
 
   // F5: every mandatory board must still have a way out.
+  //
+  // Only the root's kind == 2 candidates (forkCands, from the root's tips) are scanned for the fork way out. That is
+  // sufficient because a fork cannot rescue a mandatory board in any other way:
+  //  - The mover's own inactive line cannot produce an active fork: a timeline the mover creates is inactive, so a fork
+  //    out of it never becomes an active line that must be played or can lower the present.
+  //  - The opponent's inactive line is what can matter, since activating it lowers the present; that case is exactly
+  //    f.activationLowers, which keeps the node unanalysed (see the end of this function).
+  //  - Parity rules out a fork whose tip equals the present: the new tip is one half-turn after the target and belongs
+  //    to the opponent, so a fork helps only by ending before the present (dstHalf + 1 < present), which is the test
+  //    on the candidates below.
   bool forwardCheck(const Frame& f) {
     for (int b = 0; b < nBids; ++b) {
       if (!f.mand[size_t(b)]) continue;
@@ -1320,6 +1343,7 @@ TurnSearch::Impl::Impl(const IGame& game, Options options, PieceColor moverColor
   n = game.dim();
   assert(n <= 8);
   phase = opt.reductions && opt.cheapFirst ? 1 : 2;
+  restartLimit = restartAt = opt.restartLimit;
   castling = game._rule.castling;
   doubleStep = game._rule.pawnCanMakeTwoMoveOnFirstTurn;
   mover = moverColor;
@@ -1499,6 +1523,7 @@ bool IGame::stepResultSearch(int nodeBudget) {
       break;
   }
   _resultSearch.reset();
+  ++_stateVersion;
   return false;
 }
 
@@ -1518,6 +1543,7 @@ void IGame::submitTurn(void) {
   _currentTurnColor = opposite(_currentTurnColor);
   _undoBuffer.clear();
   _resultSearch = std::make_unique<TurnSearch>(*this);
+  ++_stateVersion;
 }
 
 const std::string NameOfGame<StandardGame>::value = "Standard";
