@@ -1,3 +1,4 @@
+#include "Input.h"
 #include "SceneManager.h"
 #include "Scene.h"
 #include "MainMenuScene.h"
@@ -71,7 +72,7 @@ void SceneManager::update(float deltaTime) {
   // Visual-only fades advance first; a click while the cross-fade runs finishes it instantly
   // That click is consumed: it must not also reach the new scene.
   bool clickConsumed = false;
-  if (_hasSnapshot && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) { _sceneFade.finish(); clickConsumed = true; }
+  if (_hasSnapshot && Input::mousePressed(MOUSE_BUTTON_LEFT)) { _sceneFade.finish(); clickConsumed = true; }
   _sceneFade.update(deltaTime);
   if (_hasSnapshot && _sceneFade.done()) releaseSnapshot();
   _menuFade.update(deltaTime);
@@ -103,7 +104,7 @@ void SceneManager::update(float deltaTime) {
   }
   
   // Handle menu toggle (ESC key)
-  if (IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ESCAPE)) {
+  if (Input::keyPressed(KEY_SPACE) || Input::keyPressed(KEY_ESCAPE)) {
     toggleMenu();
   }
 }

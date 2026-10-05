@@ -1,0 +1,3 @@
+# Main menu at rest: hero title, creatures, parallax board field, navigation column.
+wait 30
+capture main-menu

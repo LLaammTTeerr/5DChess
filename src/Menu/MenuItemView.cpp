@@ -1,3 +1,4 @@
+#include "Input.h"
 #include "MenuItemView.h"
 #include "MenuComponent.h"
 #include <raylib.h>
@@ -19,12 +20,12 @@ static Color lerpColor(Color a, Color b, float t) {
 void MenuItemView::draw(std::shared_ptr<MenuComponent> menuComponent) const {
     const bool enabled = menuComponent->isEnabled();
     const bool hot = isHovered && enabled;
-    if (hot && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) pressStartedHere = true;
-    if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT)) pressStartedHere = false;
+    if (hot && Input::mousePressed(MOUSE_BUTTON_LEFT)) pressStartedHere = true;
+    if (!Input::mouseDown(MOUSE_BUTTON_LEFT)) pressStartedHere = false;
     const bool pressed = hot && pressStartedHere;
 
     // Ease the hover amount (~150 ms)
-    const float step = GetFrameTime() / 0.15f;
+    const float step = Input::frameTime() / 0.15f;
     hoverAmount = hot ? std::fmin(1.0f, hoverAmount + step) : std::fmax(0.0f, hoverAmount - step);
     if (hot) UI::Cursor::requestHand();
 
@@ -37,7 +38,7 @@ void MenuItemView::draw(std::shared_ptr<MenuComponent> menuComponent) const {
             enterTween.start(0.0f, 1.0f, UI::Motion::base, UI::Motion::easeOutCubic,
                              enterIndex * UI::Motion::stagger, true);
         }
-        enterTween.update(GetFrameTime());
+        enterTween.update(Input::frameTime());
         const float p = enterTween.progress();
         alpha *= p;
         if (!UI::Motion::reduced()) rise = (1.0f - p) * 8.0f;

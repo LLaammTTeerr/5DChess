@@ -1,4 +1,5 @@
 #pragma once
+#include "Input.h"
 #include <vector>
 #include <memory>
 #include <string>
@@ -29,7 +30,7 @@ public:
   virtual void draw() const = 0;
 
   // True when the mouse is over any item of this menu's view (lets the menu take the click first)
-  bool isMouseOverMenu() const { return _menuView && _menuView->isPointOverItems(GetMousePosition()); }
+  bool isMouseOverMenu() const { return _menuView && _menuView->isPointOverItems(Input::mousePosition()); }
 
 protected:
   std::shared_ptr<MenuComponent> _menuSystem; // root menu component
