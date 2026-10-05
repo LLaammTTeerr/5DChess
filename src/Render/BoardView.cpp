@@ -39,7 +39,7 @@ void BoardView2D::render() const {
                 position.y,
                 float(_area.width) / float(1.0 * _boardDim),
                 float(_area.height) / float(1.0 * _boardDim),
-                (i + j) % 2 == 0 ? (Color){243, 233, 220, 255} : (Color){248, 178, 89, 255} // Alternate colors
+                (i + j) % 2 == 0 ? Color{243, 233, 220, 255} : Color{248, 178, 89, 255} // Alternate colors
             );
         }
     }
@@ -116,7 +116,7 @@ void BoardView2D::render_highlightedPositions(std::vector<Chess::Position2D> pos
             _area.y + pos.y() * _area.height / _boardDim,
             _area.width / _boardDim,
             _area.height / _boardDim,
-            (Color){0, 255, 0, 100} // Semi-transparent green
+            Color{0, 255, 0, 100} // Semi-transparent green
         );
     }
 }
@@ -151,7 +151,7 @@ void BoardView2D::render_highlightPiece(Chess::Position2D piecePosition) const {
         position.y,
         squareWidth,
         squareHeight,
-        (Color){228, 0, 75, 100} // Semi-transparent pink highlight rgb(228, 0, 75)
+        Color{228, 0, 75, 100} // Semi-transparent pink highlight rgb(228, 0, 75)
     );
     
     // Draw the piece with a slight glow effect
