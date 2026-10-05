@@ -1,4 +1,5 @@
 #include "MenuCommand.h"
+#include "Audio/AudioManager.h"
 #include "SceneManager.h"
 #include "gameState.h"
 #include "Scene/ConcreteScene/VersusScene.h"
@@ -171,7 +172,10 @@ std::unique_ptr<ICommand> ThemeSelectCommand::clone() const {
 void MusicSelectCommand::execute() {
     std::cout << "Selected music: " << _music << std::endl;
     
-    // Apply music change through SettingsState if available
+    // Music is global: apply through AudioManager so it persists across scenes
+    AudioManager::instance().playMusic(_music);
+
+    // Keep the scene-local state in sync
     if (_settingsState) {
         _settingsState->setMusic(_music);
     }
@@ -191,6 +195,17 @@ std::unique_ptr<ThemeSelectCommand> createThemeSelectCommand(const std::string& 
 
 std::unique_ptr<MusicSelectCommand> createMusicSelectCommand(const std::string& music, SettingsState* settingsState) {
     return std::make_unique<MusicSelectCommand>(music, settingsState);
+}
+
+void SfxToggleCommand::execute() {
+    auto& audio = AudioManager::instance();
+    audio.setSfxEnabled(!audio.sfxEnabled());
+}
+
+std::unique_ptr<ICommand> SfxToggleCommand::clone() const {
+    auto cloned = std::make_unique<SfxToggleCommand>();
+    cloned->_callback = _callback;
+    return cloned;
 }
 
 void ExitCommand::execute() {

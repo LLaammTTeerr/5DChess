@@ -50,3 +50,4 @@ test.cpp
 build*/
 cmake-build-*/
 .DS_Store
+.claude/

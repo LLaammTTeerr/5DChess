@@ -11,7 +11,7 @@ class Scene;
 class SettingsState : public GameState {
 private:
     std::string selectedTheme = "Classic";
-    std::string selectedMusic = "None";
+    std::string selectedMusic = "Off";
     mutable int menuVersion = 0;
     
 public:

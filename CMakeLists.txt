@@ -66,6 +66,7 @@ if(FDCHESS_BUILD_GAME)
   add_executable(5dchess ${GAME_SOURCES})
   target_include_directories(5dchess PRIVATE
     include
+    include/Audio
     include/Commands
     include/GameStates
     include/GameStates/ConcreteGameStates

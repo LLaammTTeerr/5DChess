@@ -7,6 +7,7 @@
 #include "MenuCommand.h"
 #include "MenuItemView.h"
 #include "MenuController.h"
+#include "Audio/AudioManager.h"
 #include "GameStates/ConcreteGameStates/SettingsState.h"
 
 void SettingsScene::init(void) {
@@ -44,35 +45,22 @@ void SettingsScene::init(void) {
     std::shared_ptr<MenuComponent> MusicSection = std::make_shared<Menu>("Music", true);
 
     
-    std::shared_ptr<MenuComponent> NoMusic = std::make_shared<MenuItem>("None", true);
-    NoMusic->setCommand(createMusicSelectCommand("None", _settingsState.get()));
-    
-    std::shared_ptr<MenuComponent> Beethoven = std::make_shared<MenuItem>("Beethoven Fur Elise", true);
-    Beethoven->setCommand(createMusicSelectCommand("Beethoven Fur Elise", _settingsState.get()));
-    
-    std::shared_ptr<MenuComponent> Canon = std::make_shared<MenuItem>("Canon in D", true);
-    Canon->setCommand(createMusicSelectCommand("Canon in D", _settingsState.get()));
-    
-    std::shared_ptr<MenuComponent> Tchaikovsky = std::make_shared<MenuItem>("Dance of Sugar Plum", true);
-    Tchaikovsky->setCommand(createMusicSelectCommand("Dance of Sugar Plum", _settingsState.get()));
-    
-    std::shared_ptr<MenuComponent> StarSky = std::make_shared<MenuItem>("Star Sky", true);
-    StarSky->setCommand(createMusicSelectCommand("Star Sky", _settingsState.get()));
-    
-    std::shared_ptr<MenuComponent> Victory = std::make_shared<MenuItem>("Victory", true);
-    Victory->setCommand(createMusicSelectCommand("Victory", _settingsState.get()));
-    
-    std::shared_ptr<MenuComponent> GloriousMorning = std::make_shared<MenuItem>("Glorious Morning", true);
-    GloriousMorning->setCommand(createMusicSelectCommand("Glorious Morning", _settingsState.get()));
-    
+    // "Off" first (the default), then one entry per bundled track
+    std::shared_ptr<MenuComponent> NoMusic = std::make_shared<MenuItem>(AudioManager::offName(), true);
+    NoMusic->setCommand(createMusicSelectCommand(AudioManager::offName(), _settingsState.get()));
     MusicSection->addItem(NoMusic);
-    MusicSection->addItem(Beethoven);
-    MusicSection->addItem(Canon);
-    MusicSection->addItem(Tchaikovsky);
-    MusicSection->addItem(StarSky);
-    MusicSection->addItem(Victory);
-    MusicSection->addItem(GloriousMorning);
-    
+    for (const auto& track : AudioManager::tracks()) {
+        std::shared_ptr<MenuComponent> item = std::make_shared<MenuItem>(track.name, true);
+        item->setCommand(createMusicSelectCommand(track.name, _settingsState.get()));
+        MusicSection->addItem(item);
+    }
+
+    // Sound effects on/off toggle (title is refreshed by the controller after a click)
+    std::shared_ptr<MenuComponent> SfxToggle = std::make_shared<MenuItem>(
+        SfxToggleCommand::titleFor(AudioManager::instance().sfxEnabled()), true);
+    SfxToggle->setCommand(std::make_unique<SfxToggleCommand>());
+    MusicSection->addItem(SfxToggle);
+
     // Add the music section to the main menu system
     _settingMenuSystem->addItem(MusicSection);
     _settingsMenuController = std::make_shared<SettingMenuController>(_settingMenuSystem);

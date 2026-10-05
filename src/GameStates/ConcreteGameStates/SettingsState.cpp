@@ -72,8 +72,7 @@ std::vector<std::shared_ptr<MenuItemView>> SettingsState::createNavigationMenuBu
 void SettingsState::setMusic(const std::string& music) {
     selectedMusic = music;
     
-    // TODO: Implement music change logic here
-    // For now, just log the change
+    // Playback itself is global (AudioManager, called by MusicSelectCommand); this keeps the scene-local copy.
     std::cout << "Music changed to: " << music << std::endl;
     ++menuVersion;
 }

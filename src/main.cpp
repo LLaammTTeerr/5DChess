@@ -6,6 +6,7 @@
 #include "gameState.h"
 #include "PieceTheme.h"
 #include "Render/UITheme.h"
+#include "Audio/AudioManager.h"
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #endif
@@ -17,6 +18,7 @@ SceneManager *g_sceneManager = nullptr;
 
 // One iteration of the game loop: the single place for per-frame work.
 void UpdateDrawFrame() {
+    AudioManager::instance().update();
     g_sceneManager->update(GetFrameTime());
 
     BeginDrawing();
@@ -39,6 +41,8 @@ int main() {
 #endif
     SetTargetFPS(60); // Set the frame rate
 
+    AudioManager::instance().init();
+
     ResourceManager &resourceManager = ResourceManager::getInstance();
     GameStateModel gameState;
     SceneManager sceneManager(&gameState);
@@ -59,6 +63,7 @@ int main() {
     // Release GPU resources while the GL context is still alive
     UI::Fonts::unloadAll();
     resourceManager.unloadAll();
+    AudioManager::instance().shutdown(); // before CloseWindow
     CloseWindow();
     return 0;
 }
