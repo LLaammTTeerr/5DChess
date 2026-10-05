@@ -21,6 +21,7 @@
 #include <map>
 #include <sstream>
 #include <string>
+#include <set>
 #include <vector>
 #include <filesystem>
 #include "App.h"
@@ -129,6 +130,14 @@ int main(int argc, char** argv) {
   const fs::path outDir = fs::absolute(argv[2]);
   std::vector<FrameSpec> frames;
   if (!parseScript(scriptPath.string(), frames)) return 2;
+  {
+    std::set<std::string> seen;
+    for (const FrameSpec& f : frames)
+      if (!f.capture.empty() && !seen.insert(f.capture).second) {
+        std::cerr << "duplicate capture name '" << f.capture << "' in " << scriptPath.string() << "\n";
+        return 2;
+      }
+  }
   std::error_code ec;
   fs::create_directories(outDir, ec);
 
@@ -139,11 +148,11 @@ int main(int argc, char** argv) {
   tm.reduceMotion = true;
   tm.audioDisabled = true;
   tm.seed = 5;
-  TestMode::apply();
 
   SetTraceLogLevel(LOG_WARNING);
   SetConfigFlags(FLAG_MSAA_4X_HINT);
   InitWindow(kWidth, kHeight, "5D Chess UI script");
+  TestMode::apply();  // after InitWindow: raylib reseeds its RNG from the clock there
   SetExitKey(KEY_NULL);
   ChangeDirectory(GetApplicationDirectory());  // assets are copied next to the binary
   AudioManager::instance().init();             // no-op in test mode, kept for parity with main.cpp

@@ -19,7 +19,7 @@ UPDATE=0
 if [[ ! -f "$BUILD_DIR/CMakeCache.txt" ]] || ! grep -q '^FDCHESS_BUILD_TOOLS:BOOL=ON' "$BUILD_DIR/CMakeCache.txt"; then
   cmake -S "$ROOT" -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release -DFDCHESS_BUILD_TOOLS=ON
 fi
-cmake --build "$BUILD_DIR" --target ui_script -j"$(nproc)"
+cmake --build "$BUILD_DIR" --target ui_script -j"$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)"
 BIN="$BUILD_DIR/tools/ui_script"
 
 rm -rf "$UI_OUT/run"
@@ -30,10 +30,16 @@ xvfb=(xvfb-run -a -s "-screen 0 1400x800x24")
 shopt -s nullglob
 scripts=("$UI"/scripts/*.ui)
 [[ ${#scripts[@]} -gt 0 ]] || { echo "no scripts in $UI/scripts" >&2; exit 2; }
+dups="$(grep -hE '^[[:space:]]*capture[[:space:]]' "${scripts[@]}" | awk '{print $2}' | sort | uniq -d)"
+if [[ -n "$dups" ]]; then
+  echo "error: duplicate capture name(s) across tests/ui/scripts (later one would overwrite the earlier):" >&2
+  echo "$dups" >&2
+  exit 2
+fi
 for s in "${scripts[@]}"; do
   echo "== $(basename "$s")"
   # Each script is a fresh process (fresh GL context, fresh game state)
-  "${xvfb[@]}" "$BIN" "$s" "$UI_OUT/run" > "$UI_OUT/$(basename "$s").log" 2>&1 || {
+  ${xvfb[@]+"${xvfb[@]}"} "$BIN" "$s" "$UI_OUT/run" > "$UI_OUT/$(basename "$s").log" 2>&1 || {
     echo "ui_script failed on $s; log:" >&2; tail -20 "$UI_OUT/$(basename "$s").log" >&2; exit 2; }
   tail -1 "$UI_OUT/$(basename "$s").log"
 done

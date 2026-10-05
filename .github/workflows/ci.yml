@@ -61,14 +61,14 @@ jobs:
     name: UI screenshots (Xvfb)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev \
             libgl1-mesa-dri libasound2-dev xvfb xauth python3-pil
       - name: Cache FetchContent downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: build/_deps
           key: fetchcontent-ui-${{ runner.os }}-${{ hashFiles('CMakeLists.txt', 'tests/CMakeLists.txt') }}
@@ -80,7 +80,7 @@ jobs:
         run: tests/ui/run.sh
       - name: Upload screenshots and diffs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ui-diff
           path: |
