@@ -1,5 +1,6 @@
 #include "CameraController.h" 
 #include "BoardView.h"
+#include "Render/Motion.h"
 #include "View.h"
 #include "RenderUtilis.h"
 #include <iostream>
@@ -186,6 +187,7 @@ void CameraController::update(float deltaTime, const std::vector<std::shared_ptr
             
         case CameraState::USER_CONTROLLED:
             // Camera is under user control, just update timeout
+            _panVelX = _panVelY = _zoomVel = 0.0f; // the user took over: drop any follow momentum
             _timeSinceUserInput += deltaTime;
             
             // Check if we should return to auto-centering after timeout
@@ -469,7 +471,6 @@ void CameraController::focusOnBoardWithAdaptiveZoom(const std::vector<std::share
     // Constants for adaptive zoom
     const float ZOOM_CUTOFF = 0.8f;      // Below this zoom, trigger adaptive zoom
     const float COMFORTABLE_ZOOM = 1.8f; // Target zoom for comfortable viewing
-    const float ANIMATION_DURATION = 1.0f; // Smooth transition duration
     
     // Get current zoom level
     float currentZoom = _use3DRendering ? (90.0f / _camera3D.fovy) : _camera2D.zoom; // Convert FOV to zoom-like scale for 3D
@@ -504,38 +505,31 @@ void CameraController::focusOnBoardWithAdaptiveZoom(const std::vector<std::share
         _targetZoom = std::max(0.5f, std::min(_targetZoom, 3.0f)); // Clamp zoom
     }
     
-    // Adjust transition speeds for smooth 0.3s animation
-    float originalTransitionSpeed = _cameraTransitionSpeed;
-    float originalZoomSpeed = _zoomTransitionSpeed;
-    
-    // Calculate speeds needed to complete transition in ANIMATION_DURATION
-    _cameraTransitionSpeed = 3.0f / ANIMATION_DURATION; // Adjust based on typical distance
-    _zoomTransitionSpeed = 8.0f / ANIMATION_DURATION;   // Adjust based on typical zoom change
-    
-    // Force transition to adaptive zoom state
+    // Force transition to adaptive zoom state (the smoothDamp follow handles the easing; no speed overrides)
     _cameraState = CameraState::TRANSITIONING;
     _timeSinceUserInput = 0.0f;
     
     std::cout << "Adaptive zoom triggered! Focusing on board at (" << boardCenter.x << ", " << boardCenter.y 
               << ") with target zoom: " << _targetZoom << std::endl;
     
-    // Note: Transition speeds will be restored when user takes control or auto-zoom takes over
 }
 
 void CameraController::smoothTransitionToTarget(float deltaTime) {
+    const float follow = 1.0f - std::exp(-_cameraTransitionSpeed * deltaTime); // frame-rate independent lerp (3D only)
     if (_use3DRendering) {
         // For 3D camera, interpolate position and target
         Vector3 currentPos = _camera3D.position;
         Vector3 targetPos = { _targetCameraPosition.x, currentPos.y, _targetCameraPosition.y };
         
-        _camera3D.position.x = Lerp(currentPos.x, targetPos.x, _cameraTransitionSpeed * deltaTime);
-        _camera3D.position.z = Lerp(currentPos.z, targetPos.z, _cameraTransitionSpeed * deltaTime);
-        _camera3D.target.x = Lerp(_camera3D.target.x, _targetCameraPosition.x, _cameraTransitionSpeed * deltaTime);
-        _camera3D.target.z = Lerp(_camera3D.target.z, _targetCameraPosition.y, _cameraTransitionSpeed * deltaTime);
+        _camera3D.position.x = Lerp(currentPos.x, targetPos.x, follow);
+        _camera3D.position.z = Lerp(currentPos.z, targetPos.z, follow);
+        _camera3D.target.x = Lerp(_camera3D.target.x, _targetCameraPosition.x, follow);
+        _camera3D.target.z = Lerp(_camera3D.target.z, _targetCameraPosition.y, follow);
     } else {
-        // For 2D camera, interpolate target
-        _camera2D.target.x = Lerp(_camera2D.target.x, _targetCameraPosition.x, _cameraTransitionSpeed * deltaTime);
-        _camera2D.target.y = Lerp(_camera2D.target.y, _targetCameraPosition.y, _cameraTransitionSpeed * deltaTime);
+        // 2D: critically damped follow; Reduce motion shortens it to a quick settle instead of snapping
+        const float t = UI::Motion::reduced() ? 0.06f : kPanSmoothTime;
+        _camera2D.target.x = UI::Motion::smoothDamp(_camera2D.target.x, _targetCameraPosition.x, _panVelX, t, deltaTime);
+        _camera2D.target.y = UI::Motion::smoothDamp(_camera2D.target.y, _targetCameraPosition.y, _panVelY, t, deltaTime);
     }
     
     clampToBounds();
@@ -552,7 +546,7 @@ void CameraController::smoothZoomToTarget(float deltaTime) {
         float targetFOV = _targetZoom; // For 3D, target zoom is the FOV value
         
         if (std::abs(currentFOV - targetFOV) > 0.1f) {
-            _camera3D.fovy = Lerp(currentFOV, targetFOV, _zoomTransitionSpeed * deltaTime);
+            _camera3D.fovy = Lerp(currentFOV, targetFOV, 1.0f - std::exp(-_zoomTransitionSpeed * deltaTime));
             // Clamp to valid FOV range
             _camera3D.fovy = std::max(10.0f, std::min(_camera3D.fovy, 90.0f));
         }
@@ -560,8 +554,9 @@ void CameraController::smoothZoomToTarget(float deltaTime) {
         // For 2D camera, adjust zoom
         float currentZoom = _camera2D.zoom;
         
-        if (std::abs(currentZoom - _targetZoom) > 0.01f) {
-            _camera2D.zoom = Lerp(currentZoom, _targetZoom, _zoomTransitionSpeed * deltaTime);
+        if (std::abs(currentZoom - _targetZoom) > 0.002f) {
+            _camera2D.zoom = UI::Motion::smoothDamp(currentZoom, _targetZoom, _zoomVel,
+                                                    UI::Motion::reduced() ? 0.06f : kZoomSmoothTime, deltaTime);
             // Clamp to valid zoom range
             _camera2D.zoom = std::max(0.1f, std::min(_camera2D.zoom, 3.0f));
         }

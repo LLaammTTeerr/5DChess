@@ -37,6 +37,18 @@ inline float easeOutBack(float t) {
 }
 using EaseFn = float (*)(float);
 
+// Critically damped follow (Unity-style SmoothDamp): frame-rate independent, never overshoots, keeps velocity.
+inline float smoothDamp(float current, float target, float& velocity, float smoothTime, float dt) {
+    smoothTime = smoothTime > 0.0001f ? smoothTime : 0.0001f;
+    const float omega = 2.0f / smoothTime;
+    const float x = omega * dt;
+    const float e = 1.0f / (1.0f + x + 0.48f * x * x + 0.235f * x * x * x);
+    const float change = current - target;
+    const float temp = (velocity + omega * change) * dt;
+    velocity = (velocity - omega * temp) * e;
+    return target + (change + temp) * e;
+}
+
 // Pixel-creature blink as a pure function of an id and the clock (no per-piece state, no allocation):
 // every id blinks once every 3-7 s for 120 ms, at its own phase. Always open under Reduce motion.
 inline bool blinkClosed(unsigned id, double timeSec, float closedFor = 0.12f) {
