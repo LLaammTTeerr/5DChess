@@ -57,6 +57,37 @@ jobs:
       - name: Test
         run: ctest --test-dir build -C Release --output-on-failure
 
+  ui:
+    name: UI screenshots (Xvfb)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev \
+            libgl1-mesa-dri libasound2-dev xvfb xauth python3-pil
+      - name: Cache FetchContent downloads
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: fetchcontent-ui-${{ runner.os }}-${{ hashFiles('CMakeLists.txt', 'tests/CMakeLists.txt') }}
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DFDCHESS_BUILD_TOOLS=ON -DFDCHESS_BUILD_TESTS=OFF
+      - name: Build
+        run: cmake --build build --target ui_script -j 4
+      - name: Run UI scripts and compare with tests/ui/baseline
+        run: tests/ui/run.sh
+      - name: Upload screenshots and diffs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-diff
+          path: |
+            ui-out/diff
+            ui-out/run
+            ui-out/*.log
+
   web:
     name: Build (WebAssembly)
     runs-on: ubuntu-latest
