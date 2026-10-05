@@ -168,6 +168,10 @@ void ChessView::endBoardViewSync() {
             if (!e.t.done()) _enters.push_back(e);
         }
     }
+    // _knownBoards is rebuilt from the boards that exist now, so keys of undone boards are dropped and a
+    // replayed move onto the same key grows in again; same for any in-flight grow-in of a vanished board.
+    _enters.erase(std::remove_if(_enters.begin(), _enters.end(), [&](const BoardEnter& e) {
+        return !std::binary_search(_scratchKeys.begin(), _scratchKeys.end(), e.key); }), _enters.end());
     _knownBoards.swap(_scratchKeys);
     _boardsSeeded = true;
 

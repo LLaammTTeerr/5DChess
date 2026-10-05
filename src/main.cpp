@@ -59,21 +59,24 @@ int main() {
     AudioManager::instance().init();
 
     ResourceManager &resourceManager = ResourceManager::getInstance();
-    GameStateModel gameState;
-    SceneManager sceneManager(&gameState);
-    ThemeManager::getInstance().setTheme(std::make_unique<ModernTheme>());
-    g_resourceManager = &resourceManager;
-    g_sceneManager = &sceneManager;
+    {  // scope: the SceneManager (render texture, scenes) must be destroyed while the GL context is alive
+        GameStateModel gameState;
+        SceneManager sceneManager(&gameState);
+        ThemeManager::getInstance().setTheme(std::make_unique<ModernTheme>());
+        g_resourceManager = &resourceManager;
+        g_sceneManager = &sceneManager;
 
 #ifdef __EMSCRIPTEN__
-    // The browser drives the loop; this call never returns (simulate_infinite_loop = 1),
-    // so main()'s locals stay alive for the page's lifetime.
-    emscripten_set_main_loop(UpdateDrawFrame, 0, 1);
+        // The browser drives the loop; this call never returns (simulate_infinite_loop = 1),
+        // so main()'s locals stay alive for the page's lifetime.
+        emscripten_set_main_loop(UpdateDrawFrame, 0, 1);
 #else
-    while(!WindowShouldClose() && !SceneManager::isQuitRequested()) {
-        UpdateDrawFrame();
-    }
+        while(!WindowShouldClose() && !SceneManager::isQuitRequested()) {
+            UpdateDrawFrame();
+        }
 #endif
+        g_sceneManager = nullptr;
+    }
 
     // Release GPU resources while the GL context is still alive
     UI::Fonts::unloadAll();

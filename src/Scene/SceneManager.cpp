@@ -69,7 +69,9 @@ void SceneManager::changeScene(std::unique_ptr<Scene> scene) {
 
 void SceneManager::update(float deltaTime) {
   // Visual-only fades advance first; a click while the cross-fade runs finishes it instantly
-  if (_hasSnapshot && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) _sceneFade.finish();
+  // That click is consumed: it must not also reach the new scene.
+  bool clickConsumed = false;
+  if (_hasSnapshot && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) { _sceneFade.finish(); clickConsumed = true; }
   _sceneFade.update(deltaTime);
   if (_hasSnapshot && _sceneFade.done()) releaseSnapshot();
   _menuFade.update(deltaTime);
@@ -84,7 +86,9 @@ void SceneManager::update(float deltaTime) {
     if (currentEntry->isActive()) {
       // The navigation menu is drawn on top: don't let clicks on it reach the scene below
       bool mouseOverMenu = _menuActive && _navigationMenuController && _navigationMenuController->isMouseOverMenu();
-      if (!mouseOverMenu) {
+      if (clickConsumed) {
+        currentEntry->onPointerBlocked();
+      } else if (!mouseOverMenu) {
         currentEntry->handleInput();
       } else {
         currentEntry->onPointerBlocked();

@@ -90,8 +90,9 @@ void ChessController::handleInput() {
 void ChessController::setupViewCallbacks() {
   view.setSelectedPositionCallback([this](std::pair<std::shared_ptr<BoardView>, Chess::Position2D> selectedPositionPair) {
     // Handle the selected position from the view
+    auto it = _boardViewToBoardMap.find(selectedPositionPair.first); // find(): operator[] would insert nulls
     Chess::SelectedPosition selectedPosition = {
-        _boardViewToBoardMap[selectedPositionPair.first], // Get the board from the BoardView
+        it != _boardViewToBoardMap.end() ? it->second : nullptr,
         selectedPositionPair.second // Get the position from the pair
     };
     handleSelectedPosition(selectedPosition);
@@ -99,8 +100,9 @@ void ChessController::setupViewCallbacks() {
 
   view.setMouseOverPositionCallback([this](std::pair<std::shared_ptr<BoardView>, Chess::Position2D> selectedPositionPair) {
     // Handle the selected position from the view
+    auto it = _boardViewToBoardMap.find(selectedPositionPair.first); // find(): operator[] would insert nulls
     Chess::SelectedPosition selectedPosition = {
-        _boardViewToBoardMap[selectedPositionPair.first], // Get the board from the BoardView
+        it != _boardViewToBoardMap.end() ? it->second : nullptr,
         selectedPositionPair.second // Get the position from the pair
     };
     handleMouseOverPosition(selectedPosition);

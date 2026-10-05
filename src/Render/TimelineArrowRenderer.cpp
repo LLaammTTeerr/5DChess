@@ -196,10 +196,9 @@ void TimelineArrowRenderer::drawAnimatedDashedLine(Vector2 start, Vector2 end, C
     float totalLength = sqrtf(direction.x * direction.x + direction.y * direction.y);
     
     if (totalLength == 0) return;
-    totalLength *= progress; // progressive draw
-    
-    direction.x /= totalLength;
+    direction.x /= totalLength; // unit vector from the FULL length
     direction.y /= totalLength;
+    totalLength *= progress; // progressive draw: only the length shrinks, dashes keep theirs
     
     float dashLength = 10.0f;
     float gapLength = 5.0f;
