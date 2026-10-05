@@ -1,0 +1,76 @@
+# Stalemate in Time Line Fragment after six turns (ten moves), found with a random-playout search over the engine
+# (an exhaustive search is out of reach here: time travel makes the tree explode). Moves (file a is drawn on the right):
+#   1. W  pawn d1-d2                                2. B  rook c4xc1, pawn b4-b3
+#   3. W  pawn d2-d3, rook c1xc4 (top board)         4. B  king a4-a3, rook c1-c3
+#   5. W  knight a1xb3, pawn d3 -> top board (forks) 6. B  bishop b4 back in time (forks)
+# White then has no legal turn and is not in check: "Draw" (Stalemate).
+# The camera re-centres on the newest board after every move and zooms out as boards are added, so every click
+# below was read off the screenshot of the step before it (boards shrink from 252 px to 120 px).
+# Layout (1400x800): Versus (150,280); mode row 8 (690,634); Play (808,712).
+wait 20
+click 150 280        # Versus
+wait 30
+click 690 634        # Misc - Time Line Fragment (row 8)
+wait 20
+click 808 712        # Play
+wait 120
+# turn 1 (White)
+click 447 687
+wait 40
+click 447 623
+wait 40
+click 841 90         # Submit
+wait 90
+# turn 2 (Black)
+click 827 498
+wait 40
+click 827 686
+wait 90
+click 731 181
+wait 40
+click 731 244
+wait 90
+click 841 90
+wait 90
+# turn 3 (White)
+click 922 624
+wait 40
+click 922 561
+wait 90
+click 827 371
+wait 40
+click 827 181
+wait 90
+click 841 90
+wait 90
+# turn 4 (Black)
+click 1270 181
+wait 40
+click 1270 244
+wait 90
+click 945 651
+wait 40
+click 945 543
+wait 90
+click 841 90
+wait 90
+# turn 5 (White)
+click 1325 380
+wait 40
+click 1271 272
+wait 90
+click 970 524
+wait 40
+click 970 299
+wait 90
+click 841 90
+wait 90
+# turn 6 (Black): the bishop travels back in time, creating a timeline
+click 1231 372
+wait 40
+click 822 413
+wait 90
+capture stalemate-last-move
+click 841 90         # Submit: White has no legal turn and is not in check
+wait 150
+capture stalemate-end-card
