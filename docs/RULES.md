@@ -63,9 +63,21 @@ h1 = Black to move, ...). A timeline's *tip* is its latest board. "Mover" is the
   empty between) and, as in S3, on the timeline axis (needs both boards to exist and be empty). Captures: diagonally
   forward on the same board (rank + file), or one timeline forward and one full turn into the past or future (same
   square). Pawns do not capture in other planes (S3's "brawn" variant does; it is not implemented).
-- **En passant (S3), 2D only:** a pawn may capture an enemy pawn beside it diagonally onto the square behind it
-  when that pawn made its double step in the last half-turn of the same timeline (the previous board of the
-  same timeline shows it on its start square). Across timelines it does not exist.
+- **En passant (S3), 2D only:** a pawn may capture an enemy pawn beside it diagonally onto the (empty) square behind it
+  when that pawn made its double step in the last half-turn of the same timeline. Across timelines it does not exist.
+  *Which board shows the double step.* The enemy pawn's double step is the move that produced the current board `h` from the
+  board `h - 1` of the same timeline, so the engine requires: on board `h - 1` the pawn stood unmoved on its start square (and
+  the squares it passed and now occupies were empty), on board `h` it stands beside the capturing pawn and its start square
+  is empty. S3 (`piece.js` `enPassant`, lines 925-965) reads the board **`t - 2`** instead (the board before the capturing
+  side's own last move on that timeline) and does not look at `t - 1`. Both agree whenever a timeline has been played on for at
+  least two half-turns, which is every position but one: on the *second* board of a forked timeline (the opponent's double step
+  made the second board from the first) `t - 2` is the board the fork was made from, which is not part of the new timeline (its
+  earlier entries are `null`), so S3 refuses en passant there while `h - 1`, the first board of the new timeline, exists. The engine
+  keeps `h - 1` because that is what the rule says (the double step must have been the opponent's *last* move), and because
+  `t - 2` can also accept a pawn that is on its start square two half-turns ago but arrived beside the capturer by some other
+  route. Consequence for the comparison: the engine offers en passant on the second board of a forked timeline where S3
+  does not (`refcheck` filters exactly these, `--tolerate ep-fork`, and counts them). S3 also does not check that the landing
+  square is empty; the engine does.
 - **Castling (S3), 2D, same board:** king and rook unmoved, all squares between them empty, king moves two files
   towards the rook and the rook lands next to it on the other side. The king's square, the crossed square and the target
   square must not be attacked **on that board** (S3 uses a 2D attack test, `positionIsAttacked`). Attacks coming
@@ -92,19 +104,53 @@ h1 = Black to move, ...). A timeline's *tip* is its latest board. "Mover" is the
 - Checkmate: the side to move has no legal turn and is in check, so the other side wins. Stalemate: no legal turn and
   not in check, a draw. A "turn" needs at least one move (there is no pass; S3's `pass` is used only for the check
   simulation).
-- `findLegalTurn(budget)` does a depth-first search over sequences of moves (mandatory boards first), counting every
-  tried move as a node, and returns `Found`, `None` (proven) or `Unknown` (budget exhausted). `submitTurn()` runs it with
-  `turnSearchBudget()` (default 200000) and `result()` is `Ongoing` for `Found` and `Unknown`. The search is exhaustive
-  without pruning, so a very large mate may report `Unknown` (the game then simply continues; S3 has the same kind of
-  timeout, with 60 s).
+- Deciding "no legal turn" is a search over combinations of moves across boards. It is done by `TurnSearch`
+  (resumable: `step(nodeBudget)` returns `Found`, `None` (proved) or `Running`), which `submitTurn()` only arms; the caller
+  steps it (`stepResultSearch`), so `result()` is `Ongoing` until the search proves otherwise and the game never blocks.
+  The search is exhaustive (it proves `None`), see [SEARCH.md](SEARCH.md) for the pruning, why it is safe, and its limits
+  (a rare huge position stays `Running`; the game then simply continues, S3 has a time limit of 60 s for the same reason).
 - "Softmate" (S4: only moves backwards in time remain) is not a separate result.
 
+## Differences from 5d-chess-js (S3)
+
+`tools/refcheck` plays random legal games on the engine and replays every move in S3, comparing at every position (start of
+each turn and after every move of the turn) the tip boards, the active timelines, the present boards, the **complete move
+list** (every piece, every target, every promotion choice, castling, en passant), whether the position is in check, whether
+the turn can be submitted and, at turn starts, checkmate / stalemate. Result of the last run (Release build, search budget 300 000): 500 Standard games (30 turns, 14 400 turn starts, 53 000 positions
+compared) and 100 games each of Simplify-No-Bishop, -No-Queen, -No-Rook and K-vs-B: **no divergence** except the documented
+en passant one (155 en passant moves offered only by the engine, all on the second board of a forked timeline). The compared
+positions contained about 700 en passant, 12 000 castling and 24 000 promotion moves, 4 000 positions in check, and 13 600
+checkmate/stalemate answers (S3 answers inside 2 s, positions with at most 3 timelines). Before the vector-table and pawn-direction
+fix the same comparison diverged in 60 of 60 games.
+
+The vector tables are compared separately (`compare.js --vectors`): rook, bishop, queen, king and knight are identical to S3.
+Deliberate or known differences:
+
+1. **En passant right after a fork** (above): engine `h - 1`, S3 `t - 2`. The engine offers en passant in one position S3 does
+   not (second board of a forked timeline); it also checks that the landing square is empty.
+2. **Mirrored files.** The engine's starting position has the king on the d-file and the queen on the e-file (S3: queen d,
+   king e). Rules are symmetric, so the comparison mirrors files; nothing else is affected.
+3. **Promotion pieces.** The engine always offers Queen, Rook, Bishop and Knight. S3 offers the non-royal types that exist in
+   the starting position (`availablePromotionPieces`), which differs only in variants that lack a piece type; the comparison
+   gives S3 the engine's four.
+4. **Castling attack test.** S3's `positionIsAttacked` (`board.js`) lets an adjacent non-attacking enemy piece fail to block the
+   ray behind it, and treats a diagonally adjacent enemy pawn as attacking whatever its direction. The engine's 2D test is
+   the correct one. Neither case occurred in the compared games (castling is on the back rank, where the pawn case cannot
+   arise); if they do arise the difference is intended.
+5. **Variants with several original timelines** (Time Line Invasion / Battle / Fragment) cannot be compared: S3 indexes
+   timelines even/odd for White/Black, so an original timeline +1 would count as a created one. They are covered only by the
+   engine's own tests.
+6. **Checkmate / stalemate.** S3's search is heuristic with a time limit; the engine's is exhaustive. They are compared where
+   S3 answers within its limit (and the position is small).
+7. The engine disables double steps and castling in some variants through rule flags; in S3 these are the "unmoved" marks,
+   so the comparison maps such pieces as already moved.
+
 ## What is not verified
-- No published move counts / perft numbers for the standard position were found for any open-source engine (S3 has only
-  small unit-test counts). The engine is validated by property tests (move-generator soundness, immutability of boards,
-  clone independence, the legality, ownership, active-timeline and present invariants after every submitted turn in all 9
-  game modes) and directed tests, but results are **self-consistent, not cross-checked** against another engine. The only
-  absolute number tested is the same as in 2D chess: 20 pseudo-legal moves for the first White turn.
-- The double step along the timeline axis, the 2D-only castling attack test and en passant's use of the immediately
-  preceding board come from S3 and could not be checked against the game's wiki.
+- The rules were checked against S3, not against the game itself (its wiki could not be fetched, see Sources). Where S3 and the
+  game could differ, the engine follows S3 (except for the differences above).
+- The double step along the timeline axis and the 2D-only castling attack test are S3's rules and could not be checked
+  against the game's wiki.
+- The property tests (`tests/property_test.cpp`) only show self-consistency (soundness of the move generator, immutability of
+  boards, clone independence, invariants after every turn); they are not rule verification. The independent oracles are
+  `tools/refcheck`, the vector-table comparison and the directed tests.
 - Variant boards in the misc modes use the same rules, except castling, which they turn off.

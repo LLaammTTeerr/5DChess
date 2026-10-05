@@ -27,7 +27,7 @@ const readline = require('readline');
 
 function parseArgs() {
   const a = { games: 200, turns: 25, modes: ['standard'], seed0: 1, jobs: 1, verbose: false, vectors: false,
-              mateTimeout: 3000, searchBudget: 200000, worker: false };
+              mateTimeout: 3000, searchBudget: 200000, mateMaxTimelines: 3, gameTimeout: 60, worker: false };
   const v = process.argv.slice(2);
   for (let i = 0; i < v.length; i++) {
     switch (v[i]) {
@@ -40,6 +40,8 @@ function parseArgs() {
       case '--jobs': a.jobs = +v[++i]; break;
       case '--mate-timeout': a.mateTimeout = +v[++i]; break;
       case '--search-budget': a.searchBudget = +v[++i]; break;
+      case '--game-timeout': a.gameTimeout = +v[++i]; break;
+      case '--mate-max-timelines': a.mateMaxTimelines = +v[++i]; break;
       case '--verbose': a.verbose = true; break;
       case '--vectors': a.vectors = true; break;
       case '--worker': a.worker = true; break;
@@ -229,9 +231,12 @@ function runGame(mode, seed) {
     let pending = null; // the ref move chosen for the previous 'played'
     let done = false;
     let queue = Promise.resolve();
+    // Hard wall-clock cap per game: a stuck game is recorded as a timeout instead of blocking the batch.
+    const timer = setTimeout(() => finish({ kind: 'timeout', detail: `game exceeded ${args.gameTimeout} s` }), args.gameTimeout * 1000);
     const finish = (div) => {
       if (done) return;
       done = true;
+      clearTimeout(timer);
       result.divergence = div;
       child.kill();
       rl.close();
@@ -326,7 +331,9 @@ function runGame(mode, seed) {
       if (refSubmit !== !!rec.canSubmit) return fail('submittable', { ours: !!rec.canSubmit, ref: refSubmit });
 
       // 5. checkmate / stalemate at turn starts ------------------------------------------------------------------------
-      if (rec.i === 0 && rec.legal) {
+      // The reference's checkmate / stalemate search has no way to stop inside a single huge position, so it is only asked
+      // about positions with few timelines (--mate-max-timelines).
+      if (rec.i === 0 && rec.legal && Object.keys(refTips).length <= args.mateMaxTimelines) {
         const last = g.rawBoardHistory[g.rawBoardHistory.length - 1];
         const check = refCheck;
         let refRes;
@@ -348,6 +355,12 @@ function runGame(mode, seed) {
         const base = oursKeys(n, color, [pm])[0].split('|');
         const want = pm[8] === 1 ? `${base[0]}|${rec.played[1]}|` : oursKeys(n, color, [pm])[0];
         const idx = rk.indexOf(want);
+        if (idx < 0 && want.endsWith('|ep') && filtered.dropOurs.has(want)) {
+          // The engine played an en passant capture that the reference does not offer (documented difference): the games
+          // part here, so stop comparing this game (everything before it agreed).
+          result.stats.epForkPlayed = (result.stats.epForkPlayed || 0) + 1;
+          return finish(null);
+        }
         if (idx < 0) return fail('played-move-missing', { move: fmtMoveKey(n, want) });
         const before = Object.keys(g.rawBoard).length;
         g.rawMoveBuffer.push(refMoves[idx]);
@@ -380,7 +393,7 @@ async function main() {
     const jobs = JSON.parse(process.env.REFCHECK_JOBS);
     const results = [];
     for (const [mode, seed] of jobs) results.push(await runGame(mode, seed));
-    process.send(results);
+    process.send({ results, tolerated });
     return;
   }
   const jobs = [];
@@ -390,11 +403,15 @@ async function main() {
   if (args.jobs > 1) {
     const chunks = Array.from({ length: args.jobs }, () => []);
     jobs.forEach((j, i) => chunks[i % args.jobs].push(j));
-    const forwarded = ['--ref', args.ref, '--bin', args.bin, '--turns', String(args.turns), '--mate-timeout', String(args.mateTimeout), '--search-budget', String(args.searchBudget)]
+    const forwarded = ['--ref', args.ref, '--bin', args.bin, '--turns', String(args.turns), '--mate-timeout', String(args.mateTimeout), '--search-budget', String(args.searchBudget),
+      '--mate-max-timelines', String(args.mateMaxTimelines), '--game-timeout', String(args.gameTimeout)]
       .concat(args.tolerate ? ['--tolerate', args.tolerate.join(',')] : []);
     await Promise.all(chunks.filter((c) => c.length).map((chunk) => new Promise((res) => {
       const w = fork(__filename, [...forwarded, '--worker'], { env: Object.assign({}, process.env, { REFCHECK_JOBS: JSON.stringify(chunk) }), cwd: args.ref });
-      w.on('message', (r) => { results = results.concat(r); });
+      w.on('message', (r) => {
+        results = results.concat(r.results);
+        for (const [k, v] of Object.entries(r.tolerated)) tolerated[k] = (tolerated[k] || 0) + v;
+      });
       w.on('exit', () => res());
     })));
   } else {

@@ -65,6 +65,7 @@ bool buildTurn(IGame& game, std::mt19937& rng) {
 struct Stats {
   std::vector<double> perTurn;
   double worstStep = 0;
+  long long steps = 0, stepsOver8ms = 0;
   long long nodes = 0;
   int decided = 0;
   int unresolved = 0;
@@ -83,7 +84,10 @@ void play(const char* name, int games, int turns, int frameNodes, Stats& stats) 
       while (pending) {
         const auto s0 = Clock::now();
         pending = game.stepResultSearch(frameNodes);
-        stats.worstStep = std::max(stats.worstStep, msSince(s0));
+        const double stepMs = msSince(s0);
+        stats.worstStep = std::max(stats.worstStep, stepMs);
+        ++stats.steps;
+        if (stepMs > 8.0) ++stats.stepsOver8ms;
         if (msSince(t0) > 60000) { ++stats.unresolved; break; }
       }
       stats.perTurn.push_back(msSince(t0));
@@ -119,6 +123,7 @@ int main(int argc, char** argv) {
   std::sort(st.perTurn.begin(), st.perTurn.end());
   const auto pct = [&](double p) { return st.perTurn[std::min(st.perTurn.size() - 1, std::size_t(double(st.perTurn.size()) * p))]; };
   std::printf("random games: %zu turns decided, %d ended in a win/draw, %d unresolved after 60 s\n", st.perTurn.size(), st.decided, st.unresolved);
+  std::printf("  step(%d) calls: %lld, of which over 8 ms: %lld\n", frameNodes, st.steps, st.stepsOver8ms);
   std::printf("  per turn: p50 %.4f ms  p99 %.3f ms  max %.3f ms;  slowest step(%d): %.3f ms\n", pct(0.5), pct(0.99), st.perTurn.back(),
               frameNodes, st.worstStep);
 

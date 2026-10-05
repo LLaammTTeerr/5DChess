@@ -9,6 +9,7 @@
 // mapping to 5d-chess-js (see the header of compare.js).
 #include "chess.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <iostream>
@@ -243,7 +244,10 @@ int main(int argc, char** argv) {
     }
     std::printf(",\"submit\":1}\n");
     game.submitTurn();
-    game.resolveResult();
+    if (!game.resolveResult(std::max(args.searchBudget, 1))) {
+      std::printf("{\"t\":\"end\",\"result\":0,\"unresolved\":1}\n"); // a huge position the search could not decide
+      return 0;
+    }
     (void)before;
     if (game.result() != GameResult::Ongoing) {
       std::printf("{\"t\":\"end\",\"result\":%d}\n", int(game.result()));

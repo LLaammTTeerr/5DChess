@@ -39,7 +39,7 @@ void ChessController::update(float deltaTime) {
   if (model._game->resultPending()) {
     const auto start = std::chrono::steady_clock::now();
     do {
-      model._game->stepResultSearch(250);
+      model._game->stepResultSearch(100);
     } while (model._game->resultPending() &&
              std::chrono::steady_clock::now() - start < std::chrono::milliseconds(4));
   }

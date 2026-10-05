@@ -827,7 +827,12 @@ struct TurnSearch::Impl {
     return a == b || a == 0 || b == 0 || (a == 1 && b == 2) || (a == 2 && b == 1);
   }
 
-  // Can any enemy piece on an enemy tip capture any king of the mover?
+  // Can any enemy piece on an enemy tip capture any king of the mover? This is the test that makes F2 cheap: instead of
+  // generating the moves of every enemy piece (what IGame::threatsAgainst does, ~100x slower) it asks, for each pair
+  // (enemy piece, king), whether the displacement between them is one the piece can travel, and whether the squares in
+  // between exist and are empty. `compatible` rejects most board pairs from the timeline/time displacement alone. It is a
+  // full recomputation per node rather than a delta against the parent: simple, and exact even when a new board lies on
+  // the path of two old ones (a delta would have to track that). A delta version is future work (docs/SEARCH.md).
   bool anyThreat() const {
     for (const TipRef& e : enemyTips) {
       for (const KingPos& k : kings) {
@@ -1022,7 +1027,12 @@ struct TurnSearch::Impl {
     return false;
   }
 
-  // The next candidate to try at the node of frame `f`, or -1.
+  // The next candidate to try at the node of frame `f`, or -1. This is where the search avoids work it provably need not do
+  // (see the F-numbers at the top): moves already known to be dead; orderings of independent moves other than the
+  // canonical one (the previous move `f.via` is the only one compared: a sequence with no adjacent out-of-order independent
+  // pair is enough, and every legal turn can be brought into that form); and moves of optional boards that cannot matter.
+  // Candidates come sorted by source rank (mandatory boards with the fewest live moves first, so the likeliest failure is
+  // met at the top), within a board by "inside the board, onto a tip, into the past", kings and captures first.
   int nextCandidate(Frame& f) {
     while (f.next < cands.size()) {
       const int ci = int(f.next++);
