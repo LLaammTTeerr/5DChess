@@ -42,14 +42,18 @@ std::shared_ptr<MenuComponent> MainMenuState::createNavigationMenu(GameStateMode
 
   
   std::shared_ptr<MenuComponent> Puzzles = std::make_shared<MenuItem>("Puzzles", true);
+#ifndef __EMSCRIPTEN__ // a browser tab has nothing to exit to
   std::shared_ptr<MenuComponent> Exit = std::make_shared<MenuItem>("Exit", true);
   Exit->setCommand(createExitCommand()); // Set command for Exit
+#endif
 
   mainMenu->addItem(Versus);
   mainMenu->addItem(Puzzles);
   mainMenu->addItem(Guide);
   mainMenu->addItem(Settings);
+#ifndef __EMSCRIPTEN__
   mainMenu->addItem(Exit);
+#endif
 
   return mainMenu;
 }

@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- WebAssembly (Emscripten) build with a custom HTML shell, and a GitHub Pages deploy workflow that publishes it on each release. The web build has no background music and no Exit menu item.
+
 ## [0.2.0] - 2026-10-05
 
 ### Added
