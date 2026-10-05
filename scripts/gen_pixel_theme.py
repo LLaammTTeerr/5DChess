@@ -15,6 +15,10 @@ The grids below only contain the *fill*; a 1px outline ('O') is added
 automatically around the whole silhouette (set AUTO_OUTLINE = False to draw it
 by hand).  Output is deterministic, so re-running is idempotent.
 
+Each sprite also gets an eyes-closed frame ({side}_{piece}_blink.png, same grid): the upper
+pixel of every two-pixel eye becomes body, the lower one shade, so the eye reads as a closed slit.
+The game swaps it in at random intervals (Pixel theme only).
+
 Usage: python3 scripts/gen_pixel_theme.py [--out DIR] [--sheet PATH]
 """
 import argparse
@@ -186,10 +190,27 @@ def grid_with_outline(rows):
     return g
 
 
-def render(piece, side, scale=SCALE):
+def blink_rows(rows):
+    """Eyes-closed variant: vertical two-pixel eyes collapse to body (top) over shade (bottom).
+    Isolated 'E' pixels (e.g. the knight's nostril) are not eyes and stay."""
+    g = [list(r) for r in rows]
+    out = [r[:] for r in g]
+    for y in range(SIZE):
+        for x in range(SIZE):
+            if g[y][x] != "E":
+                continue
+            if y > 0 and g[y - 1][x] == "E":
+                out[y][x] = "S"
+            elif y + 1 < SIZE and g[y + 1][x] == "E":
+                out[y][x] = "B"
+    return ["".join(r) for r in out]
+
+
+def render(piece, side, scale=SCALE, blink=False):
     pal = {k: hex_rgba(v) for k, v in PALETTES[side].items()}
     img = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
-    for y, row in enumerate(grid_with_outline(SPRITES[piece])):
+    rows = blink_rows(SPRITES[piece]) if blink else SPRITES[piece]
+    for y, row in enumerate(grid_with_outline(rows)):
         for x, ch in enumerate(row):
             if ch != ".":
                 img.putpixel((x, y), pal[ch])
@@ -250,7 +271,8 @@ def main():
     for side in SIDES:
         for piece in PIECES:
             render(piece, side).save(os.path.join(args.out, f"{side}_{piece}.png"), optimize=False)
-    print("wrote", len(SIDES) * len(PIECES), "sprites to", os.path.normpath(args.out))
+            render(piece, side, blink=True).save(os.path.join(args.out, f"{side}_{piece}_blink.png"), optimize=False)
+    print("wrote", 2 * len(SIDES) * len(PIECES), "sprites (open + blink) to", os.path.normpath(args.out))
     check_contrast()
     if args.sheet:
         make_sheet(args.sheet)

@@ -80,7 +80,12 @@ private:
   int _selectedSettingIndex = -1; // Track selected setting index
   int _selectedPieceThemeIndex = -1; // Track selected piece theme index (setting 0)
   int _selectedMusicIndex = -1; // Track selected music index (other settings)
-  int& workerSelectedIndex() { return _selectedSettingIndex == 0 ? _selectedPieceThemeIndex : _selectedMusicIndex; }
+  int _selectedDisplayIndex = -1; // Display section holds toggles only: nothing is "selected"
+  int& workerSelectedIndex() {
+    if (_selectedSettingIndex == 0) return _selectedPieceThemeIndex;
+    if (_selectedSettingIndex == 2) return _selectedDisplayIndex;
+    return _selectedMusicIndex;
+  }
 private:
   std::shared_ptr<MenuComponent> _workerMenu = nullptr;
   std::shared_ptr<ButtonMenuView> _workerMenuView = nullptr;

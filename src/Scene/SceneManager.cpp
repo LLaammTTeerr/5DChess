@@ -5,6 +5,8 @@
 #include "gameState.h"
 #include "MenuController.h"
 #include "MenuView.h"
+#include "MenuItemView.h"
+#include "Render/UITheme.h"
 
 #include <raylib.h>
 #include <iostream>
@@ -24,6 +26,7 @@ SceneManager::SceneManager(GameStateModel* gameStateModel)
 }
 
 SceneManager::~SceneManager() {
+  releaseSnapshot();
   while (!isEmpty()) {
     popScene();
   }
@@ -65,6 +68,13 @@ void SceneManager::changeScene(std::unique_ptr<Scene> scene) {
 
 
 void SceneManager::update(float deltaTime) {
+  // Visual-only fades advance first; a click while the cross-fade runs finishes it instantly
+  if (_hasSnapshot && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) _sceneFade.finish();
+  _sceneFade.update(deltaTime);
+  if (_hasSnapshot && _sceneFade.done()) releaseSnapshot();
+  _menuFade.update(deltaTime);
+  _menuAlpha = _menuFade.active ? _menuFade.value() : (_menuActive ? 1.0f : 0.0f);
+
   // Handle scene transitions
   if (_pendingTransition) {
     processTransition();
@@ -103,11 +113,43 @@ void SceneManager::render() {
   } else {
     std::cerr << "Scene stack is empty, nothing to render." << std::endl;
   }
-  
-  // Render menu overlay if active
-  if (_menuActive && _navigationMenuController) {
-    renderMenuSystem();
+
+  // Outgoing scene fades out on top of the new one (the new scene already takes input)
+  if (_hasSnapshot) {
+    const float a = 1.0f - _sceneFade.progress();
+    if (a > 0.003f) {
+      const Texture2D& t = _snapshot.texture;
+      DrawTextureRec(t, {0, 0, static_cast<float>(t.width), -static_cast<float>(t.height)}, {0, 0},
+                     UI::withAlpha(WHITE, static_cast<unsigned char>(255.0f * a)));
+    }
   }
+  
+  // Render menu overlay (fades in/out on toggle)
+  if (_menuAlpha > 0.003f && _navigationMenuController) {
+    MenuItemView::setGlobalAlpha(_menuAlpha);
+    renderMenuSystem();
+    MenuItemView::setGlobalAlpha(1.0f);
+  }
+}
+
+void SceneManager::captureSnapshot() {
+  releaseSnapshot();
+  {
+    if (_sceneStack.empty() || !_sceneStack.top()->isActive()) return;
+    const int w = GetScreenWidth(), h = GetScreenHeight();
+    _snapshot = LoadRenderTexture(w, h);
+    if (_snapshot.id == 0) return;
+    BeginTextureMode(_snapshot);
+    _sceneStack.top()->render();
+    EndTextureMode();
+    _hasSnapshot = true;
+  }
+}
+
+void SceneManager::releaseSnapshot() {
+  if (_hasSnapshot) UnloadRenderTexture(_snapshot);
+  _snapshot = RenderTexture2D{};
+  _hasSnapshot = false;
 }
 
 Scene* SceneManager::getCurrentScene() const {
@@ -122,6 +164,7 @@ void SceneManager::processTransition() {
 
   std::string sceneName = _nextScene->getName(); // Store name before moving
 
+  captureSnapshot(); // cross-fade from what is on screen now
   if (_isChangeScene) {
     popScene(); // Pop current scene if changing
     _isChangeScene = false;
@@ -131,6 +174,7 @@ void SceneManager::processTransition() {
   pushScene(std::move(_nextScene));
   _nextScene = nullptr; // Clear after processing (now safe to uncomment)
   _pendingTransition = false;
+  if (_hasSnapshot) _sceneFade.start(0.0f, 1.0f, UI::Motion::base, UI::Motion::easeOutCubic, 0.0f, true);
 }
 
 
@@ -141,11 +185,13 @@ bool SceneManager::isEmpty() const {
 // // Menu management methods
 void SceneManager::showMenu() {
   _menuActive = true;
+  _menuFade.start(_menuAlpha, 1.0f, UI::Motion::base, UI::Motion::easeOutCubic, 0.0f, true);
   std::cout << "Menu activated" << std::endl;
 }
 
 void SceneManager::hideMenu() {
   _menuActive = false;
+  _menuFade.start(_menuAlpha, 0.0f, UI::Motion::exitDuration(UI::Motion::base), UI::Motion::easeInCubic, 0.0f, true);
   std::cout << "Menu deactivated" << std::endl;
 }
 

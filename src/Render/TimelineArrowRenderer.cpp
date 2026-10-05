@@ -15,11 +15,36 @@ void TimelineArrowRenderer::update(float deltaTime) {
     _animationState.animationTime += deltaTime;
     _animationState.dashOffset += deltaTime * 50.0f; // Adjust speed as needed
     _animationState.pulsePhase += deltaTime * 2.0f;
+    for (auto& a : _active) a.t.update(deltaTime);
+    _active.erase(std::remove_if(_active.begin(), _active.end(), [](const ArrowAnim& a) { return a.t.done(); }), _active.end());
+}
+
+float TimelineArrowRenderer::progressOf(const TimelineArrow& arrow) const {
+    for (const auto& a : _active)
+        if (a.branch == arrow.isBranch && a.timeline == arrow.keyTimeline && a.halfTurn == arrow.keyHalfTurn) return a.t.progress();
+    return 1.0f;
 }
 
 void TimelineArrowRenderer::updateArrows(const std::vector<TimelineArrowData>& arrowData) {
     _arrows.clear();
     generateArrowsFromData(arrowData);
+
+    // Detect arrows that are new since the last sync and start drawing them in (never on the first sync)
+    _scratch.clear();
+    for (const auto& arrow : _arrows) _scratch.push_back({arrow.isBranch, arrow.keyTimeline, arrow.keyHalfTurn});
+    std::sort(_scratch.begin(), _scratch.end());
+    if (_seeded) {
+        for (const auto& k : _scratch) {
+            if (std::binary_search(_known.begin(), _known.end(), k)) continue;
+            ArrowAnim anim{k.branch, k.timeline, k.halfTurn, {}};
+            // Branch arrows draw slowly after the new board has started to grow; progression arrows quickly
+            anim.t.start(0.0f, 1.0f, k.branch ? UI::Motion::slow : UI::Motion::base, UI::Motion::easeOutCubic,
+                         k.branch ? 0.10f : 0.05f);
+            if (!anim.t.done()) _active.push_back(anim);
+        }
+    }
+    _known.swap(_scratch);
+    _seeded = true;
 }
 
 void TimelineArrowRenderer::render(Camera2D* camera, bool isUsing3D) const {
@@ -36,12 +61,14 @@ void TimelineArrowRenderer::render(Camera2D* camera, bool isUsing3D) const {
     BeginMode2D(*camera);
     
     for (const auto& arrow : _arrows) {
-        if (arrow.type == "progression") {
+        const float progress = progressOf(arrow);
+        if (progress <= 0.0f) continue;
+        if (!arrow.isBranch) {
             // Draw animated dashed line for progression
-            drawAnimatedDashedLine(arrow.startPos, arrow.endPos, arrow.color, arrow.thickness, _animationState.dashOffset);
-        } else if (arrow.type == "branch") {
+            drawAnimatedDashedLine(arrow.startPos, arrow.endPos, arrow.color, arrow.thickness, _animationState.dashOffset, progress);
+        } else {
             // Draw curved arrow for branching
-            drawCurvedArrow(arrow.startPos, arrow.endPos, arrow.color, arrow.thickness, _animationState.animationTime);
+            drawCurvedArrow(arrow.startPos, arrow.endPos, arrow.color, arrow.thickness, _animationState.animationTime, progress);
         }
     }
     
@@ -62,6 +89,11 @@ void TimelineArrowRenderer::generateArrowsFromData(const std::vector<TimelineArr
             arrow.thickness = (data.arrowType == "branch") ? 5.0f : 4.0f;
             arrow.type = data.arrowType;
             arrow.isAnimated = true;
+            arrow.isBranch = (data.arrowType == "branch");
+            if (auto board = data.toBoardView->getBoard()) {
+                arrow.keyTimeline = board->timeLineId();
+                arrow.keyHalfTurn = board->halfTurnNumber();
+            }
             
             _arrows.push_back(arrow);
         }
@@ -84,7 +116,7 @@ Vector2 TimelineArrowRenderer::calculateArrowPosition(std::shared_ptr<BoardView>
     }
 }
 
-void TimelineArrowRenderer::drawCurvedArrow(Vector2 start, Vector2 end, Color color, float thickness, float animationOffset) const {
+void TimelineArrowRenderer::drawCurvedArrow(Vector2 start, Vector2 end, Color color, float thickness, float animationOffset, float progress) const {
     // Calculate control point for curved arrow
     Vector2 midPoint = {(start.x + end.x) * 0.5f, (start.y + end.y) * 0.5f};
     Vector2 direction = {end.x - start.x, end.y - start.y};
@@ -109,6 +141,8 @@ void TimelineArrowRenderer::drawCurvedArrow(Vector2 start, Vector2 end, Color co
     for (int i = 0; i < segments; ++i) {
         float t1 = (float)i / segments;
         float t2 = (float)(i + 1) / segments;
+        if (t1 >= progress) break;                 // progressive draw: stop where the arrow has not reached yet
+        if (t2 > progress) t2 = progress;
         
         // Quadratic Bezier curve calculation
         Vector2 p1 = {
@@ -132,15 +166,16 @@ void TimelineArrowRenderer::drawCurvedArrow(Vector2 start, Vector2 end, Color co
         DrawLineEx(p1, p2, thickness, animatedColor);
     }
     
-    // Draw arrowhead at the end
+    // Draw arrowhead at the end (grows in over the last 12 % of the draw)
+    const float headScale = std::fmin(1.0f, std::fmax(0.0f, (progress - 0.88f) / 0.12f));
     Vector2 arrowDir = {end.x - controlPoint.x, end.y - controlPoint.y};
     float arrowLength = sqrtf(arrowDir.x * arrowDir.x + arrowDir.y * arrowDir.y);
-    if (arrowLength > 0) {
+    if (arrowLength > 0 && headScale > 0.0f) {
         arrowDir.x /= arrowLength;
         arrowDir.y /= arrowLength;
         
         Vector2 arrowSide = {-arrowDir.y, arrowDir.x};
-        float arrowSize = thickness * 2;
+        float arrowSize = thickness * 2 * headScale;
         
         Vector2 arrowPoint1 = {
             end.x - arrowDir.x * arrowSize + arrowSide.x * arrowSize * 0.5f,
@@ -156,11 +191,12 @@ void TimelineArrowRenderer::drawCurvedArrow(Vector2 start, Vector2 end, Color co
     }
 }
 
-void TimelineArrowRenderer::drawAnimatedDashedLine(Vector2 start, Vector2 end, Color color, float thickness, float dashOffset) const {
+void TimelineArrowRenderer::drawAnimatedDashedLine(Vector2 start, Vector2 end, Color color, float thickness, float dashOffset, float progress) const {
     Vector2 direction = {end.x - start.x, end.y - start.y};
     float totalLength = sqrtf(direction.x * direction.x + direction.y * direction.y);
     
     if (totalLength == 0) return;
+    totalLength *= progress; // progressive draw
     
     direction.x /= totalLength;
     direction.y /= totalLength;
@@ -190,7 +226,8 @@ void TimelineArrowRenderer::drawAnimatedDashedLine(Vector2 start, Vector2 end, C
         }
     }
     
-    // Draw arrowhead at the end
+    // Draw arrowhead at the end once the line has arrived
+    if (progress < 0.98f) return;
     Vector2 arrowPoint1 = {
         end.x - direction.x * thickness * 2 + direction.y * thickness,
         end.y - direction.y * thickness * 2 - direction.x * thickness

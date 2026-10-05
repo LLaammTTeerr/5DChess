@@ -19,7 +19,8 @@ namespace {
 
 namespace Fonts {
 namespace {
-struct Cache { ::Font title{}, section{}, button{}, body{}, mono{}; bool t=false, s=false, b=false, o=false, m=false; };
+struct Cache { ::Font title{}, section{}, button{}, body{}, mono{}, hero{}, subtitle{};
+               bool t=false, s=false, b=false, o=false, m=false, h=false, u=false; };
 Cache g;
 void release(::Font& f, bool& loaded) {
     if (loaded && f.texture.id != GetFontDefault().texture.id) UnloadFont(f);
@@ -32,9 +33,12 @@ void release(::Font& f, bool& loaded) {
 ::Font button()  { if (!g.b) { g.button  = loadSized("assets/fonts/PublicSans-Bold.ttf", Font::button);   g.b = true; } return g.button; }
 ::Font body()    { if (!g.o) { g.body    = loadSized("assets/fonts/PublicSans-Regular.ttf", Font::body);  g.o = true; } return g.body; }
 ::Font mono()    { if (!g.m) { g.mono    = loadSized("assets/fonts/intelone-mono-font-family-regular.ttf", Font::mono); g.m = true; } return g.mono; }
+::Font hero()     { if (!g.h) { g.hero     = loadSized("assets/fonts/Montserrat-Bold.ttf", Font::hero);          g.h = true; } return g.hero; }
+::Font subtitle() { if (!g.u) { g.subtitle = loadSized("assets/fonts/PublicSans-Regular.ttf", Font::subtitle);   g.u = true; } return g.subtitle; }
 void unloadAll() {
     release(g.title, g.t); release(g.section, g.s); release(g.button, g.b);
     release(g.body, g.o);  release(g.mono, g.m);
+    release(g.hero, g.h);  release(g.subtitle, g.u);
 }
 }
 

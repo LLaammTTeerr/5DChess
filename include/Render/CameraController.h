@@ -33,6 +33,10 @@ private:
   Vector2 _targetCameraPosition;
   Vector2 _autoCenterPosition;
   float _cameraTransitionSpeed = 2.0f;
+  // Critically damped follow (UI::Motion::smoothDamp): frame-rate independent and free of snapping
+  float _panVelX = 0.0f, _panVelY = 0.0f, _zoomVel = 0.0f;
+  static constexpr float kPanSmoothTime = 0.30f;   // seconds to (mostly) arrive
+  static constexpr float kZoomSmoothTime = 0.32f;
   float _userControlTimeout = 10.0f; // Time before returning to auto-centering
   float _timeSinceUserInput = 0.0f;
   float _maxDistanceFromCenter = 500.0f; // Max distance before auto-centering kicks in

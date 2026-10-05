@@ -73,6 +73,9 @@ public:
   void update(float deltaTime);
   void handleInput();
   void clearHover() { view.clearHover(); }
+  /// Developer tools / scripted demos: drive the same paths a click would
+  void scriptedSelect(Chess::SelectedPosition p) { handleSelectedPosition(p); }
+  void scriptedSubmit() { handleSubmitMove(); }
   void render();
 
 private:

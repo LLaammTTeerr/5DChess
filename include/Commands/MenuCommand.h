@@ -182,6 +182,20 @@ public:
   static std::string titleFor(bool on) { return on ? "Sound effects: On" : "Sound effects: Off"; }
 };
 
+// Toggles the global "Reduce motion" setting (UI::Motion::reduced()).
+class MotionToggleCommand : public ICommand {
+public:
+  void execute() override;
+  virtual bool canUndo() const override { return false; }
+  virtual bool canRedo() const override { return false; }
+  void undo() override {}
+  void redo() override {}
+  std::string getName() const override { return "Motion Toggle Command"; }
+  std::unique_ptr<ICommand> clone() const override;
+  CommandType getType() const override { return CommandType::IMMEDIATE; }
+  static std::string titleFor(bool reduced) { return reduced ? "Motion: Reduced" : "Motion: Full"; }
+};
+
 class ExitCommand : public ICommand {
 public:
   ExitCommand() = default;

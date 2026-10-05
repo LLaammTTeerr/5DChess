@@ -33,6 +33,7 @@ void ChessController::updateNewBoardViewsToView() {
 }
 
 void ChessController::update(float deltaTime) {
+  view.update(deltaTime); // camera + all view-side animation clocks advance exactly once per frame
   updateCurrentBoardFromModel();
   updateBoardViewFromCurrentBoards();
   // after updating the board and board views, we need bridge the board to board view
@@ -46,7 +47,8 @@ void ChessController::update(float deltaTime) {
     _currentBoardViews[i]->setBoard(_currentBoard[i]);
   }
   updateNewBoardViewsToView();
-  
+  view.endBoardViewSync(); // grow-in of new boards, hidden squares, blink: persistent state onto fresh views
+
   // Compute and update timeline arrows through proper MVC pattern
   auto timelineArrowData = computeTimelineArrows();
   view.updateTimelineArrows(timelineArrowData);
@@ -67,6 +69,7 @@ void ChessController::update(float deltaTime) {
     it->second->setMoveable(moveable);
   }
   view.updateHud(computeHud());
+  view.setEndGame(model._game->gameEnd(), model._game->gameEnd() && model._game->getWinner() == Chess::PieceColor::PIECEWHITE);
 
   if (model._game->gameEnd()) {
     if (!_isGameEnd) AudioManager::instance().playSfx(Sfx::Win); // once, on the transition
@@ -249,13 +252,24 @@ void ChessController::handleSelectedToPosition(Chess::SelectedPosition selectedP
     /// @note for testing, now we just make the move directly
     // Capture check must happen before makeMove: afterwards the target square holds the mover.
     bool isCapture = false;
+    MoveFlight flight; // for the piece-travel animation (visual only)
     {
       auto mover = model._currentMoveState.selectedBoard
           ? model._currentMoveState.selectedBoard->getPiece(model._currentMoveState.selectedPosition) : nullptr;
       auto victim = model._currentMoveState.targetBoard
           ? model._currentMoveState.targetBoard->getPiece(model._currentMoveState.targetPosition) : nullptr;
       isCapture = mover && victim && victim->color() != mover->color();
+      auto nameOf = [](const std::shared_ptr<Chess::Piece>& p) {
+        return std::string(p->color() == Chess::PieceColor::PIECEWHITE ? "white_" : "black_") + p->name();
+      };
+      if (mover) flight.piece = nameOf(mover);
+      if (isCapture) flight.victim = nameOf(victim);
+      flight.srcKey = boardKeyOf(*model._currentMoveState.selectedBoard);
+      flight.srcPos = model._currentMoveState.selectedPosition;
+      flight.dstPos = model._currentMoveState.targetPosition;
+      flight.dim = model._currentMoveState.selectedBoard->dim();
     }
+    const bool sameBoard = model._currentMoveState.selectedBoard == model._currentMoveState.targetBoard;
     model.makeMove(Chess::Move(
         {model._currentMoveState.selectedBoard, model._currentMoveState.selectedPosition},
         {model._currentMoveState.targetBoard, model._currentMoveState.targetPosition}
@@ -270,16 +284,15 @@ void ChessController::handleSelectedToPosition(Chess::SelectedPosition selectedP
     
     // Focus camera on the newest board with appropriate zoom
     std::shared_ptr<Chess::Board> newestBoard = model._game->getNewBoard();
+    // The piece travels to its square on the newly created board; same-board moves slide on that new board
+    flight.dstKey = boardKeyOf(*newestBoard);
+    if (sameBoard) flight.srcKey = flight.dstKey;
+    if (!flight.piece.empty()) view.startMoveFlight(flight);
     // calculate the position of the newest board view, the boardview of the newest board is not set in this frame
     // so just calculate the position based on the board's half turn number and time line ID
     std::shared_ptr<BoardView> newestBoardView = std::make_shared<BoardView2D>();
     newestBoardView->setBoardTexture(&ResourceManager::getInstance().getTexture2D("mainChessBoard"));
-    newestBoardView->setRenderArea({
-        static_cast<float>(newestBoard->halfTurnNumber()) * (BOARD_WORLD_SIZE + HORIZONTAL_SPACING),
-        static_cast<float>(newestBoard->timeLineId()) * (BOARD_WORLD_SIZE + VERTICAL_SPACING),
-        BOARD_WORLD_SIZE,
-        BOARD_WORLD_SIZE
-    });
+    newestBoardView->setRenderArea(boardWorldArea(boardKeyOf(*newestBoard)));
     view.focusOnNewestBoard(newestBoardView);
 }
 
@@ -287,6 +300,7 @@ void ChessController::handleSelectedPosition(Chess::SelectedPosition selectedPos
   if (_isGameEnd) {
     return; // Ignore input if the game has ended
   }
+  view.finishAnimations(); // new input: running move animations jump to their end
   if (!selectedPosition.board) {
     return; // Clicked board view has no matching model board
   }
@@ -349,12 +363,7 @@ std::vector<std::shared_ptr<BoardView>> ChessController::computeBoardView2DsFrom
   for (const auto& board : _currentBoard) {
     auto boardView = std::make_shared<BoardView2D>();
     boardView->setBoardTexture(&ResourceManager::getInstance().getTexture2D("mainChessBoard"));
-    boardView->setRenderArea({
-        static_cast<float>(board->halfTurnNumber()) * (BOARD_WORLD_SIZE + HORIZONTAL_SPACING),
-        static_cast<float>(board->timeLineId()) * (BOARD_WORLD_SIZE + VERTICAL_SPACING),
-        BOARD_WORLD_SIZE,
-        BOARD_WORLD_SIZE
-    });
+    boardView->setRenderArea(boardWorldArea(boardKeyOf(*board)));
 
     std::vector<std::pair<Chess::Position2D, std::string>> piecePositions;
     for (int x = 0; x < board->dim(); ++x) {
@@ -509,6 +518,7 @@ void ChessController::clearSelection() {
 
 void ChessController::handleUndoMove() {
   std::cout << "Undoing last move..." << std::endl;
+  view.finishAnimations();
 
   // No validity check needed - button is disabled when invalid
   model._game->undo();
@@ -521,6 +531,7 @@ void ChessController::handleUndoMove() {
 
 void ChessController::handleSubmitMove() {
   std::cout << "Submitting move..." << std::endl;
+  view.finishAnimations();
 
   // No validity check needed - button is disabled when invalid
   model._game->submitTurn();

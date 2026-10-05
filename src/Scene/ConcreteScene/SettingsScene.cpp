@@ -1,6 +1,7 @@
 #include "SettingsScene.h"
 #include "ResourceManager.h"
 #include "Render/UITheme.h"
+#include "Render/Motion.h"
 #include <iostream>
 #include <raylib.h>
 #include "MenuComponent.h"
@@ -63,6 +64,14 @@ void SettingsScene::init(void) {
 
     // Add the music section to the main menu system
     _settingMenuSystem->addItem(MusicSection);
+    // Display section: global Reduce motion toggle (title is refreshed by the controller after a click)
+    std::shared_ptr<MenuComponent> DisplaySection = std::make_shared<Menu>("Display", true);
+    std::shared_ptr<MenuComponent> MotionToggle = std::make_shared<MenuItem>(
+        MotionToggleCommand::titleFor(UI::Motion::reduced()), true);
+    MotionToggle->setCommand(std::make_unique<MotionToggleCommand>());
+    DisplaySection->addItem(MotionToggle);
+    _settingMenuSystem->addItem(DisplaySection);
+
     _settingsMenuController = std::make_shared<SettingMenuController>(_settingMenuSystem);
 }
 

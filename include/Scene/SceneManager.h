@@ -3,6 +3,8 @@
 #include <stack>
 #include <string>
 #include <iostream>
+#include <raylib.h>
+#include "Render/Motion.h"
 
 // Forward declarations
 class Scene;
@@ -50,6 +52,15 @@ private:
   std::shared_ptr<NavigationMenuController> _navigationMenuController;
   std::shared_ptr<MenuComponent> _navigationMenuSystem;
   bool _menuActive = false;
+
+  // ---- Motion: scene cross-fade + nav overlay fade (visuals only, never delay state or input) ----
+  UI::Motion::Tween _menuFade;     // nav overlay alpha
+  float _menuAlpha = 1.0f;
+  UI::Motion::Tween _sceneFade;    // 0 -> 1 progress of the cross-fade
+  RenderTexture2D _snapshot{};     // outgoing scene, drawn over the new one with alpha 1 - progress
+  bool _hasSnapshot = false;
+  void captureSnapshot();
+  void releaseSnapshot();
 
   /*
    Name of the next scene to transition to

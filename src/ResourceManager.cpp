@@ -191,12 +191,20 @@ ResourceManager::ResourceManager() {
     SetTextureFilter(_textures["assets/images/Theme_3/white_rook.png"], TEXTURE_FILTER_POINT);
 
 
+    /* Theme 3 eyes-closed frames (blink animation): same filtering */
+    for (const char* side : {"black", "white"}) {
+        for (const char* piece : {"bishop", "king", "knight", "pawn", "queen", "rook"}) {
+            const std::string file = std::string("assets/images/Theme_3/") + side + "_" + piece + "_blink.png";
+            _preloadTexture2D(file, std::string(side) + "_" + piece + "_blink_3");
+            SetTextureFilter(_textures[file], TEXTURE_FILTER_POINT);
+        }
+    }
+
     _preloadFont("assets/fonts/PublicSans-Regular.ttf", "public_sans_regular");
     _preloadFont("assets/fonts/PublicSans-Bold.ttf", "public_sans_bold");
     _preloadFont("assets/fonts/Nunito-VariableFont_wght.ttf", "nunito");
 
 
-    _preloadTexture2D("assets/5DChess.png", "welcomeImage");
     _preloadTexture2D("assets/ChessBoardNoBound.png", "mainChessBoard");
 
     _preloadTexture2D("assets/images/EndGame.png" , "endGameImage");

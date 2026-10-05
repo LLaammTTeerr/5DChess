@@ -1,6 +1,7 @@
 #pragma once
 #include "Scene.h"
 #include <string>
+#include "Render/Motion.h"
 
 class MainMenuScene : public Scene {
 public:
@@ -21,4 +22,9 @@ public:
   void onExit(void) override;
 
   bool shouldTransition(void) const override;
+
+private:
+  float _time = 0.0f;        // drives the field drift, bob and blink (frozen under Reduce motion)
+  float _enterClock = 0.0f;  // seconds since entering (creature stagger)
+  UI::Motion::Tween _enter;  // title / subtitle entrance
 };

@@ -14,6 +14,7 @@
 #include <cmath>
 #include "ResourceManager.h"
 #include "PieceTheme.h"
+#include "Render/Motion.h"
 
 NavigationMenuController::NavigationMenuController(GameStateModel* gameStateModel, std::shared_ptr<MenuComponent> menuSystem,
                                SceneManager* sceneManager)
@@ -59,6 +60,9 @@ void NavigationMenuController::updateNavigationMenuForCurrentState() {
         std::shared_ptr<MenuComponent> newMenu = _gameStateModel->getCurrentState()->createNavigationMenu(_gameStateModel, _sceneManager);
         if (newMenu) {
             _currentMenuModel = newMenu; // Update current menu model (both are shared_ptr now)
+            // Same state, new buttons (e.g. Play appearing): keep the existing ones still
+            const bool sameState = _gameStateModel->getCurrentStateName() == _lastState->getName();
+            _menuView->setSkipEnterBelow(sameState ? _menuView->getItemViews().size() : 0);
             _menuView->createNavigationItemViews(_currentMenuModel, _gameStateModel->getCurrentState()); // Update item views for the new menu
         }
         _lastState = std::move(_gameStateModel->getCurrentState()->clone()); // Store the last state
@@ -393,6 +397,9 @@ void SettingMenuController::handleInput() {
                     // A toggle is not a selection: keep the highlighted music, refresh its own label
                     command->execute();
                     workerMenuItems[i]->setTitle(SfxToggleCommand::titleFor(AudioManager::instance().sfxEnabled()));
+                } else if (dynamic_cast<MotionToggleCommand*>(command.get())) {
+                    command->execute();
+                    workerMenuItems[i]->setTitle(MotionToggleCommand::titleFor(UI::Motion::reduced()));
                 } else {
                     workerSelectedIndex() = static_cast<int>(i);
                     if (command) {
@@ -427,6 +434,7 @@ void SettingMenuController::computeWorkerMenuView() {
             Vector2 position = {startX, startY + i * (itemHeight + verticalSpacing)};
             Vector2 size = {itemWidth, itemHeight};
             auto itemView = std::make_shared<MenuItemView>(position, size);
+            itemView->setEnterIndex(i);
             itemViews.push_back(itemView);
         }
         _workerMenuView->setItemViews(itemViews);

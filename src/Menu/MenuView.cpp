@@ -6,8 +6,33 @@
 #include <cmath>
 
 
+void SelectionIndicator::draw(const Rectangle* target) const {
+    const float dt = GetFrameTime();
+    if (target) {
+        if (!_init) {
+            _init = true;
+            _x.init(target->x, 420.0f, 0.9f); _y.init(target->y, 420.0f, 0.9f);
+            _w.init(target->width, 420.0f, 0.9f); _h.init(target->height, 420.0f, 0.9f);
+            _alpha.init(0.0f, 600.0f, 1.0f);
+        }
+        _x.setTarget(target->x); _y.setTarget(target->y);
+        _w.setTarget(target->width); _h.setTarget(target->height);
+    }
+    _alpha.setTarget(target ? 1.0f : 0.0f);
+    _x.update(dt); _y.update(dt); _w.update(dt); _h.update(dt); _alpha.update(dt);
+    const float a = std::fmax(0.0f, std::fmin(1.0f, _alpha.value)) * MenuItemView::globalAlpha();
+    if (!_init || a <= 0.01f) return;
+
+    Rectangle r = {_x.value, _y.value, _w.value, _h.value};
+    auto fade = [a](Color c) { c.a = static_cast<unsigned char>(c.a * a); return c; };
+    DrawRectangleRoundedLinesEx(r, UI::Space::radius, 8, UI::Space::outline, fade(UI::Color::selected));
+    const float barH = r.height * 0.5f;
+    DrawRectangleRounded({r.x + 8, r.y + (r.height - barH) / 2, 4, barH}, 1.0f, 4, fade(UI::Color::selected));
+}
+
 void ButtonMenuView::createNavigationItemViews(std::shared_ptr<MenuComponent> menuModel, GameState* gameState) {
     _itemViews.clear(); // Clear existing item views
+    struct ResetSkip { size_t& v; ~ResetSkip() { v = 0; } } resetSkip{_skipEnterBelow};
 
     if (gameState == nullptr) {
         for (const auto& child : menuModel->getChildren()) {
@@ -25,6 +50,8 @@ void ButtonMenuView::createNavigationItemViews(std::shared_ptr<MenuComponent> me
         auto itemViews = gameState->createNavigationMenuButtonItemViews(menuModel);
         for (const auto& itemView : itemViews) {
             if (itemView) {
+                if (_itemViews.size() >= _skipEnterBelow)
+                    itemView->setEnterIndex(static_cast<int>(_itemViews.size() - _skipEnterBelow));
                 _itemViews.push_back(itemView);
             }
         }
@@ -39,9 +66,22 @@ void ButtonMenuView::draw(std::shared_ptr<MenuComponent> menuModel) const {
         if (_itemViews[i]) {
             // Submit is the primary action of the in-game row: filled accent when enabled
             if (menuItems[i]->getTitle() == "Submit") _itemViews[i]->setPrimary(true);
+            _itemViews[i]->setSelectionOutline(false);
             _itemViews[i] -> draw(menuItems[i]);
         }
     }
+    // Sliding selection indicator (settings tabs / options)
+    Rectangle selRect{};
+    bool haveSel = false;
+    for (size_t i = 0; i < _itemViews.size() && i < menuItems.size(); ++i) {
+        if (_itemViews[i] && _itemViews[i]->getSelected() && menuItems[i]->isEnabled()) {
+            const Vector2 p = _itemViews[i]->getPosition(), sz = _itemViews[i]->getSize();
+            selRect = {p.x, p.y, sz.x, sz.y};
+            haveSel = true;
+            break;
+        }
+    }
+    _indicator.draw(haveSel ? &selRect : nullptr);
 }
 
 void ButtonMenuView::createInGameItemsViews(int numberOfItems) {
@@ -81,6 +121,7 @@ void ButtonMenuView::createSettingsMenuItemViews(int numberOfItems) {
         Vector2 position = {startX + i * (itemWidth + horizontalSpacing), startY};
         Vector2 size = {itemWidth, itemHeight};
         auto itemView = std::make_shared<MenuItemView>(position, size);
+        itemView->setEnterIndex(i);
         _itemViews.push_back(itemView);
     }
 }
@@ -153,6 +194,7 @@ void ListMenuView::createInGameItemsViews(int numberOfItems) {
         };
         Vector2 size = { listArea.width - scrollbarWidth - 20.0f, itemHeight };
         auto itemView = std::make_shared<MenuItemView>(position, size);
+        itemView->setEnterIndex(i);
         _itemViews.push_back(itemView);
     }
     
@@ -274,8 +316,11 @@ void ListMenuView::draw(std::shared_ptr<MenuComponent> menuModel) const {
     BeginScissorMode((int)listArea.x, (int)listArea.y, (int)listArea.width - (int)scrollbarWidth, (int)listArea.height);
     
     // Draw menu items with scroll offset
+    Rectangle selRect{};
+    bool haveSel = false;
     for (size_t i = 0; i < _itemViews.size() && i < menuItems.size(); ++i) {
         if (_itemViews[i]) {
+            _itemViews[i]->setSelectionOutline(false);
             // Calculate item position with scroll offset
             Vector2 originalPos = _itemViews[i]->getPosition();
             Vector2 scrolledPos = { originalPos.x, originalPos.y - scrollOffset };
@@ -289,9 +334,14 @@ void ListMenuView::draw(std::shared_ptr<MenuComponent> menuModel) const {
                 _itemViews[i]->draw(menuItems[i]);
                 // Restore original position
                 const_cast<MenuItemView*>(_itemViews[i].get())->setPosition(originalPos);
+                if (_itemViews[i]->getSelected() && menuItems[i]->isEnabled()) {
+                    selRect = {scrolledPos.x, scrolledPos.y, _itemViews[i]->getSize().x, _itemViews[i]->getSize().y};
+                    haveSel = true;
+                }
             }
         }
     }
+    _indicator.draw(haveSel ? &selRect : nullptr);
     
     EndScissorMode();
     
