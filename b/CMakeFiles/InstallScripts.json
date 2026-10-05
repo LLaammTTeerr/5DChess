@@ -1,9 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/cmake_install.cmake",
-		"/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/tests/cmake_install.cmake",
-		"/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/_deps/doctest-build/cmake_install.cmake"
-	],
-	"Parallel" : false
-}

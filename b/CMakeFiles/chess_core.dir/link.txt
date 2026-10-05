@@ -1,2 +1,0 @@
-/usr/bin/ar qc libchess_core.a CMakeFiles/chess_core.dir/src/chess.cpp.o
-/usr/bin/ranlib libchess_core.a
