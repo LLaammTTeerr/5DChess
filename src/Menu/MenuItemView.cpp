@@ -28,7 +28,24 @@ void MenuItemView::draw(std::shared_ptr<MenuComponent> menuComponent) const {
     hoverAmount = hot ? std::fmin(1.0f, hoverAmount + step) : std::fmax(0.0f, hoverAmount - step);
     if (hot) UI::Cursor::requestHand();
 
-    Rectangle rect = {position.x, position.y, size.x, size.y};
+    // Entrance: fade + 8 px rise, staggered by index (animations catch up visually; input is never delayed)
+    float alpha = s_globalAlpha;
+    float rise = 0.0f;
+    if (enterIndex >= 0) {
+        if (!entered) {
+            entered = true;
+            enterTween.start(0.0f, 1.0f, UI::Motion::base, UI::Motion::easeOutCubic,
+                             enterIndex * UI::Motion::stagger, true);
+        }
+        enterTween.update(GetFrameTime());
+        const float p = enterTween.progress();
+        alpha *= p;
+        if (!UI::Motion::reduced()) rise = (1.0f - p) * 8.0f;
+    }
+    if (alpha <= 0.003f) return;
+    auto fade = [alpha](Color c) { c.a = static_cast<unsigned char>(c.a * alpha); return c; };
+
+    Rectangle rect = {position.x, position.y + rise, size.x, size.y};
     Color bg, border, textColor;
     float borderThickness = 1.0f;
 
@@ -51,14 +68,15 @@ void MenuItemView::draw(std::shared_ptr<MenuComponent> menuComponent) const {
         if (hoverAmount > 0.0f) borderThickness = 1.0f + hoverAmount;
     }
 
+    bg = fade(bg); border = fade(border); textColor = fade(textColor);
     DrawRectangleRounded(rect, UI::Space::radius, 8, bg);
     DrawRectangleRoundedLinesEx(rect, UI::Space::radius, 8, borderThickness, border);
 
-    if (isSelected && enabled) {
+    if (isSelected && enabled && drawSelectedOutline) {
         // Selected list item: accent outline plus a left bar
-        DrawRectangleRoundedLinesEx(rect, UI::Space::radius, 8, UI::Space::outline, UI::Color::selected);
+        DrawRectangleRoundedLinesEx(rect, UI::Space::radius, 8, UI::Space::outline, fade(UI::Color::selected));
         const float barH = rect.height * 0.5f;
-        DrawRectangleRounded({rect.x + 8, rect.y + (rect.height - barH) / 2, 4, barH}, 1.0f, 4, UI::Color::selected);
+        DrawRectangleRounded({rect.x + 8, rect.y + (rect.height - barH) / 2, 4, barH}, 1.0f, 4, fade(UI::Color::selected));
     }
 
     const std::string title = menuComponent->getTitle(); // keep alive: getTitle() may return by value

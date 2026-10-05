@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <raylib.h>
 #include "Render/UITheme.h"
+#include "Render/Motion.h"
 
 class MenuComponent;
 
@@ -18,6 +19,11 @@ private:
     bool isPrimary = false;          // filled accent button (e.g. Submit, Play)
     mutable bool pressStartedHere = false; // left press began on this item
     mutable float hoverAmount = 0.0f; // 0..1, eased toward isHovered over ~150 ms
+    bool drawSelectedOutline = true; // false when the owning view draws a sliding indicator instead
+    int enterIndex = -1;             // >= 0: fade/slide in on first draw, delayed by index * stagger
+    mutable bool entered = false;
+    mutable UI::Motion::Tween enterTween;
+    static inline float s_globalAlpha = 1.0f; // multiplies everything (nav overlay fade)
 
 public:
     MenuItemView(Vector2 pos, Vector2 sz) : position(pos), size(sz) {
@@ -31,6 +37,12 @@ public:
 
     void setSelected(bool selected) { isSelected = selected; }
     bool getSelected() const { return isSelected; }
+
+    void setSelectionOutline(bool on) { drawSelectedOutline = on; }
+    // Stagger the entrance of this item (index >= 0); default is no entrance animation
+    void setEnterIndex(int index) { enterIndex = index; entered = false; }
+    static void setGlobalAlpha(float a) { s_globalAlpha = a; }
+    static float globalAlpha() { return s_globalAlpha; }
 
     void setPrimary(bool primary) { isPrimary = primary; }
     bool getPrimary() const { return isPrimary; }

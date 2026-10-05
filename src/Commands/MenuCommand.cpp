@@ -14,6 +14,7 @@
 #include "Render/Controller.h"
 
 #include "PieceTheme.h"
+#include "Render/Motion.h"
 
 // ChangeStateCommand execute implementation
 void ChangeStateCommand::execute() {
@@ -204,6 +205,16 @@ void SfxToggleCommand::execute() {
 
 std::unique_ptr<ICommand> SfxToggleCommand::clone() const {
     auto cloned = std::make_unique<SfxToggleCommand>();
+    cloned->_callback = _callback;
+    return cloned;
+}
+
+void MotionToggleCommand::execute() {
+    UI::Motion::setReduced(!UI::Motion::reduced());
+}
+
+std::unique_ptr<ICommand> MotionToggleCommand::clone() const {
+    auto cloned = std::make_unique<MotionToggleCommand>();
     cloned->_callback = _callback;
     return cloned;
 }
