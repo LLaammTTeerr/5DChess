@@ -1,3 +1,4 @@
+#include "Input.h"
 #include "VersusScene.h"
 #include "ResourceManager.h"
 #include "Render/UITheme.h"
@@ -20,11 +21,11 @@ void VersusScene::init(void) {
 
 void VersusScene::handleInput(void) {
   // Handle versus scene input
-  if (IsKeyPressed(KEY_ESCAPE)) {
+  if (Input::keyPressed(KEY_ESCAPE)) {
     std::cout << "Escape pressed in VersusScene - returning to main menu" << std::endl;
   }
   
-  if (IsKeyPressed(KEY_SPACE)) {
+  if (Input::keyPressed(KEY_SPACE)) {
     std::cout << "Space pressed in VersusScene - start game" << std::endl;
   }
 

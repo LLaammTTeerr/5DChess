@@ -1,3 +1,4 @@
+#include "Input.h"
 #include "View.h"
 #include "chess.h"
 #include "raymath.h"
@@ -590,7 +591,7 @@ void ChessView::renderEndGameScreen(std::string winnerText) const {
                 if (t < period) { const float u = t / period; hop = (26.0f - i * 8.0f) * 4.0f * u * (1.0f - u); break; }
             }
         }
-        const bool closed = blinkClosed(77u, GetTime());
+        const bool closed = blinkClosed(77u, Input::time());
         Texture2D& sprite = (closed && tex.blink) ? *tex.blink : *tex.open;
         const float sx = std::floor(cx - size / 2), sy = std::floor(card.y - size + 6.0f - hop);
         DrawEllipse(static_cast<int>(cx), static_cast<int>(card.y + 1), 20.0f - hop * 0.25f, 4.0f, fa(UI::withAlpha(UI::Color::shadow, 70)));

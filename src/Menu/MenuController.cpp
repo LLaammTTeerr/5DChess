@@ -1,3 +1,4 @@
+#include "Input.h"
 #include "MenuController.h"
 #include "Audio/AudioManager.h"
 #include "MenuView.h"
@@ -71,8 +72,8 @@ void NavigationMenuController::updateNavigationMenuForCurrentState() {
 
 
 void NavigationMenuController::handleInput() {
-    Vector2 mousePosition = GetMousePosition();
-    bool mouseClicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+    Vector2 mousePosition = Input::mousePosition();
+    bool mouseClicked = Input::mousePressed(MOUSE_BUTTON_LEFT);
 
     if (!_menuView) {
         std::cout << "Menu view is not set." << std::endl;
@@ -137,8 +138,8 @@ void InGameMenuController::setViewStrategy(std::unique_ptr<IMenuView> view) {
 }
 
 void InGameMenuController::handleInput() {
-    Vector2 mousePosition = GetMousePosition();
-    bool mouseClicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+    Vector2 mousePosition = Input::mousePosition();
+    bool mouseClicked = Input::mousePressed(MOUSE_BUTTON_LEFT);
 
     if (!_menuView) {
         std::cout << "InGameMenuView is not set." << std::endl;
@@ -192,8 +193,8 @@ void VersusMenuController::setViewStrategy(std::unique_ptr<IMenuView> view) {
 void VersusMenuController::handleInput() {
     if (!_menuView || !_menuSystem) return;
 
-    Vector2 mousePos = GetMousePosition();
-    bool mouseClicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+    Vector2 mousePos = Input::mousePosition();
+    bool mouseClicked = Input::mousePressed(MOUSE_BUTTON_LEFT);
 
     // Handle scroll input for ListMenuView
     if (auto* listView = dynamic_cast<ListMenuView*>(_menuView.get())) {
@@ -359,8 +360,8 @@ void SettingMenuController::updateNavigationMenuForCurrentState() {
 }
 
 void SettingMenuController::handleInput() {
-    Vector2 mousePosition = GetMousePosition();
-    bool mouseClicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+    Vector2 mousePosition = Input::mousePosition();
+    bool mouseClicked = Input::mousePressed(MOUSE_BUTTON_LEFT);
 
     if (!_menuView) {
         std::cout << "InGameMenuView is not set." << std::endl;

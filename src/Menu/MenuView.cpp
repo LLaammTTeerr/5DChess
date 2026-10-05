@@ -1,3 +1,4 @@
+#include "Input.h"
 #include "MenuView.h"
 #include "MenuComponent.h"
 #include "gameState.h"
@@ -7,7 +8,7 @@
 
 
 void SelectionIndicator::draw(const Rectangle* target) const {
-    const float dt = GetFrameTime();
+    const float dt = Input::frameTime();
     if (target) {
         if (!_init) {
             _init = true;
@@ -203,17 +204,17 @@ void ListMenuView::createInGameItemsViews(int numberOfItems) {
 }
 
 void ListMenuView::handleScrollInput() {
-    Vector2 mousePos = GetMousePosition();
+    Vector2 mousePos = Input::mousePosition();
     
     // Handle mouse wheel scrolling
-    float wheelMove = GetMouseWheelMove();
+    float wheelMove = Input::mouseWheel();
     if (wheelMove != 0 && CheckCollisionPointRec(mousePos, listArea)) {
         scrollOffset -= wheelMove * 30.0f; // Scroll speed
         scrollOffset = fmaxf(0.0f, fminf(scrollOffset, maxScrollOffset));
     }
     
     // Handle scrollbar dragging
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+    if (Input::mousePressed(MOUSE_BUTTON_LEFT)) {
         // Check if clicked on scrollbar area (not just handle)
         if (CheckCollisionPointRec(mousePos, scrollbarArea)) {
             isDragging = true;
@@ -229,7 +230,7 @@ void ListMenuView::handleScrollInput() {
     }
     
     if (isDragging) {
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+        if (Input::mouseDown(MOUSE_BUTTON_LEFT)) {
             float relativeY = mousePos.y - scrollbarArea.y;
             if (scrollbarArea.height > 0) {
                 float scrollRatio = relativeY / scrollbarArea.height;
@@ -242,7 +243,7 @@ void ListMenuView::handleScrollInput() {
 }
 
 bool ListMenuView::isScrollbarHovered() const {
-    Vector2 mousePos = GetMousePosition();
+    Vector2 mousePos = Input::mousePosition();
     Rectangle handleRect = {
         scrollbarArea.x,
         scrollbarArea.y + getScrollHandlePosition(),

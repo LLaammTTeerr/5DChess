@@ -1,3 +1,4 @@
+#include "Input.h"
 #include "BoardView.h"
 #include "View.h"
 #include "chess.h"
@@ -97,7 +98,7 @@ Chess::Position2D BoardView2D::worldToPosition(Vector2 world) const {
 }
 
 Chess::Position2D BoardView2D::mouseToPosition() const {
-    Vector2 mousePos = GetMousePosition();
+    Vector2 mousePos = Input::mousePosition();
     if (_camera) mousePos = GetScreenToWorld2D(mousePos, *_camera);
     return worldToPosition(mousePos);
 }
@@ -108,7 +109,7 @@ float BoardView2D::worldThickness(float px) const {
 }
 
 bool BoardView2D::isMouseOverBoard() const {
-    Vector2 screenMousePos = GetMousePosition();
+    Vector2 screenMousePos = Input::mousePosition();
     bool isMouseOver = false;
     if (_camera) {
         Vector2 worldMousePos = GetScreenToWorld2D(screenMousePos, *_camera);
@@ -120,7 +121,7 @@ bool BoardView2D::isMouseOverBoard() const {
 }
 
 bool BoardView2D::isMouseClickedOnBoard() const {
-    return isMouseOverBoard() && IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+    return isMouseOverBoard() && Input::mousePressed(MOUSE_BUTTON_LEFT);
 }
 
 
@@ -199,7 +200,7 @@ void BoardView2D::render_liftedPiece(Chess::Position2D pos, float lift) const {
 void BoardView2D::render_pieces() const {
     const float alpha = _enter < 0.999f ? _enter : 1.0f;
     const Color tint = fadeColor(WHITE, alpha);
-    const double now = (_blinkEnabled ? GetTime() : 0.0);
+    const double now = (_blinkEnabled ? Input::time() : 0.0);
     for (const auto& [pos, pieceName] : _piecePositions) {
         if (isHiddenSquare(pos)) continue;
         const PieceTextures& tex = ThemeManager::getInstance().getPieceTextures(pieceName);

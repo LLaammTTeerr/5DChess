@@ -1,3 +1,4 @@
+#include "Input.h"
 #include "CameraController.h" 
 #include "BoardView.h"
 #include "Render/Motion.h"
@@ -47,21 +48,21 @@ void CameraController::applySafeAreaOffset() {
 
 void CameraController::handleUserInput() {
     // Handle keyboard input for camera controls
-    if (IsKeyPressed(KEY_Z)) {
+    if (Input::keyPressed(KEY_Z)) {
         toggleAutoZoom();
         std::cout << "Auto-zoom toggled: " << (_autoZoomEnabled ? "ON" : "OFF") << std::endl;
     }
     
     // Add manual auto-zoom trigger for testing
-    if (IsKeyPressed(KEY_X)) {
+    if (Input::keyPressed(KEY_X)) {
         _cameraState = CameraState::AUTO_ZOOMING;
         _timeSinceUserInput = 0.0f;
         std::cout << "Manual auto-zoom triggered!" << std::endl;
     }
     
     // Handle mouse dragging for camera panning - with anti-accidental measures
-    if (IsMouseButtonDown(MOUSE_LEFT_BUTTON) && shouldAllowCameraControl()) {
-        Vector2 mouseDelta = GetMouseDelta();
+    if (Input::mouseDown(MOUSE_LEFT_BUTTON) && shouldAllowCameraControl()) {
+        Vector2 mouseDelta = Input::mouseDelta();
         float deltaLength = Vector2Length(mouseDelta);
         
         // Require significant movement to prevent accidental camera control
@@ -73,7 +74,7 @@ void CameraController::handleUserInput() {
                 _isDragging = true;
                 _dragTime = 0.0f;
             } else {
-                _dragTime += GetFrameTime();
+                _dragTime += Input::frameTime();
             }
             
             // Only switch to user control after sustained dragging
@@ -91,7 +92,7 @@ void CameraController::handleUserInput() {
     }
     
     // Handle mouse wheel zoom - with anti-accidental measures
-    float wheel = GetMouseWheelMove();
+    float wheel = Input::mouseWheel();
     if (wheel != 0 && shouldAllowCameraControl()) {
         // Require more significant wheel movement to prevent accidental zoom control
         const float MIN_WHEEL_THRESHOLD = 0.5f;  // Minimum wheel movement
@@ -114,7 +115,7 @@ void CameraController::handleUserInput() {
     
     // Reset accumulated wheel if no input for a while
     if (_wheelResetTimer > 0.0f) {
-        _wheelResetTimer -= GetFrameTime();
+        _wheelResetTimer -= Input::frameTime();
         if (_wheelResetTimer <= 0.0f) {
             _accumulatedWheel = 0.0f;
         }

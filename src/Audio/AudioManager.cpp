@@ -1,4 +1,6 @@
+#include "Input.h"
 #include "Audio/AudioManager.h"
+#include "TestMode.h"
 #include <iostream>
 
 namespace {
@@ -33,6 +35,7 @@ const std::vector<AudioManager::Track>& AudioManager::tracks() {
 
 void AudioManager::init() {
     if (_ready) return;
+    if (TestMode::get().audioDisabled) return; // UI test harness: stay silent, never open a device
     InitAudioDevice();
     if (!IsAudioDeviceReady()) {
         std::cerr << "Audio: no audio device available, running silent." << std::endl;
@@ -65,7 +68,7 @@ void AudioManager::shutdown() {
 
 void AudioManager::update() {
     if (!_ready) return;
-    if (!_gesture && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+    if (!_gesture && Input::mousePressed(MOUSE_BUTTON_LEFT)) {
         _gesture = true;
         startSelectedMusic(); // deferred until the first click (browser autoplay policy)
     }
