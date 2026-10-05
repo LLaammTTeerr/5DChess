@@ -18,7 +18,7 @@ jobs:
     name: Engine tests (ASan+UBSan)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Cache FetchContent downloads
         uses: actions/cache@v4
         with:
@@ -39,7 +39,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install raylib dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -62,7 +62,7 @@ jobs:
     runs-on: ubuntu-latest
     container: emscripten/emsdk:4.0.10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install a recent CMake (the image ships 3.22; the project needs 3.28)
         run: pip install --quiet cmake
       - name: Configure
