@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- The engine now implements the official 5D Chess rules ([docs/RULES.md](docs/RULES.md)): active and inactive timelines, the present, mandatory boards, check through time and across timelines, castling, en passant and promotion choice, with every rule traced to its source and compared move by move against the reference engine 5d-chess-js (`tools/refcheck`).
+- Checkmate and stalemate end the game (the end card reads "White wins!" / "Black wins!" with "Checkmate", or "Draw" with "Stalemate"). Capturing a king no longer exists: such moves are never offered.
+- The "does the side to move have a legal turn?" result search is non-blocking: it runs a little each frame, the HUD shows "Checking position..." meanwhile, and the game never freezes ([docs/SEARCH.md](docs/SEARCH.md)).
+- Submit is enabled only when the turn is legal; when the turn would leave a king capturable the HUD says "Your king would be capturable". The present line is drawn at the present (the earliest end of the active timelines).
+- The HUD and menu cache the turn status until the game state changes (`IGame::stateVersion()`) instead of recomputing it every frame.
+- UI screenshot tests: the endgame script now plays a real two-turn checkmate and a new script a six-turn stalemate.
+
+### Fixed
+- Rules bugs found while aligning the engine with the reference: bishops, rooks, queens and kings could not move or slide forward in time (the king had no +t steps, the rook no +t slide, the bishop only -t, and queen +t slides were capped by the source board's turn number).
+- Pawn timeline direction was reversed: a pawn's forward step on the timeline axis is towards the opponent's timelines (White towards lower IDs, Black towards higher), and timeline IDs follow the creator (White positive, Black negative).
+- Moves were not required on every board of the present: a turn could be ended with boards unmoved, or with a king left capturable; this is now judged per turn (`canSubmit()`).
+
 ## [0.3.0] - 2026-10-05
 
 ### Added

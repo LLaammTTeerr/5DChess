@@ -199,9 +199,10 @@ The game changes its working directory to the executable's folder, so it can be 
 ## Features
 
 ### Core Gameplay
-- **5D Chess Mechanics**: Move pieces across time and parallel universes
+- **Official 5D Chess rules**: moves across time and parallel universes, active/inactive timelines and the present, mandatory moves on the present boards, check through time, castling, en passant and promotion (see [docs/RULES.md](docs/RULES.md); checked against the reference engine 5d-chess-js)
+- **Winning**: you win by checkmate (the opponent has no legal turn and is in check); no legal turn without check is a stalemate and a draw. Kings are never captured. The position is checked in the background after every turn ("Checking position..."), so the game never freezes
 - **Timeline Visualization**: Boards branch into new timelines, with arrows showing the branch
-- **Legal Move Highlighting**: Visual guides for valid moves
+- **Legal Move Highlighting**: Visual guides for valid moves; Submit is enabled only when the whole turn is legal (otherwise the HUD says why, e.g. "Your king would be capturable")
 - **Undo**: Take back moves within the current turn before submitting (no redo)
 - **Board orientation**: Boards are drawn from White's side
 
@@ -239,12 +240,14 @@ theme_preview <Classic|Modern|Fantasy|Pixel> <Standard|Battle|Invasion|Fragment>
 
 ## Roadmap
 
-- **v0.4.0**: official 5D Chess rules (check, checkmate, active timelines, castling, en passant, promotion choice), three board view styles (Deep space by default, Atlas, Blueprint), and a codebase refactor.
+- ~~Official 5D Chess rules~~ (check, checkmate, stalemate, active timelines, castling, en passant, promotion choice): done.
+- **v0.4.0**: three board view styles (Deep space by default, Atlas, Blueprint) and a codebase refactor.
 - **v0.5.0**: AI opponent, save/load, puzzles and an interactive guide.
 
 ## Known limitations
 
-- The current rules are simplified (you win by capturing the king) until v0.4.0.
+- In rare, huge positions the checkmate/stalemate search may not finish in reasonable time; the result then stays undecided ("Checking position...") and the game simply continues ([docs/SEARCH.md](docs/SEARCH.md)).
+- The rules engine is cross-checked against 5d-chess-js on Standard and the Simplify modes only; the Misc modes (Time Line Invasion, Battle, Fragment) are not cross-checked.
 - The Puzzles and Guide menu items are placeholders.
 
 ## Troubleshooting
