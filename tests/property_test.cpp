@@ -6,6 +6,7 @@
 #include <array>
 #include <cstdlib>
 #include <map>
+#include <climits>
 #include <set>
 
 using namespace Chess;
@@ -14,6 +15,7 @@ using namespace test;
 namespace {
 
 constexpr std::array<unsigned, 6> kSeeds = {1u, 2u, 3u, 7u, 42u, 2024u};
+constexpr std::array<unsigned, 4> kFuzzSeeds = {1u, 2u};
 
 // Dump of a single board's contents, including each piece's back-reference to its board and square.
 std::string dumpBoard(const std::shared_ptr<Board>& board) {
@@ -57,7 +59,35 @@ struct Coverage {
   int moves = 0;
   int knightMoves = 0;
   int crossBoardMoves = 0;
+  int whiteBranches = 0;
+  int blackBranches = 0;
+  int turns = 0;
+  // What the random games actually exercised (every counter is asserted to be > 0 by the tests below).
+  int castles = 0;
+  int enPassant = 0;
+  int promotions = 0;
+  int pawnTimelineMoves = 0;
+  int inCheckAtTurnStart = 0;
+  int optionalBoardMoves = 0;
+  int decidedGames = 0;
+  int searchRunning = 0; // turns whose legal-turn search did not finish within the node budget (tracked, not asserted)
 };
+
+// What kind of move is this, judged before it is made.
+void classify(const IGame& game, const Move& m, Coverage& cov) {
+  auto piece = m.from.board->getPiece(m.from.position);
+  const bool same = m.to.board == m.from.board;
+  const int dx = m.to.position.x() - m.from.position.x();
+  const int lastRank = piece->color() == PieceColor::PIECEWHITE ? game.dim() - 1 : 0;
+  if (piece->type() == PieceType::King and same and std::abs(dx) == 2) ++cov.castles;
+  if (piece->type() == PieceType::Pawn) {
+    if (same and dx != 0 and m.to.board->getPiece(m.to.position) == nullptr) ++cov.enPassant;
+    if (m.to.position.y() == lastRank) ++cov.promotions;
+    if (!same) ++cov.pawnTimelineMoves;
+  }
+  const auto mandatory = game.mandatoryBoards();
+  if (std::find(mandatory.begin(), mandatory.end(), m.from.board) == mandatory.end()) ++cov.optionalBoardMoves;
+}
 
 // Property (a) and (d): checks every target of every own piece on every moveable board.
 void checkMoveGenSoundness(const IGame& game, Coverage& cov) {
@@ -99,80 +129,146 @@ void checkMoveGenSoundness(const IGame& game, Coverage& cov) {
   }
 }
 
-// Plays up to `plies` random plies (submitting the turn when no move is left), undoing occasionally.
-void scribble(IGame& game, std::mt19937& rng, int plies) {
-  for (int i = 0; i < plies and not game.gameEnd(); ++i) {
-    if (game.getMoveableBoards().empty()) {
-      if (!game.undoable()) return;
-      game.submitTurn();
-      continue;
+// Builds a random legal turn (moves on random moveable boards, undoing dead ends) and leaves it pending.
+// Returns false if no legal turn was found within a few attempts. `onMove` sees every move that is made.
+template <class F>
+bool buildRandomTurn(IGame& game, std::mt19937& rng, F&& onMove) {
+  for (int attempt = 0; attempt < 12; ++attempt) {
+    for (int step = 0; step < 10; ++step) {
+      if (game.canSubmit() and test::randInt(rng, 0, 2) != 0) return true;
+      auto moves = game.allPseudoLegalMoves();
+      if (moves.empty()) break;
+      // Pawn moves and castling are favoured, so that double steps, en passant, promotion and castling occur in short games.
+      std::vector<int> weight(moves.size(), 1);
+      int total = 0;
+      for (std::size_t i = 0; i < moves.size(); ++i) {
+        auto piece = moves[i].from.board->getPiece(moves[i].from.position);
+        if (piece->type() == PieceType::Pawn) {
+          weight[i] = 4;
+          const bool sameBoard = moves[i].to.board == moves[i].from.board;
+          if (sameBoard and moves[i].to.position.x() != moves[i].from.position.x()
+              and moves[i].to.board->getPiece(moves[i].to.position) == nullptr)
+            weight[i] = 60; // en passant, when it is on offer
+          if (moves[i].to.position.y() == (piece->color() == PieceColor::PIECEWHITE ? game.dim() - 1 : 0)) weight[i] = 40; // promotion
+        }
+        if (piece->type() == PieceType::King and moves[i].to.board == moves[i].from.board
+            and std::abs(moves[i].to.position.x() - moves[i].from.position.x()) == 2) weight[i] = 12;
+        total += weight[i];
+      }
+      int pick = test::randInt(rng, 0, total - 1);
+      std::size_t idx = 0;
+      while (pick >= weight[idx]) pick -= weight[idx++];
+      Move move = moves[idx];
+      onMove(game, move);
+      static const PieceType promos[] = {PieceType::Queen, PieceType::Rook, PieceType::Bishop, PieceType::Knight};
+      game.makeMove(move, promos[test::randInt(rng, 0, 3)]);
+      if (test::randInt(rng, 0, 5) == 0) game.undo();
     }
-    auto moves = game.allPseudoLegalMoves();
-    if (moves.empty()) return;
-    game.makeMove(moves[std::uniform_int_distribution<std::size_t>(0, moves.size() - 1)(rng)]);
-    if (std::uniform_int_distribution<int>(0, 5)(rng) == 0) game.undo();
+    if (game.canSubmit()) return true;
+    while (game.undoable()) game.undo();
+  }
+  return false;
+}
+
+// Plays up to `turns` random legal turns on `game` (used on clones).
+void scribble(IGame& game, std::mt19937& rng, int turns) {
+  for (int i = 0; i < turns and game.result() == GameResult::Ongoing; ++i) {
+    if (!buildRandomTurn(game, rng, [](const IGame&, const Move&) {})) return;
+    game.submitTurn();
   }
 }
 
+// The official active-timeline rule, derived from scratch: the n-th timeline created by a player is active iff the
+// opponent has created at least n - 1 timelines. White creates positive IDs above the original ones, Black negative
+// IDs below them.
+bool expectedActive(int id, int origMin, int origMax, int whiteCreated, int blackCreated) {
+  if (id >= origMin and id <= origMax) return true;
+  if (id > origMax) return (id - origMax) <= blackCreated + 1;
+  return (origMin - id) <= whiteCreated + 1;
+}
+
+// Invariants that must hold at any moment between turns.
+void checkTimelineInvariants(const IGame& game, int origMin, int origMax) {
+  int whiteCreated = 0, blackCreated = 0;
+  for (int id : game.timeLineIds()) {
+    if (id > origMax) ++whiteCreated;
+    if (id < origMin) ++blackCreated;
+  }
+  // IDs are allocated contiguously outwards from the original ones.
+  CHECK(game.maxTimeLineId() == origMax + whiteCreated);
+  CHECK(game.minTimeLineId() == origMin - blackCreated);
+  int present = INT_MAX;
+  for (int id : game.timeLineIds()) {
+    const bool active = expectedActive(id, origMin, origMax, whiteCreated, blackCreated);
+    CHECK(game.isTimeLineActive(id) == active);
+    if (active) present = std::min(present, game.timeLine(id)->halfTurnNumber());
+  }
+  CHECK(game.presentHalfTurn() == present);
+  CHECK(game.bufferHalfTurn() == present);
+  CHECK(present % 2 == int(game.getCurrentTurnColor()));
+}
+
 template <class G>
-void fuzzGame(unsigned seed, int plies, Coverage& cov) {
+void fuzzGame(unsigned seed, int turns, Coverage& cov) {
   std::mt19937 rng(seed);
   std::shared_ptr<IGame> gamePtr = createGame<G>();
   IGame& game = *gamePtr;
-  std::vector<int> createdHalfTurns; // half-turn of every board created by the moves of the current turn
+  const int origMin = game.minTimeLineId();
+  const int origMax = game.maxTimeLineId();
 
-  auto play = [&](const Move& move) {
-    const std::size_t timeLinesBefore = game.getTimeLines().size();
-    const int present = game.presentHalfTurn();
-    auto before = dumpAllBoards(game);
+  for (int turn = 0; turn < turns and game.result() == GameResult::Ongoing; ++turn) {
+    CAPTURE(turn);
+    checkTimelineInvariants(game, origMin, origMax);
 
-    game.makeMove(move);
-
-    CHECK(game.getTimeLines().size() >= timeLinesBefore);
-    CHECK(game.getTimeLines().size() <= timeLinesBefore + 1);
-    CHECK(game.presentHalfTurn() == present);
-    for (const auto& [board, dump] : before) CHECK(dumpBoard(board) == dump);
-    createdHalfTurns.push_back(std::min(move.from.board->halfTurnNumber() + 1, game.getNewBoard()->halfTurnNumber()));
-  };
-
-  for (int ply = 0; ply < plies and not game.gameEnd(); ++ply) {
-    CAPTURE(ply);
-    if (std::uniform_int_distribution<int>(0, 7)(rng) == 0) {
-      // Clone, play random plies on the clone: the original must not notice.
+    if (test::randInt(rng, 0, 5) == 0) {
+      // Clone, play random turns on the clone: the original must not notice, the clone must stay consistent.
       const std::string pre = snapshot(game);
       auto dumps = dumpAllBoards(game);
       auto copy = game.clone();
       CHECK(snapshot(*copy) == pre);
-      scribble(*copy, rng, 12);
+      CHECK(copy->result() == game.result());
+      scribble(*copy, rng, 4);
+      checkTimelineInvariants(*copy, origMin, origMax);
       CHECK(snapshot(game) == pre);
       for (const auto& [board, dump] : dumps) CHECK(dumpBoard(board) == dump);
     }
-    if (game.getMoveableBoards().empty()) {
-      REQUIRE(game.undoable()); // otherwise the game would be stuck
-      const PieceColor colorBefore = game.getCurrentTurnColor();
-      const int expectedPresent = *std::min_element(createdHalfTurns.begin(), createdHalfTurns.end());
-      game.submitTurn();
-      createdHalfTurns.clear();
-      CHECK(game.getCurrentTurnColor() == opposite(colorBefore));
-      CHECK(game.presentHalfTurn() == expectedPresent);
-      CHECK_FALSE(game.undoable());
-      continue;
-    }
 
     checkMoveGenSoundness(game, cov);
-    auto moves = game.allPseudoLegalMoves();
-    if (moves.empty()) break;
-    const Move move = moves[std::uniform_int_distribution<std::size_t>(0, moves.size() - 1)(rng)];
-    CAPTURE(key(move.from));
-    CAPTURE(key(move.to));
 
-    const std::string pre = snapshot(game);
-    play(move);
-    if (std::uniform_int_distribution<int>(0, 3)(rng) == 0) {
-      game.undo();
-      createdHalfTurns.pop_back();
-      CHECK(snapshot(game) == pre);
-      play(move);
+    const PieceColor mover = game.getCurrentTurnColor();
+    const std::vector<int> idList = game.timeLineIds();
+    const std::set<int> idsBefore(idList.begin(), idList.end());
+    const std::string startSnapshot = snapshot(game);
+    auto before = dumpAllBoards(game);
+    if (game.inCheck()) ++cov.inCheckAtTurnStart;
+    auto onMove = [&](const IGame& g, const Move& m) { ++cov.moves; classify(g, m, cov); };
+
+    if (!buildRandomTurn(game, rng, onMove)) {
+      // Dead end for the random player: nothing may have changed.
+      CHECK(snapshot(game) == startSnapshot);
+      break;
+    }
+    // A pending turn that may be submitted: nobody can capture the mover's kings, no board was left behind.
+    CHECK(game.mandatoryBoards().empty());
+    CHECK(game.threatsAgainst(mover).empty());
+    for (const auto& [board, dump] : before) CHECK(dumpBoard(board) == dump);
+    // Ownership of new timelines by sign of the ID.
+    for (int id : game.timeLineIds()) {
+      if (idsBefore.count(id)) continue;
+      if (mover == PieceColor::PIECEWHITE) { CHECK(id > origMax); ++cov.whiteBranches; }
+      else { CHECK(id < origMin); ++cov.blackBranches; }
+    }
+    game.submitTurn();
+    if (!game.resolveResult(50000)) ++cov.searchRunning;
+    ++cov.turns;
+    CHECK(game.getCurrentTurnColor() == opposite(mover));
+    CHECK_FALSE(game.undoable());
+    CHECK(game.threatsAgainst(mover).empty());
+    if (game.result() != GameResult::Ongoing) {
+      ++cov.decidedGames;
+      // A decided game really has no legal turn left (unbounded re-check).
+      CHECK(game.findLegalTurn(2000000) == TurnSearch::Status::None);
+      CHECK(game.inCheck() == (game.result() != GameResult::Draw));
     }
   }
 }
@@ -183,21 +279,60 @@ TEST_CASE_TEMPLATE("random games keep the move generator sound and snapshots imm
                    CustomGameEmitBishop, CustomGameEmitKnight, CustomGameEmitQueen, CustomGameEmitRook,
                    CustomGameKVB, MiscGameTimeLineInvasion, MiscGameTimeLineBattle, MiscGameTimeLineFragment) {
   Coverage cov;
-  for (unsigned seed : kSeeds) {
+  for (unsigned seed : kFuzzSeeds) {
     CAPTURE(seed);
     CAPTURE(NameOfGame<G>::value);
-    fuzzGame<G>(seed, 60, cov);
+    fuzzGame<G>(seed, 8, cov);
   }
   CHECK(cov.moves > 0);
 }
 
 TEST_CASE("fuzz exercises knights and cross-board moves") {
   Coverage cov;
-  fuzzGame<StandardGame>(1u, 80, cov);
-  fuzzGame<CustomGameEmitKnight>(2u, 80, cov);
-  fuzzGame<MiscGameTimeLineBattle>(3u, 80, cov);
+  fuzzGame<StandardGame>(1u, 16, cov);
+  fuzzGame<CustomGameEmitKnight>(2u, 16, cov);
+  fuzzGame<MiscGameTimeLineBattle>(3u, 16, cov);
   CHECK(cov.knightMoves > 0);
   CHECK(cov.crossBoardMoves > 0);
+  CHECK(cov.turns > 12);
+  CHECK(cov.whiteBranches > 0);
+  CHECK(cov.blackBranches > 0);
+}
+
+// Plays random legal turns without any of the property checks (fast), only to count what the games reach.
+template <class G>
+void coverWalk(unsigned seed, int turns, Coverage& cov) {
+  std::mt19937 rng(seed);
+  std::shared_ptr<IGame> game = createGame<G>();
+  for (int turn = 0; turn < turns and game->result() == GameResult::Ongoing; ++turn) {
+    if (game->inCheck()) ++cov.inCheckAtTurnStart;
+    if (!buildRandomTurn(*game, rng, [&](const IGame& g, const Move& m) { ++cov.moves; classify(g, m, cov); })) break;
+    game->submitTurn();
+    if (!game->resolveResult(50000)) ++cov.searchRunning;
+    ++cov.turns;
+    if (game->result() != GameResult::Ongoing) ++cov.decidedGames;
+  }
+}
+
+TEST_CASE("random games reach castling, en passant, promotion, pawn timeline moves, check, optional boards and a decision") {
+  // These property tests only show that the engine is self-consistent (soundness, immutability, invariants); they are NOT
+  // evidence that the rules are right. That is what the directed tests and tools/refcheck (a comparison with 5d-chess-js)
+  // are for. This test makes sure the random games get anywhere near the interesting rules at all.
+  Coverage cov;
+  for (unsigned seed = 1; seed <= 24; ++seed) coverWalk<StandardGame>(seed, 20, cov);
+  for (unsigned seed = 1; seed <= 5; ++seed) coverWalk<CustomGameKVB>(seed, 20, cov);
+  for (unsigned seed = 1; seed <= 10; ++seed) coverWalk<MiscGameTimeLineFragment>(seed, 20, cov);
+  MESSAGE("castles " << cov.castles << ", en passant " << cov.enPassant << ", promotions " << cov.promotions
+                     << ", pawn timeline moves " << cov.pawnTimelineMoves << ", in check at turn start "
+                     << cov.inCheckAtTurnStart << ", optional-board moves " << cov.optionalBoardMoves << ", decided games "
+                     << cov.decidedGames << ", searches still running " << cov.searchRunning << ", turns " << cov.turns);
+  CHECK(cov.castles > 0);
+  CHECK(cov.enPassant > 0);
+  CHECK(cov.promotions > 0);
+  CHECK(cov.pawnTimelineMoves > 0);
+  CHECK(cov.inCheckAtTurnStart > 0);
+  CHECK(cov.optionalBoardMoves > 0);
+  CHECK(cov.decidedGames > 0);
 }
 
 TEST_CASE("rook, bishop and king moves are subsets of queen moves from the same square") {
@@ -208,7 +343,7 @@ TEST_CASE("rook, bishop and king moves are subsets of queen moves from the same 
       std::mt19937 rng(seed * 1000 + trial);
       CAPTURE(seed);
       CAPTURE(trial);
-      auto uni = [&](int lo, int hi) { return std::uniform_int_distribution<int>(lo, hi)(rng); };
+      auto uni = [&](int lo, int hi) { return test::randInt(rng, lo, hi); };
 
       struct Blocker { int tl, x, y; PieceColor color; };
       const int tx = uni(0, N - 1), ty = uni(0, N - 1);

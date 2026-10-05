@@ -17,6 +17,7 @@ endif()
 option(FDCHESS_BUILD_GAME "Build the raylib game executable" ON)
 option(FDCHESS_BUILD_TESTS "Build the unit/property test suite" ON)
 option(FDCHESS_BUILD_TOOLS "Build developer tools (theme_preview screenshot tool; not installed)" OFF)
+option(FDCHESS_BUILD_REFCHECK "Build tools/refcheck (random-game dumper for differential testing against 5d-chess-js)" OFF)
 option(FDCHESS_SANITIZE "Build with AddressSanitizer + UndefinedBehaviorSanitizer" OFF)
 
 if(FDCHESS_SANITIZE AND NOT MSVC AND NOT EMSCRIPTEN)
@@ -136,6 +137,10 @@ endif()
 # --- Developer tools (optional, never installed/packaged) ----------------------
 if(FDCHESS_BUILD_TOOLS AND FDCHESS_BUILD_GAME AND NOT EMSCRIPTEN)
   add_subdirectory(tools)
+endif()
+
+if(FDCHESS_BUILD_REFCHECK AND NOT EMSCRIPTEN)
+  add_subdirectory(tools/refcheck)
 endif()
 
 # --- Tests --------------------------------------------------------------------

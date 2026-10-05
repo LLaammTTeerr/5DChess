@@ -1,7 +1,9 @@
-# Shortest king capture under current rules (found with a search over the engine): in the 4x4 "Misc - Time Line
-# Fragment" mode white's king steps to (1,1) and black's knight captures it. Capturing a king ends the game at once.
-# Layout (1400x800): Versus (150,280); mode row 8 (690,634); Play (808,712). Boards are 252 px (63.3 px squares):
-# the white-moveable one at x 415..667, y 466..718; after white submits, black's copy sits at x 732..985.
+# Checkmate in Time Line Fragment (4x4, two timelines), found with a search over the engine: White steps the king
+# (a1 -> a2) on the white-moveable board, then Black plays pawn b4-b3 on the first board and bishop b4-a3 on the
+# second; White then has no legal turn and its king is attacked: "Black wins!" (Checkmate).
+# Layout (1400x800): Versus (150,280); mode row 8 (690,634); Play (808,712). Boards are 252 px (63.3 px squares, files
+# drawn mirrored): the white-moveable one at x 415..667, y 466..718; after white submits, black's boards sit at
+# x 732..985 (y 149..402 and y 466..718).
 wait 20
 click 150 280        # Versus
 wait 30
@@ -12,13 +14,21 @@ wait 120
 capture endgame-start
 click 636 687        # white king (bottom-left board)
 wait 40
-click 573 624        # steps diagonally, into the black knight's reach
+click 636 623        # one step up
 wait 40
 click 841 90         # Submit
 wait 90
 capture endgame-black-to-move
-click 953 498        # black knight (bottom-right board)
+click 890 181        # black pawn on the top board
 wait 40
-click 890 624        # captures the white king
+click 890 244        # one step down
+wait 60
+capture endgame-black-first-move
+click 731 498        # black bishop (bottom board: the view re-centred after the first move)
+wait 40
+click 795 561        # diagonal step
+wait 90
+capture endgame-black-second-move
+click 841 90         # Submit: White has no legal turn
 wait 150
 capture endgame-end-card

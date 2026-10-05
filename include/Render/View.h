@@ -94,7 +94,7 @@ public:
   /// New input: running move/board/arrow animations jump to their end.
   void finishAnimations();
   /// Drive the end-of-game card (scrim fade, spring pop, king hop in the Pixel theme).
-  void setEndGame(bool ended, bool whiteWon);
+  void setEndGame(bool ended, bool whiteWon, bool draw = false);
 
 public:  
   // Focus camera on newest board
@@ -128,7 +128,7 @@ public:
   /// @brief Render present line behind all boards and arrows
   virtual void renderPresentLine() const;
   /// @param winnerText e.g. "White wins!" - drawn on a scrim with a centred card
-  virtual void renderEndGameScreen(std::string winnerText) const;
+  virtual void renderEndGameScreen(std::string winnerText, std::string reason = "Checkmate") const;
 private:
   // ---- Persistent motion state (BoardViews are rebuilt every frame, so nothing animated lives on them) ----
   struct Flight {
@@ -165,6 +165,7 @@ private:
   // end of game
   bool _endActive = false;
   bool _endWhiteWon = true;
+  bool _endDraw = false;
   float _endClock = 0.0f;
   UI::Motion::Tween _endScrim;
   UI::Motion::Spring _endPop;
