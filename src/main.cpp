@@ -6,6 +6,7 @@
 #include "gameState.h"
 #include "PieceTheme.h"
 #include "Render/UITheme.h"
+#include "Audio/AudioManager.h"
 
 int main() {
     SetConfigFlags(FLAG_MSAA_4X_HINT);
@@ -16,12 +17,15 @@ int main() {
     ChangeDirectory(GetApplicationDirectory());
     SetTargetFPS(60); // Set the frame rate
 
+    AudioManager::instance().init();
+
     ResourceManager &resourceManager = ResourceManager::getInstance();
     GameStateModel gameState;
     SceneManager sceneManager(&gameState);
     ThemeManager::getInstance().setTheme(std::make_unique<ModernTheme>());
 
     while(!WindowShouldClose() && !SceneManager::isQuitRequested()) {
+        AudioManager::instance().update();
         sceneManager.update(GetFrameTime());
        
         BeginDrawing();
@@ -35,6 +39,7 @@ int main() {
     // Release GPU resources while the GL context is still alive
     UI::Fonts::unloadAll();
     resourceManager.unloadAll();
+    AudioManager::instance().shutdown(); // before CloseWindow
     CloseWindow();
     return 0;
 }

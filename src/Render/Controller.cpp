@@ -6,6 +6,7 @@
 #include "MenuView.h"
 #include "MenuItemView.h"
 #include "Render/UITheme.h"
+#include "Audio/AudioManager.h"
 
 
 
@@ -68,6 +69,7 @@ void ChessController::update(float deltaTime) {
   view.updateHud(computeHud());
 
   if (model._game->gameEnd()) {
+    if (!_isGameEnd) AudioManager::instance().playSfx(Sfx::Win); // once, on the transition
     _isGameEnd = true;
     return;
   }
@@ -245,10 +247,21 @@ void ChessController::handleSelectedToPosition(Chess::SelectedPosition selectedP
     view.update_FromPosition({nullptr, Chess::Position2D(-1, -1)});
     /// @note the following code will be put in the onComplete callback of the transition
     /// @note for testing, now we just make the move directly
+    // Capture check must happen before makeMove: afterwards the target square holds the mover.
+    bool isCapture = false;
+    {
+      auto mover = model._currentMoveState.selectedBoard
+          ? model._currentMoveState.selectedBoard->getPiece(model._currentMoveState.selectedPosition) : nullptr;
+      auto victim = model._currentMoveState.targetBoard
+          ? model._currentMoveState.targetBoard->getPiece(model._currentMoveState.targetPosition) : nullptr;
+      isCapture = mover && victim && victim->color() != mover->color();
+    }
     model.makeMove(Chess::Move(
         {model._currentMoveState.selectedBoard, model._currentMoveState.selectedPosition},
         {model._currentMoveState.targetBoard, model._currentMoveState.targetPosition}
     ));
+    // TODO: Sfx::Check / Sfx::Castle / Sfx::Promote / Sfx::Draw once the rules implement them.
+    AudioManager::instance().playSfx(isCapture ? Sfx::Capture : Sfx::Move);
     model._currentMoveState.reset(); // Reset the move state after the move is made
     resetHighlightedBoard();
     resetHighlightedPositions();

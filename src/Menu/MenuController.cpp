@@ -1,4 +1,5 @@
 #include "MenuController.h"
+#include "Audio/AudioManager.h"
 #include "MenuView.h"
 #include "MenuCommand.h"
 #include "MenuComponent.h"
@@ -82,6 +83,7 @@ void NavigationMenuController::handleInput() {
         itemViews[i]->setHovered(isHovered);
 
         if (isHovered && mouseClicked) {
+            AudioManager::instance().playSfx(Sfx::Click);
             std::cout << "Clicked on:" << menuItems[i]->getTitle() << std::endl;
             auto command = menuItems[i]->cloneCommand();
             std::cout << "Command: " << (command ? command->getName() : "None") << std::endl;
@@ -147,6 +149,7 @@ void InGameMenuController::handleInput() {
         itemViews[i]->setHovered(isHovered);
 
         if (isHovered && mouseClicked) {
+            AudioManager::instance().playSfx(Sfx::Click);
             std::cout << "Clicked on: " << menuItems[i]->getTitle() << std::endl;
             auto command = menuItems[i]->cloneCommand();
             if (command) {
@@ -238,6 +241,7 @@ void VersusMenuController::handleInput() {
             itemViews[i]->setSelected(static_cast<int>(i) == _selectedGameModeIndex);
 
             if (isHovered && mouseClicked) {
+                AudioManager::instance().playSfx(Sfx::Click);
                 // Update selected game mode index
                 _selectedGameModeIndex = static_cast<int>(i);
 
@@ -367,6 +371,7 @@ void SettingMenuController::handleInput() {
         itemViews[i]->setHovered(isHovered);
 
         if (isHovered && mouseClicked) {
+            AudioManager::instance().playSfx(Sfx::Click);
             if (i != _selectedSettingIndex) {
                 _selectedSettingIndex = static_cast<int>(i);
             }
@@ -382,10 +387,17 @@ void SettingMenuController::handleInput() {
             workerItemViews[i]->setHovered(isHovered);
 
             if (isHovered && mouseClicked) {
-                workerSelectedIndex() = static_cast<int>(i);
+                AudioManager::instance().playSfx(Sfx::Click);
                 auto command = workerMenuItems[i]->cloneCommand();
-                if (command) {
-                    command->execute(); // Execute the command
+                if (dynamic_cast<SfxToggleCommand*>(command.get())) {
+                    // A toggle is not a selection: keep the highlighted music, refresh its own label
+                    command->execute();
+                    workerMenuItems[i]->setTitle(SfxToggleCommand::titleFor(AudioManager::instance().sfxEnabled()));
+                } else {
+                    workerSelectedIndex() = static_cast<int>(i);
+                    if (command) {
+                        command->execute(); // Execute the command
+                    }
                 }
             }
         }
@@ -427,7 +439,15 @@ void SettingMenuController::update() {
         if (_workerMenu != _menuSystem->getChildren()[_selectedSettingIndex]) {
             _workerMenu = _menuSystem->getChildren()[_selectedSettingIndex];
             std::cout << "Selected setting changed to: " << _workerMenu->getTitle() << std::endl;
-            computeWorkerMenuView();            
+            computeWorkerMenuView();
+            // Highlight the track that is currently playing (music is global, not per-scene)
+            if (_selectedSettingIndex == 1) {
+                const auto& items = _workerMenu->getChildren();
+                for (size_t i = 0; i < items.size(); ++i) {
+                    if (items[i]->getTitle() == AudioManager::instance().selectedMusic())
+                        _selectedMusicIndex = static_cast<int>(i);
+                }
+            }
         }
     }
 
