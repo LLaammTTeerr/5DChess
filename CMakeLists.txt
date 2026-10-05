@@ -81,6 +81,7 @@ if(FDCHESS_BUILD_GAME)
 
   install(TARGETS 5dchess RUNTIME DESTINATION .)
   install(DIRECTORY assets DESTINATION .)
+  install(DIRECTORY docs/screenshots DESTINATION docs)
   install(FILES README.md LICENSE DESTINATION . OPTIONAL)
 
   set(CPACK_PACKAGE_NAME 5DChess)
