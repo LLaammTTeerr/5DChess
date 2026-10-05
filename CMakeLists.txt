@@ -19,7 +19,7 @@ option(FDCHESS_BUILD_TESTS "Build the unit/property test suite" ON)
 option(FDCHESS_BUILD_TOOLS "Build developer tools (theme_preview screenshot tool; not installed)" OFF)
 option(FDCHESS_SANITIZE "Build with AddressSanitizer + UndefinedBehaviorSanitizer" OFF)
 
-if(FDCHESS_SANITIZE AND NOT MSVC)
+if(FDCHESS_SANITIZE AND NOT MSVC AND NOT EMSCRIPTEN)
   add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer)
   add_link_options(-fsanitize=address,undefined)
 endif()
@@ -39,7 +39,13 @@ endif()
 
 # --- Game ---------------------------------------------------------------------
 if(FDCHESS_BUILD_GAME)
-  find_package(raylib 5.0 QUIET)
+  if(EMSCRIPTEN)
+    # WebAssembly build: always build raylib from source for the Web platform.
+    set(PLATFORM Web CACHE STRING "" FORCE)
+    set(raylib_FOUND FALSE)
+  else()
+    find_package(raylib 5.0 QUIET)
+  endif()
   if(NOT raylib_FOUND)
     message(STATUS "raylib not found on the system, fetching raylib 5.5")
     set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -74,30 +80,56 @@ if(FDCHESS_BUILD_GAME)
       "-framework OpenGL" "-framework Cocoa" "-framework IOKit" "-framework CoreAudio" "-framework CoreVideo")
   endif()
 
-  # Copy assets next to the binary so it runs from the build directory.
-  add_custom_command(TARGET 5dchess POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-      ${CMAKE_CURRENT_SOURCE_DIR}/assets $<TARGET_FILE_DIR:5dchess>/assets)
+  if(EMSCRIPTEN)
+    # Web build: only the assets the game loads are embedded into the virtual
+    # filesystem. assets/backgroundmusic is deliberately left out (size and
+    # licensing), as are files the code never loads (buttons/, backgroundimage/,
+    # unused fonts, per-theme cancel icons, ...).
+    set(WEB_ASSETS
+      chess.png 5DChess.png ChessBoardNoBound.png images/EndGame.png
+      fonts/PublicSans-Regular.ttf fonts/PublicSans-Bold.ttf fonts/Montserrat-Bold.ttf
+      fonts/Nunito-VariableFont_wght.ttf fonts/intelone-mono-font-family-regular.ttf)
+    foreach(theme 0 1 2 3)
+      foreach(color black white)
+        foreach(piece bishop king knight pawn queen rook)
+          list(APPEND WEB_ASSETS images/Theme_${theme}/${color}_${piece}.png)
+        endforeach()
+      endforeach()
+    endforeach()
+    set(WEB_LINK_OPTIONS -sUSE_GLFW=3 -sALLOW_MEMORY_GROWTH=1
+      "SHELL:--shell-file ${CMAKE_CURRENT_SOURCE_DIR}/web/shell.html")
+    foreach(a ${WEB_ASSETS})
+      list(APPEND WEB_LINK_OPTIONS "SHELL:--preload-file ${CMAKE_CURRENT_SOURCE_DIR}/assets/${a}@/assets/${a}")
+    endforeach()
+    target_link_options(5dchess PRIVATE ${WEB_LINK_OPTIONS})
+    set_target_properties(5dchess PROPERTIES SUFFIX ".html")
+    set_property(TARGET 5dchess APPEND PROPERTY LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/web/shell.html)
+  else()
+    # Copy assets next to the binary so it runs from the build directory.
+    add_custom_command(TARGET 5dchess POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/assets $<TARGET_FILE_DIR:5dchess>/assets)
 
-  install(TARGETS 5dchess RUNTIME DESTINATION .)
-  install(DIRECTORY assets DESTINATION .)
-  install(DIRECTORY docs/screenshots DESTINATION docs)
-  install(FILES README.md LICENSE DESTINATION . OPTIONAL)
+    install(TARGETS 5dchess RUNTIME DESTINATION .)
+    install(DIRECTORY assets DESTINATION .)
+    install(DIRECTORY docs/screenshots DESTINATION docs)
+    install(FILES README.md LICENSE DESTINATION . OPTIONAL)
 
-  set(CPACK_PACKAGE_NAME 5DChess)
-  set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
-  set(CPACK_GENERATOR ZIP)
-  set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY ON)
-  include(CPack)
+    set(CPACK_PACKAGE_NAME 5DChess)
+    set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+    set(CPACK_GENERATOR ZIP)
+    set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY ON)
+    include(CPack)
+  endif()
 endif()
 
 # --- Developer tools (optional, never installed/packaged) ----------------------
-if(FDCHESS_BUILD_TOOLS AND FDCHESS_BUILD_GAME)
+if(FDCHESS_BUILD_TOOLS AND FDCHESS_BUILD_GAME AND NOT EMSCRIPTEN)
   add_subdirectory(tools)
 endif()
 
 # --- Tests --------------------------------------------------------------------
-if(FDCHESS_BUILD_TESTS)
+if(FDCHESS_BUILD_TESTS AND NOT EMSCRIPTEN)
   enable_testing()
   add_subdirectory(tests)
 endif()

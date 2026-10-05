@@ -56,3 +56,25 @@ jobs:
         run: cmake --build build --config Release -j 4
       - name: Test
         run: ctest --test-dir build -C Release --output-on-failure
+
+  web:
+    name: Build (WebAssembly)
+    runs-on: ubuntu-latest
+    container: emscripten/emsdk:4.0.10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install a recent CMake (the image ships 3.22; the project needs 3.28)
+        run: pip install --quiet cmake
+      - name: Configure
+        run: emcmake cmake -S . -B build-web -DCMAKE_BUILD_TYPE=Release -DFDCHESS_BUILD_TESTS=OFF
+      - name: Build
+        run: cmake --build build-web -j 4
+      - name: Stage site
+        run: |
+          mkdir site
+          cp build-web/5dchess.js build-web/5dchess.wasm build-web/5dchess.data site/
+          cp build-web/5dchess.html site/index.html
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 5dchess-web
+          path: site

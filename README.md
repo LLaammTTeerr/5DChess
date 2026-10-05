@@ -2,6 +2,8 @@
 
 A modern implementation of multidimensional chess featuring timeline mechanics, built with C++ and Raylib graphics library.
 
+**Play in your browser: <https://llaammtteerr.github.io/5DChess/>** (available after the next release; the web build has no background music).
+
 ![A standard game from White's side with the e-pawn selected and its legal squares highlighted](docs/screenshots/standard-game.png)
 
 ## Table of Contents
@@ -72,6 +74,18 @@ cmake --build build --config Release -j
 
 On Windows (MSVC, multi-config generator) use the same two commands; the binary ends up in `build/Release/`.
 Assets are copied next to the executable after every build.
+
+### Web build
+
+A WebAssembly build (emsdk 4.0.10, raylib's Web platform) runs in the browser. It needs CMake 3.28+, so with the
+`emscripten/emsdk` image install a newer CMake first (`pip install cmake`):
+
+```bash
+emcmake cmake -S . -B build-web -DCMAKE_BUILD_TYPE=Release -DFDCHESS_BUILD_TESTS=OFF
+cmake --build build-web -j
+python3 -m http.server 8765 -d build-web   # then open http://localhost:8765/5dchess.html
+```
+Only the assets the game loads are bundled; `assets/backgroundmusic` is excluded. Releases are deployed to GitHub Pages by `.github/workflows/pages.yml`.
 
 ### CMake options
 
