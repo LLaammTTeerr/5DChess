@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  verify-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check tag matches project VERSION
+        id: check
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          ver=$(grep -m1 -oP '^\s*VERSION\s+\K[0-9]+(\.[0-9]+)*' CMakeLists.txt)
+          echo "tag=$tag cmake=$ver"
+          if [ -z "$ver" ] || [ "$tag" != "$ver" ]; then
+            echo "::error::Tag v$tag does not match CMakeLists.txt VERSION '$ver'"
+            exit 1
+          fi
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Package (${{ matrix.name }})
+    needs: verify-tag
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { os: ubuntu-latest, name: linux }
+          - { os: macos-latest, name: macos }
+          - { os: windows-latest, name: windows }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install raylib dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev libasound2-dev
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DFDCHESS_BUILD_TESTS=ON
+      - name: Build
+        run: cmake --build build --config Release -j 4
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Package
+        shell: bash
+        run: |
+          cmake --build build --config Release --target package
+          cd build
+          zips=(5DChess-*.zip)
+          [ ${#zips[@]} -eq 1 ] || { echo "::error::expected exactly one zip, got: ${zips[*]}"; exit 1; }
+          mv "${zips[0]}" "5DChess-${{ needs.verify-tag.outputs.version }}-${{ matrix.name }}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 5DChess-${{ matrix.name }}
+          path: build/5DChess-${{ needs.verify-tag.outputs.version }}-${{ matrix.name }}.zip
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: List artifacts
+        run: ls -l dist
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: dist/*.zip

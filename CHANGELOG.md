@@ -1,0 +1,45 @@
+# Changelog
+
+All notable changes to this project are documented in this file.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.1.0] - 2026-10-05
+
+### Added
+- CMake build; raylib is fetched automatically.
+- doctest unit tests and property/fuzz tests for the engine.
+- Optional ASan/UBSan build (`FDCHESS_SANITIZE`).
+- GitHub Actions CI on Linux, macOS and Windows, and tag-driven release packaging.
+- Dependabot configuration.
+
+### Fixed
+- Engine: bishop cross-timeline moves targeted the wrong board (crash for white).
+- Engine: the queen could not reach the board edge.
+- Engine: memory leak from `shared_ptr` cycles.
+- Engine: dangling `initializer_list` (undefined behaviour) in queen move generation.
+- Engine: the present turn could skip a timeline after a move onto a board ahead in time.
+- Engine: undo after a king capture kept the game over.
+- Engine: submitting a turn with no moves.
+- UI: ESC closed the game.
+- UI: selection state machine (null-board crash, moves on the wrong board, stale target board).
+- UI: undo/submit left a stale selection.
+- UI: clicks on menu buttons fell through to the board.
+- UI: the camera could not reach later boards.
+- UI: missing arrowheads/diamonds (triangle winding).
+- UI: colour overflow in pulsing arrows.
+- UI: disabled buttons vanished.
+- UI: settings theme and music shared one index.
+- UI: scenes were initialised twice.
+- UI: Exit skipped cleanup and never called `CloseWindow`.
+- UI: assets are now resolved relative to the executable.
+- UI: hovering the navigation menu froze the game.
+
+### Removed
+- Dead and unused files and code.
+- Tracked `.DS_Store` and `.vscode` files.
+
+[Unreleased]: https://github.com/LLaammTTeerr/5DChess/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/LLaammTTeerr/5DChess/releases/tag/v0.1.0

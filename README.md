@@ -18,45 +18,34 @@ A modern implementation of multidimensional chess featuring timeline mechanics, 
 
 This project implements a 5D Chess game with an advanced UI system featuring:
 - Multi-timeline chess mechanics
-- Interactive board visualization with highlighting and transitions
+- Interactive board visualization with highlighting and an auto-focusing camera
 - Dynamic menu system with hierarchical navigation
-- Undo/redo command system
+- In-turn undo, deselect and submit controls (command pattern for menu actions)
 - State-driven scene management
 - Modular rendering pipeline
 
 ## Prerequisites
 
-### macOS (Primary Support)
-- **Xcode Command Line Tools**: Required for compilation
-- **Homebrew**: Package manager for dependencies
-- **C++20 Compatible Compiler**: GCC or Clang
-- **Raylib**: Graphics and audio library
+- A C++20 compiler (GCC 11+, Clang 14+, or MSVC 2022)
+- CMake 3.28 or newer
+- Git is not required to build; raylib 5.5 is downloaded automatically by CMake
+  (a system-installed raylib >= 5.0 is used instead if found)
 
-### Other Platforms
-The project is primarily configured for macOS but can be adapted for Linux/Windows with appropriate dependency paths.
+### Linux (Debian/Ubuntu)
+```bash
+sudo apt-get install -y build-essential cmake libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev libasound2-dev
+```
+
+### macOS
+Install the Xcode Command Line Tools (`xcode-select --install`) and CMake (`brew install cmake`).
+`brew install raylib` is optional: CMake fetches raylib itself when it is not installed.
+
+### Windows
+Install Visual Studio 2022 (Desktop development with C++) and CMake. Use a
+"Developer PowerShell" or any shell with `cmake` on the PATH.
 
 ## Installation
 
-### 1. Install Xcode Command Line Tools
-```bash
-xcode-select --install
-```
-
-### 2. Install Homebrew (if not already installed)
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
-
-### 3. Install Dependencies
-```bash
-# Install Raylib graphics library
-brew install raylib
-
-# Verify installation
-brew list raylib
-```
-
-### 4. Clone the Repository
 ```bash
 git clone https://github.com/LLaammTTeerr/5DChess.git
 cd 5DChess
@@ -64,88 +53,80 @@ cd 5DChess
 
 ## Building
 
-The project uses a Makefile for compilation with automatic dependency detection.
-
-### Quick Build & Run
 ```bash
-make
-```
-This command will:
-1. Compile all source files
-2. Link with Raylib
-3. Run the executable
-4. Clean up the binary after execution
-
-### Build Only (Without Running)
-```bash
-make compile
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release -j
 ```
 
-### Clean Build Files
+On Windows (MSVC, multi-config generator) use the same two commands; the binary ends up in `build/Release/`.
+Assets are copied next to the executable after every build.
+
+### CMake options
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `FDCHESS_BUILD_GAME` | ON | Build the raylib game (`5dchess`) |
+| `FDCHESS_BUILD_TESTS` | ON | Build the unit/property tests (doctest) |
+| `FDCHESS_SANITIZE` | OFF | Enable AddressSanitizer + UBSan (GCC/Clang) |
+
+### Tests
 ```bash
-make clean
+cmake -S . -B build-test -DCMAKE_BUILD_TYPE=Debug -DFDCHESS_BUILD_GAME=OFF -DFDCHESS_SANITIZE=ON
+cmake --build build-test -j
+ctest --test-dir build-test --output-on-failure
+```
+The engine tests do not need raylib or a display. Drop `-DFDCHESS_SANITIZE=ON` for a plain run.
+
+### Packaging
+```bash
+cmake --build build --config Release
+cmake --build build --config Release --target package   # produces 5DChess-<version>-<platform>.zip
 ```
 
-### Manual Compilation
-If you prefer manual compilation or need to debug build issues:
-```bash
-g++ -std=c++20 \
-    -Iinclude -Iinclude/Commands -Iinclude/GameStates -Iinclude/Menu \
-    -Iinclude/Render -Iinclude/Scene -Iinclude/Commands/Invoker \
-    -Iinclude/GameStates/ConcreteGameStates -Iinclude/Scene/ConcreteScene \
-    -I/opt/homebrew/include \
-    $(find . -name "*.cpp") \
-    -o run \
-    -L/opt/homebrew/lib -lraylib \
-    -framework OpenGL -framework Cocoa -framework IOKit -framework CoreAudio
-```
+### Releasing
+1. Bump `VERSION` in the `project()` call of `CMakeLists.txt`.
+2. Update `CHANGELOG.md` (move `[Unreleased]` entries under the new version).
+3. Tag and push: `git tag vX.Y.Z && git push origin vX.Y.Z`.
+
+The release workflow checks that the tag matches `VERSION`, builds on Linux/macOS/Windows, and publishes the ZIPs to a GitHub Release.
 
 ## Running
 
-After successful compilation:
-
-### Option 1: Using Make (Recommended)
 ```bash
-make
+./build/5dchess            # Linux/macOS
+.\build\Release\5dchess.exe   # Windows
 ```
-
-### Option 2: Direct Execution
-```bash
-./run
-```
-
-### Option 3: Build Then Run Separately
-```bash
-make compile
-./run
-```
+The game changes its working directory to the executable's folder, so it can be launched from anywhere.
 
 ## Project Structure
 
 ```
 5DChess/
-├── assets/                     # Game assets
+├── CMakeLists.txt             # Build, install and CPack configuration
+├── CHANGELOG.md               # Release notes
+├── .github/                   # CI, release workflows and Dependabot config
+├── assets/                    # Game assets
 │   ├── images/                # Piece and board textures
 │   ├── fonts/                 # Custom fonts
 │   ├── backgroundmusic/       # Audio files
-│   ├── soundeffect/          # Sound effects
-│   └── buttons/              # UI button graphics
+│   ├── soundeffect/           # Sound effects
+│   └── buttons/               # UI button graphics
 ├── include/                   # Header files
-│   ├── Commands/             # Command pattern implementation
-│   ├── GameStates/           # State pattern for game flow
-│   ├── Menu/                 # Menu system (Composite pattern)
-│   ├── Render/               # Rendering and view components
-│   └── Scene/                # Scene management
-├── src/                      # Source files
+│   ├── Commands/              # Menu and in-game commands (Command pattern)
+│   ├── GameStates/            # State pattern for game flow
+│   ├── Menu/                  # Menu system (Composite pattern)
+│   ├── Render/                # Rendering and view components
+│   └── Scene/                 # Scene management
+├── src/                       # Source files
 │   ├── Commands/
 │   ├── GameStates/
 │   ├── Menu/
 │   ├── Render/
 │   ├── Scene/
-│   ├── main.cpp              # Entry point
-│   └── chess.cpp             # Core game logic
-├── makefile                  # Build configuration
-└── README.md                 # This file
+│   ├── main.cpp               # Entry point
+│   └── chess.cpp              # Core rules engine (no raylib dependency)
+├── tests/                     # doctest unit and property tests for the engine
+└── README.md                  # This file
 ```
 
 ## Controls
@@ -157,12 +138,12 @@ make compile
 ### Game Controls
 - **Mouse Click**: Select pieces and move destinations
 - **Mouse Hover**: Preview available moves
-- **Menu Button**: Access in-game menu for save/load/settings
+- **In-game Menu**: Undo, Deselect and Submit buttons (greyed out when unavailable)
 
 ### Keyboard Shortcuts
-- **ESC**: Toggle menu/back navigation
-- **Space**: Confirm actions
-- **Enter**: Execute selected commands
+- **ESC / Space**: Toggle the in-game menu
+- **Z**: Toggle camera auto-zoom
+- **X**: Trigger a manual auto-zoom
 
 ## Features
 
@@ -170,12 +151,12 @@ make compile
 - **5D Chess Mechanics**: Move pieces across time and parallel universes
 - **Timeline Visualization**: Clear representation of temporal moves
 - **Legal Move Highlighting**: Visual guides for valid moves
-- **Undo/Redo System**: Full move history with branching support
+- **Undo**: Take back moves within the current turn before submitting (no redo)
 
 ### User Interface
 - **Dynamic Menus**: Context-sensitive navigation
 - **Multiple View Modes**: Button and list-based menu layouts
-- **Smooth Transitions**: Animated piece movements and UI changes
+- **Camera**: Smooth auto-centering and auto-zoom, plus manual pan and zoom
 - **Responsive Design**: Adaptive layouts for different screen sizes
 
 ### Technical Features
@@ -184,64 +165,23 @@ make compile
 - **Resource Management**: Efficient asset loading and caching
 - **Extensible Framework**: Easy addition of new features and game modes
 
+### Known limitations
+- Background music and sound assets are present, but audio is not implemented yet.
+
 ## Troubleshooting
 
-### Common Build Issues
+### Build issues
 
-#### 1. Raylib Not Found
-```bash
-# Verify Raylib installation
-brew list raylib
-# If not installed:
-brew install raylib
-```
+- **`raylib.h`/X11/GL headers missing on Linux**: install the apt packages listed under Prerequisites.
+- **CMake too old** (`cmake_minimum_required` error): install CMake 3.28+ (`pip install cmake` or Kitware's apt repository).
+- **raylib download fails (offline/proxy)**: install raylib >= 5.0 system-wide (`brew install raylib`, or your distro package) and re-run CMake with a clean build directory.
+- **Stale configuration**: delete the build directory and configure again.
 
-#### 2. Compiler Not Found
-```bash
-# Install Xcode Command Line Tools
-xcode-select --install
-# Verify GCC/Clang
-g++ --version
-```
+### Runtime issues
 
-#### 3. Include Path Issues
-Check that Homebrew installed Raylib in the expected location:
-```bash
-ls /opt/homebrew/include/raylib.h
-ls /opt/homebrew/lib/libraylib.a
-```
-
-#### 4. Permission Errors
-```bash
-# Ensure execute permissions
-chmod +x run
-```
-
-### Runtime Issues
-
-#### 1. Missing Assets
-Ensure you're running from the project root directory where `assets/` folder is located.
-
-#### 2. Window Doesn't Open
-- Check if other applications are using OpenGL
-- Verify graphics drivers are updated
-- Try running with different window flags
-
-#### 3. Performance Issues
-- Lower the FPS limit in `main.cpp`
-- Reduce texture quality in `assets/images/`
-- Check system resources
-
-### Platform-Specific Notes
-
-#### Linux
-Modify the Makefile's `LDFLAGS` section:
-```makefile
-LDFLAGS = -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
-```
-
-#### Windows
-Use MinGW or Visual Studio with appropriate library paths for Raylib.
+- **Missing assets**: the `assets/` folder must sit next to the executable. CMake copies it after the build; packaged ZIPs include it.
+- **Window doesn't open**: check graphics drivers (OpenGL 3.3 is required). Headless machines need a display, e.g. `xvfb-run -a ./build/5dchess`.
+- **Performance issues**: lower the FPS limit in `main.cpp` or reduce texture sizes in `assets/images/`.
 
 ## Contributing
 
@@ -258,7 +198,7 @@ Use MinGW or Visual Studio with appropriate library paths for Raylib.
 - Maintain the established design patterns
 
 ### Testing
-- Test builds on macOS before submitting
+- Run `ctest` (see Tests above) before submitting; CI runs it on Linux, macOS and Windows
 - Verify all menu interactions work correctly
 - Ensure no memory leaks with new features
 
