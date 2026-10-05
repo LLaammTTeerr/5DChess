@@ -514,6 +514,14 @@ public:
   bool castling = true;
 };
 
+/**
+ * Movement vectors of a piece type as (dx, dy, dz, dw): file, rank, full turns (a step of dz changes the half-turn by
+ * 2 * dz, so a move always lands on a board of the mover's colour) and timeline ID. King and Knight move exactly one
+ * vector; Rook, Bishop and Queen slide along one until blocked or off the existing boards. Identical to the vector
+ * sets of 5d-chess-js (piece.js movePos / moveVecs); empty for pawns, which are special-cased. See docs/RULES.md.
+ */
+const std::vector<std::array<int, 4>>& pieceVectors(PieceType type);
+
 class IGame {
 public:
   IGame(int N) : _N(N), _presentHalfTurn(0), _currentTurnColor(PieceColor::PIECEWHITE) {}
@@ -676,9 +684,7 @@ protected:
   int _origMax = INT_MIN;
   bool _setupDone = false;
 
-  std::shared_ptr<Piece> _getPieceByVector4DFullTurn(Vector4D position, PieceColor mover) const;
   std::vector<SelectedPosition> _movesFor(PieceColor mover, SelectedPosition selected) const;
-  bool _attacked2D(const std::shared_ptr<Board>& board, Position2D pos, PieceColor by) const;
   std::vector<Threat> _threatsAgainst(PieceColor victim, bool firstOnly) const;
   TurnSearch _search(int& nodes, int budget);
   void _evaluateResult(void);
@@ -753,6 +759,8 @@ public:
   inline PieceColor getCurrentTurnColor(void) const {
     return _currentTurnColor;
   }
+
+  inline const RuleEngine& rule(void) const { return _rule; }
 };
 
 class Constant {

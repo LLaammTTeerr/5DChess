@@ -1,0 +1,38 @@
+[
+{
+  "directory": "/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b",
+  "command": "/usr/bin/c++  -I/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/include -g -std=c++20 -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -UNDEBUG -Wall -Wextra -o CMakeFiles/chess_core.dir/src/chess.cpp.o -c /home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/src/chess.cpp",
+  "file": "/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/src/chess.cpp",
+  "output": "CMakeFiles/chess_core.dir/src/chess.cpp.o"
+},
+{
+  "directory": "/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/tests",
+  "command": "/usr/bin/c++  -I/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/include -I/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/_deps/doctest-src -g -std=c++20 -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -UNDEBUG -o CMakeFiles/chess_tests.dir/main.cpp.o -c /home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/tests/main.cpp",
+  "file": "/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/tests/main.cpp",
+  "output": "tests/CMakeFiles/chess_tests.dir/main.cpp.o"
+},
+{
+  "directory": "/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/tests",
+  "command": "/usr/bin/c++  -I/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/include -I/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/_deps/doctest-src -g -std=c++20 -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -UNDEBUG -o CMakeFiles/chess_tests.dir/engine_test.cpp.o -c /home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/tests/engine_test.cpp",
+  "file": "/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/tests/engine_test.cpp",
+  "output": "tests/CMakeFiles/chess_tests.dir/engine_test.cpp.o"
+},
+{
+  "directory": "/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/tests",
+  "command": "/usr/bin/c++  -I/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/include -I/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/_deps/doctest-src -g -std=c++20 -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -UNDEBUG -o CMakeFiles/chess_tests.dir/rules_test.cpp.o -c /home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/tests/rules_test.cpp",
+  "file": "/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/tests/rules_test.cpp",
+  "output": "tests/CMakeFiles/chess_tests.dir/rules_test.cpp.o"
+},
+{
+  "directory": "/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/tests",
+  "command": "/usr/bin/c++  -I/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/include -I/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/_deps/doctest-src -g -std=c++20 -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -UNDEBUG -o CMakeFiles/chess_tests.dir/property_test.cpp.o -c /home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/tests/property_test.cpp",
+  "file": "/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/tests/property_test.cpp",
+  "output": "tests/CMakeFiles/chess_tests.dir/property_test.cpp.o"
+},
+{
+  "directory": "/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/_deps/doctest-build",
+  "command": "/usr/bin/c++ -DDOCTEST_CONFIG_IMPLEMENT_WITH_MAIN -I/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/_deps/doctest-src -g -std=c++11 -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -o CMakeFiles/doctest_with_main.dir/doctest/parts/doctest.cpp.o -c /home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/_deps/doctest-src/doctest/parts/doctest.cpp",
+  "file": "/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/_deps/doctest-src/doctest/parts/doctest.cpp",
+  "output": "_deps/doctest-build/CMakeFiles/doctest_with_main.dir/doctest/parts/doctest.cpp.o"
+}
+]

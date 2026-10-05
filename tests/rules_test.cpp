@@ -141,40 +141,46 @@ TEST_CASE("pawns: step and (unmoved) double step on the rank axis, capture diago
 }
 
 TEST_CASE("pawns: move one timeline forward on the same square, capture one timeline forward and a full turn back") {
+  // Forward on the timeline axis is towards the opponent's timelines: White towards lower IDs (5d-chess-js
+  // timelineMove(l, -forward)).
   Sandbox game(5, std::vector<int>{3, 3}, 2);
-  game.place(0, 2, 1, make<Pawn>(PieceColor::PIECEWHITE));
-  game.boardAt(1, 0)->placePiece({2, 1}, make<Rook>(PieceColor::PIECEBLACK));
-  auto moves = movesAt(game, game.tip(0), 2, 1);
-  CHECK(contains(moves, game.tip(1), 2, 1));            // sideways on the timeline axis (to a higher ID)
-  CHECK(contains(moves, game.boardAt(1, 0), 2, 1));     // capture: one timeline up and one full turn back
-  CHECK_FALSE(contains(moves, game.boardAt(1, 1), 2, 1));
+  game.place(1, 2, 1, make<Pawn>(PieceColor::PIECEWHITE));
+  game.boardAt(0, 0)->placePiece({2, 1}, make<Rook>(PieceColor::PIECEBLACK));
+  auto moves = movesAt(game, game.tip(1), 2, 1);
+  CHECK(contains(moves, game.tip(0), 2, 1));            // sideways on the timeline axis (to a lower ID)
+  CHECK(contains(moves, game.boardAt(0, 0), 2, 1));     // capture: one timeline down and one full turn back
+  CHECK_FALSE(contains(moves, game.boardAt(0, 1), 2, 1));
   // A black piece straight ahead on the timeline axis blocks the step and cannot be captured by it.
-  game.place(1, 2, 1, make<Rook>(PieceColor::PIECEBLACK));
-  CHECK_FALSE(contains(movesAt(game, game.tip(0), 2, 1), game.tip(1), 2, 1));
+  game.place(0, 2, 1, make<Rook>(PieceColor::PIECEBLACK));
+  CHECK_FALSE(contains(movesAt(game, game.tip(1), 2, 1), game.tip(0), 2, 1));
+  // A white pawn never steps towards higher IDs.
+  Sandbox up(5, std::vector<int>{3, 3}, 2);
+  up.place(0, 2, 1, make<Pawn>(PieceColor::PIECEWHITE));
+  CHECK_FALSE(contains(movesAt(up, up.tip(0), 2, 1), up.tip(1), 2, 1));
 }
 
-TEST_CASE("pawns: a black pawn steps towards lower timeline IDs") {
+TEST_CASE("pawns: a black pawn steps towards higher timeline IDs") {
   Sandbox game(5, std::vector<int>{1, 1}, 0);
-  game.place(0, 0, 0, make<King>(PieceColor::PIECEWHITE));
-  game.place(1, 4, 0, make<Knight>(PieceColor::PIECEWHITE));
-  game.place(1, 3, 3, make<Pawn>(PieceColor::PIECEBLACK));
-  game.makeMove(mv(game.tip(0), 0, 0, 0, 1));
-  game.makeMove(mv(game.tip(1), 4, 0, 3, 2));
+  game.place(1, 0, 0, make<King>(PieceColor::PIECEWHITE));
+  game.place(0, 4, 0, make<Knight>(PieceColor::PIECEWHITE));
+  game.place(0, 3, 3, make<Pawn>(PieceColor::PIECEBLACK));
+  game.makeMove(mv(game.tip(1), 0, 0, 0, 1));
+  game.makeMove(mv(game.tip(0), 4, 0, 3, 2));
   REQUIRE(game.canSubmit());
   game.submitTurn();
-  auto moves = movesAt(game, game.tip(1), 3, 3);
-  CHECK(contains(moves, game.tip(0), 3, 3));            // towards timeline 0, same square
-  CHECK(contains(moves, game.tip(1), 3, 2) == false);   // blocked by the white knight straight ahead
+  auto moves = movesAt(game, game.tip(0), 3, 3);
+  CHECK(contains(moves, game.tip(1), 3, 3));            // towards timeline 1, same square
+  CHECK(contains(moves, game.tip(0), 3, 2) == false);   // blocked by the white knight straight ahead
 }
 
 TEST_CASE("pawns: an unmoved pawn may also make the double step along the timeline axis") {
   Sandbox game(4, std::vector<int>{1, 1, 1}, 0);
-  game.place(0, 1, 1, make<Pawn>(PieceColor::PIECEWHITE));
-  auto moves = movesAt(game, game.tip(0), 1, 1);
+  game.place(2, 1, 1, make<Pawn>(PieceColor::PIECEWHITE));
+  auto moves = movesAt(game, game.tip(2), 1, 1);
   CHECK(contains(moves, game.tip(1), 1, 1));
-  CHECK(contains(moves, game.tip(2), 1, 1));
+  CHECK(contains(moves, game.tip(0), 1, 1));
   game.place(1, 1, 1, make<Rook>(PieceColor::PIECEBLACK));  // a piece in between blocks both
-  CHECK_FALSE(contains(movesAt(game, game.tip(0), 1, 1), game.tip(2), 1, 1));
+  CHECK_FALSE(contains(movesAt(game, game.tip(2), 1, 1), game.tip(0), 1, 1));
 }
 
 TEST_CASE("en passant: capturing the pawn that just made the double step, on the same board") {
@@ -479,4 +485,56 @@ TEST_CASE("standard game: the first turn has 20 moves for White and for Black") 
   playOne(game, 4, 1, 4, 3);
   CHECK(game.allPseudoLegalMoves().size() == 20);
   CHECK(game.result() == GameResult::Ongoing);
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Movement vectors (5d-chess-js piece.js movePos / moveVecs): every piece may also move FORWARD in time, onto a board
+// of its own colour that lies in the future of the board it stands on (such boards exist on timelines that are ahead).
+// ---------------------------------------------------------------------------------------------------------------
+
+TEST_CASE("movement vectors: sizes match 5d-chess-js") {
+  CHECK(pieceVectors(PieceType::Rook).size() == 8);
+  CHECK(pieceVectors(PieceType::Bishop).size() == 24);
+  CHECK(pieceVectors(PieceType::Queen).size() == 80);
+  CHECK(pieceVectors(PieceType::King).size() == 80);
+  CHECK(pieceVectors(PieceType::Knight).size() == 48);
+  CHECK(pieceVectors(PieceType::Pawn).empty());
+  // Every bishop vector has exactly two non-zero components, every rook vector exactly one.
+  for (const auto& v : pieceVectors(PieceType::Bishop)) CHECK((v[0] != 0) + (v[1] != 0) + (v[2] != 0) + (v[3] != 0) == 2);
+  for (const auto& v : pieceVectors(PieceType::Rook)) CHECK((v[0] != 0) + (v[1] != 0) + (v[2] != 0) + (v[3] != 0) == 1);
+}
+
+TEST_CASE("movement vectors: king, rook, bishop and queen move forward in time") {
+  // Timeline 0 has boards h0..h2, timeline 1 has h0..h4: its h2 and h4 boards are in the future of h0 / h2 of timeline 0.
+  Sandbox game(4, std::vector<int>{3, 5}, 2);
+  game.boardAt(0, 0)->placePiece({1, 1}, make<King>(PieceColor::PIECEWHITE));
+  game.boardAt(0, 1)->placePiece({1, 1}, make<Pawn>(PieceColor::PIECEBLACK)); // no effect on a white move (other half-turn)
+  auto king = movesAt(game, game.boardAt(0, 0), 1, 1);
+  CHECK(contains(king, game.boardAt(0, 2), 1, 1));     // dz = +1 on the same timeline
+  CHECK(contains(king, game.boardAt(1, 2), 1, 1));     // dz = +1, dw = +1
+  CHECK(contains(king, game.boardAt(1, 0), 1, 1));     // dw = +1
+  CHECK(contains(king, game.boardAt(1, 2), 2, 2));     // dz = +1, dw = +1, dx = dy = +1
+  CHECK_FALSE(contains(king, game.boardAt(1, 4), 1, 1)); // two full turns away: a king steps once
+
+  Sandbox rook(4, std::vector<int>{3, 5}, 2);
+  rook.boardAt(0, 0)->placePiece({1, 1}, make<Rook>(PieceColor::PIECEWHITE));
+  auto rm = movesAt(rook, rook.boardAt(0, 0), 1, 1);
+  CHECK(contains(rm, rook.boardAt(0, 2), 1, 1));
+  CHECK_FALSE(contains(rm, rook.boardAt(1, 2), 1, 1));  // a rook moves along one axis only
+  rook.boardAt(0, 2)->placePiece({1, 1}, make<Pawn>(PieceColor::PIECEBLACK));
+  CHECK(contains(movesAt(rook, rook.boardAt(0, 0), 1, 1), rook.boardAt(0, 2), 1, 1)); // capture ends the slide
+
+  Sandbox bishop(4, std::vector<int>{3, 5}, 2);
+  bishop.boardAt(0, 0)->placePiece({1, 1}, make<Bishop>(PieceColor::PIECEWHITE));
+  auto bm = movesAt(bishop, bishop.boardAt(0, 0), 1, 1);
+  CHECK(contains(bm, bishop.boardAt(0, 2), 2, 1));      // file + time
+  CHECK(contains(bm, bishop.boardAt(0, 2), 1, 2));      // rank + time
+  CHECK(contains(bm, bishop.boardAt(1, 2), 1, 1));      // timeline + time
+  CHECK_FALSE(contains(bm, bishop.boardAt(0, 2), 1, 1)); // a single axis is a rook move
+
+  Sandbox queen(4, std::vector<int>{3, 3, 5}, 2);
+  queen.boardAt(0, 0)->placePiece({0, 0}, make<Queen>(PieceColor::PIECEWHITE));
+  auto qm = movesAt(queen, queen.boardAt(0, 0), 0, 0);
+  CHECK(contains(qm, queen.boardAt(1, 2), 1, 1));       // (dx, dy, dz, dw) = (1, 1, 1, 1)
+  CHECK(contains(qm, queen.boardAt(2, 4), 2, 2));       // twice that: not capped by the board's own turn number
 }

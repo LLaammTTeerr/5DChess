@@ -1,0 +1,14 @@
+# Target labels
+ doctest-populate
+# Source files and their labels
+/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/_deps/doctest-subbuild/CMakeFiles/doctest-populate
+/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/_deps/doctest-subbuild/CMakeFiles/doctest-populate.rule
+/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/_deps/doctest-subbuild/CMakeFiles/doctest-populate-complete.rule
+/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/_deps/doctest-subbuild/doctest-populate-prefix/src/doctest-populate-stamp/doctest-populate-build.rule
+/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/_deps/doctest-subbuild/doctest-populate-prefix/src/doctest-populate-stamp/doctest-populate-configure.rule
+/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/_deps/doctest-subbuild/doctest-populate-prefix/src/doctest-populate-stamp/doctest-populate-download.rule
+/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/_deps/doctest-subbuild/doctest-populate-prefix/src/doctest-populate-stamp/doctest-populate-install.rule
+/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/_deps/doctest-subbuild/doctest-populate-prefix/src/doctest-populate-stamp/doctest-populate-mkdir.rule
+/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/_deps/doctest-subbuild/doctest-populate-prefix/src/doctest-populate-stamp/doctest-populate-patch.rule
+/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/_deps/doctest-subbuild/doctest-populate-prefix/src/doctest-populate-stamp/doctest-populate-test.rule
+/home/lamter/5DChess/.claude/worktrees/agent-abbcc5aa09f651e16/b/_deps/doctest-subbuild/doctest-populate-prefix/src/doctest-populate-stamp/doctest-populate-update.rule

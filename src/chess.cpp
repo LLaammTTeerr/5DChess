@@ -117,18 +117,6 @@ bool IGame::boardExists(int timeLineID, int halfTurn) const {
   return pos >= 0 && pos < static_cast<int>(it->second->size());
 }
 
-std::shared_ptr<Piece> IGame::_getPieceByVector4DFullTurn(Vector4D position, PieceColor mover) const {
-  int x = position.x();
-  int y = position.y();
-  int halfTurn = 2 * position.z() + int(mover);
-  int timeLineID = position.w();
-  assert(hasTimeLine(timeLineID));
-  std::shared_ptr<const Board> board = timeLine(timeLineID)->getBoardByHalfTurn(halfTurn);
-  assert(board != nullptr);
-  assert(x >= 0 && x < board->dim() && y >= 0 && y < board->dim());
-  return board->getPiece(Position2D(x, y));
-}
-
 void IGame::undo(void) {
   assert(undoable());
   assert(_undoBuffer.size());
@@ -148,399 +136,248 @@ void IGame::undo(void) {
   _currentTurnMoves.pop_back();
 }
 
-std::vector<Vector4D> genKnightMoves(const Vector4D& from) {
-  std::vector<Vector4D> moves;
-  moves.reserve(48);
+// ---------------------------------------------------------------------------------------------------------------
+// Move generation. One generic implementation, written against a small "Access" interface, so that the game
+// (RealAccess: shared Board objects) and the turn search (a compact private position) generate exactly the same moves.
+//
+//   int dim() const;                                 board size N
+//   bool exists(int tl, int half) const;             does the board (timeline, half-turn) exist?
+//   Cell at(int tl, int half, int x, int y) const;   contents of a square of an existing board
+//   bool castlingEnabled() const / doubleStepEnabled() const
+//
+// Coordinates: x = file, y = rank, tl = timeline ID, half = half-turn (z in full turns is half / 2).
+// Movement vectors are those of 5d-chess-js (src/piece.js movePos / moveVecs), in (dx, dy, dz, dw) with dz in FULL
+// turns (a move of dz changes the half-turn by 2*dz, so that it lands on a board of the mover's colour) and dw the
+// change of the timeline ID.
+// ---------------------------------------------------------------------------------------------------------------
+namespace {
 
-  const int x = from.x();
-  const int y = from.y();
-  const int z = from.z();
-  const int w = from.w();
-
-  auto build = [&] (int axis2, int axis1, int s2, int s1) {
-    int nx = x, ny = y, nz = z, nw = w;
-
-    switch (axis2) {
-      case 0: nx += 2 * s2; break;
-      case 1: ny += 2 * s2; break;
-      case 2: nz += 2 * s2; break;
-      case 3: nw += 2 * s2; break;
-    }
-
-    switch (axis1) {
-      case 0: nx += 1 * s1; break;
-      case 1: ny += 1 * s1; break;
-      case 2: nz += 1 * s1; break;
-      case 3: nw += 1 * s1; break;
-    }
-
-    Vector4D to = Vector4D(nx, ny, nz, nw);
-
-    moves.push_back(to);
-  };
-
-  for (int axis2 = 0; axis2 < 4; axis2 += 1) {
-    for (int axis1 = 0; axis1 < 4; axis1 += 1) {
-      if (axis1 == axis2) continue;
-      for (int s2 : {-1, 1}) {
-        for (int s1 : {-1, 1}) {
-          build(axis2, axis1, s2, s1);
-        }
-      }
-    }
+struct Cell {
+  uint8_t v = 0; // 0 = empty; bits 0-2: PieceType + 1, bit 3: colour, bit 4: unmoved
+  inline bool empty() const { return v == 0; }
+  inline PieceType type() const { return PieceType((v & 7) - 1); }
+  inline PieceColor color() const { return PieceColor((v >> 3) & 1); }
+  inline bool unmoved() const { return (v & 16) != 0; }
+  static inline Cell make(PieceType type, PieceColor color, bool unmoved) {
+    Cell c;
+    c.v = uint8_t((int(type) + 1) | (int(color) << 3) | (unmoved ? 16 : 0));
+    return c;
   }
+  static inline Cell of(const std::shared_ptr<Piece>& piece) {
+    return piece ? make(piece->type(), piece->color(), piece->unmoved()) : Cell();
+  }
+};
 
-  return moves;
+using Vec = std::array<int, 4>; // dx, dy, dz (full turns), dw (timelines)
+
+enum class Gait { Step, Ray };
+
+// Every non-zero vector of {-1,0,1}^4 with at least `minNonZero` and at most `maxNonZero` non-zero components.
+std::vector<Vec> unitVectors(int minNonZero, int maxNonZero) {
+  std::vector<Vec> out;
+  for (int a = -1; a <= 1; ++a) for (int b = -1; b <= 1; ++b) for (int c = -1; c <= 1; ++c) for (int d = -1; d <= 1; ++d) {
+    const int nz = (a != 0) + (b != 0) + (c != 0) + (d != 0);
+    if (nz >= minNonZero && nz <= maxNonZero) out.push_back(Vec{a, b, c, d});
+  }
+  return out;
 }
 
-std::vector<SelectedPosition> IGame::_movesFor(PieceColor mover, SelectedPosition selected) const {
-  std::shared_ptr<const Piece> piece = selected.board->getPiece(selected.position);
-  Vector4D from = selected.toVector4D();
-  int parity = int(mover);
-  std::vector<SelectedPosition> moveablePositions;
-
-  if (piece == nullptr) {
-    throw std::runtime_error("No piece at selected position");
-  }
-
-  if (piece->color() != mover) {
-    throw std::runtime_error("Piece color does not match current turn color");
-  }
-
-  if (piece->type() == PieceType::Rook) {
-    for (int nx = from.x() + 1; nx < dim(); nx += 1) {
-      std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({nx, from.y(), from.z(), from.w()}, mover);
-      if (targetPiece != nullptr and targetPiece->color() == mover) {
-        break;
-      }
-      moveablePositions.emplace_back(selected.board, Position2D(nx, from.y()));
-      if (targetPiece != nullptr)
-        break;
-    }
-
-    for (int nx = from.x() - 1; nx >= 0; nx -= 1) {
-      std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({nx, from.y(), from.z(), from.w()}, mover);
-      if (targetPiece != nullptr and targetPiece->color() == mover) {
-        break;
-      }
-      moveablePositions.emplace_back(selected.board, Position2D(nx, from.y()));
-      if (targetPiece != nullptr)
-        break;
-    }
-
-    for (int ny = from.y() + 1; ny < dim(); ny += 1) {
-      std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({from.x(), ny, from.z(), from.w()}, mover);
-      if (targetPiece != nullptr and targetPiece->color() == mover) {
-        break;
-      }
-      moveablePositions.emplace_back(selected.board, Position2D(from.x(), ny));
-      if (targetPiece != nullptr)
-        break;
-    }
-
-    for (int ny = from.y() - 1; ny >= 0; ny -= 1) {
-      std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({from.x(), ny, from.z(), from.w()}, mover);
-      if (targetPiece != nullptr and targetPiece->color() == mover) {
-        break;
-      }
-      moveablePositions.emplace_back(selected.board, Position2D(from.x(), ny));
-      if (targetPiece != nullptr)
-        break;
-    }
-
-    for (int nz = from.z() - 1; nz >= 0; nz -= 1) {
-      if (not boardExists(from.w(), 2 * nz + parity)) {
-        break;
-      }
-      std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({from.x(), from.y(), nz, from.w()}, mover);
-      if (targetPiece != nullptr and targetPiece->color() == mover) {
-        break;
-      }
-      moveablePositions.emplace_back(getBoard(from.w(), 2 * nz + parity), Position2D(from.x(), from.y()));
-      if (targetPiece != nullptr)
-        break;
-    }
-
-    for (int nw = from.w() - 1; nw >= minTimeLineId(); nw -= 1) {
-      if (not boardExists(nw, 2 * from.z() + parity)) {
-        break;
-      }
-      std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({from.x(), from.y(), from.z(), nw}, mover);
-      if (targetPiece != nullptr and targetPiece->color() == mover) {
-        break;
-      }
-      moveablePositions.emplace_back(getBoard(nw, 2 * from.z() + parity), Position2D(from.x(), from.y()));
-      if (targetPiece != nullptr)
-        break;
-    }
-
-    for (int nw = from.w() + 1; nw <= maxTimeLineId(); nw += 1) {
-      if (not boardExists(nw, 2 * from.z() + parity)) {
-        break;
-      }
-      std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({from.x(), from.y(), from.z(), nw}, mover);
-      if (targetPiece != nullptr and targetPiece->color() == mover) {
-        break;
-      }
-      moveablePositions.emplace_back(getBoard(nw, 2 * from.z() + parity), Position2D(from.x(), from.y()));
-      if (targetPiece != nullptr)
-        break;
+// Knight: 2 along one axis and 1 along another, over all ordered pairs of distinct axes of the 4 (48 vectors).
+std::vector<Vec> knightVectors() {
+  std::vector<Vec> out;
+  for (int long_ = 0; long_ < 4; ++long_) for (int short_ = 0; short_ < 4; ++short_) {
+    if (long_ == short_) continue;
+    for (int sl : {-1, 1}) for (int ss : {-1, 1}) {
+      Vec v{0, 0, 0, 0};
+      v[long_] = 2 * sl;
+      v[short_] = ss;
+      out.push_back(v);
     }
   }
+  return out;
+}
 
-  if (piece->type() == PieceType::Knight) {
-    std::vector<Vector4D> knightMoves = genKnightMoves(from);
+} // namespace
 
-    for (const Vector4D& move : knightMoves) {
-      if (move.x() >= 0 && move.x() < dim() && move.y() >= 0 && move.y() < dim()) {
-        if (boardExists(move.w(), 2 * move.z() + parity)
-            && (_getPieceByVector4DFullTurn(move, mover) == nullptr || _getPieceByVector4DFullTurn(move, mover)->color() != mover)) {
-          moveablePositions.emplace_back(getBoard(move.w(), 2 * move.z() + parity), Position2D(move.x(), move.y()));
-        }
+const std::vector<std::array<int, 4>>& pieceVectors(PieceType type) {
+  // Rook: one axis. Bishop: exactly two axes (6 planes x 4 diagonals). Queen: any of the 80 combinations.
+  // King: the same 80 combinations, one step. Knight: 48 jumps. (5d-chess-js moveVecs / movePos.)
+  static const std::vector<Vec> rook = unitVectors(1, 1);
+  static const std::vector<Vec> bishop = unitVectors(2, 2);
+  static const std::vector<Vec> queen = unitVectors(1, 4);
+  static const std::vector<Vec> knight = knightVectors();
+  static const std::vector<Vec> none;
+  switch (type) {
+    case PieceType::Rook: return rook;
+    case PieceType::Bishop: return bishop;
+    case PieceType::Queen: return queen;
+    case PieceType::King: return queen;
+    case PieceType::Knight: return knight;
+    case PieceType::Pawn: break;
+  }
+  return none;
+}
+
+namespace {
+
+// Is the square (x, y) of an existing board attacked, on that board alone, by a piece of colour `by`? (Castling
+// only looks at the board the king stands on.) The square itself may be empty or occupied.
+template <class A>
+bool attacked2D(const A& a, int tl, int half, int x, int y, PieceColor by) {
+  const int n = a.dim();
+  auto at = [&](int px, int py) -> Cell { return (px < 0 || px >= n || py < 0 || py >= n) ? Cell() : a.at(tl, half, px, py); };
+  auto is = [&](const Cell& c, PieceType t) { return !c.empty() and c.color() == by and c.type() == t; };
+  static const int knight[8][2] = {{1, 2}, {2, 1}, {-1, 2}, {-2, 1}, {1, -2}, {2, -1}, {-1, -2}, {-2, -1}};
+  for (const auto& k : knight) {
+    if (is(at(x + k[0], y + k[1]), PieceType::Knight)) return true;
+  }
+  const int pawnFrom = by == PieceColor::PIECEWHITE ? -1 : 1; // a white pawn attacks one rank up, so it stands one down
+  for (int dx : {-1, 1}) {
+    if (is(at(x + dx, y + pawnFrom), PieceType::Pawn)) return true;
+  }
+  for (int dx = -1; dx <= 1; ++dx) {
+    for (int dy = -1; dy <= 1; ++dy) {
+      if ((dx != 0 or dy != 0) and is(at(x + dx, y + dy), PieceType::King)) return true;
+    }
+  }
+  for (int dx = -1; dx <= 1; ++dx) {
+    for (int dy = -1; dy <= 1; ++dy) {
+      if (dx == 0 and dy == 0) continue;
+      const bool diagonal = dx != 0 and dy != 0;
+      for (int px = x + dx, py = y + dy; px >= 0 && px < n && py >= 0 && py < n; px += dx, py += dy) {
+        const Cell c = a.at(tl, half, px, py);
+        if (c.empty()) continue;
+        if (c.color() == by and (c.type() == PieceType::Queen or c.type() == (diagonal ? PieceType::Bishop : PieceType::Rook)))
+          return true;
+        break;
       }
     }
   }
+  return false;
+}
 
-  if (piece->type() == PieceType::Bishop) {
-    for (int sx : {-1, +1}) for (int sy : {-1, +1}) {
-      for (int d = 1; d < dim(); d += 1) {
-        int nx = from.x() + sx * d;
-        int ny = from.y() + sy * d;
-        if (nx < 0 || nx >= dim() || ny < 0 || ny >= dim()) break;
-        std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({nx, ny, from.z(), from.w()}, mover);
-        if (targetPiece != nullptr and targetPiece->color() == mover) {
-          break;
-        }
-        moveablePositions.emplace_back(selected.board, Position2D(nx, ny));
-        if (targetPiece != nullptr) {
-          break;
-        }
-      }
-    }
+// Calls emit(tl, half, x, y, promotes) for every target square the piece on (tl, half, x, y) can move to. `promotes`
+// is true when a pawn reaches the last rank. Castling is the king's two-file step, en passant the pawn's diagonal step
+// onto the empty square behind the captured pawn; makeMove recognises both from the geometry.
+template <class A, class Emit>
+void generateMoves(const A& a, int tl, int half, int x, int y, Emit&& emit) {
+  const int n = a.dim();
+  const Cell piece = a.at(tl, half, x, y);
+  assert(!piece.empty());
+  const PieceColor mover = piece.color();
 
-    for (int sx : {-1, +1}) {
-      for (int d = 1; d < dim(); d += 1) {
-        int nx = from.x() + sx * d;
-        int nz = from.z() - d;
-        if (nz < 0) break;
-        if (nx < 0 || nx >= dim()) break;
-        if (!boardExists(from.w(), 2 * nz + parity)) break;
-        std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({nx, from.y(), nz, from.w()}, mover);
-        if (targetPiece != nullptr and targetPiece->color() == mover) {
-          break;
-        }
-        moveablePositions.emplace_back(getBoard(from.w(), 2 * nz + parity), Position2D(nx, from.y()));
-        if (targetPiece != nullptr) {
-          break;
-        }
-      }
-    }
-
-    for (int sy : {-1, +1}) {
-      for (int d = 1; d < dim(); d += 1) {
-        int ny = from.y() + sy * d;
-        int nz = from.z() - d;
-        if (nz < 0) break;
-        if (ny < 0 || ny >= dim()) break;
-        if (!boardExists(from.w(), 2 * nz + parity)) break;
-        std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({from.x(), ny, nz, from.w()}, mover);
-        if (targetPiece != nullptr and targetPiece->color() == mover) {
-          break;
-        }
-        moveablePositions.emplace_back(getBoard(from.w(), 2 * nz + parity), Position2D(from.x(), ny));
-        if (targetPiece != nullptr) {
-          break;
-        }
-      }
-    }
-
-    for (int sx : {-1, +1}) for (int sw : {-1, +1}) {
-      for (int d = 1; d < dim(); d += 1) {
-        int nx = from.x() + sx * d;
-        int nw = from.w() + sw * d;
-        if (nx < 0 || nx >= dim()) break;
-        if (!boardExists(nw, 2 * from.z() + parity)) break;
-        std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({nx, from.y(), from.z(), nw}, mover);
-        if (targetPiece != nullptr and targetPiece->color() == mover) {
-          break;
-        }
-        moveablePositions.emplace_back(getBoard(nw, 2 * from.z() + parity), Position2D(nx, from.y()));
-        if (targetPiece != nullptr) {
-          break;
-        }
-      }
-    }
-
-    for (int sy : {-1, +1}) for (int sw : {-1, +1}) {
-      for (int d = 1; d < dim(); d += 1) {
-        int ny = from.y() + sy * d;
-        int nw = from.w() + sw * d;
-        if (ny < 0 || ny >= dim()) break;
-        if (!boardExists(nw, 2 * from.z() + parity)) break;
-        std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({from.x(), ny, from.z(), nw}, mover);
-        if (targetPiece != nullptr and targetPiece->color() == mover) {
-          break;
-        }
-        moveablePositions.emplace_back(getBoard(nw, 2 * from.z() + parity), Position2D(from.x(), ny));
-        if (targetPiece != nullptr) {
-          break;
-        }
-      }
-    }
-
-    for (int sw : {-1, +1}) {
-      for (int d = 1; d <= selected.board->fullTurnNumber(); d += 1) {
-        int nz = from.z() - d;
-        int nw = from.w() + sw * d;
-        if (!boardExists(nw, 2 * nz + parity)) break;
-        std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({from.x(), from.y(), nz, nw}, mover);
-        if (targetPiece != nullptr and targetPiece->color() == mover) {
-          break;
-        }
-        moveablePositions.emplace_back(getBoard(nw, 2 * nz + parity), Position2D(from.x(), from.y()));
-        if (targetPiece != nullptr) {
-          break;
-        }
-      }
-    }
-  }
-
-  if (piece->type() == PieceType::Queen) {
-    for (int mask = 1; mask < (1 << 4); mask += 1) {
-      #define ONBIT(n) ((mask) & (1 << (n)))
-      int maxD = INT_MAX;
-      if (ONBIT(0) || ONBIT(1)) {
-        maxD = std::min(maxD, dim());
-      }
-      if (ONBIT(2)) {
-        maxD = std::min(maxD, selected.board->fullTurnNumber() + 1);
-      }
-      if (ONBIT(3)) {
-        maxD = std::min(maxD, maxTimeLineId() - minTimeLineId() + 1);
-      }
-      #undef ONBIT
-      // Value-returning helper: the range-init temporary stays alive for the whole loop.
-      auto signs = [mask](int bit) {
-        return (mask & bit) ? std::vector<int>{-1, +1} : std::vector<int>{0};
-      };
-      for (int s0 : signs(1))
-      for (int s1 : signs(2))
-      for (int s2 : signs(4))
-      for (int s3 : signs(8)) {
-        for (int d = 1; d < maxD; d += 1) {
-          int nx = from.x() + s0 * d;
-          int ny = from.y() + s1 * d;
-          int nz = from.z() + s2 * d;
-          int nw = from.w() + s3 * d;
-
-          if (nx < 0 || nx >= dim() || ny < 0 || ny >= dim()) break;
-          if (!boardExists(nw, 2 * nz + parity)) break;
-          std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn({nx, ny, nz, nw}, mover);
-          if (targetPiece != nullptr && targetPiece->color() == mover) break;
-
-          std::shared_ptr<Board> targetBoard = getBoard(nw, 2 * nz + parity);
-          moveablePositions.emplace_back(targetBoard, Position2D(nx, ny));
-          if (targetPiece != nullptr) break;
-        }
-      }
-    }
-  }
-
-  if (piece->type() == PieceType::King) {
-    for (int dx = -1; dx <= +1; dx += 1)
-    for (int dy = -1; dy <= +1; dy += 1)
-    for (int dz = -1; dz <= 0; dz += 1)
-    for (int dw = -1; dw <= +1; dw += 1) {
-      if (dx == 0 && dy == 0 && dz == 0 && dw == 0) continue;
-      Vector4D to = Vector4D(from.x() + dx, from.y() + dy, from.z() + dz, from.w() + dw);
-      if (to.x() >= 0 && to.x() < dim() && to.y() >= 0 && to.y() < dim()) {
-        if (boardExists(to.w(), 2 * to.z() + parity)) {
-          std::shared_ptr<Piece> targetPiece = _getPieceByVector4DFullTurn(to, mover);
-          if (targetPiece and targetPiece->color() == mover)
-            continue;
-          moveablePositions.emplace_back(getBoard(to.w(), 2 * to.z() + parity), Position2D(to.x(), to.y()));
-        }
+  if (piece.type() != PieceType::Pawn) {
+    const auto& vectors = pieceVectors(piece.type());
+    const bool ray = piece.type() == PieceType::Rook or piece.type() == PieceType::Bishop or piece.type() == PieceType::Queen;
+    for (const Vec& v : vectors) {
+      int ptl = tl + v[3], phalf = half + 2 * v[2], px = x + v[0], py = y + v[1];
+      while (px >= 0 && px < n && py >= 0 && py < n && a.exists(ptl, phalf)) {
+        const Cell target = a.at(ptl, phalf, px, py);
+        if (!target.empty() and target.color() == mover) break;
+        emit(ptl, phalf, px, py, false);
+        if (!ray or !target.empty()) break;
+        ptl += v[3]; phalf += 2 * v[2]; px += v[0]; py += v[1];
       }
     }
     // Castling (2D, same board): king and rook unmoved, everything between them empty, and neither the king's
     // square, the square it crosses nor the square it lands on attacked on this board.
-    if (_rule.castling and piece->unmoved()) {
-      const std::shared_ptr<Board>& b = selected.board;
-      const int y = from.y();
+    if (piece.type() == PieceType::King and piece.unmoved() and a.castlingEnabled()) {
+      const PieceColor enemy = opposite(mover);
       for (int dir : {-1, +1}) {
-        int fx = from.x() + dir;
-        while (fx >= 0 && fx < dim() && b->getPiece(Position2D(fx, y)) == nullptr) fx += dir;
-        if (fx < 0 || fx >= dim() || std::abs(fx - from.x()) < 3) continue;
-        std::shared_ptr<Piece> rook = b->getPiece(Position2D(fx, y));
-        if (rook->type() != PieceType::Rook or rook->color() != mover or not rook->unmoved()) continue;
-        const PieceColor enemy = opposite(mover);
-        if (_attacked2D(b, Position2D(from.x(), y), enemy) or _attacked2D(b, Position2D(from.x() + dir, y), enemy)
-            or _attacked2D(b, Position2D(from.x() + 2 * dir, y), enemy)) continue;
-        moveablePositions.emplace_back(b, Position2D(from.x() + 2 * dir, y));
+        int fx = x + dir;
+        while (fx >= 0 && fx < n && a.at(tl, half, fx, y).empty()) fx += dir;
+        if (fx < 0 || fx >= n || std::abs(fx - x) < 3) continue;
+        const Cell rook = a.at(tl, half, fx, y);
+        if (rook.type() != PieceType::Rook or rook.color() != mover or not rook.unmoved()) continue;
+        if (attacked2D(a, tl, half, x, y, enemy) or attacked2D(a, tl, half, x + dir, y, enemy)
+            or attacked2D(a, tl, half, x + 2 * dir, y, enemy)) continue;
+        emit(tl, half, x + 2 * dir, y, false);
+      }
+    }
+    return;
+  }
+
+  // Pawn.
+  const int d = mover == PieceColor::PIECEWHITE ? 1 : -1; // forward on the rank axis (and, reversed, on the timeline axis)
+  const int lastRank = mover == PieceColor::PIECEWHITE ? n - 1 : 0;
+  const int ny = y + d;
+  if (ny >= 0 && ny < n) {
+    if (a.at(tl, half, x, ny).empty()) {
+      emit(tl, half, x, ny, ny == lastRank);
+      const int ny2 = y + 2 * d;
+      if (a.doubleStepEnabled() and piece.unmoved() and ny2 >= 0 and ny2 < n and a.at(tl, half, x, ny2).empty()) {
+        emit(tl, half, x, ny2, ny2 == lastRank);
+      }
+    }
+    for (int dx : {-1, +1}) {
+      const int nx = x + dx;
+      if (nx < 0 || nx >= n) continue;
+      const Cell target = a.at(tl, half, nx, ny);
+      if (!target.empty()) {
+        if (target.color() != mover) emit(tl, half, nx, ny, ny == lastRank);
+        continue;
+      }
+      // En passant: an enemy pawn right beside us made the double step in the last half-turn of this timeline.
+      const int startY = y + 2 * d;
+      const Cell beside = a.at(tl, half, nx, y);
+      if (beside.empty() or beside.type() != PieceType::Pawn or beside.color() == mover) continue;
+      if (startY < 0 || startY >= n or !a.at(tl, half, nx, startY).empty()) continue;
+      if (!a.exists(tl, half - 1)) continue;
+      const Cell before = a.at(tl, half - 1, nx, startY);
+      if (!before.empty() and before.type() == PieceType::Pawn and before.color() != mover and before.unmoved()
+          and a.at(tl, half - 1, nx, ny).empty() and a.at(tl, half - 1, nx, y).empty()) {
+        emit(tl, half, nx, ny, false);
       }
     }
   }
-
-
-  if (piece->type() == PieceType::Pawn) {
-    const int d = mover == PieceColor::PIECEWHITE ? 1 : -1; // forward on the rank axis AND on the timeline axis
-    const int tlId = selected.board->timeLineId();
-    const int h = selected.board->halfTurnNumber();
-    const int x = from.x();
-    const int y = from.y();
-    const std::shared_ptr<Board>& b = selected.board;
-    const int ny = y + d;
-    if (ny >= 0 && ny < dim()) {
-      if (b->getPiece(Position2D(x, ny)) == nullptr) {
-        moveablePositions.emplace_back(b, Position2D(x, ny));
-        const int ny2 = y + 2 * d;
-        if (_rule.pawnCanMakeTwoMoveOnFirstTurn and piece->unmoved() and ny2 >= 0 and ny2 < dim()
-            and b->getPiece(Position2D(x, ny2)) == nullptr) {
-          moveablePositions.emplace_back(b, Position2D(x, ny2));
-        }
-      }
-      for (int dx : {-1, +1}) {
-        const int nx = x + dx;
-        if (nx < 0 || nx >= dim()) continue;
-        std::shared_ptr<Piece> target = b->getPiece(Position2D(nx, ny));
-        if (target != nullptr) {
-          if (target->color() != mover) moveablePositions.emplace_back(b, Position2D(nx, ny));
-          continue;
-        }
-        // En passant: an enemy pawn right beside us made the double step in the last half-turn of this timeline.
-        const int startY = y + 2 * d;
-        std::shared_ptr<Piece> beside = b->getPiece(Position2D(nx, y));
-        if (beside == nullptr or beside->type() != PieceType::Pawn or beside->color() == mover) continue;
-        if (startY < 0 || startY >= dim() or b->getPiece(Position2D(nx, startY)) != nullptr) continue;
-        if (not boardExists(tlId, h - 1)) continue;
-        std::shared_ptr<Board> previous = getBoard(tlId, h - 1);
-        std::shared_ptr<Piece> before = previous->getPiece(Position2D(nx, startY));
-        if (before != nullptr and before->type() == PieceType::Pawn and before->color() != mover and before->unmoved()
-            and previous->getPiece(Position2D(nx, ny)) == nullptr and previous->getPiece(Position2D(nx, y)) == nullptr) {
-          moveablePositions.emplace_back(b, Position2D(nx, ny));
-        }
-      }
-    }
-    // Timeline axis: one step "forward" (White towards higher IDs, Black towards lower) onto the same square.
-    const int nid = tlId + d;
-    if (boardExists(nid, h)) {
-      std::shared_ptr<Board> side = getBoard(nid, h);
-      if (side->getPiece(Position2D(x, y)) == nullptr) {
-        moveablePositions.emplace_back(side, Position2D(x, y));
-        if (_rule.pawnCanMakeTwoMoveOnFirstTurn and piece->unmoved() and boardExists(nid + d, h)) {
-          std::shared_ptr<Board> side2 = getBoard(nid + d, h);
-          if (side2->getPiece(Position2D(x, y)) == nullptr) moveablePositions.emplace_back(side2, Position2D(x, y));
-        }
-      }
-    }
-    // Timeline-axis capture: one step forward in the timeline and one full turn back or ahead in time.
-    for (int dh : {-2, +2}) {
-      if (!boardExists(nid, h + dh)) continue;
-      std::shared_ptr<Board> diag = getBoard(nid, h + dh);
-      std::shared_ptr<Piece> target = diag->getPiece(Position2D(x, y));
-      if (target != nullptr and target->color() != mover) moveablePositions.emplace_back(diag, Position2D(x, y));
+  // Timeline axis: one step "forward" onto the same square. Forward on the timeline axis is the direction of the
+  // opponent's timelines (5d-chess-js: timelineMove(l, -forward)), i.e. White towards lower IDs, Black towards higher.
+  const int ntl = tl - d;
+  if (a.exists(ntl, half) and a.at(ntl, half, x, y).empty()) {
+    emit(ntl, half, x, y, false);
+    if (a.doubleStepEnabled() and piece.unmoved() and a.exists(ntl - d, half) and a.at(ntl - d, half, x, y).empty()) {
+      emit(ntl - d, half, x, y, false);
     }
   }
+  // Timeline-axis capture: one timeline forward and one full turn back or ahead in time (same square).
+  for (int dh : {-2, +2}) {
+    if (!a.exists(ntl, half + dh)) continue;
+    const Cell target = a.at(ntl, half + dh, x, y);
+    if (!target.empty() and target.color() != mover) emit(ntl, half + dh, x, y, false);
+  }
+}
+
+// Access to the boards of a real game.
+class RealAccess {
+public:
+  explicit RealAccess(const IGame& game) : _game(game) {}
+  inline int dim() const { return _game.dim(); }
+  inline bool exists(int tl, int half) const { return _game.boardExists(tl, half); }
+  inline Cell at(int tl, int half, int x, int y) const {
+    return Cell::of(_game.getBoard(tl, half)->getPiece(Position2D(x, y)));
+  }
+  inline bool castlingEnabled() const { return _game.rule().castling; }
+  inline bool doubleStepEnabled() const { return _game.rule().pawnCanMakeTwoMoveOnFirstTurn; }
+private:
+  const IGame& _game;
+};
+
+} // namespace
+
+std::vector<SelectedPosition> IGame::_movesFor(PieceColor mover, SelectedPosition selected) const {
+  std::shared_ptr<const Piece> piece = selected.board->getPiece(selected.position);
+  if (piece == nullptr) {
+    throw std::runtime_error("No piece at selected position");
+  }
+  if (piece->color() != mover) {
+    throw std::runtime_error("Piece color does not match current turn color");
+  }
+  std::vector<SelectedPosition> moveablePositions;
+  RealAccess access(*this);
+  generateMoves(access, selected.board->timeLineId(), selected.board->halfTurnNumber(), selected.position.x(),
+                selected.position.y(), [&](int tl, int half, int x, int y, bool) {
+                  moveablePositions.emplace_back(getBoard(tl, half), Position2D(x, y));
+                });
   return moveablePositions;
 }
 
@@ -558,43 +395,6 @@ std::shared_ptr<Piece> makePiece(PieceType type, PieceColor color) {
     case PieceType::Pawn: return std::make_shared<Pawn>(color);
   }
   return nullptr;
-}
-
-// Is `pos` attacked on this single 2D board by a piece of colour `by`? (Used for castling, which only looks at the
-// board the king stands on.) The square itself may be empty or occupied.
-bool IGame::_attacked2D(const std::shared_ptr<Board>& board, Position2D pos, PieceColor by) const {
-  const int n = board->dim();
-  auto at = [&](int x, int y) -> std::shared_ptr<Piece> {
-    return (x < 0 || x >= n || y < 0 || y >= n) ? nullptr : board->getPiece(Position2D(x, y));
-  };
-  auto is = [&](const std::shared_ptr<Piece>& p, PieceType t) { return p != nullptr and p->color() == by and p->type() == t; };
-  static const int knight[8][2] = {{1, 2}, {2, 1}, {-1, 2}, {-2, 1}, {1, -2}, {2, -1}, {-1, -2}, {-2, -1}};
-  for (const auto& k : knight) {
-    if (is(at(pos.x() + k[0], pos.y() + k[1]), PieceType::Knight)) return true;
-  }
-  const int pawnFrom = by == PieceColor::PIECEWHITE ? -1 : 1; // a white pawn attacks one rank up, so it stands one down
-  for (int dx : {-1, 1}) {
-    if (is(at(pos.x() + dx, pos.y() + pawnFrom), PieceType::Pawn)) return true;
-  }
-  for (int dx = -1; dx <= 1; ++dx) {
-    for (int dy = -1; dy <= 1; ++dy) {
-      if ((dx != 0 or dy != 0) and is(at(pos.x() + dx, pos.y() + dy), PieceType::King)) return true;
-    }
-  }
-  for (int dx = -1; dx <= 1; ++dx) {
-    for (int dy = -1; dy <= 1; ++dy) {
-      if (dx == 0 and dy == 0) continue;
-      const bool diagonal = dx != 0 and dy != 0;
-      for (int x = pos.x() + dx, y = pos.y() + dy; x >= 0 && x < n && y >= 0 && y < n; x += dx, y += dy) {
-        std::shared_ptr<Piece> p = board->getPiece(Position2D(x, y));
-        if (p == nullptr) continue;
-        if (p->color() == by and (p->type() == PieceType::Queen or p->type() == (diagonal ? PieceType::Bishop : PieceType::Rook)))
-          return true;
-        break;
-      }
-    }
-  }
-  return false;
 }
 
 void IGame::makeMove(Move move, PieceType promotion) {

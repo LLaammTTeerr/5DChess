@@ -45,14 +45,24 @@ h1 = Black to move, ...). A timeline's *tip* is its latest board. "Mover" is the
   game itself (S2) allow all of them; we follow the latter.
 
 ### Movement
-- Rook, bishop, knight, queen, king: unchanged generalisations to four axes. Move targets must be boards ending on the
-  mover's turn.
+- **Vector sets (S3 `piece.js` `movePos` / `moveVecs`, copied exactly, see `pieceVectors()`):** a vector is
+  (dx, dy, dz, dw) = (file, rank, full turns, timeline ID); a step of dz changes the half-turn by 2 dz so that a move always
+  lands on a board of the mover's colour. Both signs of every axis are allowed, **including forward in time** (onto a
+  board that exists on a timeline that is ahead).
+  - Rook: the 8 single-axis vectors, sliding. Bishop: the 24 vectors with exactly two non-zero components (the six planes
+    x-y, x-t, y-t, x-l, y-l, t-l, four diagonals each), sliding. Queen: all 80 non-zero vectors of {-1,0,1}^4, sliding.
+    King: the same 80 vectors, one step. Knight: 48 jumps, 2 along one axis and 1 along another.
+  - A slide continues while the next board exists (a missing board, e.g. before a fork, ends it), stops on an own piece
+    (not capturable) and ends after capturing an enemy piece. Move targets must be boards ending on the mover's turn.
+  - Before this was aligned with S3 the king had no +t steps, the rook no +t slide, the bishop only -t, and the queen's
+    +t slides were capped by the source board's own turn number.
 - **Pawns (S3):** one step forward on the rank axis (White up, Black down) or one step "forward" on the timeline axis
-  (White towards higher IDs, Black towards lower) onto the same square of the same-time board, both only onto an
-  empty square. An unmoved pawn may also make the double step on the rank axis (if empty between) and, as in S3, on the timeline
-  axis (needs both boards to exist and be empty). Captures: diagonally forward on the same board (rank + file),
-  or one timeline forward and one full turn into the past or future (same square). Pawns do not capture in
-  other planes (S3's "brawn" variant does; it is not implemented).
+  onto the same square of the same-time board, both only onto an empty square. **Forward on the timeline axis is towards
+  the opponent's timelines: White towards lower IDs, Black towards higher** (S3 `timelineMove(l, -forward)`; an earlier
+  version of the engine had it the other way round). An unmoved pawn may also make the double step on the rank axis (if
+  empty between) and, as in S3, on the timeline axis (needs both boards to exist and be empty). Captures: diagonally
+  forward on the same board (rank + file), or one timeline forward and one full turn into the past or future (same
+  square). Pawns do not capture in other planes (S3's "brawn" variant does; it is not implemented).
 - **En passant (S3), 2D only:** a pawn may capture an enemy pawn beside it diagonally onto the square behind it
   when that pawn made its double step in the last half-turn of the same timeline (the previous board of the
   same timeline shows it on its start square). Across timelines it does not exist.

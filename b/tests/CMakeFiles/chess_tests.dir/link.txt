@@ -1,0 +1,1 @@
+/usr/bin/c++ -g -fsanitize=address,undefined -Wl,--dependency-file=CMakeFiles/chess_tests.dir/link.d CMakeFiles/chess_tests.dir/main.cpp.o CMakeFiles/chess_tests.dir/engine_test.cpp.o CMakeFiles/chess_tests.dir/rules_test.cpp.o CMakeFiles/chess_tests.dir/property_test.cpp.o -o chess_tests  ../libchess_core.a
