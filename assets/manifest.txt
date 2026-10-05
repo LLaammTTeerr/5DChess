@@ -1,0 +1,94 @@
+# Asset manifest: the single list of files the game loads (and the web build embeds).
+# One asset per line:  <kind> <id> <path relative to assets/> [tag=value ...]
+#   kind  texture | font | sound | music | dir (a directory embedded as a whole, ids unused)
+#   tags  filter=point   point sampling (crisp pixel art)
+#         web=no         native only: not embedded in the WebAssembly build
+# Textures are loaded at startup; fonts (per size), sounds and music on first use.
+# The Emscripten --preload-file list is generated from this file (CMakeLists.txt).
+
+texture board.main ChessBoardNoBound.png
+
+texture piece.classic.black_bishop images/Theme_0/black_bishop.png
+texture piece.classic.black_king images/Theme_0/black_king.png
+texture piece.classic.black_knight images/Theme_0/black_knight.png
+texture piece.classic.black_pawn images/Theme_0/black_pawn.png
+texture piece.classic.black_queen images/Theme_0/black_queen.png
+texture piece.classic.black_rook images/Theme_0/black_rook.png
+texture piece.classic.white_bishop images/Theme_0/white_bishop.png
+texture piece.classic.white_king images/Theme_0/white_king.png
+texture piece.classic.white_knight images/Theme_0/white_knight.png
+texture piece.classic.white_pawn images/Theme_0/white_pawn.png
+texture piece.classic.white_queen images/Theme_0/white_queen.png
+texture piece.classic.white_rook images/Theme_0/white_rook.png
+
+texture piece.modern.black_bishop images/Theme_1/black_bishop.png
+texture piece.modern.black_king images/Theme_1/black_king.png
+texture piece.modern.black_knight images/Theme_1/black_knight.png
+texture piece.modern.black_pawn images/Theme_1/black_pawn.png
+texture piece.modern.black_queen images/Theme_1/black_queen.png
+texture piece.modern.black_rook images/Theme_1/black_rook.png
+texture piece.modern.white_bishop images/Theme_1/white_bishop.png
+texture piece.modern.white_king images/Theme_1/white_king.png
+texture piece.modern.white_knight images/Theme_1/white_knight.png
+texture piece.modern.white_pawn images/Theme_1/white_pawn.png
+texture piece.modern.white_queen images/Theme_1/white_queen.png
+texture piece.modern.white_rook images/Theme_1/white_rook.png
+
+texture piece.fantasy.black_bishop images/Theme_2/black_bishop.png
+texture piece.fantasy.black_king images/Theme_2/black_king.png
+texture piece.fantasy.black_knight images/Theme_2/black_knight.png
+texture piece.fantasy.black_pawn images/Theme_2/black_pawn.png
+texture piece.fantasy.black_queen images/Theme_2/black_queen.png
+texture piece.fantasy.black_rook images/Theme_2/black_rook.png
+texture piece.fantasy.white_bishop images/Theme_2/white_bishop.png
+texture piece.fantasy.white_king images/Theme_2/white_king.png
+texture piece.fantasy.white_knight images/Theme_2/white_knight.png
+texture piece.fantasy.white_pawn images/Theme_2/white_pawn.png
+texture piece.fantasy.white_queen images/Theme_2/white_queen.png
+texture piece.fantasy.white_rook images/Theme_2/white_rook.png
+
+texture piece.pixel.black_bishop images/Theme_3/black_bishop.png filter=point
+texture piece.pixel.black_king images/Theme_3/black_king.png filter=point
+texture piece.pixel.black_knight images/Theme_3/black_knight.png filter=point
+texture piece.pixel.black_pawn images/Theme_3/black_pawn.png filter=point
+texture piece.pixel.black_queen images/Theme_3/black_queen.png filter=point
+texture piece.pixel.black_rook images/Theme_3/black_rook.png filter=point
+texture piece.pixel.white_bishop images/Theme_3/white_bishop.png filter=point
+texture piece.pixel.white_king images/Theme_3/white_king.png filter=point
+texture piece.pixel.white_knight images/Theme_3/white_knight.png filter=point
+texture piece.pixel.white_pawn images/Theme_3/white_pawn.png filter=point
+texture piece.pixel.white_queen images/Theme_3/white_queen.png filter=point
+texture piece.pixel.white_rook images/Theme_3/white_rook.png filter=point
+texture piece.pixel.black_bishop_blink images/Theme_3/black_bishop_blink.png filter=point
+texture piece.pixel.black_king_blink images/Theme_3/black_king_blink.png filter=point
+texture piece.pixel.black_knight_blink images/Theme_3/black_knight_blink.png filter=point
+texture piece.pixel.black_pawn_blink images/Theme_3/black_pawn_blink.png filter=point
+texture piece.pixel.black_queen_blink images/Theme_3/black_queen_blink.png filter=point
+texture piece.pixel.black_rook_blink images/Theme_3/black_rook_blink.png filter=point
+texture piece.pixel.white_bishop_blink images/Theme_3/white_bishop_blink.png filter=point
+texture piece.pixel.white_king_blink images/Theme_3/white_king_blink.png filter=point
+texture piece.pixel.white_knight_blink images/Theme_3/white_knight_blink.png filter=point
+texture piece.pixel.white_pawn_blink images/Theme_3/white_pawn_blink.png filter=point
+texture piece.pixel.white_queen_blink images/Theme_3/white_queen_blink.png filter=point
+texture piece.pixel.white_rook_blink images/Theme_3/white_rook_blink.png filter=point
+
+font ui.montserrat_bold fonts/Montserrat-Bold.ttf
+font ui.public_sans_bold fonts/PublicSans-Bold.ttf
+font ui.public_sans fonts/PublicSans-Regular.ttf
+font ui.mono fonts/intelone-mono-font-family-regular.ttf
+
+sound sfx.move soundeffect/move.ogg
+sound sfx.capture soundeffect/capture.ogg
+sound sfx.castle soundeffect/castle.ogg
+sound sfx.click soundeffect/click.ogg
+sound sfx.draw soundeffect/game-drawn.ogg
+sound sfx.win soundeffect/game-won.ogg
+sound sfx.check soundeffect/check.ogg
+sound sfx.promote soundeffect/promote.ogg
+
+music music.calm backgroundmusic/calm-piano-vaporware.ogg
+music music.slow backgroundmusic/slow-piano-intermission.ogg
+music music.solo backgroundmusic/solo-piano-4.ogg
+
+# Position files (one .5dp per starting position); the directory may not exist yet.
+dir positions/ positions/
