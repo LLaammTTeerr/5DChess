@@ -6,7 +6,7 @@ Chess with multiverse time travel: a 5D Chess game with timelines, built in C++2
 [![Latest release](https://img.shields.io/github/v/release/LLaammTTeerr/5DChess)](https://github.com/LLaammTTeerr/5DChess/releases/latest)
 [![Pages deploy](https://github.com/LLaammTTeerr/5DChess/actions/workflows/pages.yml/badge.svg)](https://github.com/LLaammTTeerr/5DChess/actions/workflows/pages.yml)
 
-**▶ Play in your browser: <https://llaammtteerr.github.io/5DChess/>**
+**▶ Play in your browser: <https://chess.lamter.cc/>**
 
 **⬇ Download for Linux/macOS/Windows: <https://github.com/LLaammTTeerr/5DChess/releases/latest>**
 
