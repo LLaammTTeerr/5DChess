@@ -59,7 +59,7 @@ bool hasKing(const Board& board, int n, PieceColor color) {
 // both colours move. The boards are sparse on purpose: many positions have exactly one legal turn or very few, the case
 // where a wrong reduction would lose the only answer. With `sparse` false the boards are somewhat fuller.
 std::unique_ptr<Sandbox> randomPosition(std::mt19937& rng, int n, int lines, bool created, bool sparse = true) {
-  auto uni = [&](int lo, int hi) { return std::uniform_int_distribution<int>(lo, hi)(rng); };
+  auto uni = [&](int lo, int hi) { return test::randInt(rng, lo, hi); };
   const int shift = uni(0, 1);
   std::vector<int> counts;
   for (int i = 0; i < lines; ++i) counts.push_back(uni(2, 3) + shift);
@@ -220,10 +220,10 @@ TEST_CASE("TurnSearch gives the same answer as findLegalTurn on played games, an
       bool ok = false;
       for (int attempt = 0; attempt < 20 and !ok; ++attempt) {
         for (int step = 0; step < 8; ++step) {
-          if (game.canSubmit() and std::uniform_int_distribution<int>(0, 2)(rng) != 0) { ok = true; break; }
+          if (game.canSubmit() and test::randInt(rng, 0, 2) != 0) { ok = true; break; }
           auto moves = game.allPseudoLegalMoves();
           if (moves.empty()) break;
-          game.makeMove(moves[std::uniform_int_distribution<std::size_t>(0, moves.size() - 1)(rng)]);
+          game.makeMove(moves[std::size_t(test::randInt(rng, 0, int(moves.size()) - 1))]);
         }
         ok = ok or game.canSubmit();
         if (!ok) while (game.undoable()) game.undo();

@@ -13,6 +13,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <cstdio>
+#include <cstdint>
 #include <random>
 #include <string>
 #include <vector>
@@ -48,7 +49,7 @@ public:
 };
 
 bool buildTurn(IGame& game, std::mt19937& rng) {
-  auto uni = [&](int lo, int hi) { return std::uniform_int_distribution<int>(lo, hi)(rng); };
+  auto uni = [&](int lo, int hi) { return int(lo + int(rng() % std::uint32_t(hi - lo + 1))); };
   for (int attempt = 0; attempt < 12; ++attempt) {
     for (int step = 0; step < 10; ++step) {
       if (game.canSubmit() and uni(0, 2) != 0) return true;

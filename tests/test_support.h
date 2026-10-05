@@ -3,11 +3,16 @@
 #include "chess.h"
 
 #include <memory>
+#include <cstdint>
 #include <random>
 #include <string>
 #include <vector>
 
 namespace test {
+
+// Portable RNG helper: std::*_distribution output is implementation-defined (libstdc++ vs libc++ vs MSVC differ), but
+// std::mt19937's raw output is fixed by the standard, so derive values from it directly to play identical games everywhere.
+inline int randInt(std::mt19937& rng, int lo, int hi) { return lo + int(rng() % std::uint32_t(hi - lo + 1)); }
 
 using namespace Chess;
 

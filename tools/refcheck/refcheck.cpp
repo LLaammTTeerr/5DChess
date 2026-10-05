@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <cstring>
 #include <iostream>
+#include <cstdint>
 #include <random>
 #include <string>
 #include <vector>
@@ -128,7 +129,7 @@ std::string stateJson(const IGame& game, int turn, int index, bool turnStart, co
 
 // A random legal turn, built with backtracking. Pawn moves are favoured early so that double steps and en passant occur.
 bool buildTurn(IGame& game, std::mt19937& rng, int turn, std::vector<Played>& turnMoves) {
-  auto uni = [&](int lo, int hi) { return std::uniform_int_distribution<int>(lo, hi)(rng); };
+  auto uni = [&](int lo, int hi) { return int(lo + int(rng() % std::uint32_t(hi - lo + 1))); };
   for (int attempt = 0; attempt < 30; ++attempt) {
     turnMoves.clear();
     for (int step = 0; step < 12; ++step) {

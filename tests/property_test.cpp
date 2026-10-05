@@ -135,7 +135,7 @@ template <class F>
 bool buildRandomTurn(IGame& game, std::mt19937& rng, F&& onMove) {
   for (int attempt = 0; attempt < 12; ++attempt) {
     for (int step = 0; step < 10; ++step) {
-      if (game.canSubmit() and std::uniform_int_distribution<int>(0, 2)(rng) != 0) return true;
+      if (game.canSubmit() and test::randInt(rng, 0, 2) != 0) return true;
       auto moves = game.allPseudoLegalMoves();
       if (moves.empty()) break;
       // Pawn moves and castling are favoured, so that double steps, en passant, promotion and castling occur in short games.
@@ -155,14 +155,14 @@ bool buildRandomTurn(IGame& game, std::mt19937& rng, F&& onMove) {
             and std::abs(moves[i].to.position.x() - moves[i].from.position.x()) == 2) weight[i] = 12;
         total += weight[i];
       }
-      int pick = std::uniform_int_distribution<int>(0, total - 1)(rng);
+      int pick = test::randInt(rng, 0, total - 1);
       std::size_t idx = 0;
       while (pick >= weight[idx]) pick -= weight[idx++];
       Move move = moves[idx];
       onMove(game, move);
       static const PieceType promos[] = {PieceType::Queen, PieceType::Rook, PieceType::Bishop, PieceType::Knight};
-      game.makeMove(move, promos[std::uniform_int_distribution<int>(0, 3)(rng)]);
-      if (std::uniform_int_distribution<int>(0, 5)(rng) == 0) game.undo();
+      game.makeMove(move, promos[test::randInt(rng, 0, 3)]);
+      if (test::randInt(rng, 0, 5) == 0) game.undo();
     }
     if (game.canSubmit()) return true;
     while (game.undoable()) game.undo();
@@ -220,7 +220,7 @@ void fuzzGame(unsigned seed, int turns, Coverage& cov) {
     CAPTURE(turn);
     checkTimelineInvariants(game, origMin, origMax);
 
-    if (std::uniform_int_distribution<int>(0, 5)(rng) == 0) {
+    if (test::randInt(rng, 0, 5) == 0) {
       // Clone, play random turns on the clone: the original must not notice, the clone must stay consistent.
       const std::string pre = snapshot(game);
       auto dumps = dumpAllBoards(game);
@@ -319,7 +319,7 @@ TEST_CASE("random games reach castling, en passant, promotion, pawn timeline mov
   // evidence that the rules are right. That is what the directed tests and tools/refcheck (a comparison with 5d-chess-js)
   // are for. This test makes sure the random games get anywhere near the interesting rules at all.
   Coverage cov;
-  for (unsigned seed = 1; seed <= 8; ++seed) coverWalk<StandardGame>(seed, 20, cov);
+  for (unsigned seed = 1; seed <= 24; ++seed) coverWalk<StandardGame>(seed, 20, cov);
   for (unsigned seed = 1; seed <= 5; ++seed) coverWalk<CustomGameKVB>(seed, 20, cov);
   for (unsigned seed = 1; seed <= 10; ++seed) coverWalk<MiscGameTimeLineFragment>(seed, 20, cov);
   MESSAGE("castles " << cov.castles << ", en passant " << cov.enPassant << ", promotions " << cov.promotions
@@ -343,7 +343,7 @@ TEST_CASE("rook, bishop and king moves are subsets of queen moves from the same 
       std::mt19937 rng(seed * 1000 + trial);
       CAPTURE(seed);
       CAPTURE(trial);
-      auto uni = [&](int lo, int hi) { return std::uniform_int_distribution<int>(lo, hi)(rng); };
+      auto uni = [&](int lo, int hi) { return test::randInt(rng, lo, hi); };
 
       struct Blocker { int tl, x, y; PieceColor color; };
       const int tx = uni(0, N - 1), ty = uni(0, N - 1);
