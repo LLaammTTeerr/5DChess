@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.28)
 
 project(5DChess
-  VERSION 0.2.0
+  VERSION 0.3.0
   DESCRIPTION "Multidimensional chess with timeline mechanics"
   LANGUAGES C CXX)
 
@@ -105,6 +105,8 @@ if(FDCHESS_BUILD_GAME)
       endforeach()
     endforeach()
     set(WEB_LINK_OPTIONS -sUSE_GLFW=3 -sALLOW_MEMORY_GROWTH=1
+      # raylib's bundled miniaudio ScriptProcessor callback reads Module.HEAPF32 (not exported by default)
+      -sEXPORTED_RUNTIME_METHODS=HEAPF32
       "SHELL:--shell-file ${CMAKE_CURRENT_SOURCE_DIR}/web/shell.html")
     foreach(a ${WEB_ASSETS})
       list(APPEND WEB_LINK_OPTIONS "SHELL:--preload-file ${CMAKE_CURRENT_SOURCE_DIR}/assets/${a}@/assets/${a}")

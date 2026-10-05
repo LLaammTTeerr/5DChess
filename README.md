@@ -2,7 +2,7 @@
 
 A modern implementation of multidimensional chess featuring timeline mechanics, built with C++ and Raylib graphics library.
 
-**Play in your browser: <https://llaammtteerr.github.io/5DChess/>** (available after the next release; the web build has no background music).
+**Play in your browser: <https://llaammtteerr.github.io/5DChess/>** (available after the next release).
 
 ![A standard game from White's side with the e-pawn selected and its legal squares highlighted](docs/screenshots/standard-game.png)
 
