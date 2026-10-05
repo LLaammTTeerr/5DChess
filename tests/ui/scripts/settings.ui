@@ -1,0 +1,18 @@
+# Settings -> each submenu. Layout (1400x800): main menu buttons are 200x44 at x=50, y=258+60*i
+# (Versus 0, Puzzles 1, Guide 2, Settings 3, Exit 4). Settings tabs are 160x44 at y=150, x=440+180*i.
+# Piece Theme options are 200x44 at x=50, y=282+64*i (Classic, Modern, Fantasy, Pixel).
+wait 20
+click 150 460        # Settings
+wait 30
+capture settings-initial
+click 520 172        # Piece Theme tab
+wait 20
+click 150 496        # Pixel
+wait 20
+capture settings-piece-theme-pixel
+click 700 172        # Music tab
+wait 20
+capture settings-music
+click 880 172        # Display tab
+wait 20
+capture settings-display

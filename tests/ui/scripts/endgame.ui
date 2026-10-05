@@ -1,0 +1,24 @@
+# Shortest king capture under current rules (found with a search over the engine): in the 4x4 "Misc - Time Line
+# Fragment" mode white's king steps to (1,1) and black's knight captures it. Capturing a king ends the game at once.
+# Layout (1400x800): Versus (150,280); mode row 8 (690,634); Play (808,712). Boards are 252 px (63.3 px squares):
+# the white-moveable one at x 415..667, y 466..718; after white submits, black's copy sits at x 732..985.
+wait 20
+click 150 280        # Versus
+wait 30
+click 690 634        # Misc - Time Line Fragment (row 8)
+wait 20
+click 808 712        # Play
+wait 120
+capture endgame-start
+click 636 687        # white king (bottom-left board)
+wait 40
+click 573 624        # steps diagonally, into the black knight's reach
+wait 40
+click 841 90         # Submit
+wait 90
+capture endgame-black-to-move
+click 953 498        # black knight (bottom-right board)
+wait 40
+click 890 624        # captures the white king
+wait 150
+capture endgame-end-card
