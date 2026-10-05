@@ -8,6 +8,8 @@
 #include "Render/UITheme.h"
 #include "Audio/AudioManager.h"
 
+#include <chrono>
+
 
 
 
@@ -33,6 +35,14 @@ void ChessController::updateNewBoardViewsToView() {
 }
 
 void ChessController::update(float deltaTime) {
+  // The "does the side to move have any legal turn?" search runs a little each frame (see IGame::submitTurn).
+  if (model._game->resultPending()) {
+    const auto start = std::chrono::steady_clock::now();
+    do {
+      model._game->stepResultSearch(250);
+    } while (model._game->resultPending() &&
+             std::chrono::steady_clock::now() - start < std::chrono::milliseconds(4));
+  }
   updateCurrentBoardFromModel();
   updateBoardViewFromCurrentBoards();
   // after updating the board and board views, we need bridge the board to board view
@@ -455,6 +465,8 @@ HudData ChessController::computeHud() const {
   hud.timelineCount = model._game->timeLineCount();
   if (model._game->result() != Chess::GameResult::Ongoing) {
     hud.hint = "";
+  } else if (model._game->resultPending()) {
+    hud.hint = "Checking position...";
   } else if (model._game->canSubmit()) {
     hud.hint = "Submit your turn";
   } else if (model._game->mandatoryBoards().empty() && model._game->undoable()) {
@@ -522,9 +534,9 @@ void ChessController::handleUndoMove() {
 }
 
 void ChessController::handleSubmitMove() {
+  if (!model._game->canSubmit()) return;
   std::cout << "Submitting move..." << std::endl;
 
-  // No validity check needed - button is disabled when invalid
   model._game->submitTurn();
   std::cout << "Move submitted successfully." << std::endl;
   clearSelection();
