@@ -272,7 +272,9 @@ theme_preview <Classic|Modern|Fantasy|Pixel> <Standard|Battle|Invasion|Fragment>
 
 ## License
 
-This project is part of an academic assignment for Object-Oriented Programming course.
+The source code is released under the [MIT License](LICENSE). It started as an academic assignment for the Object-Oriented Programming course at HCMUS.
+
+Assets keep their own licences, listed in [assets/CREDITS.md](assets/CREDITS.md): the music and sound effects are CC0, the fonts are under the SIL Open Font License, and the Pixel piece theme is original to this project. The provenance of piece themes 0–2 and some board images is unknown, so they are not covered by the MIT licence.
 
 ## Credits
 
