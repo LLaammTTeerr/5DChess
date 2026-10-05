@@ -150,12 +150,19 @@ int main(int argc, char** argv) {
       ChessController controller(model, view);
       controller.update(0.0f);
       const float dt = 1.0f / 60.0f;
+      double updateMs = 0, renderMs = 0; int splitFrames = 0;
       auto frame = [&](bool dump, int index) {
+        const auto a0 = std::chrono::steady_clock::now();
         controller.update(dt);
+        const auto a1 = std::chrono::steady_clock::now();
         BeginDrawing();
         ClearBackground(UI::Color::bg);
         controller.render();
+        const auto a2 = std::chrono::steady_clock::now();
         EndDrawing();
+        updateMs += std::chrono::duration<double, std::milli>(a1 - a0).count();
+        renderMs += std::chrono::duration<double, std::milli>(a2 - a1).count();
+        ++splitFrames;
         if (dump) {
           Image shot = LoadImageFromScreen();
           char name[64];
@@ -211,6 +218,7 @@ int main(int argc, char** argv) {
               steady.add(std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
             }
             steady.report("steady ");
+            std::cout << "cpu split (all frames): update " << updateMs / splitFrames << " ms, render calls " << renderMs / splitFrames << " ms\n";
           }
           idle.report("idle   ");
           anim.report("animated");

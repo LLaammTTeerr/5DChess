@@ -182,7 +182,9 @@ The game changes its working directory to the executable's folder, so it can be 
 ### User Interface
 - **Dynamic Menus**: Context-sensitive navigation
 - **Multiple View Modes**: Button and list-based menu layouts
-- **Camera**: Smooth auto-centering and auto-zoom, plus manual pan and zoom
+- **Camera**: Smooth auto-centering and auto-zoom (spring-damped), plus manual pan and zoom
+- **Motion**: shared motion tokens and easing (`include/Render/Motion.h`); pieces slide or arc across boards, new boards grow in, selection lifts, a turn banner announces the side to move, scenes cross-fade, and the main menu is an animated hero. Animations never delay game state or input. Settings -> Display -> **Motion: Reduced** turns everything into instant changes or short cross-fades
+- **Pixel blink**: Pixel-theme pieces blink at random intervals when zoomed in
 - **Responsive Design**: Adaptive layouts for different screen sizes
 - **Warm cream + terracotta theme**: shared design tokens (`include/Render/UITheme.h`), rounded buttons with smooth hover and a pointing-hand cursor, a status HUD (side to move, turn, next-step hint), a controls hint bar and an end-of-game card
 
