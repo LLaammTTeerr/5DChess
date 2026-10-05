@@ -1,14 +1,8 @@
+#pragma once
 #include "chess.h"
 #include <vector>
 #include <memory>
 #include "Render/RenderUtilis.h"
-
-#pragma once
-
-// class ChessModel;
-// class ChessView;
-// class ChessController;
-
 
 struct MoveState {
   std::shared_ptr<Chess::Board> selectedBoard; // Board where the move is being made

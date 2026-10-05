@@ -10,8 +10,6 @@ class MenuComponent;
 class GameStateModel;
 class GameState;
 class SceneManager;
-class ChessView;
-class ChessModel;
 
 class MenuController {
 public:
@@ -30,6 +28,9 @@ public:
   // Draw the menu
   virtual void draw() const = 0;
 
+  // True when the mouse is over any item of this menu's view (lets the menu take the click first)
+  bool isMouseOverMenu() const { return _menuView && _menuView->isPointOverItems(GetMousePosition()); }
+
 protected:
   std::shared_ptr<MenuComponent> _menuSystem; // root menu component
   std::shared_ptr<MenuComponent> _currentMenuModel; 
@@ -37,11 +38,8 @@ protected:
 };
 
 class InGameMenuController : public MenuController {
-private:
-  ChessModel* _chessModel;
-  ChessView* _chessView;
 public:
-  InGameMenuController(ChessModel* chessModel, ChessView* chessView, std::shared_ptr<MenuComponent> menuSystem);
+  InGameMenuController(std::shared_ptr<MenuComponent> menuSystem);
   void setViewStrategy(std::unique_ptr<IMenuView> view) override;
   void handleInput() override; // Handle user input for in-game menu navigation
   void update() override; // Update the in-game menu controller
@@ -80,7 +78,9 @@ public:
 
 private:
   int _selectedSettingIndex = -1; // Track selected setting index
-  int _selectedPieceThemeIndex = -1; // Track selected piece theme index
+  int _selectedPieceThemeIndex = -1; // Track selected piece theme index (setting 0)
+  int _selectedMusicIndex = -1; // Track selected music index (other settings)
+  int& workerSelectedIndex() { return _selectedSettingIndex == 0 ? _selectedPieceThemeIndex : _selectedMusicIndex; }
 private:
   std::shared_ptr<MenuComponent> _workerMenu = nullptr;
   std::shared_ptr<ButtonMenuView> _workerMenuView = nullptr;

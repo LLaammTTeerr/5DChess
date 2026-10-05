@@ -6,12 +6,12 @@
 #include "MenuCommand.h"
 #include "MenuItemView.h"
 #include "MenuController.h"
-
-SettingsScene::SettingsScene() {
-    init();
-}
+#include "GameStates/ConcreteGameStates/SettingsState.h"
 
 void SettingsScene::init(void) {
+    // Holds the selected theme/music name for this scene's menu commands
+    _settingsState = std::make_shared<SettingsState>();
+
     // Initialize the menu system first
     _settingMenuSystem = std::make_shared<Menu>("Settings Menu", true);
     
@@ -40,25 +40,25 @@ void SettingsScene::init(void) {
 
     
     std::shared_ptr<MenuComponent> NoMusic = std::make_shared<MenuItem>("None", true);
-    NoMusic->setCommand(createMusicSelectCommand("None"));
+    NoMusic->setCommand(createMusicSelectCommand("None", _settingsState.get()));
     
     std::shared_ptr<MenuComponent> Beethoven = std::make_shared<MenuItem>("Beethoven Fur Elise", true);
-    Beethoven->setCommand(createMusicSelectCommand("Beethoven Fur Elise"));
+    Beethoven->setCommand(createMusicSelectCommand("Beethoven Fur Elise", _settingsState.get()));
     
     std::shared_ptr<MenuComponent> Canon = std::make_shared<MenuItem>("Canon in D", true);
-    Canon->setCommand(createMusicSelectCommand("Canon in D"));
+    Canon->setCommand(createMusicSelectCommand("Canon in D", _settingsState.get()));
     
     std::shared_ptr<MenuComponent> Tchaikovsky = std::make_shared<MenuItem>("Dance of Sugar Plum", true);
-    Tchaikovsky->setCommand(createMusicSelectCommand("Dance of Sugar Plum"));
+    Tchaikovsky->setCommand(createMusicSelectCommand("Dance of Sugar Plum", _settingsState.get()));
     
     std::shared_ptr<MenuComponent> StarSky = std::make_shared<MenuItem>("Star Sky", true);
-    StarSky->setCommand(createMusicSelectCommand("Star Sky"));
+    StarSky->setCommand(createMusicSelectCommand("Star Sky", _settingsState.get()));
     
     std::shared_ptr<MenuComponent> Victory = std::make_shared<MenuItem>("Victory", true);
-    Victory->setCommand(createMusicSelectCommand("Victory"));
+    Victory->setCommand(createMusicSelectCommand("Victory", _settingsState.get()));
     
     std::shared_ptr<MenuComponent> GloriousMorning = std::make_shared<MenuItem>("Glorious Morning", true);
-    GloriousMorning->setCommand(createMusicSelectCommand("Glorious Morning"));
+    GloriousMorning->setCommand(createMusicSelectCommand("Glorious Morning", _settingsState.get()));
     
     MusicSection->addItem(NoMusic);
     MusicSection->addItem(Beethoven);
@@ -68,14 +68,12 @@ void SettingsScene::init(void) {
     MusicSection->addItem(Victory);
     MusicSection->addItem(GloriousMorning);
     
-    // // Add the music section to the main menu system
+    // Add the music section to the main menu system
     _settingMenuSystem->addItem(MusicSection);
     _settingsMenuController = std::make_shared<SettingMenuController>(_settingMenuSystem);
 }
 
-void SettingsScene::handleInput(void) {    
-    update(GetFrameTime());
-
+void SettingsScene::handleInput(void) {
     // Handle menu controller input
     if (_settingsMenuController) {
         _settingsMenuController->handleInput();

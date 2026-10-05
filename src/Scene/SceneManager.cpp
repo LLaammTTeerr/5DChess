@@ -63,14 +63,6 @@ void SceneManager::changeScene(std::unique_ptr<Scene> scene) {
   _pendingTransition = true;
 }
 
-void SceneManager::pushSceneDeferred(std::unique_ptr<Scene> scene) {
-  // Set up deferred push - will push new scene on top of current scene in next loop
-  _nextScene = std::move(scene);
-  _isChangeScene = false; // Don't pop current scene
-  _pendingTransition = true;
-  std::cout << "Deferred push scene: " << _nextScene->getName() << std::endl;
-}
-
 
 void SceneManager::update(float deltaTime) {
   // Handle scene transitions
@@ -80,7 +72,11 @@ void SceneManager::update(float deltaTime) {
   else if (!_sceneStack.empty()) {
     auto &currentEntry = _sceneStack.top();
     if (currentEntry->isActive()) {
-      currentEntry->handleInput();
+      // The navigation menu is drawn on top: don't let clicks on it reach the scene below
+      bool mouseOverMenu = _menuActive && _navigationMenuController && _navigationMenuController->isMouseOverMenu();
+      if (!mouseOverMenu) {
+        currentEntry->handleInput();
+      }
       currentEntry->update(deltaTime);
     }
   }
@@ -119,15 +115,10 @@ Scene* SceneManager::getCurrentScene() const {
   return nullptr;
 }
 
-std::unique_ptr<Scene> SceneManager::createScene(const std::string &name) {
-  return nullptr;
-}
-
 void SceneManager::processTransition() {
   assert(_pendingTransition && _nextScene != nullptr);
 
   std::string sceneName = _nextScene->getName(); // Store name before moving
-  // std::cout << "Processing transition to scene: " << sceneName << std::endl;
 
   if (_isChangeScene) {
     popScene(); // Pop current scene if changing
@@ -136,7 +127,6 @@ void SceneManager::processTransition() {
   
   // Create and push the new scene
   pushScene(std::move(_nextScene));
-  // std::cout << "Transitioning to scene: " << sceneName << std::endl;
   _nextScene = nullptr; // Clear after processing (now safe to uncomment)
   _pendingTransition = false;
 }

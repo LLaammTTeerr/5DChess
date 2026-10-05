@@ -87,7 +87,6 @@ void VersusScene::onEnter() {
   std::cout << "Entering VersusScene..." << std::endl;
   _isActive = true;
   selectedGameMode = "None";
-  init(); // Initialize the menu when entering the scene
 }
 
 void VersusScene::onExit() { _isActive = false; }

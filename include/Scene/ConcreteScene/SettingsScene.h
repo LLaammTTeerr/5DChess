@@ -5,6 +5,7 @@
 
 class SettingMenuController;
 class MenuComponent;
+class SettingsState;
 
 class SettingsScene : public Scene {
 private:
@@ -12,8 +13,9 @@ private:
 private:
   std::shared_ptr<SettingMenuController> _settingsMenuController;
   std::shared_ptr<MenuComponent> _settingMenuSystem;
+  std::shared_ptr<SettingsState> _settingsState;
 public:
-  SettingsScene();
+  SettingsScene() = default;
     ~SettingsScene() override = default;
 
     void init(void) override;

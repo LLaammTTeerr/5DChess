@@ -19,7 +19,6 @@ public:
   void pushScene(std::unique_ptr<Scene> scene);
   void popScene();
   void changeScene(std::unique_ptr<Scene> scene);
-  void pushSceneDeferred(std::unique_ptr<Scene> scene); // Push scene in next loop iteration
 
   // Core update loop
   void update(float deltaTime);
@@ -39,11 +38,12 @@ public:
   // Game state access
   GameStateModel* getGameStateModel() const { return _gameStateModel; }
 
-  // Transition management
-  // void requestTransition(const std::string& sceneName);
-  // bool isTransitioning() const { return _pendingTransition; }
+  // Quit request (e.g. from the Exit menu item), honoured by the main loop
+  static void requestQuit() { _quitRequested = true; }
+  static bool isQuitRequested() { return _quitRequested; }
 
 private:
+  static inline bool _quitRequested = false;
   std::stack<std::unique_ptr<Scene>> _sceneStack;
 
   GameStateModel* _gameStateModel;
@@ -63,7 +63,6 @@ private:
   bool _isChangeScene = false;
 
   void processTransition(); // helper function to handle scene transitions -- called in update
-  std::unique_ptr<Scene> createScene(const std::string &name);
   
   // Menu system helpers
   void initializeNavigationMenuSystem();

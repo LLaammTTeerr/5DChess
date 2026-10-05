@@ -2,6 +2,8 @@
 #include "Render/BoardView.h"
 #include <algorithm>
 #include <cmath>
+#include <iostream>
+#include <limits>
 
 // External constants (should be defined in BoardView.cpp)
 extern const float BOARD_WORLD_SIZE;
@@ -40,12 +42,6 @@ void PresentLineRenderer::render(Camera2D* camera, bool isUsing3D, const std::ve
 
     // Calculate the x position based on half turn - position it at the center of the board
     float xPosition = _lineData.halfTurnPosition * (BOARD_WORLD_SIZE + HORIZONTAL_SPACING) + (BOARD_WORLD_SIZE / 2.0f);
-    
-    // Debug output for positioning
-    std::cout << "Present Line Debug: halfTurnPosition=" << _lineData.halfTurnPosition 
-              << ", xPosition=" << xPosition 
-              << ", BOARD_WORLD_SIZE=" << BOARD_WORLD_SIZE 
-              << ", HORIZONTAL_SPACING=" << HORIZONTAL_SPACING << std::endl;
     
     // Calculate the vertical bounds of the line
     auto [yStart, yEnd] = calculateLineBounds(boardViews);
@@ -130,10 +126,11 @@ void PresentLineRenderer::drawAnimatedPresentLine(float x, float yStart, float y
         Vector2 left = {center.x - markerSize, center.y};
         
         // Draw filled diamond
-        DrawTriangle(top, right, center, animatedColor);
-        DrawTriangle(right, bottom, center, animatedColor);
-        DrawTriangle(bottom, left, center, animatedColor);
-        DrawTriangle(left, top, center, animatedColor);
+        // (counter-clockwise on screen, y down, as raylib requires)
+        DrawTriangle(top, center, right, animatedColor);
+        DrawTriangle(right, center, bottom, animatedColor);
+        DrawTriangle(bottom, center, left, animatedColor);
+        DrawTriangle(left, center, top, animatedColor);
         
         // Add bright center highlight
         Color highlightColor = {255, 255, 255, 150};

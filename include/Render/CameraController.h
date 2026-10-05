@@ -19,6 +19,9 @@ private:
   Camera2D _camera2D;
   Camera3D _camera3D;
   Vector3 _worldSize;
+  // 2D pan limits: bounding box of the current board views plus a margin (falls back to the world size)
+  Vector2 _boundsMin = { 0.0f, 0.0f };
+  Vector2 _boundsMax = { 0.0f, 0.0f };
   bool _use3DRendering = false;
   
   // Camera state tracking
@@ -72,7 +75,7 @@ private:
   // Camera state methods
   void calculateAutoCenterPosition(const std::vector<std::shared_ptr<BoardView>>& boardViews);
   void calculateOptimalZoom(const std::vector<std::shared_ptr<BoardView>>& boardViews);
-  void updateCameraState(float deltaTime);
+  void updateWorldBounds(const std::vector<std::shared_ptr<BoardView>>& boardViews);
   void smoothTransitionToTarget(float deltaTime);
   void smoothZoomToTarget(float deltaTime);
   

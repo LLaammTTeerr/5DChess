@@ -123,9 +123,9 @@ void TimelineArrowRenderer::drawCurvedArrow(Vector2 start, Vector2 end, Color co
         // Add pulsing effect
         float pulse = 1.0f + 0.3f * sinf(_animationState.pulsePhase + t1 * 3.14159f);
         Color animatedColor = {
-            (unsigned char)(color.r * pulse),
-            (unsigned char)(color.g * pulse),
-            (unsigned char)(color.b * pulse),
+            (unsigned char)fminf(255.0f, color.r * pulse),
+            (unsigned char)fminf(255.0f, color.g * pulse),
+            (unsigned char)fminf(255.0f, color.b * pulse),
             color.a
         };
         
@@ -151,7 +151,8 @@ void TimelineArrowRenderer::drawCurvedArrow(Vector2 start, Vector2 end, Color co
             end.y - arrowDir.y * arrowSize - arrowSide.y * arrowSize * 0.5f
         };
         
-        DrawTriangle(end, arrowPoint1, arrowPoint2, color);
+        // raylib needs counter-clockwise order (screen space, y down) or the triangle is culled
+        DrawTriangle(end, arrowPoint2, arrowPoint1, color);
     }
 }
 

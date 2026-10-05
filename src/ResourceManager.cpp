@@ -101,7 +101,11 @@ Font& ResourceManager::getFont(const std::string &alias) {
 }
 
 ResourceManager::~ResourceManager() {
-    // Unload all textures and fonts
+    unloadAll();
+}
+
+void ResourceManager::unloadAll() {
+    // Unload all textures and fonts (no-op if already unloaded)
     for (const auto &pair : _textures) {
         UnloadTexture(pair.second);
     }

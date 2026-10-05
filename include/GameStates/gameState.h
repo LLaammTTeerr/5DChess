@@ -25,7 +25,6 @@ public:
 
     
     virtual std::shared_ptr<MenuComponent> createNavigationMenu(GameStateModel* gameStateModel, SceneManager* sceneManager) = 0;
-    // virtual void renderMenu(std::shared_ptr<MenuComponent> menu) const = 0;
     virtual std::unique_ptr<Scene> createScene() const = 0;
     virtual std::vector<std::shared_ptr<MenuItemView>> createNavigationMenuButtonItemViews(std::shared_ptr<MenuComponent> menu) const = 0;
 };
@@ -45,9 +44,6 @@ public:
     void setStateByName(const std::string& stateName);
     GameState* getCurrentState() const { return _currentState.get(); }
     std::string getCurrentStateName() const;
-    
-    // Update method for state pattern
-    void update(float deltaTime);
     
     // Helper methods for state creation
     static std::unique_ptr<GameState> createState(const std::string& stateName);

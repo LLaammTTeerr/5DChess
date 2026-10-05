@@ -29,8 +29,6 @@ public:
     virtual void render_highlightBoundaries() const = 0;
     virtual void render_highlightedPositions(std::vector<Chess::Position2D> positions) const = 0;
 
-    // virtual void setBoard(std::shared_ptr<Chess::Board> board) = 0;
-    // virtual std::shared_ptr<Chess::Board> getBoard() const = 0;
     virtual void setBoardTexture(Texture2D* texture) = 0;
 
     virtual bool is3D() const = 0;
@@ -82,7 +80,6 @@ public:
   BoardView2D() = default;
   ~BoardView2D() = default;
 
-  // void render() const override {};
   void render() const override;
   void render_pieces() const override;
   void render_highlightPiece(Chess::Position2D piecePosition) const override;
@@ -123,42 +120,3 @@ public:
     return fminf(_area.width, _area.height);
   }
 };
-
-// class BoardView3D : public BoardView {
-// private:
-//     std::shared_ptr<Chess::Board> _board;
-//     Texture2D* _boardTexture;
-//     Vector3 _position; // 3D position (e.g., timeline * spacing, 0, turn * spacing)
-//     Camera3D* _camera;
-//     bool _isActive = false;
-//     bool _isMouseOver = false;
-//     std::vector<Chess::Position2D> _highlightedPositions;
-//     float _boardSize = 8.0f; // Size of board in 3D units
-//     Model _boardModel; // For GPU-accelerated rendering
-// private:
-//     ChessView* _supervisor = nullptr;
-// public:
-//     BoardView3D(std::shared_ptr<Chess::Board> board, Texture2D* texture, Vector3 position, Camera3D* camera);
-//     ~BoardView3D();
-
-//     void update(float deltaTime) override {};
-//     void handleInput() override {};
-//     void render() const override {};
-
-//     void setBoard(std::shared_ptr<Chess::Board> board) override;
-//     std::shared_ptr<Chess::Board> getBoard() const override { return _board; }
-//     void setBoardTexture(Texture2D* texture) override;
-//     void updateHighlightedPositions(const std::vector<Chess::Position2D>& positions) override;
-//     bool is3D() const override;
-
-//     void setPosition(Vector3 position);
-
-//     bool isMouseClickedOnBoard() const override { return 0; };
-
-// private:
-//     void updateMouseOverBoard();
-
-
-// public:
-//     void setSupervisor(ChessView* supervisor) override;
-// };

@@ -61,13 +61,15 @@ void ChessView::handleMouseSelection() {
     }
 }
 
-void ChessView::handleInput() {
+void ChessView::handleInput(bool pointerBlocked) {
     /// @brief Handle input for camera movement and zoom
     update(GetFrameTime());
 
     /// @brief Handle mouse clicks: selected board and selected position
-    handleMouseSelection();
-    handleMouseOver();
+    if (!pointerBlocked) {
+        handleMouseSelection();
+        handleMouseOver();
+    }
     /// @brief Handle user camera input (delegate to CameraController)
     _cameraController->handleUserInput();
 }
@@ -109,12 +111,6 @@ void ChessView::render() const {
     render_highlightedPositions();
     render_highlightPiece(_fromPosition);
 
-    // Draw UI
-    Vector2 mousePos = GetMousePosition();
-    Vector2 worldPos = _cameraController->isUsing3DRendering() ? Vector2{0, 0} : GetScreenToWorld2D(mousePos, *_cameraController->getCamera2D());
-    
-    // Delegate debug info rendering to CameraController
-    // _cameraController->renderDebugInfo();
 }
 
 
@@ -134,50 +130,6 @@ void ChessView::addBoardView(std::shared_ptr<BoardView> boardView) {
     }
 }
 
-
-void ChessView::removeBoardView(std::shared_ptr<BoardView> boardView) {
-    if (boardView) {
-        auto it = std::remove(_boardViews.begin(), _boardViews.end(), boardView);
-        if (it != _boardViews.end()) {
-            _boardViews.erase(it, _boardViews.end());
-            // Re-evaluate rendering mode
-            bool use3D = false;
-            for (const auto& view : _boardViews) {
-                if (view->is3D()) {
-                    use3D = true;
-                    break;
-                }
-            }
-            _cameraController->setUsing3DRendering(use3D);
-        } else {
-            std::cerr << "Attempted to remove a non-existent BoardView!" << std::endl;
-        }
-    } else {
-        std::cerr << "Attempted to remove a null BoardView!" << std::endl;
-    }
-}
-
-
-std::vector<std::shared_ptr<BoardView>> ChessView::getBoardViews() const {
-    return _boardViews;
-}
-
-// void ChessView::queueUpdateInvalidBoardSelection() {
-//     updateQueue.push_back([this](){
-//         if (_selectedBoardView) {
-//             _isSelectedBoardViewInvalid = true;
-//         }
-//         else {
-//             _isSelectedBoardViewInvalid = false;
-//         }
-//     });
-// }
-
-// void ChessView::queueUpdateMoveState(const RenderMoveState& rmoveState) {
-//     updateQueue.push_back([this, rmoveState](){
-//         // if
-//     });
-// }
 
 void ChessView::clearBoardViews() {
     _boardViews.clear();
@@ -227,9 +179,6 @@ void ChessView::render_highlightPiece(std::pair<std::shared_ptr<BoardView>, Ches
 }
 
 void ChessView::update_highlightedPositions(const std::vector<std::pair<std::shared_ptr<BoardView>, Chess::Position2D>>& positions) {
-    if (!positions.empty()) {
-        std::cout << "Updating highlighted positions with " << positions.size() << " entries." << std::endl;
-    }
     _highlightedPositions = positions;
 }
 
@@ -248,29 +197,6 @@ void ChessView::render_highlightedPositions() const {
         }
     }
     EndMode2D();
-}
-
-void ChessView::startMoveTransition(
-    std::shared_ptr<BoardView> fromBoardView,
-    Chess::Position2D fromPosition,
-    std::shared_ptr<BoardView> toBoardView,
-    Chess::Position2D toPosition,
-    float duration,
-    std::function<void()> onComplete
-) {
-    if (fromBoardView && toBoardView) {
-        TransitionComponent transition;
-        transition.fromBoardView = fromBoardView;
-        transition.fromPosition = fromPosition;
-        transition.toBoardView = toBoardView;
-        transition.toPosition = toPosition;
-        transition.duration = duration;
-        transition.onComplete = onComplete;
-
-        _transitions.push_back(transition);
-    } else {
-        std::cerr << "Invalid board views for move transition!" << std::endl;
-    }
 }
 
 void ChessView::updateTimelineArrows(const std::vector<TimelineArrowData>& arrowData) {

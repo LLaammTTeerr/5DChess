@@ -74,7 +74,7 @@ std::vector<std::shared_ptr<MenuItemView>> VersusState::createNavigationMenuButt
     const float horizontalSpacing = 20.0f; // spacing between items
     const float itemHeight = 40.0f;
     const float itemWidth = 200.0f;
-    const float startX = (GetScreenWidth() - activeItems * itemWidth + (activeItems - 1) * horizontalSpacing) / 2.0f;
+    const float startX = (GetScreenWidth() - (activeItems * itemWidth + (activeItems - 1) * horizontalSpacing)) / 2.0f;
     const float startY = 650.0f;
 
     itemViews.reserve(activeItems); // Reserve space for active items

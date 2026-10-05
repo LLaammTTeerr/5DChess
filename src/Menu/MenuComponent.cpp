@@ -3,33 +3,6 @@
 #include "MenuCommand.h"
 #include <algorithm>
 
-// std::shared_ptr<MenuComponent> MenuItem::clone() const {
-//     auto cloned = std::make_shared<MenuComponent>(*this);
-
-//     // Clone the command if it exists
-//     if (_command) {
-//         cloned->setCommand(_command->clone());
-//     }
-
-//     return cloned;
-// }
-
-// std::shared_ptr<MenuComponent> Menu::clone() const {
-//     auto cloned = std::make_shared<Menu>(*this);
-
-//     // Clone the command if it exists
-//     if (_command) {
-//         cloned->setCommand(_command->clone());
-//     }
-
-//     // Clone children
-//     for (const auto& child : _children) {
-//         cloned->addItem(child->clone());
-//     }
-
-//     return cloned;
-// }
-
 MenuItem::MenuItem(const std::string& title, bool enabled)
     : _title(title), _enabled(enabled), _command(nullptr) {}
 

@@ -39,12 +39,6 @@ std::string GameStateModel::getCurrentStateName() const {
     return "NONE";
 }
 
-void GameStateModel::update(float deltaTime) {
-    if (_currentState) {
-        _currentState->update(this, deltaTime);
-    }
-}
-
 std::unique_ptr<GameState> GameStateModel::createState(const std::string& stateName) {
     if (stateName == "MAIN_MENU") {
         return std::make_unique<MainMenuState>();
@@ -52,17 +46,6 @@ std::unique_ptr<GameState> GameStateModel::createState(const std::string& stateN
     else if (stateName == "VERSUS") {
         return std::make_unique<VersusState>();
     } 
-    // else if (stateName == "PUZZLES") {
-    //     return std::make_unique<PuzzlesState>();
-    // } else if (stateName == "GUIDE") {
-    //     return std::make_unique<GuideState>();
-    // } else if (stateName == "SETTINGS_MENU") {
-    //     return std::make_unique<SettingsMenuState>();
-    // } else if (stateName == "IN_GAME") {
-    //     return std::make_unique<InGameState>();
-    // } else if (stateName == "PAUSED") {
-    //     return std::make_unique<PausedState>();
-    // }
     return nullptr;
 }
 

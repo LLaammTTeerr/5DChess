@@ -15,7 +15,7 @@
 #endif
 
 // CameraController implementation
-CameraController::CameraController(Vector3 worldSize) : _worldSize(worldSize) {
+CameraController::CameraController(Vector3 worldSize) : _worldSize(worldSize), _boundsMax{ worldSize.x, worldSize.y } {
     // Initialize 2D camera
     _camera2D.target = { worldSize.x / 2, worldSize.y / 2 };
     _camera2D.offset = { GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f };
@@ -150,8 +150,8 @@ void CameraController::moveCamera(Vector2 delta) {
 }
 
 void CameraController::update(float deltaTime, const std::vector<std::shared_ptr<BoardView>>& boardViews) {
-    // Update camera state and handle transitions
-    updateCameraState(deltaTime);
+    // Keep the pan limits in sync with where the boards actually are
+    updateWorldBounds(boardViews);
     
     // Calculate the center position of all board views
     calculateAutoCenterPosition(boardViews);
@@ -229,8 +229,34 @@ void CameraController::clampToBounds() {
         _camera3D.target.x = std::max(0.0f, std::min(_camera3D.target.x, _worldSize.x));
         _camera3D.target.z = std::max(0.0f, std::min(_camera3D.target.z, _worldSize.z));
     } else {
-        _camera2D.target.x = std::max(0.0f, std::min(_camera2D.target.x, _worldSize.x));
-        _camera2D.target.y = std::max(0.0f, std::min(_camera2D.target.y, _worldSize.y));
+        _camera2D.target.x = std::max(_boundsMin.x, std::min(_camera2D.target.x, _boundsMax.x));
+        _camera2D.target.y = std::max(_boundsMin.y, std::min(_camera2D.target.y, _boundsMax.y));
+    }
+}
+
+void CameraController::updateWorldBounds(const std::vector<std::shared_ptr<BoardView>>& boardViews) {
+    float minX = FLT_MAX, minY = FLT_MAX;
+    float maxX = -FLT_MAX, maxY = -FLT_MAX;
+    int validBoardCount = 0;
+
+    for (const auto& boardView : boardViews) {
+        if (boardView && !boardView->is3D()) {
+            Rectangle area = boardView->getArea();
+            minX = std::min(minX, area.x);
+            minY = std::min(minY, area.y);
+            maxX = std::max(maxX, area.x + area.width);
+            maxY = std::max(maxY, area.y + area.height);
+            validBoardCount++;
+        }
+    }
+
+    if (validBoardCount > 0) {
+        const float margin = BOARD_WORLD_SIZE; // allow panning one board beyond the outermost boards
+        _boundsMin = { minX - margin, minY - margin };
+        _boundsMax = { maxX + margin, maxY + margin };
+    } else {
+        _boundsMin = { 0.0f, 0.0f };
+        _boundsMax = { _worldSize.x, _worldSize.y };
     }
 }
 
@@ -324,8 +350,6 @@ void CameraController::calculateOptimalZoom(const std::vector<std::shared_ptr<Bo
         
         // Set target zoom (not clamped to auto-zoom range yet)
         _targetZoom = optimalZoom;
-        
-        std::cout << "Calculated optimal zoom: " << optimalZoom << " (total area: " << totalWidth << "x" << totalHeight << ")" << std::endl;
     }
 }
 
@@ -482,11 +506,6 @@ void CameraController::focusOnBoardWithAdaptiveZoom(const std::vector<std::share
               << ") with target zoom: " << _targetZoom << std::endl;
     
     // Note: Transition speeds will be restored when user takes control or auto-zoom takes over
-}
-
-void CameraController::updateCameraState(float deltaTime) {
-    // This method can be used for any additional state-specific logic
-    // Currently, most state management is handled in update()
 }
 
 void CameraController::smoothTransitionToTarget(float deltaTime) {

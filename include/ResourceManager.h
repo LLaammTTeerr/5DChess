@@ -13,6 +13,9 @@ public:
   Texture2D& getTexture2D(const std::string &alias);
   Font& getFont(const std::string &alias);
 
+  /* Unload every texture/font. Call before CloseWindow(); safe to call twice. */
+  void unloadAll();
+
 private:
   ResourceManager();
   ~ResourceManager();

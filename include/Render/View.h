@@ -9,38 +9,6 @@
 #include "Render/PresentLineRenderer.h"
 
 
-struct TransitionComponent {
-  bool isActive;  // Is animation running?
-  float duration; // Duration of the transition in seconds
-  float elapsedTime; // Time elapsed since the start of the transition
-  std::function<void()> onStart;  // Callback when animation starts
-  std::function<void()> onComplete; // Callback when animation completes
-  std::string name; // Name of the transition for identification  
-
-  std::shared_ptr<BoardView> fromBoardView; // Board view where the move starts
-  Chess::Position2D fromPosition; // Position on the fromBoardView where the move starts
-  std::shared_ptr<BoardView> toBoardView; // Board view where the move ends
-  Chess::Position2D toPosition; // Position on the toBoardView where the move ends
-
-  TransitionComponent()
-      : isActive(false), duration(0.0f), elapsedTime(0.0f),
-        onStart(nullptr), onComplete(nullptr), name(""),
-        fromBoardView(nullptr), fromPosition{-1, -1},
-        toBoardView(nullptr), toPosition{-1, -1} {}
-
-  virtual void update(float deltaTime) {
-    if (!isActive) return;
-
-    elapsedTime += deltaTime;
-    if (elapsedTime >= duration) {
-      isActive = false;
-      if (onComplete) onComplete();
-    }
-  }
-};
-
-
-
 class ChessView {
 private:
   Vector3 _worldSize;
@@ -56,7 +24,8 @@ public:
   virtual void setMouseOverPositionCallback(std::function<void(std::pair<std::shared_ptr<BoardView>, Chess::Position2D>)> callback) { _onMouseOverPositionCallback = callback; };
 public:
   virtual void update(float deltaTime);
-  virtual void handleInput();
+  /// @param pointerBlocked true when the mouse is over UI drawn on top (no board selection/hover)
+  virtual void handleInput(bool pointerBlocked = false);
   virtual void render() const;
 
 private:
@@ -76,46 +45,14 @@ public:
   virtual void update_highlightedPositions(const std::vector<std::pair<std::shared_ptr<BoardView>, Chess::Position2D>>& positions);
 
 private:
-  std::vector<TransitionComponent> _transitions;  // List of transitions
-public:
-  /// @brief Start a transition for adding a new board view
-  /// @param fromBoardView The board view to transition from
-  virtual void startAddBoardViewTransition(std::shared_ptr<BoardView> fromBoardView) {};
-
-  /// @brief Start a transition for moving a piece from one board view to another
-  /// @param fromBoardView The board view to move from
-  /// @param fromPosition The position on the fromBoardView where the move starts
-  /// @param toBoardView The board view to move to
-  /// @param toPosition The position on the toBoardView where the move ends
-  /// @param duration The duration of the transition in seconds
-  /// @param onComplete callback to update model and view after the transition completes
-  /// @note This method will be called by the controller to start the transition
-  virtual void startMoveTransition(
-      std::shared_ptr<BoardView> fromBoardView,
-      Chess::Position2D fromPosition,
-      std::shared_ptr<BoardView> toBoardView,
-      Chess::Position2D toPosition,
-      float duration,
-      std::function<void()> onComplete = nullptr
-  );
-private:
-  std::vector<std::function<void()>> updateQueue; // Queue for update callbacks
-public:
-
-
-
-private:
   std::vector<std::shared_ptr<BoardView>> _boardViews; // List of board views
   std::unique_ptr<CameraController> _cameraController; // Camera management
   std::unique_ptr<TimelineArrowRenderer> _arrowRenderer; // Timeline arrow rendering
   std::unique_ptr<PresentLineRenderer> _presentLineRenderer; // Present line rendering
 
 public:
-  // virtual void update
   virtual void clearBoardViews();
   virtual void addBoardView(std::shared_ptr<BoardView> boardView);
-  virtual void removeBoardView(std::shared_ptr<BoardView> boardView);
-  virtual std::vector<std::shared_ptr<BoardView>> getBoardViews() const;
 
 public:  
   // Focus camera on newest board

@@ -4,7 +4,6 @@
 #include "MenuCommand.h"
 #include "Scene/ConcreteScene/TestingScene.h"
 #include "Scene/SceneManager.h"
-// #include "GameStates/ConcreteGameStates/MainMenuState.h"
 #include "Menu/MenuItemView.h"
 #include "ResourceManager.h"
 #include "TestingState.h"
@@ -25,7 +24,7 @@ void TestingState::update(GameStateModel* context, float deltaTime) {
 }
 
 std::unique_ptr<GameState> TestingState::clone() const {
-    return std::make_unique<TestingState>();
+    return std::make_unique<TestingState>(_gameModeSelected);
 }
 
 std::unique_ptr<Scene> TestingState::createScene() const {

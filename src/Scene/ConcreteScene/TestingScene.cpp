@@ -6,9 +6,7 @@
 #include "Render/View.h"
 
 TestingScene::TestingScene(const std::string& gameMode)
-    : _gameModeSelected(gameMode) {
-  init();
-}
+    : _gameModeSelected(gameMode) {}
 
 void TestingScene::init(void) {
   #define TRY_LOAD_MODE(X) if (_gameModeSelected == Chess::NameOfGame<X>::value) { _game = Chess::createGame<X>(); }
@@ -26,23 +24,12 @@ void TestingScene::init(void) {
   _chessModel = std::make_shared<ChessModel>(_game);
   _chessView = std::make_shared<ChessView>(Vector3{5000, 5000, 1});
   _chessController = std::make_shared<ChessController>(*_chessModel, *_chessView);
-
-  // auto boardViews = _chessController->computeBoardView2DsFromModel();
-  // for (auto& boardView : boardViews) {
-  //   std::cout << "Adding BoardView with ID: " << boardView->getBoard()->getTimeLine()->ID() << std::endl;
-  // }
-  // _chessController->handleInput();
-  // for (auto timeLine : _chessModel->getTimeLines()) {
-  //   auto board = timeLine->back();
-  //   if (board) {
-  //     std::cout << "TimeLine ID: " << timeLine->ID() << ", Board Full Turn: " << board->fullTurnNumber() << ", Half Turn: " << board->halfTurnNumber() << std::endl;
-  //   }
-  // }
-
+  // Build the board views once so the first frame's input already has them to map clicks onto
+  _chessController->update(0.0f);
 }
 
 void TestingScene::update(float deltaTime) {
-  // std::cout << "Updating TestingScene..." << std::endl;
+  _chessController->update(deltaTime);
 }
 
 void TestingScene::handleInput() {

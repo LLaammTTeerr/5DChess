@@ -42,23 +42,6 @@ public:
   }
 };
 
-// class startGameCommand : public ICommand {
-// private:
-//   GameStateModel* _gameState;
-// public:
-//   startGameCommand(GameStateModel* gameState);
-
-//   void execute() override;
-//   virtual bool canUndo() const override { return false; }
-//   virtual bool canRedo() const override { return false; }
-//   void undo() override {}
-//   void redo() override {}
-//   std::string getName() const override { return "Start Game Command"; }
-//   std::unique_ptr<ICommand> clone() const override; 
-// };
-
-
-
 // Factory function declarations
 std::unique_ptr<ChangeStateCommand> createVersusCommand(
     GameStateModel* gameStateModel, SceneManager* sceneManager);
@@ -188,10 +171,7 @@ public:
 class ExitCommand : public ICommand {
 public:
   ExitCommand() = default;
-  void execute() override {
-    // CloseWindow();
-    exit(0);
-  };
+  void execute() override; // asks the main loop to quit (see SceneManager::requestQuit)
   virtual bool canUndo() const override { return false; }
   virtual bool canRedo() const override { return false; }
   void undo() override {}

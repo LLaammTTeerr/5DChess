@@ -117,8 +117,7 @@ IMenuView* NavigationMenuController::getMenuView() const {
     return _menuView.get();
 }
 
-InGameMenuController::InGameMenuController(ChessModel* chessModel, ChessView* chessView, std::shared_ptr<MenuComponent> menuSystem)
-    : _chessModel(chessModel), _chessView(chessView) {
+InGameMenuController::InGameMenuController(std::shared_ptr<MenuComponent> menuSystem) {
     _menuSystem = menuSystem; // Assign to the protected member from the base class
     setViewStrategy(std::make_unique<ButtonMenuView>()); // Default view strategy
 }
@@ -383,7 +382,7 @@ void SettingMenuController::handleInput() {
             workerItemViews[i]->setHovered(isHovered);
 
             if (isHovered && mouseClicked) {
-                _selectedPieceThemeIndex = static_cast<int>(i);
+                workerSelectedIndex() = static_cast<int>(i);
                 auto command = workerMenuItems[i]->cloneCommand();
                 if (command) {
                     command->execute(); // Execute the command
@@ -452,7 +451,7 @@ void SettingMenuController::update() {
                 itemView->setSelected(false);
             }
         }
-        int selectedPieceIndex = _selectedPieceThemeIndex;
+        int selectedPieceIndex = workerSelectedIndex();
         if (selectedPieceIndex >= 0 && selectedPieceIndex < (int)(workerItemViews.size())) {
             workerItemViews[selectedPieceIndex]->setSelected(true);
         }
@@ -467,7 +466,8 @@ void SettingMenuController::draw() const {
         _workerMenuView->draw(_workerMenu);
     }
 
-    if (_workerMenu && _selectedPieceThemeIndex >= 0) {
+    // Preview only applies to the piece theme submenu
+    if (_workerMenu && _selectedSettingIndex == 0 && _selectedPieceThemeIndex >= 0) {
         renderPreviewPieceTheme();
     }
 }

@@ -190,6 +190,10 @@ std::unique_ptr<MusicSelectCommand> createMusicSelectCommand(const std::string& 
     return std::make_unique<MusicSelectCommand>(music, settingsState);
 }
 
+void ExitCommand::execute() {
+    SceneManager::requestQuit();
+}
+
 std::unique_ptr<ICommand> ExitCommand::clone() const {
     return std::make_unique<ExitCommand>();
 }

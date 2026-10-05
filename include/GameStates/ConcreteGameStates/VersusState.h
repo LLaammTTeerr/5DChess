@@ -1,4 +1,5 @@
 #pragma once
+#include "gameState.h"
 #include <string>
 #include <memory>
 #include <vector>
@@ -11,6 +12,7 @@ class GameState;
 class SceneManager;
 class MenuComponent;
 class Scene;
+class MenuItemView;
 
 class VersusState : public GameState {
 private:
@@ -25,7 +27,6 @@ public:
     std::string getName() const override { return "VERSUS"; }
     std::unique_ptr<GameState> clone() const override;
     std::shared_ptr<MenuComponent> createNavigationMenu(GameStateModel* gameStateModel, SceneManager* sceneManager) override;
-    // virtual void renderMenu(std::shared_ptr<MenuComponent> menu) const override;
     virtual std::unique_ptr<Scene> createScene() const override;
     virtual std::vector<std::shared_ptr<MenuItemView>> createNavigationMenuButtonItemViews(std::shared_ptr<MenuComponent> menu) const override;
     

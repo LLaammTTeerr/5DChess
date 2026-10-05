@@ -5,12 +5,14 @@
 #include "Scene/SceneManager.h"
 #include "gameState.h"
 #include "PieceTheme.h"
-// #include "Menu/MenuStructure.h"
 
 int main() {
     SetConfigFlags(FLAG_MSAA_4X_HINT);
     // Initialize the window before using ResourceManager
     InitWindow(1400, 800, "5D Chess Game");
+    SetExitKey(KEY_NULL); // ESC toggles the in-game menu; don't let raylib close the window
+    // Resolve relative "assets/..." paths next to the binary regardless of launch directory
+    ChangeDirectory(GetApplicationDirectory());
     SetTargetFPS(60); // Set the frame rate
 
     ResourceManager &resourceManager = ResourceManager::getInstance();
@@ -18,18 +20,7 @@ int main() {
     SceneManager sceneManager(&gameState);
     ThemeManager::getInstance().setTheme(std::make_unique<ModernTheme>());
 
-    // TestApp app;
-    // app.init();
-    // app.update();
-    while(!WindowShouldClose()) {
-        
-
-        // app.update();
-        // app.render();
-    //     // Example of using a texture
-    //     Texture2D chessTexture = resourceManager.getTexture2D("chess");
-    //     DrawTexture(chessTexture, 100, 100, WHITE);
-
+    while(!WindowShouldClose() && !SceneManager::isQuitRequested()) {
         sceneManager.update(GetFrameTime());
        
         BeginDrawing();
@@ -39,4 +30,9 @@ int main() {
 
         EndDrawing();
     }
+
+    // Release GPU resources while the GL context is still alive
+    resourceManager.unloadAll();
+    CloseWindow();
+    return 0;
 }

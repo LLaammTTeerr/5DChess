@@ -36,7 +36,8 @@ void ButtonMenuView::draw(std::shared_ptr<MenuComponent> menuModel) const {
     const auto& menuItems = menuModel->getChildren();
     // Draw each item view
     for (size_t i = 0; i < _itemViews.size() && i < menuItems.size(); ++i) {
-        if (_itemViews[i] && menuItems[i] -> isEnabled()) {
+        // Disabled items are still drawn (greyed out by MenuItemView) but are not clickable
+        if (_itemViews[i]) {
             _itemViews[i] -> draw(menuItems[i]);
         }
     }
@@ -279,7 +280,7 @@ void ListMenuView::draw(std::shared_ptr<MenuComponent> menuModel) const {
     
     // Draw menu items with scroll offset
     for (size_t i = 0; i < _itemViews.size() && i < menuItems.size(); ++i) {
-        if (_itemViews[i] && menuItems[i]->isEnabled()) {
+        if (_itemViews[i]) {
             // Calculate item position with scroll offset
             Vector2 originalPos = _itemViews[i]->getPosition();
             Vector2 scrolledPos = { originalPos.x, originalPos.y - scrollOffset };
