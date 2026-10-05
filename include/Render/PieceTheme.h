@@ -7,6 +7,8 @@
 class IPieceTheme  {
 public:
   virtual Texture2D& getTexture(const std::string& pieceName) = 0;
+  /// True when "<piece>_blink" textures (eyes closed) exist, e.g. "white_pawn_blink"
+  virtual bool hasBlink() const { return false; }
   virtual ~IPieceTheme() = default;
 };
 
@@ -29,6 +31,7 @@ public:
 class PixelTheme : public IPieceTheme {
 public:
   Texture2D& getTexture(const std::string& pieceName) override;
+  bool hasBlink() const override { return true; }
 };
 
 // singleton class to manage themes
@@ -37,6 +40,7 @@ public:
   static ThemeManager& getInstance();
   void setTheme(std::unique_ptr<IPieceTheme> newTheme);
   Texture2D& getPieceTexture(const std::string& pieceName);
+  bool currentThemeHasBlink() { ensureInitialized(); return _theme->hasBlink(); }
 
   ThemeManager(const ThemeManager&) = delete;
   ThemeManager(ThemeManager&&) = delete;

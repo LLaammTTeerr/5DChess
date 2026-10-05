@@ -87,13 +87,16 @@ if(FDCHESS_BUILD_GAME)
     # licensing), as are files the code never loads (buttons/, backgroundimage/,
     # unused fonts, per-theme cancel icons, ...).
     set(WEB_ASSETS
-      chess.png 5DChess.png ChessBoardNoBound.png images/EndGame.png
+      chess.png ChessBoardNoBound.png images/EndGame.png
       fonts/PublicSans-Regular.ttf fonts/PublicSans-Bold.ttf fonts/Montserrat-Bold.ttf
       fonts/Nunito-VariableFont_wght.ttf fonts/intelone-mono-font-family-regular.ttf)
     foreach(theme 0 1 2 3)
       foreach(color black white)
         foreach(piece bishop king knight pawn queen rook)
           list(APPEND WEB_ASSETS images/Theme_${theme}/${color}_${piece}.png)
+          if(theme EQUAL 3)  # eyes-closed blink frames of the Pixel theme
+            list(APPEND WEB_ASSETS images/Theme_3/${color}_${piece}_blink.png)
+          endif()
         endforeach()
       endforeach()
     endforeach()

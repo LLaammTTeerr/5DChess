@@ -44,6 +44,8 @@ inline constexpr int button  = 20; // Public Sans Bold
 inline constexpr int body    = 18; // Public Sans
 inline constexpr int mono    = 16; // Intel One Mono
 inline constexpr int minimum = 14;
+inline constexpr int hero     = 96; // Montserrat Bold: main-menu title
+inline constexpr int subtitle = 26; // Public Sans Regular: main-menu tagline
 }
 
 namespace Space {
@@ -65,6 +67,8 @@ namespace Fonts {
 ::Font button();   // Public Sans Bold, Font::button
 ::Font body();     // Public Sans Regular, Font::body
 ::Font mono();     // Intel One Mono, Font::mono
+::Font hero();     // Montserrat Bold, Font::hero (main-menu title)
+::Font subtitle(); // Public Sans Regular, Font::subtitle
 // Unload every cached font and reset the cache (call before CloseWindow). Accessors reload lazily.
 void unloadAll();
 }

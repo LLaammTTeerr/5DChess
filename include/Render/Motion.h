@@ -37,6 +37,18 @@ inline float easeOutBack(float t) {
 }
 using EaseFn = float (*)(float);
 
+// Pixel-creature blink as a pure function of an id and the clock (no per-piece state, no allocation):
+// every id blinks once every 3-7 s for 120 ms, at its own phase. Always open under Reduce motion.
+inline bool blinkClosed(unsigned id, double timeSec, float closedFor = 0.12f) {
+    if (reduced()) return false;
+    unsigned h = id * 2654435761u; h ^= h >> 15; h *= 2246822519u; h ^= h >> 13;
+    const float f1 = static_cast<float>(h & 0xFFFFu) / 65535.0f;
+    const float f2 = static_cast<float>((h >> 16) & 0xFFFFu) / 65535.0f;
+    const float period = 3.0f + 4.0f * f1;
+    const float t = std::fmod(static_cast<float>(std::fmod(timeSec, 1000.0)) + f2 * period, period);
+    return t < closedFor;
+}
+
 // Clamp a frame time so a stalled frame never explodes a spring or skips an animation.
 inline float safeDt(float dt) { return dt < 0.0f ? 0.0f : (dt > maxStep ? maxStep : dt); }
 
