@@ -58,7 +58,7 @@ jobs:
           zips=(5DChess-*.zip)
           [ ${#zips[@]} -eq 1 ] || { echo "::error::expected exactly one zip, got: ${zips[*]}"; exit 1; }
           mv "${zips[0]}" "5DChess-${{ needs.verify-tag.outputs.version }}-${{ matrix.name }}.zip"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: 5DChess-${{ matrix.name }}
           path: build/5DChess-${{ needs.verify-tag.outputs.version }}-${{ matrix.name }}.zip
