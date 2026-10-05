@@ -6,12 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-05
+
 ### Added
 - Pixel piece theme (original pixel-art creatures) and its generator script (`scripts/gen_pixel_theme.py`).
 - Restyled UI: colour and typography tokens, button states, in-game HUD with turn/timeline count and hints, controls bar, end-game overlay, clearer selection, legal-move and capture highlights.
 - `theme_preview` developer tool (`-DFDCHESS_BUILD_TOOLS=ON`).
 
 ### Changed
+- Boards are drawn from White's side (White at the bottom, standard orientation).
 - The camera keeps boards clear of the HUD.
 - The present line is a thin line.
 
@@ -55,5 +58,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dead and unused files and code.
 - Tracked `.DS_Store` and `.vscode` files.
 
-[Unreleased]: https://github.com/LLaammTTeerr/5DChess/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/LLaammTTeerr/5DChess/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/LLaammTTeerr/5DChess/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/LLaammTTeerr/5DChess/releases/tag/v0.1.0

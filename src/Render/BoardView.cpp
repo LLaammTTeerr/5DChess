@@ -30,19 +30,13 @@ void BoardView2D::render() const {
         return;
     }
 
-    for (int i = 0; i < _boardDim; ++i) {
-        for (int j = 0; j < _boardDim; ++j) {
-            Vector2 position = {
-                _area.x + float(i) * (_area.width / float(1.0 * _boardDim)),
-                _area.y + float(j) * (_area.height / float(1.0 * _boardDim))
-            };
-            DrawRectangle(
-                position.x,
-                position.y,
-                float(_area.width) / float(1.0 * _boardDim),
-                float(_area.height) / float(1.0 * _boardDim),
-                (i + j) % 2 == 0 ? UI::Color::squareLight : UI::Color::squareDark // Alternate colors
-            );
+    for (int x = 0; x < _boardDim; ++x) {
+        for (int y = 0; y < _boardDim; ++y) {
+            const Rectangle sq = squareRect(Chess::Position2D(x, y));
+            // Engine (0,0) is light; after the rotation it is White's bottom-right corner
+            const bool light = (x + y) % 2 == 0;
+            DrawRectangle(sq.x, sq.y, sq.width, sq.height,
+                          light ? UI::Color::squareLight : UI::Color::squareDark);
         }
     }
     render_pieces();
@@ -53,6 +47,32 @@ void BoardView2D::render() const {
     } else {
         DrawRectangleLinesEx(_area, worldThickness(2.0f), UI::Color::border);
     }
+}
+
+// The view is the engine grid rotated 180 degrees: White (y=0) is at the BOTTOM and the
+// engine's x=0 file is at the RIGHT, which puts the queen on d1 and the king on e1.
+// Each mapping is its own inverse, so one helper serves both directions.
+int BoardView2D::colToScreen(int x) const { return _boardDim - 1 - x; }
+int BoardView2D::screenToCol(int screenCol) const { return _boardDim - 1 - screenCol; }
+int BoardView2D::rowToScreen(int y) const { return _boardDim - 1 - y; }
+int BoardView2D::screenToRow(int screenRow) const { return _boardDim - 1 - screenRow; }
+
+Rectangle BoardView2D::squareRect(Chess::Position2D pos) const {
+    const float sw = _area.width / _boardDim;
+    const float sh = _area.height / _boardDim;
+    return Rectangle{_area.x + colToScreen(pos.x()) * sw, _area.y + rowToScreen(pos.y()) * sh, sw, sh};
+}
+
+Chess::Position2D BoardView2D::worldToPosition(Vector2 world) const {
+    const int col = static_cast<int>((world.x - _area.x) / (_area.width / _boardDim));
+    const int row = static_cast<int>((world.y - _area.y) / (_area.height / _boardDim));
+    return Chess::Position2D{screenToCol(col), screenToRow(row)};
+}
+
+Chess::Position2D BoardView2D::mouseToPosition() const {
+    Vector2 mousePos = GetMousePosition();
+    if (_camera) mousePos = GetScreenToWorld2D(mousePos, *_camera);
+    return worldToPosition(mousePos);
 }
 
 float BoardView2D::worldThickness(float px) const {
@@ -82,40 +102,12 @@ void BoardView2D::setSupervisor(ChessView* supervisor) {
 }
 
 Chess::Position2D BoardView2D::getMouseOverPosition() const {
-    if (isMouseOverBoard()) {
-        Vector2 mousePos = GetMousePosition();
-        if (_camera) {
-            Vector2 worldMousePos = GetScreenToWorld2D(mousePos, *_camera);
-            return Chess::Position2D{
-                static_cast<int>((worldMousePos.x - _area.x) / (_area.width / _boardDim)),
-                static_cast<int>((worldMousePos.y - _area.y) / (_area.height / _boardDim))
-            };
-        } else {
-            return Chess::Position2D{
-                static_cast<int>((mousePos.x - _area.x) / (_area.width / _boardDim)),
-                static_cast<int>((mousePos.y - _area.y) / (_area.height / _boardDim))
-            };
-        }
-    }
+    if (isMouseOverBoard()) return mouseToPosition();
     return Chess::Position2D{-1, -1}; // Invalid position
 }
 
 Chess::Position2D BoardView2D::getMouseClickedPosition() const {
-    if (isMouseClickedOnBoard()) {
-        Vector2 mousePos = GetMousePosition();
-        if (_camera) {
-            Vector2 worldMousePos = GetScreenToWorld2D(mousePos, *_camera);
-            return Chess::Position2D{
-                static_cast<int>((worldMousePos.x - _area.x) / (_area.width / _boardDim)),
-                static_cast<int>((worldMousePos.y - _area.y) / (_area.height / _boardDim))
-            };
-        } else {
-            return Chess::Position2D{
-                static_cast<int>((mousePos.x - _area.x) / (_area.width / _boardDim)),
-                static_cast<int>((mousePos.y - _area.y) / (_area.height / _boardDim))
-            };
-        }
-    }
+    if (isMouseClickedOnBoard()) return mouseToPosition();
     return Chess::Position2D{-1, -1};
 }
 
@@ -127,9 +119,8 @@ void BoardView2D::render_highlightedPositions(std::vector<Chess::Position2D> pos
     const float sw = _area.width / _boardDim;
     const float sh = _area.height / _boardDim;
     for (const auto& pos : positions) {
-        const float x = _area.x + pos.x() * sw;
-        const float y = _area.y + pos.y() * sh;
-        const Vector2 center = {x + sw / 2, y + sh / 2};
+        const Rectangle sq = squareRect(pos);
+        const Vector2 center = {sq.x + sw / 2, sq.y + sh / 2};
         const bool occupied = std::any_of(_piecePositions.begin(), _piecePositions.end(),
                                           [&](const auto& p) { return p.first == pos; });
         if (occupied) {
@@ -144,12 +135,8 @@ void BoardView2D::render_highlightedPositions(std::vector<Chess::Position2D> pos
 
 void BoardView2D::render_hoverSquare(Chess::Position2D pos) const {
     if (pos.x() < 0 || pos.y() < 0 || pos.x() >= _boardDim || pos.y() >= _boardDim) return;
-    DrawRectangle(
-        _area.x + pos.x() * _area.width / _boardDim,
-        _area.y + pos.y() * _area.height / _boardDim,
-        _area.width / _boardDim,
-        _area.height / _boardDim,
-        UI::Color::hover);
+    const Rectangle sq = squareRect(pos);
+    DrawRectangle(sq.x, sq.y, sq.width, sq.height, UI::Color::hover);
 }
 
 void BoardView2D::render_highlightPiece(Chess::Position2D piecePosition) const {
@@ -157,12 +144,7 @@ void BoardView2D::render_highlightPiece(Chess::Position2D piecePosition) const {
         piecePosition.x() >= _boardDim || piecePosition.y() >= _boardDim) {
         return;
     }
-    const float squareWidth = _area.width / _boardDim;
-    const float squareHeight = _area.height / _boardDim;
-    const Rectangle square = {
-        _area.x + piecePosition.x() * squareWidth,
-        _area.y + piecePosition.y() * squareHeight,
-        squareWidth, squareHeight};
+    const Rectangle square = squareRect(piecePosition);
     // Selected piece: accent tint plus a 3 px accent outline (pieces are drawn underneath)
     DrawRectangleRec(square, UI::Color::hover);
     DrawRectangleLinesEx(square, worldThickness(UI::Space::outline), UI::Color::selected);
@@ -171,14 +153,11 @@ void BoardView2D::render_highlightPiece(Chess::Position2D piecePosition) const {
 void BoardView2D::render_pieces() const {
     for (const auto& [pos, pieceName] : _piecePositions) {
         Texture2D& texture = ThemeManager::getInstance().getPieceTexture(pieceName);
-        Vector2 piecePosition = {
-            _area.x + pos.x() * _area.width / _boardDim,
-            _area.y + pos.y() * _area.height / _boardDim
-        };
+        const Rectangle sq = squareRect(pos);
         DrawTexturePro(
                 texture,
                 Rectangle{0, 0, static_cast<float>(texture.width), static_cast<float>(texture.height)},
-                Rectangle{piecePosition.x, piecePosition.y, _area.width / _boardDim, _area.height / _boardDim},
+                sq,
                 Vector2{0, 0},
                 0.0f,
                 WHITE

@@ -86,6 +86,16 @@ private:
   /// World-space thickness that appears as `px` screen pixels at the current zoom
   float worldThickness(float px) const;
 
+  /// Engine file/row <-> on-screen column/row (0 = left/top); the board is rotated 180 degrees
+  int colToScreen(int x) const;
+  int screenToCol(int screenCol) const;
+  int rowToScreen(int y) const;
+  int screenToRow(int screenRow) const;
+  /// Screen-space (world) rectangle of an engine square
+  Rectangle squareRect(Chess::Position2D pos) const;
+  Chess::Position2D worldToPosition(Vector2 world) const;
+  Chess::Position2D mouseToPosition() const;
+
 public:
   BoardView2D() = default;
   ~BoardView2D() = default;
