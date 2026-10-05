@@ -6,7 +6,6 @@
 #include "Scene/SceneManager.h"
 #include "GameStates/ConcreteGameStates/SettingsState.h"
 #include "Menu/MenuItemView.h"
-#include "ResourceManager.h"
 #include "PieceTheme.h"
 
 // SettingsState implementation

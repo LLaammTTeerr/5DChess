@@ -1,7 +1,6 @@
 #pragma once
 #include "Scene.h"
 #include <string>
-#include "ResourceManager.h"
 #include "chess.h"
 #include "Render/View.h"
 #include "Render/RenModel.h"

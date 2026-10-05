@@ -1,10 +1,9 @@
 #include "Render/Motion.h"
+#include "App.h"
 
 namespace UI::Motion {
 
-namespace { bool g_reduced = false; }
-bool reduced() { return g_reduced; }
-void setReduced(bool on) { g_reduced = on; }
+bool reduced() { return App::current().settings.reduceMotion; }
 
 float Tween::effectiveDuration() const {
     if (!reduced()) return duration;

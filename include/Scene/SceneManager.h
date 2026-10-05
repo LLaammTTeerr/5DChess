@@ -40,12 +40,7 @@ public:
   // Game state access
   GameStateModel* getGameStateModel() const { return _gameStateModel; }
 
-  // Quit request (e.g. from the Exit menu item), honoured by the main loop
-  static void requestQuit() { _quitRequested = true; }
-  static bool isQuitRequested() { return _quitRequested; }
-
 private:
-  static inline bool _quitRequested = false;
   std::stack<std::unique_ptr<Scene>> _sceneStack;
 
   GameStateModel* _gameStateModel;

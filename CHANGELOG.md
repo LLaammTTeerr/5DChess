@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Internal: one `App` context (src/App.cpp) owns Assets, audio, settings, theme and scenes; `assets/manifest.txt` is the single list of loaded assets and also generates the web build's preload list. The ResourceManager/ThemeManager/UI::Fonts singletons are gone. Unused loads (`chess.png`, `images/EndGame.png`, `fonts/Nunito`) are no longer loaded or bundled in the web build.
 - The engine now implements the official 5D Chess rules ([docs/RULES.md](docs/RULES.md)): active and inactive timelines, the present, mandatory boards, check through time and across timelines, castling, en passant and promotion choice, with every rule traced to its source and compared move by move against the reference engine 5d-chess-js (`tools/refcheck`; Standard and Simplify modes; the three multi-timeline Misc modes have no reference mapping).
 - Checkmate and stalemate end the game (the end card reads "White wins!" / "Black wins!" with "Checkmate", or "Draw" with "Stalemate"). Capturing a king no longer exists: such moves are never offered.
 - The "does the side to move have a legal turn?" result search is non-blocking: it runs a little each frame, the HUD shows "Checking position..." meanwhile, and the game never freezes ([docs/SEARCH.md](docs/SEARCH.md)).

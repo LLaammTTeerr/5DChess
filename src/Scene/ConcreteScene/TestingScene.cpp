@@ -1,5 +1,4 @@
 #include "TestingScene.h"
-#include "ResourceManager.h"
 #include "Render/UITheme.h"
 #include <iostream>
 #include <raylib.h> // Assuming raylib is used for rendering

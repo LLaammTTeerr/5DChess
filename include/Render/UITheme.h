@@ -60,7 +60,7 @@ inline constexpr float radius = 0.25f;       // DrawRectangleRounded roundness
 inline constexpr float outline = 3.0f;       // selection outline
 }
 
-// Fonts are loaded lazily at their display size (after InitWindow) so text stays crisp.
+// Fonts are loaded lazily at their display size (Assets caches them per id and size) so text stays crisp.
 namespace Fonts {
 ::Font title();    // Montserrat Bold, Font::title
 ::Font section();  // Montserrat Bold, Font::section
@@ -69,8 +69,6 @@ namespace Fonts {
 ::Font mono();     // Intel One Mono, Font::mono
 ::Font hero();     // Montserrat Bold, Font::hero (main-menu title)
 ::Font subtitle(); // Public Sans Regular, Font::subtitle
-// Unload every cached font and reset the cache (call before CloseWindow). Accessors reload lazily.
-void unloadAll();
 }
 
 // In-game screen-space layout shared by the HUD, the action buttons and the camera safe area.

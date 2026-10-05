@@ -27,12 +27,10 @@
 #include "App.h"
 #include "Input.h"
 #include "TestMode.h"
-#include "ResourceManager.h"
 #include "Scene/SceneManager.h"
 #include "gameState.h"
 #include "PieceTheme.h"
 #include "Render/UITheme.h"
-#include "Audio/AudioManager.h"
 
 namespace {
 
@@ -155,20 +153,16 @@ int main(int argc, char** argv) {
   TestMode::apply();  // after InitWindow: raylib reseeds its RNG from the clock there
   SetExitKey(KEY_NULL);
   ChangeDirectory(GetApplicationDirectory());  // assets are copied next to the binary
-  AudioManager::instance().init();             // no-op in test mode, kept for parity with main.cpp
 
   int rc = 0;
-  ResourceManager& resources = ResourceManager::getInstance();
   {
-    GameStateModel gameState;
-    SceneManager sceneManager(&gameState);
-    ThemeManager::getInstance().setTheme(std::make_unique<ModernTheme>());
+    App app;  // same context as src/main.cpp (default Modern theme, audio stays silent in test mode)
 
     Input::Scripted& in = Input::scripted();
     Vector2 prev = in.position;
     int captured = 0;
     for (const FrameSpec& f : frames) {
-      if (WindowShouldClose() || SceneManager::isQuitRequested()) break;
+      if (WindowShouldClose() || app.quit) break;
       in.pressed[0] = f.press;
       if (f.press) in.down[0] = true;
       if (f.release) in.down[0] = false;
@@ -179,7 +173,7 @@ int main(int argc, char** argv) {
       in.keysPressed.clear();
       if (f.key) in.keysPressed.push_back(f.key);
 
-      App::frame(sceneManager, [&] {
+      app.frame([&] {
         if (f.capture.empty()) return;
         rlDrawRenderBatchActive();  // raylib batches draw calls until EndDrawing: flush so the read-back sees them
         Image shot = LoadImageFromScreen();
@@ -193,9 +187,6 @@ int main(int argc, char** argv) {
     }
     std::cout << "ui_script: " << frames.size() << " frames, " << captured << " captures -> " << outDir.string() << "\n";
   }
-  UI::Fonts::unloadAll();
-  resources.unloadAll();
-  AudioManager::instance().shutdown();
   CloseWindow();
   return rc;
 }

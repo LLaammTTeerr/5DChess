@@ -20,7 +20,6 @@ inline constexpr float exitDuration(float enter) { return enter * exitFactor; }
 
 // ---- Global "Reduce motion" setting: everything becomes instant or a short cross-fade ----
 bool reduced();
-void setReduced(bool on);
 
 // ---- Easing (t in [0,1]) ----
 inline float clamp01(float t) { return t < 0.0f ? 0.0f : (t > 1.0f ? 1.0f : t); }

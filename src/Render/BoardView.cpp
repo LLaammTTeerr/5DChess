@@ -1,3 +1,4 @@
+#include "App.h"
 #include "Input.h"
 #include "BoardView.h"
 #include "View.h"
@@ -183,7 +184,7 @@ const std::string* BoardView2D::pieceNameAt(Chess::Position2D pos) const {
 void BoardView2D::render_liftedPiece(Chess::Position2D pos, float lift) const {
     const std::string* name = pieceNameAt(pos);
     if (!name) return;
-    const PieceTextures& tex = ThemeManager::getInstance().getPieceTextures(*name);
+    const PieceTextures& tex = App::current().themes.getPieceTextures(*name);
     const Rectangle sq = squareRect(pos);
     const float up = lift * sq.height * 0.09f;
     const float grow = 1.0f + 0.06f * lift;
@@ -203,7 +204,7 @@ void BoardView2D::render_pieces() const {
     const double now = (_blinkEnabled ? Input::time() : 0.0);
     for (const auto& [pos, pieceName] : _piecePositions) {
         if (isHiddenSquare(pos)) continue;
-        const PieceTextures& tex = ThemeManager::getInstance().getPieceTextures(pieceName);
+        const PieceTextures& tex = App::current().themes.getPieceTextures(pieceName);
         Texture2D* texture = tex.open;
         if (_blinkEnabled && tex.blink) {
             const unsigned id = _blinkSeed * 64u + static_cast<unsigned>(pos.x() * 8 + pos.y()) * 2654435761u

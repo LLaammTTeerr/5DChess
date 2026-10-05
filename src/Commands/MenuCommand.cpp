@@ -1,3 +1,4 @@
+#include "App.h"
 #include "MenuCommand.h"
 #include "Audio/AudioManager.h"
 #include "SceneManager.h"
@@ -150,18 +151,7 @@ std::unique_ptr<ICommand> GameModeSelectCommand::clone() const {
 void ThemeSelectCommand::execute() {
     std::cout << "Selected theme: " << _theme << std::endl;
     
-    if (_theme == "Classic") {
-      ThemeManager::getInstance().setTheme(std::make_unique<ClassicTheme>());
-    }
-    else if (_theme == "Modern") {
-      ThemeManager::getInstance().setTheme(std::make_unique<ModernTheme>());
-    }
-    else if (_theme == "Fantasy") {
-      ThemeManager::getInstance().setTheme(std::make_unique<Modern2Theme>());
-    }
-    else if (_theme == "Pixel") {
-      ThemeManager::getInstance().setTheme(std::make_unique<PixelTheme>());
-    }
+    if (const PieceTheme* theme = Themes::byName(_theme)) App::current().themes.setTheme(*theme);
 }
 
 std::unique_ptr<ICommand> ThemeSelectCommand::clone() const {
@@ -174,7 +164,7 @@ void MusicSelectCommand::execute() {
     std::cout << "Selected music: " << _music << std::endl;
     
     // Music is global: apply through AudioManager so it persists across scenes
-    AudioManager::instance().playMusic(_music);
+    App::current().audio.playMusic(_music);
 
     // Keep the scene-local state in sync
     if (_settingsState) {
@@ -199,7 +189,7 @@ std::unique_ptr<MusicSelectCommand> createMusicSelectCommand(const std::string& 
 }
 
 void SfxToggleCommand::execute() {
-    auto& audio = AudioManager::instance();
+    auto& audio = App::current().audio;
     audio.setSfxEnabled(!audio.sfxEnabled());
 }
 
@@ -210,7 +200,7 @@ std::unique_ptr<ICommand> SfxToggleCommand::clone() const {
 }
 
 void MotionToggleCommand::execute() {
-    UI::Motion::setReduced(!UI::Motion::reduced());
+    App::current().settings.reduceMotion = !App::current().settings.reduceMotion;
 }
 
 std::unique_ptr<ICommand> MotionToggleCommand::clone() const {
@@ -220,7 +210,7 @@ std::unique_ptr<ICommand> MotionToggleCommand::clone() const {
 }
 
 void ExitCommand::execute() {
-    SceneManager::requestQuit();
+    App::current().quit = true;
 }
 
 std::unique_ptr<ICommand> ExitCommand::clone() const {
