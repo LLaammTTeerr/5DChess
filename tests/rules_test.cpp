@@ -409,9 +409,13 @@ TEST_CASE("checkmate: a back-rank mate ends the game with a win for the mating s
   game.makeMove(mv(game.tip(0), 3, 0, 3, 3));
   REQUIRE(game.canSubmit());
   game.submitTurn();
+  CHECK(game.result() == GameResult::Ongoing);  // submitTurn() does not search: the result is armed, not decided
+  CHECK(game.resultPending());
+  CHECK(game.resolveResult());
+  CHECK_FALSE(game.resultPending());
   CHECK(game.result() == GameResult::WhiteWins);
   CHECK(game.inCheck());                       // Black to move, in check
-  CHECK(game.findLegalTurn() == TurnSearch::None);
+  CHECK(game.findLegalTurn() == TurnSearch::Status::None);
   CHECK_FALSE(game.canSubmit());
 }
 
@@ -423,9 +427,10 @@ TEST_CASE("checkmate: the same position with an escape square is not mate") {
   game.place(0, 1, 2, make<Pawn>(PieceColor::PIECEBLACK));   // (0,2) is free now: the king can step there
   game.makeMove(mv(game.tip(0), 3, 0, 3, 3));
   game.submitTurn();
+  game.resolveResult();
   CHECK(game.result() == GameResult::Ongoing);
   CHECK(game.inCheck());
-  CHECK(game.findLegalTurn() == TurnSearch::Found);
+  CHECK(game.findLegalTurn() == TurnSearch::Status::Found);
 }
 
 TEST_CASE("stalemate: no legal turn and not in check is a draw") {
@@ -436,15 +441,16 @@ TEST_CASE("stalemate: no legal turn and not in check is a draw") {
   game.makeMove(mv(game.tip(0), 3, 1, 1, 1));
   REQUIRE(game.canSubmit());
   game.submitTurn();
+  game.resolveResult();
   CHECK(game.result() == GameResult::Draw);
   CHECK_FALSE(game.inCheck());
-  CHECK(game.findLegalTurn() == TurnSearch::None);
+  CHECK(game.findLegalTurn() == TurnSearch::Status::None);
 }
 
-TEST_CASE("game end: an exhausted search budget leaves the game Ongoing; the search reports Unknown") {
+TEST_CASE("game end: a search that has not finished leaves the game Ongoing and reports Running") {
   StandardGame game;
-  CHECK(game.findLegalTurn(0) == TurnSearch::Unknown);
-  CHECK(game.findLegalTurn() == TurnSearch::Found);
+  CHECK(game.findLegalTurn(0) == TurnSearch::Status::Running);
+  CHECK(game.findLegalTurn() == TurnSearch::Status::Found);
 
   Sandbox mate(4);
   mate.place(0, 0, 0, make<King>(PieceColor::PIECEWHITE));
@@ -452,13 +458,16 @@ TEST_CASE("game end: an exhausted search budget leaves the game Ongoing; the sea
   mate.place(0, 0, 3, make<King>(PieceColor::PIECEBLACK));
   mate.place(0, 0, 2, make<Pawn>(PieceColor::PIECEBLACK));
   mate.place(0, 1, 2, make<Pawn>(PieceColor::PIECEBLACK));
-  mate.setTurnSearchBudget(0);                 // too small to prove anything
   mate.makeMove(mv(mate.tip(0), 3, 0, 3, 3));
   mate.submitTurn();
+  CHECK(mate.stepResultSearch(0));             // no node budget: nothing proven yet
   CHECK(mate.result() == GameResult::Ongoing);
+  CHECK(mate.resultPending());
+  CHECK_FALSE(mate.stepResultSearch(1000000)); // done
+  CHECK(mate.result() == GameResult::WhiteWins);
 }
 
-TEST_CASE("clone: carries unmoved flags, the result and the search budget") {
+TEST_CASE("clone: carries unmoved flags and the result, but not a pending search") {
   Sandbox game(4);
   game.place(0, 0, 0, make<King>(PieceColor::PIECEWHITE));
   game.place(0, 3, 0, make<Rook>(PieceColor::PIECEWHITE));
@@ -467,9 +476,11 @@ TEST_CASE("clone: carries unmoved flags, the result and the search budget") {
   game.place(0, 1, 2, make<Pawn>(PieceColor::PIECEBLACK));
   game.makeMove(mv(game.tip(0), 3, 0, 3, 3));
   game.submitTurn();
+  auto pendingCopy = game.clone();
+  CHECK_FALSE(pendingCopy->resultPending());
+  game.resolveResult();
   auto copy = game.clone();
   CHECK(copy->result() == GameResult::WhiteWins);
-  CHECK(copy->turnSearchBudget() == game.turnSearchBudget());
   CHECK(snapshot(*copy) == snapshot(game));
   auto moved = copy->timeLine(0)->back()->getPiece({3, 3});
   REQUIRE(moved != nullptr);

@@ -501,11 +501,70 @@ struct Threat {
 
 enum class GameResult { Ongoing, WhiteWins, BlackWins, Draw };
 
-/** Outcome of the bounded search for a legal turn. */
-enum class TurnSearch {
-  Found,   // a legal turn exists
-  None,    // proven: no legal turn exists
-  Unknown, // node budget exhausted
+class IGame;
+
+/**
+ * Resumable search for a legal turn of the side to move (continuing from the moves already pending, if any).
+ *
+ * A turn is legal when every mandatory board has been moved on (or made irrelevant by a jump into the past), at least one
+ * move was made, and the opponent cannot capture any of the mover's kings (IGame::canSubmit). The search proves either
+ * that such a turn exists (Found, turn() lists its moves) or that none does (None: checkmate or stalemate). It is
+ * exhaustive, but it works on a private compact copy of the position, prunes every position in which a king can already
+ * be captured (captures stay possible whatever else is played), plays moves of independent boards in one canonical
+ * order, and ignores moves of optional boards that cannot affect the outcome (see src/chess.cpp for the argument), so
+ * the mates seen in play are proven within a few thousand nodes.
+ *
+ * It never recurses across step() calls: all state lives in an explicit stack, so step() can be called with a small
+ * budget once per frame. The IGame it was created from may change afterwards; the search keeps its own snapshot.
+ */
+class TurnSearch {
+public:
+  enum class Status {
+    Found,   // a legal turn exists: turn()
+    None,    // proven: no legal turn exists
+    Running, // not decided yet: call step() again
+  };
+
+  /** One move of a turn; `promotion` is what a pawn reaching the last rank becomes (otherwise unused). */
+  struct Step {
+    Move move;
+    PieceType promotion = PieceType::Queen;
+  };
+
+  struct Options {
+    /** false: only the threat pruning, no other reduction; for cross-checking. Overrides the switches below. */
+    bool reductions = true;
+    /** Switches of the individual reductions (test knobs, see src/chess.cpp F3, F4, F5, phase 1). */
+    bool commutation = true, irrelevant = true, forwardCheck = true, cheapFirst = true;
+  };
+
+  explicit TurnSearch(const IGame& game);
+  TurnSearch(const IGame& game, Options options);
+  ~TurnSearch();
+  TurnSearch(const TurnSearch&) = delete;
+  TurnSearch& operator=(const TurnSearch&) = delete;
+
+  /**
+   * Continue the search for at most `nodeBudget` nodes (a node is one move tried, whether it is then abandoned or
+   * kept). Returns the status afterwards; once it is not Running it stays that way. A node costs a few microseconds,
+   * roughly independent of the position, so a budget of a few thousand fits in a frame.
+   */
+  Status step(int nodeBudget);
+  Status status(void) const;
+  long long nodes(void) const;
+
+  /** The moves of a legal turn, in playing order; valid when status() == Found. They refer to boards of the game. */
+  const std::vector<Step>& turn(void) const;
+
+  /** Whether the side to move is in check in the position the search started from (what IGame::inCheck() says). */
+  bool inCheck(void) const;
+
+  /** Test hook: can `victim`'s king be captured in `game` as it is (same answer as !IGame::threatsAgainst().empty())? */
+  static bool kingCapturable(const IGame& game, PieceColor victim);
+
+private:
+  struct Impl;
+  std::unique_ptr<Impl> _impl;
 };
 
 class RuleEngine {
@@ -523,9 +582,10 @@ public:
 const std::vector<std::array<int, 4>>& pieceVectors(PieceType type);
 
 class IGame {
+  friend class TurnSearch;
 public:
   IGame(int N) : _N(N), _presentHalfTurn(0), _currentTurnColor(PieceColor::PIECEWHITE) {}
-  virtual ~IGame() = default;
+  virtual ~IGame();
 
   /**
    * Cheap full-state copy for search. TimeLine objects are deep-copied (their vectors of shared_ptr<Board> are
@@ -569,10 +629,30 @@ public:
 
   /**
    * End the current turn and hand the move to the opponent. Requires canSubmit() (asserted).
-   * Afterwards the present, the side to move and result() are updated (result() runs a bounded search for a legal
-   * turn of the new side to move, see findLegalTurn).
+   * Afterwards the present and the side to move are updated and result() is Ongoing; the question whether the new side to
+   * move has a legal turn at all is NOT answered here (that search can take long): submitTurn() only arms it, see
+   * resultPending(). The caller drives it a little at a time, e.g. once per frame:
+   *
+   *   game.submitTurn();
+   *   while (game.resultPending()) game.stepResultSearch(2000);   // or resolveResult()
+   *   // result() is now WhiteWins / BlackWins / Draw if the side to move had no legal turn, else still Ongoing
+   *
+   * Moves made while the search is pending are fine; the search works on a snapshot of the position at submitTurn().
    */
   void submitTurn(void);
+
+  /** True between submitTurn() and the end of the legal-turn search it armed. */
+  inline bool resultPending(void) const { return _resultSearch != nullptr; }
+
+  /**
+   * Run the pending legal-turn search for at most `nodeBudget` nodes (see TurnSearch::step). When it proves that the side
+   * to move has no legal turn, result() becomes the other side's win (if the side to move is in check: checkmate) or a
+   * draw (stalemate). Returns resultPending() afterwards; does nothing if nothing is pending.
+   */
+  bool stepResultSearch(int nodeBudget);
+
+  /** Convenience: steps until the search has decided or `maxNodes` nodes were used. Returns !resultPending(). */
+  bool resolveResult(long long maxNodes = 100000000);
 
   /**
    * True if the pending turn may be submitted: at least one move was made, every mandatory board has been moved on
@@ -604,18 +684,14 @@ public:
   std::vector<Threat> threatsAgainst(PieceColor victim) const;
 
   /**
-   * Bounded depth-first search over sets of moves for a legal turn of the side to move (continuing from the pending
-   * moves, if any). Every move tried costs one node.
+   * One-shot form of TurnSearch: runs a search from the current position (pending moves included) for at most
+   * `nodeBudget` nodes. Running means the budget was exhausted.
    */
-  TurnSearch findLegalTurn(int nodeBudget = 200000) const;
-
-  /** Node budget used by submitTurn() when it evaluates result(). */
-  inline int turnSearchBudget(void) const { return _turnSearchBudget; }
-  inline void setTurnSearchBudget(int budget) { _turnSearchBudget = budget; }
+  TurnSearch::Status findLegalTurn(int nodeBudget = 1000000) const;
 
   /**
-   * Ongoing / WhiteWins / BlackWins / Draw. Decided in submitTurn(): checkmate (no legal turn, in check) is a win
-   * for the other side, stalemate (no legal turn, not in check) a draw. An exhausted search budget counts as Ongoing.
+   * Ongoing / WhiteWins / BlackWins / Draw. Ongoing until a legal-turn search proves otherwise (see submitTurn,
+   * stepResultSearch): checkmate (no legal turn, in check) is a win for the other side, stalemate a draw.
    */
   inline GameResult result(void) const { return _result; }
 
@@ -677,7 +753,7 @@ protected:
   std::vector<std::vector<int>> _undoBuffer;
   RuleEngine _rule;
   GameResult _result = GameResult::Ongoing;
-  int _turnSearchBudget = 200000;
+  std::unique_ptr<TurnSearch> _resultSearch; // armed by submitTurn(), never copied
   // Range of the timeline IDs present at the start of the game; timelines outside it were created by a player
   // (above: White, below: Black). Set while the game is being set up (_addTimeLine), frozen by the first move.
   int _origMin = INT_MAX;
@@ -686,8 +762,6 @@ protected:
 
   std::vector<SelectedPosition> _movesFor(PieceColor mover, SelectedPosition selected) const;
   std::vector<Threat> _threatsAgainst(PieceColor victim, bool firstOnly) const;
-  TurnSearch _search(int& nodes, int budget);
-  void _evaluateResult(void);
   void _passMandatoryBoards(std::map<const Board*, std::shared_ptr<Board>>& passedFrom);
   IGame(const IGame& other);
   IGame& operator=(const IGame&) = delete;

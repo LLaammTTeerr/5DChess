@@ -9,6 +9,7 @@
 #include <climits>
 #include <algorithm>
 #include <cstdlib>
+#include <map>
 
 // using namespace Chess;
 namespace Chess {
@@ -475,7 +476,6 @@ IGame::IGame(const IGame& other)
     _undoBuffer(other._undoBuffer),
     _rule(other._rule),
     _result(other._result),
-    _turnSearchBudget(other._turnSearchBudget),
     _origMin(other._origMin),
     _origMax(other._origMax),
     _setupDone(other._setupDone) {
@@ -563,59 +563,942 @@ std::vector<Threat> IGame::checkingAttacks(void) const {
   return threats;
 }
 
-TurnSearch IGame::_search(int& nodes, int budget) {
-  if (!_currentTurnMoves.empty() and canSubmit()) return TurnSearch::Found;
-  // Pieces that can move, mandatory boards first: they are the ones every legal turn needs. Moves are generated
-  // lazily per piece, since a legal turn is usually found among the first few.
-  std::vector<SelectedPosition> sources;
-  const auto mandatory = mandatoryBoards();
-  auto collect = [&](const std::shared_ptr<Board>& board) {
-    for (int x = 0; x < board->dim(); ++x) {
-      for (int y = 0; y < board->dim(); ++y) {
-        auto piece = board->getPiece({x, y});
-        if (piece and piece->color() == _currentTurnColor) sources.emplace_back(board, Position2D(x, y));
+// ---------------------------------------------------------------------------------------------------------------
+// TurnSearch
+//
+// The question: does the side to move ("the mover", M) have a legal turn? A turn is a sequence of moves; it is legal when
+// at least one move was made, no mandatory board is left, and no king of M can be captured by the opponent ("E") on a
+// board that ends on E's turn. The search is exhaustive. It is fast because of these facts about the rules.
+//
+// F1 (moves). All moves M can make this turn are fixed at its start: a move starts on a tip of M's colour and ends on a
+//    board of M's colour. Moves create boards of E's colour only (a move extends a timeline by one board, or forks a
+//    new one whose first board follows the target), so no new board of M's colour appears and none changes. The set U of
+//    (piece, target) pairs therefore only SHRINKS during the turn, when a source tip has been used up (a tip is used up
+//    by moving from it or onto it). Candidates are generated once, at the root.
+// F2 (captures are permanent: pruning). Boards never change, boards and timelines only get added, and E's tips stay E's
+//    tips. A pair (E piece on an E tip, M king on a board of E's colour) in which the piece can capture the king stays
+//    such a pair when more boards exist (a sliding path stays open: new boards only exist at the ends of timelines, and a
+//    board cannot become non-empty). So a position in which a king is already capturable can never be repaired: prune it.
+//    The whole check is a plain pair test on the E tips x the kings (`attacks`), no move lists. The same argument gives
+//    "dead" candidates: if the board a move leaves behind (its source half alone) already allows a capture, the move can
+//    never be part of a legal turn, whatever else is played and wherever it lands; if its two halves together do (it
+//    extends a tip), it is dead as long as that tip is still a tip.
+// F3 (commutation). Two moves from different tips commute (same result in either order, each still playable after the
+//    other) unless one moves onto the other's source tip, both move onto the same tip, or both fork a timeline. Of two
+//    independent moves only one order is searched: moves that fork a timeline come after those that do not (a fork
+//    changes the IDs of later forks), and otherwise the order of a ranking of the source boards.
+// F4 (irrelevant moves). A move from an optional board (not one that has to be moved on) that neither forks a timeline nor
+//    lands on a mandatory board cannot change which boards are mandatory, and only adds boards (so only adds threats): a
+//    legal turn without it stays legal, UNLESS another move of the turn lands on its source or target tip (then that move
+//    forks instead of extending), or the board is on a timeline that a fork of M can still activate. Such a move is only
+//    tried in those cases.
+// F5 (forward checking). A mandatory board stops being mandatory only if a move leaves it, a move lands on it, or a fork
+//    pulls the present back before it. If none of those moves is still alive (not dead by F2) the position is hopeless.
+// The proof that F3/F4 keep completeness is by taking a shortest legal turn: F4 never removes one of its moves, and
+// sorting it by adjacent swaps of independent moves (F3) gives a sequence the search visits.
+// ---------------------------------------------------------------------------------------------------------------
+namespace {
+
+struct Brd {
+  std::array<uint8_t, 64> c; // cells, index y * n + x (Cell::v)
+};
+
+struct SLine {
+  bool exists = false;
+  int forkAt = 0;
+  std::vector<int> boards; // arena indices; board k is half-turn forkAt + 1 + k
+};
+
+struct Cand {
+  int srcBid;
+  int srcTl, srcHalf;
+  int8_t sx, sy;
+  int dstTl, dstHalf;
+  int8_t dx, dy;
+  int dstBid;      // bid of the destination if it is a tip of the mover's colour at the root, else -1
+  uint8_t promo;   // 0, or PieceType + 1 of the promotion piece
+  bool capture, king;
+  int8_t kind = 0; // 0: within a board, 1: onto a tip of another board, 2: into the past (forks a timeline)
+  int8_t srcDeadF = -1, extDeadF = -1; // -1 unknown, 0 alive, 1 dead (F2), computed at the root
+};
+
+struct TipRef {
+  int tl, half, arena;
+  uint8_t count;
+  std::array<uint8_t, 64> pos; // squares (y * n + x) of the E pieces on this board
+};
+
+struct KingPos {
+  int tl, half;
+  int8_t x, y;
+};
+
+struct Undo {
+  int srcTl = 0, dstTl = 0, createdId = 0;
+  bool sameBoard = false, created = false, targetDone = false;
+  int oldMin = 0, oldMax = 0;
+  size_t arenaSize = 0, tipSize = 0, kingSize = 0;
+};
+
+} // namespace
+
+struct TurnSearch::Impl {
+  Options opt;
+  // Snapshot -------------------------------------------------------------------------------------------------------
+  int n = 0;
+  bool castling = true, doubleStep = true;
+  PieceColor mover = PieceColor::PIECEWHITE, enemy = PieceColor::PIECEBLACK;
+  std::vector<Brd> arena;
+  std::vector<std::shared_ptr<Board>> realBoards; // arena index -> board of the game, for the root boards
+  int base = 0;
+  std::vector<SLine> lines;
+  int minId = 0, maxId = 0, origMin = 0, origMax = 0;
+  std::vector<TipRef> enemyTips;
+  std::vector<KingPos> kings; // kings of the mover on every board of the enemy's colour
+  int pending = 0;            // moves already made in the game's current turn
+  int rootMinId = 0, rootMaxId = 0;
+  bool rootInCheckFlag = false;
+  // Root tips of the mover's colour ("bids") and the candidates ---------------------------------------------------
+  int nBids = 0;
+  std::vector<int> bidTl, bidHalf, bidRank;
+  std::vector<int> bidOfLine; // by line index; -1 if the line has no tip of the mover's colour at the root
+  std::vector<Cand> cands;
+  std::vector<std::vector<int>> fromBid; // per bid: its candidates
+  std::vector<std::vector<int>> byDst;   // per bid: candidates from OTHER boards that land on it
+  std::vector<int> forkCands;            // cross-board candidates whose target is not a tip at the root
+  std::vector<int8_t> nodeSrc, nodeFull; // dead flags found at the current node (1), valid in its subtree
+  std::vector<int> trail;
+  int phase = 1; // 1: optional boards only when they obviously matter (fast, incomplete); 2: everything (complete)
+  std::vector<long long> bidFail;
+  long long restartLimit = 20000, restartAt = 20000;
+  size_t initCursor = 0; // candidates whose dead flags have been computed so far
+  std::vector<char> consumed;
+  // Search ---------------------------------------------------------------------------------------------------------
+  struct Frame {
+    size_t next = 0;
+    int via = -1;           // candidate that led here
+    bool viaCreated = false;
+    std::vector<char> mand; // mandatory bids at this node
+    int mandCount = 0;
+    int present = 0;
+    bool activationLowers = false;
+    bool nextActive = false;
+    size_t trailMark = 0;
+  };
+  std::vector<Frame> stack;
+  std::vector<Undo> undos;
+  std::vector<char> usedDst; // per applied move: did it use up the destination tip as well
+  Status st = Status::Running;
+  long long nodeCount = 0;
+  int budgetLeft = 0;
+  std::vector<Step> found;
+  long long prunedThreat = 0, prunedForward = 0;
+  size_t maxDepth = 0;
+
+  // Access interface for generateMoves ---------------------------------------------------------------------------
+  inline int dim() const { return n; }
+  inline bool castlingEnabled() const { return castling; }
+  inline bool doubleStepEnabled() const { return doubleStep; }
+  inline const SLine* lineAt(int tl) const {
+    const int i = tl - base;
+    return (i < 0 || i >= int(lines.size())) ? nullptr : &lines[size_t(i)];
+  }
+  inline SLine* lineAt(int tl) {
+    const int i = tl - base;
+    return (i < 0 || i >= int(lines.size())) ? nullptr : &lines[size_t(i)];
+  }
+  inline int tipHalf(const SLine& l) const { return l.forkAt + int(l.boards.size()); }
+  inline bool exists(int tl, int half) const {
+    const SLine* l = lineAt(tl);
+    if (!l || !l->exists) return false;
+    const int pos = half - l->forkAt - 1;
+    return pos >= 0 && pos < int(l->boards.size());
+  }
+  inline Cell at(int tl, int half, int x, int y) const {
+    const SLine* l = lineAt(tl);
+    Cell c;
+    c.v = arena[size_t(l->boards[size_t(half - l->forkAt - 1)])].c[size_t(y * n + x)];
+    return c;
+  }
+  inline bool isActive(int id) const {
+    if (id >= origMin && id <= origMax) return true;
+    const int whiteCreated = std::max(0, maxId - origMax);
+    const int blackCreated = std::max(0, origMin - minId);
+    if (id > origMax) return id - origMax <= blackCreated + 1;
+    return origMin - id <= whiteCreated + 1;
+  }
+
+  Impl(const IGame& game, Options options, PieceColor moverColor, bool forQuery);
+
+  // --- position helpers ---------------------------------------------------------------------------------------------
+  // Fills `out` with the mandatory bids; returns their number and the present.
+  int mandatoryBids(std::vector<char>& out, int& presentOut) const {
+    out.assign(size_t(nBids), 0);
+    int present = INT_MAX;
+    for (int id = minId; id <= maxId; ++id) {
+      const SLine* l = lineAt(id);
+      if (l && l->exists && isActive(id)) present = std::min(present, tipHalf(*l));
+    }
+    presentOut = present;
+    if (present == INT_MAX || present % 2 != int(mover)) return 0;
+    int count = 0;
+    for (int id = minId; id <= maxId; ++id) {
+      const SLine* l = lineAt(id);
+      if (!l || !l->exists || !isActive(id) || tipHalf(*l) != present) continue;
+      const int bid = bidOfLine[size_t(id - base)];
+      assert(bid >= 0);
+      out[size_t(bid)] = 1;
+      ++count;
+    }
+    return count;
+  }
+
+  void pushTip(int tl, int half, int arenaIdx) {
+    TipRef t;
+    t.tl = tl;
+    t.half = half;
+    t.arena = arenaIdx;
+    t.count = 0;
+    const Brd& b = arena[size_t(arenaIdx)];
+    for (int i = 0; i < n * n; ++i) {
+      Cell c;
+      c.v = b.c[size_t(i)];
+      if (!c.empty() and c.color() == enemy) t.pos[t.count++] = uint8_t(i);
+    }
+    enemyTips.push_back(t);
+  }
+
+  void pushKings(int tl, int half, int arenaIdx) {
+    const Brd& b = arena[size_t(arenaIdx)];
+    for (int i = 0; i < n * n; ++i) {
+      Cell c;
+      c.v = b.c[size_t(i)];
+      if (!c.empty() and c.type() == PieceType::King and c.color() == mover)
+        kings.push_back(KingPos{tl, half, int8_t(i % n), int8_t(i / n)});
+    }
+  }
+
+  // Can the enemy piece `a` on (tla, ha, ax, ay) capture the king k? Mirrors generateMoves for the enemy piece.
+  inline bool attacks(Cell a, int ax, int ay, int tla, int ha, const KingPos& k) const {
+    const int dx = k.x - ax, dy = k.y - ay, dz = (k.half - ha) / 2, dw = k.tl - tla;
+    const int adx = std::abs(dx), ady = std::abs(dy), adz = std::abs(dz), adw = std::abs(dw);
+    const int m = std::max(std::max(adx, ady), std::max(adz, adw));
+    if (m == 0) return false;
+    switch (a.type()) {
+      case PieceType::Knight: {
+        int twos = 0, ones = 0;
+        for (int v : {adx, ady, adz, adw}) {
+          if (v == 2) ++twos;
+          else if (v == 1) ++ones;
+          else if (v != 0) return false;
+        }
+        return twos == 1 && ones == 1;
+      }
+      case PieceType::King:
+        return m == 1;
+      case PieceType::Pawn: {
+        const int d = a.color() == PieceColor::PIECEWHITE ? 1 : -1;
+        return (dz == 0 && dw == 0 && dy == d && adx == 1) || (dx == 0 && dy == 0 && dw == -d && adz == 1);
+      }
+      case PieceType::Rook:
+      case PieceType::Bishop:
+      case PieceType::Queen: {
+        int nz = 0;
+        for (int v : {adx, ady, adz, adw}) {
+          if (v == 0) continue;
+          if (v != m) return false;
+          ++nz;
+        }
+        if (a.type() == PieceType::Rook && nz != 1) return false;
+        if (a.type() == PieceType::Bishop && nz != 2) return false;
+        const int ux = (dx > 0) - (dx < 0), uy = (dy > 0) - (dy < 0), uz = (dz > 0) - (dz < 0), uw = (dw > 0) - (dw < 0);
+        for (int s = 1; s < m; ++s) {
+          const int tl = tla + s * uw, half = ha + 2 * s * uz, x = ax + s * ux, y = ay + s * uy;
+          if (!exists(tl, half) || !at(tl, half, x, y).empty()) return false;
+        }
+        return true;
       }
     }
-  };
-  for (const auto& board : mandatory) collect(board);
-  for (const auto& board : getMoveableBoards()) {
-    if (std::find(mandatory.begin(), mandatory.end(), board) == mandatory.end()) collect(board);
+    return false;
   }
-  bool unknown = false;
-  for (const SelectedPosition& from : sources) {
-    for (const SelectedPosition& to : _movesFor(_currentTurnColor, from)) {
-      if (nodes >= budget) return TurnSearch::Unknown;
-      ++nodes;
-      makeMove(Move{from, to});
-      const TurnSearch r = _search(nodes, budget);
-      undo();
-      if (r == TurnSearch::Found) return r;
-      if (r == TurnSearch::Unknown) unknown = true;
+
+  static inline bool compatible(int dz, int dw) {
+    const int a = std::abs(dz), b = std::abs(dw);
+    return a == b || a == 0 || b == 0 || (a == 1 && b == 2) || (a == 2 && b == 1);
+  }
+
+  // Can any enemy piece on an enemy tip capture any king of the mover?
+  bool anyThreat() const {
+    for (const TipRef& e : enemyTips) {
+      for (const KingPos& k : kings) {
+        if (!compatible((k.half - e.half) / 2, k.tl - e.tl)) continue;
+        const Brd& b = arena[size_t(e.arena)];
+        for (int i = 0; i < e.count; ++i) {
+          const int sq = e.pos[size_t(i)];
+          Cell a;
+          a.v = b.c[size_t(sq)];
+          if (attacks(a, sq % n, sq / n, e.tl, e.half, k)) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  // --- applying a move ------------------------------------------------------------------------------------------------
+  inline Cell arrivingCell(const Cand& c, Cell piece) const {
+    return Cell::make(c.promo ? PieceType(c.promo - 1) : piece.type(), mover, false);
+  }
+
+  // The source half of a move: the board its source timeline gets (for a move within a board, the whole move).
+  void applySource(const Cand& c, Undo& u) {
+    u.arenaSize = arena.size();
+    u.tipSize = enemyTips.size();
+    u.kingSize = kings.size();
+    u.oldMin = minId;
+    u.oldMax = maxId;
+    u.srcTl = c.srcTl;
+    u.dstTl = c.dstTl;
+    u.created = false;
+    u.targetDone = false;
+    u.sameBoard = c.dstTl == c.srcTl && c.dstHalf == c.srcHalf;
+
+    SLine& S = *lineAt(c.srcTl);
+    Brd nb = arena[size_t(S.boards.back())];
+    const int si = c.sy * n + c.sx, di = c.dy * n + c.dx;
+    Cell piece;
+    piece.v = nb.c[size_t(si)];
+    nb.c[size_t(si)] = 0;
+    if (u.sameBoard) {
+      const int dxm = c.dx - c.sx;
+      const bool castle = piece.type() == PieceType::King && c.dy == c.sy && std::abs(dxm) == 2;
+      Cell target;
+      target.v = nb.c[size_t(di)];
+      const bool enPassant = piece.type() == PieceType::Pawn && dxm != 0 && target.empty();
+      if (enPassant) nb.c[size_t(c.sy * n + c.dx)] = 0;
+      if (castle) {
+        const int dir = dxm > 0 ? 1 : -1;
+        int rx = c.sx + dir;
+        while (nb.c[size_t(c.sy * n + rx)] == 0) rx += dir;
+        nb.c[size_t(c.sy * n + rx)] = 0;
+        nb.c[size_t(c.sy * n + c.sx + dir)] = Cell::make(PieceType::Rook, mover, false).v;
+      }
+      nb.c[size_t(di)] = arrivingCell(c, piece).v;
+    }
+    arena.push_back(nb);
+    S.boards.push_back(int(arena.size()) - 1);
+    pushTip(c.srcTl, c.srcHalf + 1, int(arena.size()) - 1);
+    pushKings(c.srcTl, c.srcHalf + 1, int(arena.size()) - 1);
+  }
+
+  // The target half of a move to another board: extends the target timeline or forks a new one. Returns whether a
+  // timeline was created.
+  bool applyTarget(const Cand& c, Undo& u) {
+    u.targetDone = true;
+    const Cell piece = at(c.srcTl, c.srcHalf, c.sx, c.sy);
+    const Cell arriving = arrivingCell(c, piece);
+    const int di = c.dy * n + c.dx;
+    SLine& T = *lineAt(c.dstTl);
+    if (tipHalf(T) == c.dstHalf) {
+      Brd nt = arena[size_t(T.boards.back())];
+      nt.c[size_t(di)] = arriving.v;
+      arena.push_back(nt);
+      T.boards.push_back(int(arena.size()) - 1);
+      pushTip(c.dstTl, c.dstHalf + 1, int(arena.size()) - 1);
+      pushKings(c.dstTl, c.dstHalf + 1, int(arena.size()) - 1);
+      return false;
+    }
+    Brd nt = arena[size_t(T.boards[size_t(c.dstHalf - T.forkAt - 1)])];
+    nt.c[size_t(di)] = arriving.v;
+    arena.push_back(nt);
+    const int id = mover == PieceColor::PIECEWHITE ? maxId + 1 : minId - 1;
+    SLine* L = lineAt(id);
+    assert(L && !L->exists);
+    L->exists = true;
+    L->forkAt = c.dstHalf;
+    L->boards.assign(1, int(arena.size()) - 1);
+    if (id > maxId) maxId = id;
+    if (id < minId) minId = id;
+    u.created = true;
+    u.createdId = id;
+    pushTip(id, c.dstHalf + 1, int(arena.size()) - 1);
+    pushKings(id, c.dstHalf + 1, int(arena.size()) - 1);
+    return true;
+  }
+
+  // Returns whether a timeline was created.
+  bool apply(const Cand& c, Undo& u) {
+    applySource(c, u);
+    return u.sameBoard ? false : applyTarget(c, u);
+  }
+
+  void undo(const Undo& u) {
+    if (u.created) {
+      SLine& L = *lineAt(u.createdId);
+      L.exists = false;
+      L.boards.clear();
+    } else if (u.targetDone) {
+      lineAt(u.dstTl)->boards.pop_back();
+    }
+    lineAt(u.srcTl)->boards.pop_back();
+    minId = u.oldMin;
+    maxId = u.oldMax;
+    arena.resize(u.arenaSize);
+    enemyTips.resize(u.tipSize);
+    kings.resize(u.kingSize);
+  }
+
+  // --- dead candidates (F2) ----------------------------------------------------------------------------------------------
+  // Computed in the root position only (the position as the search started), one node each, before the search proper.
+  inline bool srcDead(int ci) const {
+    assert(cands[size_t(ci)].srcDeadF >= 0);
+    return cands[size_t(ci)].srcDeadF == 1;
+  }
+
+  // Both halves together, in the root position: valid for a move onto a tip while that tip is still a tip, and for a fork
+  // while no timeline has been created yet (a fork's ID, and so the position of its board, depends on earlier forks).
+  inline bool extDead(int ci) const {
+    assert(cands[size_t(ci)].extDeadF >= 0);
+    return cands[size_t(ci)].extDeadF == 1;
+  }
+
+  bool computeSrcDead(Cand& c) {
+    Undo u;
+    applySource(c, u);
+    c.srcDeadF = anyThreat() ? 1 : 0;
+    undo(u);
+    return c.srcDeadF == 1;
+  }
+
+  void computeExtDead(Cand& c) {
+    c.extDeadF = 0;
+    if (c.srcDeadF == 1) {
+      c.extDeadF = 1;
+      return;
+    }
+    if (c.dstTl == c.srcTl && c.dstHalf == c.srcHalf) return;
+    Undo u;
+    apply(c, u); // onto a tip: an extension; otherwise a fork, with the ID the root position gives it
+    c.extDeadF = anyThreat() ? 1 : 0;
+    undo(u);
+  }
+
+  // --- search ------------------------------------------------------------------------------------------------------------
+  inline bool isTipNow(int tl, int half) const {
+    const SLine* l = lineAt(tl);
+    return l && l->exists && tipHalf(*l) == half;
+  }
+
+  // An inactive timeline of the opponent's is activated by timelines the mover creates; moving on it now can therefore
+  // matter later (it changes where the present will be). All other timelines keep their activity during the turn.
+  bool activatable(int tl) const {
+    if (isActive(tl)) return false;
+    return mover == PieceColor::PIECEWHITE ? tl < origMin : tl > origMax;
+  }
+
+  // Would the timeline the mover creates next be active? (Later ones are never more likely to be.)
+  bool nextLineActive() const {
+    if (mover == PieceColor::PIECEWHITE) {
+      const int blackCreated = std::max(0, origMin - minId);
+      return (maxId + 1) - origMax <= blackCreated + 1;
+    }
+    const int whiteCreated = std::max(0, maxId - origMax);
+    return origMin - (minId - 1) <= whiteCreated + 1;
+  }
+
+  inline bool noTimelineCreated() const { return minId == rootMinId && maxId == rootMaxId; }
+
+  bool createsTimeline(const Cand& c) const {
+    const bool same = c.dstTl == c.srcTl && c.dstHalf == c.srcHalf;
+    return !same && !isTipNow(c.dstTl, c.dstHalf);
+  }
+
+  // Is some other still-playable candidate landing on board `bid`, from a source other than `except`?
+  bool landedOnByOther(int bid, int except) const {
+    if (bid < 0) return false;
+    for (int j : byDst[size_t(bid)]) {
+      const Cand& o = cands[size_t(j)];
+      if (o.srcBid != except && !consumed[size_t(o.srcBid)]) return true;
+    }
+    return false;
+  }
+
+  // The next candidate to try at the node of frame `f`, or -1.
+  int nextCandidate(Frame& f) {
+    while (f.next < cands.size()) {
+      const int ci = int(f.next++);
+      const Cand& c = cands[size_t(ci)];
+      if (consumed[size_t(c.srcBid)]) continue;
+      if (srcDead(ci) || nodeSrc[size_t(ci)] == 1) continue;
+      if (c.kind == 1 ? (!consumed[size_t(c.dstBid)] && isTipNow(c.dstTl, c.dstHalf) && (extDead(ci) || nodeFull[size_t(ci)] == 1))
+                      : (c.kind == 2 && noTimelineCreated() && (extDead(ci) || nodeFull[size_t(ci)] == 1)))
+        continue;
+      if (opt.reductions) {
+        // F3: of two independent moves, only one order.
+        if (opt.commutation && f.via >= 0) {
+          const Cand& p = cands[size_t(f.via)];
+          const bool cCreates = createsTimeline(c);
+          const bool before = cCreates != f.viaCreated ? !cCreates : bidRank[size_t(c.srcBid)] < bidRank[size_t(p.srcBid)];
+          if (before) {
+            const bool pSame = p.dstTl == p.srcTl && p.dstHalf == p.srcHalf;
+            const bool dependent = (c.dstTl == p.srcTl && c.dstHalf == p.srcHalf) ||
+                                   (!pSame && c.dstTl == p.dstTl && c.dstHalf == p.dstHalf) || (f.viaCreated && cCreates);
+            if (!dependent) continue;
+          }
+        }
+        // Phase 1 only: of the optional boards, only moves that land on a mandatory board or can pull the present back.
+        if (phase == 1 && opt.cheapFirst && !f.mand[size_t(c.srcBid)]) {
+          const bool onMandatory = c.kind == 1 && c.dstBid >= 0 && f.mand[size_t(c.dstBid)];
+          const bool clearer = c.kind == 2 && f.nextActive && c.dstHalf + 1 < f.present;
+          if (!onMandatory && !clearer && !f.activationLowers) continue;
+        }
+        // F4: an irrelevant move of an optional board.
+        // (Not while no move has been made: a turn needs at least one move, so there it is the move itself that counts.)
+        if (opt.irrelevant && !f.mand[size_t(c.srcBid)] && pending + int(stack.size()) - 1 >= 1) {
+          const bool same = c.dstTl == c.srcTl && c.dstHalf == c.srcHalf;
+          const bool inert = !activatable(c.srcTl) &&
+                             (same || (isTipNow(c.dstTl, c.dstHalf) && !activatable(c.dstTl) &&
+                                       !(c.dstBid >= 0 && f.mand[size_t(c.dstBid)])));
+          if (inert && !landedOnByOther(c.srcBid, c.srcBid) && !(!same && landedOnByOther(c.dstBid, c.srcBid))) continue;
+        }
+      }
+      return ci;
+    }
+    return -1;
+  }
+
+  void fillFrame(Frame& f) {
+    f.mandCount = mandatoryBids(f.mand, f.present);
+    f.activationLowers = false;
+    f.nextActive = nextLineActive();
+    for (int id = minId; id <= maxId && f.mandCount > 0; ++id) {
+      const SLine* l = lineAt(id);
+      if (l && l->exists && activatable(id) && tipHalf(*l) < f.present) {
+        f.activationLowers = true;
+        break;
+      }
     }
   }
-  return unknown ? TurnSearch::Unknown : TurnSearch::None;
+
+  // Dead flags found at the current node (F2 again, but with the boards of the moves made so far): they hold in the whole
+  // subtree and are forgotten when the search backs up past the node. Only "dead" is remembered: a move that is fine now
+  // may be dead after further moves.
+  bool nodeSrcDead(int ci) {
+    if (srcDead(ci) || nodeSrc[size_t(ci)] == 1) return true;
+    Undo u;
+    applySource(cands[size_t(ci)], u);
+    const bool dead = anyThreat();
+    undo(u);
+    --budgetLeft;
+    ++nodeCount;
+    if (dead) {
+      nodeSrc[size_t(ci)] = 1;
+      trail.push_back(ci * 2);
+    }
+    return dead;
+  }
+
+  // Both halves; only meaningful for a move onto a tip (while it is one) and for a fork while no timeline was created.
+  bool nodeFullDead(int ci) {
+    if (extDead(ci) || nodeFull[size_t(ci)] == 1) return true;
+    Undo u;
+    apply(cands[size_t(ci)], u);
+    const bool dead = anyThreat();
+    undo(u);
+    --budgetLeft;
+    ++nodeCount;
+    if (dead) {
+      nodeFull[size_t(ci)] = 1;
+      trail.push_back(ci * 2 + 1);
+    }
+    return dead;
+  }
+
+  // F5: every mandatory board must still have a way out.
+  bool forwardCheck(const Frame& f) {
+    for (int b = 0; b < nBids; ++b) {
+      if (!f.mand[size_t(b)]) continue;
+      bool alive = false;
+      for (int ci : fromBid[size_t(b)]) {
+        if (!nodeSrcDead(ci)) { alive = true; break; }
+      }
+      if (!alive) {
+        for (int ci : byDst[size_t(b)]) {
+          if (consumed[size_t(cands[size_t(ci)].srcBid)]) continue;
+          if (!nodeSrcDead(ci) && !nodeFullDead(ci)) { alive = true; break; }
+        }
+      }
+      if (!alive) {
+        // A fork whose new timeline ends before the present (or any fork, if it can activate a timeline that does).
+        for (int ci : forkCands) {
+          const Cand& c = cands[size_t(ci)];
+          if (consumed[size_t(c.srcBid)]) continue;
+          if (!f.activationLowers && (!f.nextActive || c.dstHalf + 1 >= f.present)) continue;
+          if (!nodeSrcDead(ci) && !(noTimelineCreated() && nodeFullDead(ci))) { alive = true; break; }
+        }
+      }
+      if (!alive && f.activationLowers) alive = true; // not analysed: keep the node
+      if (!alive) {
+        ++bidFail[size_t(b)];
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Source ranking: mandatory boards first; among them the ones that failed most often so far, then the ones with the
+  // fewest live moves (the likeliest to fail), then by timeline. Ranks only decide the order of the search, not what is
+  // searched, so they can change at a restart.
+  void rank(const std::vector<char>& mand) {
+    std::vector<int> alive(size_t(nBids), 0);
+    for (const Cand& c : cands) {
+      if (mand[size_t(c.srcBid)] && c.srcDeadF == 0) ++alive[size_t(c.srcBid)];
+    }
+    std::vector<int> order(static_cast<size_t>(nBids));
+    for (int i = 0; i < nBids; ++i) order[size_t(i)] = i;
+    std::sort(order.begin(), order.end(), [&](int a, int b) {
+      if (mand[size_t(a)] != mand[size_t(b)]) return mand[size_t(a)] > mand[size_t(b)];
+      if (mand[size_t(a)]) {
+        if (bidFail[size_t(a)] != bidFail[size_t(b)]) return bidFail[size_t(a)] > bidFail[size_t(b)];
+        if (alive[size_t(a)] != alive[size_t(b)]) return alive[size_t(a)] < alive[size_t(b)];
+      }
+      return bidTl[size_t(a)] < bidTl[size_t(b)];
+    });
+    bidRank.assign(size_t(nBids), 0);
+    for (int r = 0; r < nBids; ++r) bidRank[size_t(order[size_t(r)])] = r;
+  }
+
+  // Sort the candidates by source rank (within a board: moves inside the board, then onto a tip, then forks; kings and
+  // captures first: the likeliest to work) and rebuild the per-board indexes.
+  void arrange() {
+    std::stable_sort(cands.begin(), cands.end(), [&](const Cand& a, const Cand& b) {
+      if (bidRank[size_t(a.srcBid)] != bidRank[size_t(b.srcBid)]) return bidRank[size_t(a.srcBid)] < bidRank[size_t(b.srcBid)];
+      if (a.kind != b.kind) return a.kind < b.kind;
+      if (a.king != b.king) return a.king;
+      return a.capture && !b.capture;
+    });
+    fromBid.assign(size_t(nBids), {});
+    byDst.assign(size_t(nBids), {});
+    forkCands.clear();
+    for (size_t i = 0; i < cands.size(); ++i) {
+      const Cand& c = cands[i];
+      fromBid[size_t(c.srcBid)].push_back(int(i));
+      if (c.kind == 1) byDst[size_t(c.dstBid)].push_back(int(i));
+      if (c.kind == 2) forkCands.push_back(int(i));
+    }
+    nodeSrc.assign(cands.size(), -1);
+    nodeFull.assign(cands.size(), -1);
+  }
+
+  // Restart with a new ranking when the search keeps failing (the usual cure for a bad early choice that depth-first
+  // backtracking would only undo after exhausting everything below it). The limit doubles, so the last run is unbounded
+  // in practice and the search stays complete.
+  void restart() {
+    while (stack.size() > 1) backUp();
+    const std::vector<char> mand = stack.back().mand;
+    rank(mand);
+    arrange();
+    stack.back().next = 0;
+    restartAt = nodeCount + restartLimit;
+    restartLimit *= 2;
+  }
+
+  void pushFrame(int via, bool viaCreated) {
+    Frame f;
+    f.via = via;
+    f.viaCreated = viaCreated;
+    fillFrame(f);
+    f.trailMark = trail.size();
+    stack.push_back(std::move(f));
+  }
+
+  void backUp() {
+    const int via = stack.back().via;
+    const size_t mark = stack.back().trailMark;
+    while (trail.size() > mark) {
+      const int e = trail.back();
+      trail.pop_back();
+      (e & 1 ? nodeFull : nodeSrc)[size_t(e >> 1)] = -1;
+    }
+    stack.pop_back();
+    undo(undos.back());
+    undos.pop_back();
+    const Cand& c = cands[size_t(via)];
+    consumed[size_t(c.srcBid)] = 0;
+    if (usedDst.back()) consumed[size_t(c.dstBid)] = 0;
+    usedDst.pop_back();
+  }
+
+  Status run(int budget) {
+    if (st != Status::Running) return st;
+    budgetLeft = budget;
+    // First compute the dead flags of all candidates in the root position (a node each).
+    while (initCursor < cands.size() && budgetLeft > 0) {
+      Cand& c = cands[initCursor++];
+      if (c.srcDeadF < 0) computeSrcDead(c);
+      computeExtDead(c);
+      --budgetLeft;
+      ++nodeCount;
+    }
+    if (initCursor < cands.size()) return Status::Running;
+    while (budgetLeft > 0) {
+      if (opt.reductions && nodeCount > restartAt && stack.size() > 1) restart();
+      Frame& f = stack.back();
+      const int ci = nextCandidate(f);
+      if (ci < 0) {
+        if (stack.size() == 1) {
+          if (phase == 1 && opt.reductions && opt.cheapFirst) {
+            phase = 2; // the cheap search found nothing: now the complete one
+            stack.back().next = 0;
+            continue;
+          }
+          st = Status::None;
+          return st;
+        }
+        backUp();
+        continue;
+      }
+      const Cand& c = cands[size_t(ci)];
+      --budgetLeft;
+      ++nodeCount;
+      Undo u;
+      const bool created = apply(c, u);
+      if (anyThreat()) {
+        undo(u);
+        ++prunedThreat;
+        continue;
+      }
+      // The move is kept for now: its source tip, and the tip it extended, are used up.
+      consumed[size_t(c.srcBid)] = 1;
+      char extended = 0;
+      if (!created && !u.sameBoard && c.dstBid >= 0 && !consumed[size_t(c.dstBid)]) {
+        consumed[size_t(c.dstBid)] = 1;
+        extended = 1;
+      }
+      undos.push_back(u);
+      usedDst.push_back(extended);
+      pushFrame(ci, created);
+      if (pending + int(stack.size()) - 1 >= 1 && stack.back().mandCount == 0) {
+        found.clear();
+        for (size_t i = 1; i < stack.size(); ++i) found.push_back(toStep(cands[size_t(stack[i].via)]));
+        st = Status::Found;
+        return st;
+      }
+      maxDepth = std::max(maxDepth, stack.size());
+      if (opt.reductions && opt.forwardCheck && !forwardCheck(stack.back())) {
+        backUp();
+        ++prunedForward;
+      }
+    }
+    return Status::Running;
+  }
+
+  std::shared_ptr<Board> realBoard(int tl, int half) const {
+    const SLine* l = lineAt(tl);
+    return realBoards[size_t(l->boards[size_t(half - l->forkAt - 1)])];
+  }
+
+  Step toStep(const Cand& c) const {
+    Step s;
+    s.move = Move{SelectedPosition(realBoard(c.srcTl, c.srcHalf), Position2D(c.sx, c.sy)),
+                  SelectedPosition(realBoard(c.dstTl, c.dstHalf), Position2D(c.dx, c.dy))};
+    s.promotion = c.promo ? PieceType(c.promo - 1) : PieceType::Queen;
+    return s;
+  }
+};
+
+TurnSearch::Impl::Impl(const IGame& game, Options options, PieceColor moverColor, bool forQuery) : opt(options) {
+  n = game.dim();
+  assert(n <= 8);
+  phase = opt.reductions && opt.cheapFirst ? 1 : 2;
+  castling = game._rule.castling;
+  doubleStep = game._rule.pawnCanMakeTwoMoveOnFirstTurn;
+  mover = moverColor;
+  enemy = opposite(mover);
+  minId = game.minTimeLineId();
+  maxId = game.maxTimeLineId();
+  origMin = game._origMin;
+  origMax = game._origMax;
+  pending = int(game._currentTurnMoves.size());
+  rootMinId = minId;
+  rootMaxId = maxId;
+
+  // Root tips of the mover's colour get a "bid"; the lines vector has room for every timeline a turn can create.
+  int tips = 0;
+  for (const auto& kv : game._timeLines) {
+    if (kv.second->halfTurnNumber() % 2 == int(mover)) ++tips;
+  }
+  const int pad = tips + 2;
+  base = minId - pad;
+  lines.resize(size_t(maxId - minId + 1 + 2 * pad));
+  bidOfLine.assign(lines.size(), -1);
+  for (const auto& kv : game._timeLines) {
+    SLine& l = lines[size_t(kv.first - base)];
+    l.exists = true;
+    l.forkAt = kv.second->forkAt();
+    for (const auto& board : kv.second->getBoards()) {
+      Brd b;
+      for (int y = 0; y < n; ++y) {
+        for (int x = 0; x < n; ++x) b.c[size_t(y * n + x)] = Cell::of(board->getPiece(Position2D(x, y))).v;
+      }
+      arena.push_back(b);
+      realBoards.push_back(board);
+      l.boards.push_back(int(arena.size()) - 1);
+    }
+    if (kv.second->halfTurnNumber() % 2 == int(mover)) {
+      bidOfLine[size_t(kv.first - base)] = nBids++;
+      bidTl.push_back(kv.first);
+      bidHalf.push_back(kv.second->halfTurnNumber());
+    } else {
+      pushTip(kv.first, kv.second->halfTurnNumber(), l.boards.back());
+    }
+  }
+  // Kings of the mover on every board of the enemy's colour.
+  for (int id = minId; id <= maxId; ++id) {
+    const SLine* l = lineAt(id);
+    if (!l || !l->exists) continue;
+    for (size_t k = 0; k < l->boards.size(); ++k) {
+      const int half = l->forkAt + 1 + int(k);
+      if (half % 2 == int(enemy)) pushKings(id, half, l->boards[k]);
+    }
+  }
+  arena.reserve(arena.size() + size_t(4 * tips + 16));
+
+  if (forQuery) return;
+
+  // In check? Pass the mandatory boards (copy them forward) and see whether a king can be captured.
+  consumed.assign(size_t(nBids), 0);
+  std::vector<char> mand0;
+  int present0 = 0;
+  mandatoryBids(mand0, present0);
+  {
+    const size_t a0 = arena.size(), t0 = enemyTips.size(), k0 = kings.size();
+    for (int bid = 0; bid < nBids; ++bid) {
+      if (!mand0[size_t(bid)]) continue;
+      SLine& l = *lineAt(bidTl[size_t(bid)]);
+      arena.push_back(arena[size_t(l.boards.back())]);
+      l.boards.push_back(int(arena.size()) - 1);
+      pushTip(bidTl[size_t(bid)], bidHalf[size_t(bid)] + 1, int(arena.size()) - 1);
+      pushKings(bidTl[size_t(bid)], bidHalf[size_t(bid)] + 1, int(arena.size()) - 1);
+    }
+    rootInCheckFlag = anyThreat();
+    for (int bid = 0; bid < nBids; ++bid) {
+      if (mand0[size_t(bid)]) lineAt(bidTl[size_t(bid)])->boards.pop_back();
+    }
+    arena.resize(a0);
+    enemyTips.resize(t0);
+    kings.resize(k0);
+  }
+
+  if (anyThreat()) {
+    st = Status::None; // a king is capturable and stays so
+    return;
+  }
+
+  // Generate every candidate move of the mover from the root tips.
+  std::map<std::pair<int, int>, int> bidOfBoard;
+  for (int b = 0; b < nBids; ++b) bidOfBoard[{bidTl[size_t(b)], bidHalf[size_t(b)]}] = b;
+  for (int bid = 0; bid < nBids; ++bid) {
+    const int tl = bidTl[size_t(bid)], half = bidHalf[size_t(bid)];
+    for (int y = 0; y < n; ++y) {
+      for (int x = 0; x < n; ++x) {
+        const Cell piece = at(tl, half, x, y);
+        if (piece.empty() or piece.color() != mover) continue;
+        generateMoves(*this, tl, half, x, y, [&](int ttl, int thalf, int tx, int ty, bool promotes) {
+          // A legal game never lets a king be captured (makeMove asserts it): such moves are not candidates.
+          if (const Cell target = at(ttl, thalf, tx, ty); !target.empty() and target.type() == PieceType::King) return;
+          Cand c;
+          c.srcBid = bid;
+          c.srcTl = tl;
+          c.srcHalf = half;
+          c.sx = int8_t(x);
+          c.sy = int8_t(y);
+          c.dstTl = ttl;
+          c.dstHalf = thalf;
+          c.dx = int8_t(tx);
+          c.dy = int8_t(ty);
+          auto it = bidOfBoard.find({ttl, thalf});
+          c.dstBid = it == bidOfBoard.end() ? -1 : it->second;
+          c.king = piece.type() == PieceType::King;
+          const bool same = ttl == tl && thalf == half;
+          c.kind = same ? 0 : c.dstBid >= 0 ? 1 : 2;
+          c.capture = !at(ttl, thalf, tx, ty).empty() || (same && piece.type() == PieceType::Pawn && tx != x);
+          if (promotes) {
+            for (PieceType p : {PieceType::Queen, PieceType::Rook, PieceType::Bishop, PieceType::Knight}) {
+              c.promo = uint8_t(int(p) + 1);
+              cands.push_back(c);
+            }
+          } else {
+            c.promo = 0;
+            cands.push_back(c);
+          }
+        });
+      }
+    }
+  }
+  // The moves of the mandatory boards get their dead flags now: the ranking below uses them.
+  for (Cand& c : cands) {
+    if (mand0[size_t(c.srcBid)]) computeSrcDead(c);
+  }
+  bidFail.assign(size_t(nBids), 0);
+  rank(mand0);
+  arrange();
+
+  pushFrame(-1, false);
+  if (pending >= 1 && stack.back().mandCount == 0) st = Status::Found; // already submittable
 }
 
-TurnSearch IGame::findLegalTurn(int nodeBudget) const {
-  IGame search(*this);
-  search._result = GameResult::Ongoing;
-  int nodes = 0;
-  return search._search(nodes, nodeBudget);
+TurnSearch::TurnSearch(const IGame& game) : TurnSearch(game, Options{}) {}
+
+TurnSearch::TurnSearch(const IGame& game, Options options)
+    : _impl(std::make_unique<Impl>(game, options, game.getCurrentTurnColor(), false)) {}
+
+TurnSearch::~TurnSearch() = default;
+
+TurnSearch::Status TurnSearch::step(int nodeBudget) { return _impl->run(nodeBudget); }
+
+TurnSearch::Status TurnSearch::status(void) const { return _impl->st; }
+
+long long TurnSearch::nodes(void) const { return _impl->nodeCount; }
+
+const std::vector<TurnSearch::Step>& TurnSearch::turn(void) const { return _impl->found; }
+
+bool TurnSearch::inCheck(void) const { return _impl->rootInCheckFlag; }
+
+bool TurnSearch::kingCapturable(const IGame& game, PieceColor victim) {
+  Impl impl(game, Options{}, victim, true);
+  return impl.anyThreat();
 }
 
-void IGame::_evaluateResult(void) {
-  assert(_currentTurnMoves.empty());
-  const bool check = !checkingAttacks().empty();
-  switch (findLegalTurn(_turnSearchBudget)) {
-    case TurnSearch::Found:
-    case TurnSearch::Unknown:
-      _result = GameResult::Ongoing;
+IGame::~IGame() = default;
+
+TurnSearch::Status IGame::findLegalTurn(int nodeBudget) const {
+  TurnSearch search(*this);
+  return search.step(nodeBudget);
+}
+
+bool IGame::stepResultSearch(int nodeBudget) {
+  if (!_resultSearch) return false;
+  switch (_resultSearch->step(nodeBudget)) {
+    case TurnSearch::Status::Running:
+      return true;
+    case TurnSearch::Status::Found:
       break;
-    case TurnSearch::None:
-      if (!check) _result = GameResult::Draw;
+    case TurnSearch::Status::None:
+      if (!_resultSearch->inCheck()) _result = GameResult::Draw;
       else _result = _currentTurnColor == PieceColor::PIECEWHITE ? GameResult::BlackWins : GameResult::WhiteWins;
       break;
   }
+  _resultSearch.reset();
+  return false;
+}
+
+bool IGame::resolveResult(long long maxNodes) {
+  while (resultPending() && maxNodes > 0) {
+    const int budget = int(std::min<long long>(maxNodes, 100000));
+    stepResultSearch(budget);
+    maxNodes -= budget;
+  }
+  return !resultPending();
 }
 
 void IGame::submitTurn(void) {
@@ -624,7 +1507,7 @@ void IGame::submitTurn(void) {
   _currentTurnMoves.clear();
   _currentTurnColor = opposite(_currentTurnColor);
   _undoBuffer.clear();
-  _evaluateResult();
+  _resultSearch = std::make_unique<TurnSearch>(*this);
 }
 
 const std::string NameOfGame<StandardGame>::value = "Standard";

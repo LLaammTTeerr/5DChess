@@ -167,7 +167,6 @@ void fuzzGame(unsigned seed, int turns, Coverage& cov) {
   std::mt19937 rng(seed);
   std::shared_ptr<IGame> gamePtr = createGame<G>();
   IGame& game = *gamePtr;
-  game.setTurnSearchBudget(60);
   const int origMin = game.minTimeLineId();
   const int origMax = game.maxTimeLineId();
 
@@ -213,13 +212,14 @@ void fuzzGame(unsigned seed, int turns, Coverage& cov) {
       else { CHECK(id < origMin); ++cov.blackBranches; }
     }
     game.submitTurn();
+    game.resolveResult(50000);
     ++cov.turns;
     CHECK(game.getCurrentTurnColor() == opposite(mover));
     CHECK_FALSE(game.undoable());
     CHECK(game.threatsAgainst(mover).empty());
     if (game.result() != GameResult::Ongoing) {
       // A decided game really has no legal turn left (unbounded re-check).
-      CHECK(game.findLegalTurn(2000000) == TurnSearch::None);
+      CHECK(game.findLegalTurn(2000000) == TurnSearch::Status::None);
       CHECK(game.inCheck() == (game.result() != GameResult::Draw));
     }
   }

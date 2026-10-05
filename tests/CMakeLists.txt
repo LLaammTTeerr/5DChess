@@ -10,6 +10,7 @@ add_executable(chess_tests
   main.cpp
   engine_test.cpp
   rules_test.cpp
+  search_test.cpp
   property_test.cpp)
 target_link_libraries(chess_tests PRIVATE chess_core doctest::doctest)
 target_compile_options(chess_tests PRIVATE $<IF:$<CXX_COMPILER_ID:MSVC>,/UNDEBUG,-UNDEBUG>)
