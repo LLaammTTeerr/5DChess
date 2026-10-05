@@ -32,6 +32,14 @@ public:
     _presentHalfTurn = presentHalfTurn;
   }
 
+  // Adds a timeline as if a player had created it during the game (counts as created by White when above the
+  // original IDs and by Black when below). It holds `count` empty boards (half-turns 0..count-1).
+  void addCreatedTimeLine(int id, int count) {
+    _setupDone = true;
+    auto line = _addTimeLine(std::make_shared<TimeLine>(dim(), id));
+    for (int h = 0; h < count; ++h) line->pushBack(std::make_shared<Board>(dim(), id, h));
+  }
+
   std::shared_ptr<Board> boardAt(int timeLineID, int halfTurn) const {
     return timeLine(timeLineID)->getBoardByHalfTurn(halfTurn);
   }
@@ -66,7 +74,7 @@ inline std::string key(const SelectedPosition& p) {
 inline std::string snapshot(const IGame& game) {
   std::string out = "present=" + std::to_string(game.presentHalfTurn()) +
                     " color=" + std::to_string(int(game.getCurrentTurnColor())) +
-                    " end=" + std::to_string(game.gameEnd()) + " undoable=" + std::to_string(game.undoable()) + "\n";
+                    " result=" + std::to_string(int(game.result())) + " undoable=" + std::to_string(game.undoable()) + "\n";
   for (const auto& timeLine : game.getTimeLines()) {
     out += "T" + std::to_string(timeLine->ID()) + " fork=" + std::to_string(timeLine->forkAt()) +
            " parent=" + std::to_string(timeLine->parentId()) + "\n";
@@ -78,6 +86,7 @@ inline std::string snapshot(const IGame& game) {
           char c = piece ? piece->symbol() : '.';
           if (piece && piece->color() == PieceColor::PIECEBLACK) c = char(c - 'A' + 'a');
           out += c;
+          if (piece && piece->unmoved()) out += '\'';
         }
         out += '/';
       }

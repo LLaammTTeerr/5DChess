@@ -10,7 +10,7 @@ TEST_CASE("standard game: initial position") {
   CHECK(game.dim() == 8);
   CHECK(game.presentHalfTurn() == 0);
   CHECK(game.getCurrentTurnColor() == PieceColor::PIECEWHITE);
-  CHECK_FALSE(game.gameEnd());
+  CHECK(game.result() == GameResult::Ongoing);
   CHECK_FALSE(game.undoable());
   REQUIRE(game.getTimeLines().size() == 1);
   REQUIRE(game.getMoveableBoards().size() == 1);
@@ -104,19 +104,24 @@ TEST_CASE("a knight jumping back in time branches a new timeline") {
   CHECK(game.getTimeLines().size() == 1);
 }
 
-TEST_CASE("capturing the king ends the game; undo un-ends it") {
+// Rule replaced: the old engine ended the game when a king was captured. In the official rules a king is never
+// captured; instead a turn after which the opponent could capture a king may not be submitted (see docs/RULES.md).
+TEST_CASE("check rule: a turn that leaves a king capturable cannot be submitted (replaces king-capture-ends-game)") {
   Sandbox game(4);
-  game.place(0, 0, 0, make<Rook>(PieceColor::PIECEWHITE));
-  game.place(0, 3, 0, make<King>(PieceColor::PIECEBLACK));
+  game.place(0, 0, 0, make<Rook>(PieceColor::PIECEBLACK));
+  game.place(0, 3, 0, make<King>(PieceColor::PIECEWHITE));
+  game.place(0, 0, 3, make<Knight>(PieceColor::PIECEWHITE));
   auto board = game.tip(0);
-  REQUIRE(contains(movesAt(game, board, 0, 0), board, 3, 0));
-
-  game.makeMove({{board, {0, 0}}, {board, {3, 0}}});
-  REQUIRE(game.gameEnd());
-  CHECK(game.getWinner() == PieceColor::PIECEWHITE);
-
+  // White's king is attacked along the first rank; moving the knight does not help.
+  CHECK(game.inCheck());
+  game.makeMove({{board, {0, 3}}, {board, {1, 1}}});
+  CHECK_FALSE(game.canSubmit());
+  CHECK_FALSE(game.threatsAgainst(PieceColor::PIECEWHITE).empty());
   game.undo();
-  CHECK_FALSE(game.gameEnd());
+  // Stepping the king out of the rook's line is fine.
+  game.makeMove({{board, {3, 0}}, {board, {3, 1}}});
+  CHECK(game.canSubmit());
+  CHECK(game.threatsAgainst(PieceColor::PIECEWHITE).empty());
 }
 
 TEST_CASE("pawns promote to a queen on the last rank") {
@@ -196,6 +201,9 @@ TEST_CASE("game-mode names are unique") {
   CHECK(std::adjacent_find(names.begin(), names.end()) == names.end());
 }
 
+// Still valid under the official present rule (present = earliest end-turn among ACTIVE timelines): timeline 0
+// ends at h3 after the move, which is earlier than timeline 1's h5. Only the reasoning changed: the old engine took
+// the min of the NEW boards, the official rule takes the min over all active timelines.
 TEST_CASE("present does not skip a timeline after a move onto a board ahead in time") {
   // Timeline 0 is at h2 (the present), timeline 1 is already at h4.
   Sandbox game(5, {3, 5}, 2);

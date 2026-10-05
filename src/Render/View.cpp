@@ -224,10 +224,11 @@ void ChessView::finishAnimations() {
     _arrowRenderer->finishAnimations();
 }
 
-void ChessView::setEndGame(bool ended, bool whiteWon) {
+void ChessView::setEndGame(bool ended, bool whiteWon, bool draw) {
     if (ended && !_endActive) {
         _endActive = true;
         _endWhiteWon = whiteWon;
+        _endDraw = draw;
         _endClock = 0.0f;
         _endScrim.start(0.0f, 1.0f, UI::Motion::base, UI::Motion::easeOutCubic, 0.0f, true);
         _endPop.init(0.0f, 260.0f, 0.62f);
@@ -550,7 +551,7 @@ void ChessView::renderTurnBanner() const {
                UI::Font::body, 0, fade(UI::Color::text));
 }
 
-void ChessView::renderEndGameScreen(std::string winnerText) const {
+void ChessView::renderEndGameScreen(std::string winnerText, std::string reason) const {
     using namespace UI::Motion;
     const float screenW = static_cast<float>(GetScreenWidth());
     const float screenH = static_cast<float>(GetScreenHeight());
@@ -574,12 +575,12 @@ void ChessView::renderEndGameScreen(std::string winnerText) const {
 
     const float cx = card.x + card.width / 2;
     UI::drawTextCentered(UI::Fonts::title(), winnerText.c_str(), cx, card.y + 34, UI::Font::title, fa(UI::Color::text));
-    UI::drawTextCentered(UI::Fonts::body(), "King captured", cx, card.y + 102, UI::Font::body, fa(UI::Color::textMuted));
+    UI::drawTextCentered(UI::Fonts::body(), reason.c_str(), cx, card.y + 102, UI::Font::body, fa(UI::Color::textMuted));
     DrawRectangle(static_cast<int>(card.x + 40), static_cast<int>(card.y + 146), static_cast<int>(card.width - 80), 1, fa(UI::Color::border));
     UI::drawTextCentered(UI::Fonts::body(), "Use Back to return to game selection", cx, card.y + 164, UI::Font::body, fa(UI::Color::primary));
 
     // Pixel theme: the winner's king hops a few times on top of the card
-    if (ThemeManager::getInstance().isPixelTheme()) {
+    if (ThemeManager::getInstance().isPixelTheme() && !_endDraw) {
         const char* name = _endWhiteWon ? "white_king" : "black_king";
         const PieceTextures& tex = ThemeManager::getInstance().getPieceTextures(name);
         const float size = 64.0f;

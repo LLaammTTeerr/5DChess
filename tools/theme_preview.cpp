@@ -48,7 +48,9 @@ std::shared_ptr<Chess::IGame> makeGame(const std::string& mode) {
 bool findScriptedMove(Chess::IGame& game, bool preferCross, Chess::SelectedPosition& bestFrom, Chess::SelectedPosition& bestTo) {
   using namespace Chess;
   bool haveBest = false, cross = false;
-  for (const auto& board : game.getMoveableBoards()) {
+  auto boards = game.mandatoryBoards();
+  if (boards.empty()) boards = game.getMoveableBoards();
+  for (const auto& board : boards) {
     for (int y = 0; y < game.dim() && !cross; ++y) {
       for (int x = 0; x < game.dim() && !cross; ++x) {
         SelectedPosition from(board, Position2D(x, y));
@@ -66,17 +68,20 @@ bool findScriptedMove(Chess::IGame& game, bool preferCross, Chess::SelectedPosit
   return haveBest;
 }
 
-// Plays one full turn: every moveable board gets one move; cross-board moves win.
+// Plays one full turn: every mandatory board gets one move; cross-board moves win.
 bool playScriptedTurn(Chess::IGame& game) {
   using namespace Chess;
-  for (int guard = 0; !game.getMoveableBoards().empty() && guard < 16; ++guard) {
+  for (int guard = 0; !game.mandatoryBoards().empty() && guard < 16; ++guard) {
     SelectedPosition bestFrom, bestTo;
     if (!findScriptedMove(game, true, bestFrom, bestTo)) break;
     game.makeMove({bestFrom, bestTo});
-    if (game.gameEnd()) { game.undo(); break; }  // safety net: never end the game in a preview
   }
-  if (game.undoable()) game.submitTurn();
-  return !game.gameEnd();
+  if (game.canSubmit()) {
+    game.submitTurn();
+    return game.result() == GameResult::Ongoing;
+  }
+  while (game.undoable()) game.undo();  // an illegal scripted turn: leave the game untouched
+  return false;
 }
 
 struct FrameClock {

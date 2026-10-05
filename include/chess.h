@@ -53,6 +53,8 @@ inline constexpr PieceColor opposite(PieceColor c) {
   return c == PieceColor::PIECEWHITE ? PieceColor::PIECEBLACK : PieceColor::PIECEWHITE;
 }
 
+enum class PieceType : int { King, Queen, Rook, Bishop, Knight, Pawn };
+
 class Position2D;
 class Piece;
 class Board;
@@ -100,6 +102,16 @@ public:
   virtual ~Piece() = default;
 
   virtual std::shared_ptr<Piece> clone() const = 0;
+
+  /** The kind of piece (what a promotion chooses between, what castling looks for, ...). */
+  virtual PieceType type(void) const = 0;
+
+  /**
+   * True until the piece has made a move. Needed for castling (king and rook) and the pawn double step.
+   * Copied by clone(), so a forked board keeps the flags of the board it was forked from.
+   */
+  inline bool unmoved(void) const { return _unmoved; }
+  inline void setUnmoved(bool unmoved) { _unmoved = unmoved; }
 
   /**
    * Get the color of the piece.
@@ -156,7 +168,11 @@ protected:
   PieceColor _color;
   std::weak_ptr<Board> _board; // Non-owning: the board owns the piece, so a shared_ptr would be a cycle
   Position2D _position;
+  bool _unmoved = true;
 };
+
+/** Create a fresh (unmoved) piece of the given kind. */
+std::shared_ptr<Piece> makePiece(PieceType type, PieceColor color);
 
 class King : public Piece {
 public:
@@ -166,6 +182,8 @@ public:
   virtual std::shared_ptr<Piece> clone() const override {
     return std::make_shared<King>(*this);
   }
+
+  PieceType type(void) const override { return PieceType::King; }
 
   inline const std::string& name(void) const override {
     static const std::string name = "king";
@@ -187,6 +205,8 @@ public:
     return std::make_shared<Queen>(*this);
   }
 
+  PieceType type(void) const override { return PieceType::Queen; }
+
   inline const std::string& name(void) const override {
     static const std::string name = "queen";
     return name;
@@ -206,6 +226,8 @@ public:
   virtual std::shared_ptr<Piece> clone() const override {
     return std::make_shared<Rook>(*this);
   }
+
+  PieceType type(void) const override { return PieceType::Rook; }
 
   inline const std::string& name(void) const override {
     static const std::string name = "rook";
@@ -227,6 +249,8 @@ public:
     return std::make_shared<Bishop>(*this);
   }
 
+  PieceType type(void) const override { return PieceType::Bishop; }
+
   inline const std::string& name(void) const override {
     static const std::string name = "bishop";
     return name;
@@ -247,6 +271,8 @@ public:
     return std::make_shared<Knight>(*this);
   }
 
+  PieceType type(void) const override { return PieceType::Knight; }
+
   inline const std::string& name(void) const override {
     static const std::string name = "knight";
     return name;
@@ -266,6 +292,8 @@ public:
   virtual std::shared_ptr<Piece> clone() const override {
     return std::make_shared<Pawn>(*this);
   }
+
+  PieceType type(void) const override { return PieceType::Pawn; }
 
   inline const std::string& name(void) const override {
     static const std::string name = "pawn";
@@ -455,24 +483,109 @@ struct SelectedPosition {
   }
 };
 
-// Represents a move in the game, including the source and destination positions
+// Represents a move in the game, including the source and destination positions.
+// Castling is a king move two files sideways, en passant a pawn's diagonal step onto the empty square behind the
+// captured pawn: both are recognised by makeMove from the geometry, so a Move needs no extra fields.
 class Move {
 // public for easy access in TurnState
 public:
   SelectedPosition from;
   SelectedPosition to;
-  // Additional fields can be added, e.g., piece type, but keeping simple for now
+};
+
+/** A piece of `attacker.board` that could capture the king on `king.board` (both positions are on real boards). */
+struct Threat {
+  SelectedPosition attacker;
+  SelectedPosition king;
+};
+
+enum class GameResult { Ongoing, WhiteWins, BlackWins, Draw };
+
+class IGame;
+
+/**
+ * Resumable search for a legal turn of the side to move (continuing from the moves already pending, if any).
+ *
+ * A turn is legal when every mandatory board has been moved on (or made irrelevant by a jump into the past), at least one
+ * move was made, and the opponent cannot capture any of the mover's kings (IGame::canSubmit). The search proves either
+ * that such a turn exists (Found, turn() lists its moves) or that none does (None: checkmate or stalemate). It is
+ * exhaustive, but it works on a private compact copy of the position, prunes every position in which a king can already
+ * be captured (captures stay possible whatever else is played), plays moves of independent boards in one canonical
+ * order, and ignores moves of optional boards that cannot affect the outcome (see src/chess.cpp for the argument), so
+ * the mates seen in play are proven within a few thousand nodes.
+ *
+ * It never recurses across step() calls: all state lives in an explicit stack, so step() can be called with a small
+ * budget once per frame. The IGame it was created from may change afterwards; the search keeps its own snapshot.
+ */
+class TurnSearch {
+public:
+  enum class Status {
+    Found,   // a legal turn exists: turn()
+    None,    // proven: no legal turn exists
+    Running, // not decided yet: call step() again
+  };
+
+  /** One move of a turn; `promotion` is what a pawn reaching the last rank becomes (otherwise unused). */
+  struct Step {
+    Move move;
+    PieceType promotion = PieceType::Queen;
+  };
+
+  struct Options {
+    /** false: only the threat pruning, no other reduction; for cross-checking. Overrides the switches below. */
+    bool reductions = true;
+    /** Switches of the individual reductions (test knobs, see src/chess.cpp F3, F4, F5, phase 1). */
+    bool commutation = true, irrelevant = true, forwardCheck = true, cheapFirst = true;
+  };
+
+  explicit TurnSearch(const IGame& game);
+  TurnSearch(const IGame& game, Options options);
+  ~TurnSearch();
+  TurnSearch(const TurnSearch&) = delete;
+  TurnSearch& operator=(const TurnSearch&) = delete;
+
+  /**
+   * Continue the search for at most `nodeBudget` nodes (a node is one move tried, whether it is then abandoned or
+   * kept). Returns the status afterwards; once it is not Running it stays that way. A node costs a few microseconds,
+   * roughly independent of the position, so a budget of a few thousand fits in a frame.
+   */
+  Status step(int nodeBudget);
+  Status status(void) const;
+  long long nodes(void) const;
+
+  /** The moves of a legal turn, in playing order; valid when status() == Found. They refer to boards of the game. */
+  const std::vector<Step>& turn(void) const;
+
+  /** Whether the side to move is in check in the position the search started from (what IGame::inCheck() says). */
+  bool inCheck(void) const;
+
+  /** Test hook: can `victim`'s king be captured in `game` as it is (same answer as !IGame::threatsAgainst().empty())? */
+  static bool kingCapturable(const IGame& game, PieceColor victim);
+
+private:
+  struct Impl;
+  std::unique_ptr<Impl> _impl;
 };
 
 class RuleEngine {
 public:
   bool pawnCanMakeTwoMoveOnFirstTurn = true;
+  bool castling = true;
 };
 
+/**
+ * Movement vectors of a piece type as (dx, dy, dz, dw): file, rank, full turns (a step of dz changes the half-turn by
+ * 2 * dz, so a move always lands on a board of the mover's colour) and timeline ID. King and Knight move exactly one
+ * vector; Rook, Bishop and Queen slide along one until blocked or off the existing boards. Identical to the vector
+ * sets of 5d-chess-js (piece.js movePos / moveVecs); empty for pawns, which are special-cased. See docs/RULES.md.
+ */
+const std::vector<std::array<int, 4>>& pieceVectors(PieceType type);
+
 class IGame {
+  friend class TurnSearch;
 public:
   IGame(int N) : _N(N), _presentHalfTurn(0), _currentTurnColor(PieceColor::PIECEWHITE) {}
-  virtual ~IGame() = default;
+  virtual ~IGame();
 
   /**
    * Cheap full-state copy for search. TimeLine objects are deep-copied (their vectors of shared_ptr<Board> are
@@ -508,26 +621,89 @@ public:
     return _presentHalfTurn;
   }
 
-  inline int bufferHalfTurn(void) const {
-    return _currentTurnMoves.size() == 0
-          ? _presentHalfTurn
-          : *std::min_element(_nextHalfTurnBuffer.begin(), _nextHalfTurnBuffer.end());
-  }
+  /**
+   * The present as it stands right now, including the moves of the pending turn: the earliest end-turn
+   * (half-turn of the latest board) among the ACTIVE timelines. Equals presentHalfTurn() when no move is pending.
+   */
+  int bufferHalfTurn(void) const;
 
   /**
-   * Apply the turn state to the game.
-   * @note At least one move must have been made this turn (asserted).
-   * @param turnState The TurnState object contain  // Apply the completed turn
-  // One turn might consist of multiple moves
-  // This method applies all moves in the current turn to the game stateing the moves to apply.
+   * End the current turn and hand the move to the opponent. Requires canSubmit() (asserted).
+   * Afterwards the present and the side to move are updated and result() is Ongoing; the question whether the new side to
+   * move has a legal turn at all is NOT answered here (that search can take long): submitTurn() only arms it, see
+   * resultPending(). The caller drives it a little at a time, e.g. once per frame:
+   *
+   *   game.submitTurn();
+   *   while (game.resultPending()) game.stepResultSearch(2000);   // or resolveResult()
+   *   // result() is now WhiteWins / BlackWins / Draw if the side to move had no legal turn, else still Ongoing
+   *
+   * Moves made while the search is pending are fine; the search works on a snapshot of the position at submitTurn().
    */
   void submitTurn(void);
 
+  /** True between submitTurn() and the end of the legal-turn search it armed. */
+  inline bool resultPending(void) const { return _resultSearch != nullptr; }
+
   /**
-   * Get the board where the current player can make moves.
-   * @return A vector of shared pointers to the boards where moves can be made.
-   * This method returns a vector of boards that are currently available for making moves.
-   * It can be used to determine which boards are active for the current turn.
+   * Run the pending legal-turn search for at most `nodeBudget` nodes (see TurnSearch::step). When it proves that the side
+   * to move has no legal turn, result() becomes the other side's win (if the side to move is in check: checkmate) or a
+   * draw (stalemate). Returns resultPending() afterwards; does nothing if nothing is pending.
+   */
+  bool stepResultSearch(int nodeBudget);
+
+  /** Convenience: steps until the search has decided or `maxNodes` nodes were used. Returns !resultPending(). */
+  bool resolveResult(long long maxNodes = 100000000);
+
+  /**
+   * True if the pending turn may be submitted: at least one move was made, every mandatory board has been moved on
+   * (the present now belongs to the opponent), and the opponent cannot capture any of the mover's kings on any
+   * board it will be able to move on (threatsAgainst(mover) is empty). False once the game is over.
+   */
+  bool canSubmit(void) const;
+
+  /**
+   * Boards the mover MUST still move on before the turn can be submitted: the latest boards of the active
+   * timelines that lie on the present, while the present belongs to the mover. Empty once the present has passed
+   * to the opponent.
+   */
+  std::vector<std::shared_ptr<Board>> mandatoryBoards(void) const;
+
+  /**
+   * Threats against the side to move as the real game shows them: with every mandatory board (that has not been
+   * moved on yet) passed, which pieces of the opponent could capture one of the mover's kings. This is what
+   * makes "in check" (inCheck()). Attacker and king boards are real boards of this game (a passed board is
+   * reported as the board it was passed from).
+   */
+  std::vector<Threat> checkingAttacks(void) const;
+  inline bool inCheck(void) const { return !checkingAttacks().empty(); }
+
+  /**
+   * Kings of `victim` that the opponent could capture in the position as it is now, the opponent moving next, on
+   * any board it can move on (every board that ends on the opponent's turn, active or not). No passing is simulated.
+   */
+  std::vector<Threat> threatsAgainst(PieceColor victim) const;
+
+  /**
+   * One-shot form of TurnSearch: runs a search from the current position (pending moves included) for at most
+   * `nodeBudget` nodes. Running means the budget was exhausted.
+   */
+  TurnSearch::Status findLegalTurn(int nodeBudget = 1000000) const;
+
+  /**
+   * Ongoing / WhiteWins / BlackWins / Draw. Ongoing until a legal-turn search proves otherwise (see submitTurn,
+   * stepResultSearch): checkmate (no legal turn, in check) is a win for the other side, stalemate a draw.
+   */
+  inline GameResult result(void) const { return _result; }
+
+  /** Timelines that may be played on without being optional-only: see the active-timeline rule in docs/RULES.md. */
+  std::vector<int> activeTimeLineIds(void) const;
+  bool isTimeLineActive(int timeLineId) const;
+
+  /**
+   * Get the boards where the current player can make moves: the latest board of every timeline (active or not)
+   * that ends on the current player's turn, whether or not it lies on the present. Only mandatoryBoards() have to
+   * be moved on.
+   * @return Boards in ascending timeline-ID order.
    */
   std::vector<std::shared_ptr<Board>> getMoveableBoards(void) const;
 
@@ -540,11 +716,12 @@ public:
   std::vector<SelectedPosition> getMoveablePositions(SelectedPosition selected) const;
 
   /**
-   * Make a move for the current player.
-   * @param move The move to make; the source must hold a piece of the current turn's color.
-   * @note The game must not have ended (asserted). Capturing a king ends the game; undo() reverts that.
+   * Make a (pseudo-legal) move for the current player. Legality is judged per turn, see canSubmit().
+   * @param move The move to make; the source must hold a piece of the current turn's color on a moveable board.
+   * @param promotion Piece a pawn becomes when it reaches the last rank (Queen, Rook, Bishop or Knight).
+   * @note The game must not have ended (asserted).
    */
-  void makeMove(Move move);
+  void makeMove(Move move, PieceType promotion = PieceType::Queen);
 
   /**
    * Check if the current turn can be undone.
@@ -563,15 +740,6 @@ public:
     return timeLine(timeLineID)->getBoardByHalfTurn(halfTurn);
   }
 
-  inline bool gameEnd(void) const {
-    return _gameWinner.has_value();
-  }
-
-  inline PieceColor getWinner(void) const {
-    assert(gameEnd());
-    return *_gameWinner;
-  }
-
   inline std::shared_ptr<Board> getNewBoard(void) const {
     assert(undoable());
     return timeLine(_undoBuffer.back().back())->back();
@@ -579,15 +747,22 @@ public:
 protected:
   int _N;
   int _presentHalfTurn;
-  std::vector<int> _nextHalfTurnBuffer;
   std::map<int, std::shared_ptr<TimeLine>> _timeLines; // keyed (and ordered) by timeline ID; IDs may be negative
   std::vector<Move> _currentTurnMoves;
   PieceColor _currentTurnColor;
   std::vector<std::vector<int>> _undoBuffer;
   RuleEngine _rule;
-  std::optional<PieceColor> _gameWinner;
+  GameResult _result = GameResult::Ongoing;
+  std::unique_ptr<TurnSearch> _resultSearch; // armed by submitTurn(), never copied
+  // Range of the timeline IDs present at the start of the game; timelines outside it were created by a player
+  // (above: White, below: Black). Set while the game is being set up (_addTimeLine), frozen by the first move.
+  int _origMin = INT_MAX;
+  int _origMax = INT_MIN;
+  bool _setupDone = false;
 
-  std::shared_ptr<Piece> _getPieceByVector4DFullTurn(Vector4D position) const;
+  std::vector<SelectedPosition> _movesFor(PieceColor mover, SelectedPosition selected) const;
+  std::vector<Threat> _threatsAgainst(PieceColor victim, bool firstOnly) const;
+  void _passMandatoryBoards(std::map<const Board*, std::shared_ptr<Board>>& passedFrom);
   IGame(const IGame& other);
   IGame& operator=(const IGame&) = delete;
 
@@ -596,13 +771,14 @@ protected:
     const bool inserted = _timeLines.emplace(timeLine->ID(), timeLine).second;
     assert(inserted);
     (void)inserted;
+    if (!_setupDone) {
+      _origMin = std::min(_origMin, timeLine->ID());
+      _origMax = std::max(_origMax, timeLine->ID());
+    }
     return timeLine;
   }
 
-  /**
-   * ID for a timeline newly branched by `mover`. For now every new branch gets max+1.
-   * The next step (official multiverse rules) makes Black allocate min-1 (negative IDs) and White max+1.
-   */
+  /** ID for a timeline newly branched by `mover`: White gets max+1, Black min-1. */
   int allocateTimeLineId(PieceColor mover) const;
 public:
   /** The timeline with the given ID (must exist). */
@@ -648,7 +824,7 @@ public:
 
   /**
    * Every (from, to) pair, for every own piece on every moveable board, that getMoveablePositions offers
-   * to the side to move.
+   * to the side to move. Promotions appear once (makeMove's promotion argument picks the piece).
    */
   std::vector<Move> allPseudoLegalMoves(void) const;
 
@@ -657,6 +833,8 @@ public:
   inline PieceColor getCurrentTurnColor(void) const {
     return _currentTurnColor;
   }
+
+  inline const RuleEngine& rule(void) const { return _rule; }
 };
 
 class Constant {

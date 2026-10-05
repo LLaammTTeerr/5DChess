@@ -8,6 +8,8 @@
 #include "Render/UITheme.h"
 #include "Audio/AudioManager.h"
 
+#include <chrono>
+
 
 
 
@@ -34,6 +36,14 @@ void ChessController::updateNewBoardViewsToView() {
 
 void ChessController::update(float deltaTime) {
   view.update(deltaTime); // camera + all view-side animation clocks advance exactly once per frame
+  // The "does the side to move have any legal turn?" search runs a little each frame (see IGame::submitTurn).
+  if (model._game->resultPending()) {
+    const auto start = std::chrono::steady_clock::now();
+    do {
+      model._game->stepResultSearch(100);
+    } while (model._game->resultPending() &&
+             std::chrono::steady_clock::now() - start < std::chrono::milliseconds(4));
+  }
   updateCurrentBoardFromModel();
   updateBoardViewFromCurrentBoards();
   // after updating the board and board views, we need bridge the board to board view
@@ -64,14 +74,17 @@ void ChessController::update(float deltaTime) {
   for (const auto& board : _currentBoard) {
     auto it = _boardToBoardViewMap.find(board);
     if (it == _boardToBoardViewMap.end() || !it->second) continue;
-    bool moveable = !model._game->gameEnd() &&
+    bool moveable = model._game->result() == Chess::GameResult::Ongoing &&
         std::find(_moveableBoards.begin(), _moveableBoards.end(), board) != _moveableBoards.end();
     it->second->setMoveable(moveable);
   }
   view.updateHud(computeHud());
-  view.setEndGame(model._game->gameEnd(), model._game->gameEnd() && model._game->getWinner() == Chess::PieceColor::PIECEWHITE);
+  {
+    const Chess::GameResult res = model._game->result();
+    view.setEndGame(res != Chess::GameResult::Ongoing, res == Chess::GameResult::WhiteWins, res == Chess::GameResult::Draw);
+  }
 
-  if (model._game->gameEnd()) {
+  if (model._game->result() != Chess::GameResult::Ongoing) {
     if (!_isGameEnd) AudioManager::instance().playSfx(Sfx::Win); // once, on the transition
     _isGameEnd = true;
     return;
@@ -409,10 +422,11 @@ void ChessController::render() {
   view.renderHud();
   renderInGameMenu();
 
-  if (model._game->gameEnd()) {
-    auto winner = model._game->getWinner();
-    std::string winnerText = (winner == Chess::PieceColor::PIECEWHITE) ? "White wins!" : "Black wins!";
-    view.renderEndGameScreen(winnerText);
+  const Chess::GameResult result = model._game->result();
+  if (result != Chess::GameResult::Ongoing) {
+    std::string text = result == Chess::GameResult::WhiteWins ? "White wins!"
+                     : result == Chess::GameResult::BlackWins ? "Black wins!" : "Draw";
+    view.renderEndGameScreen(text, result == Chess::GameResult::Draw ? "Stalemate" : "Checkmate");
   }
 }
 
@@ -463,10 +477,14 @@ HudData ChessController::computeHud() const {
   hud.whiteToMove = model._game->getCurrentTurnColor() == Chess::PieceColor::PIECEWHITE;
   hud.fullTurn = model._game->presentFullTurn() + 1;
   hud.timelineCount = model._game->timeLineCount();
-  if (model._game->gameEnd()) {
+  if (model._game->result() != Chess::GameResult::Ongoing) {
     hud.hint = "";
-  } else if (_moveableBoards.empty()) {
+  } else if (model._game->resultPending()) {
+    hud.hint = "Checking position...";
+  } else if (model._game->canSubmit()) {
     hud.hint = "Submit your turn";
+  } else if (model._game->mandatoryBoards().empty() && model._game->undoable()) {
+    hud.hint = "Your king would be capturable";
   } else {
     switch (model._currentMoveState.currentPhase) {
       case MovePhase::SELECT_FROM_BOARD: hud.hint = "Select a board"; break;
@@ -489,22 +507,21 @@ void ChessController::updateMenuButtonStates() {
 
   // Update Undo button: enabled if there are moves to undo
   if (undoItem) {
-    bool canUndo = model._game->undoable() && !model._game->gameEnd();
+    bool canUndo = model._game->undoable() && model._game->result() == Chess::GameResult::Ongoing;
     undoItem->setEnabled(canUndo);
   }
 
-  // Update Submit button: enabled if there are no moveable boards (turn can be submitted)
+  // Update Submit button: enabled once the turn is complete and legal (engine rule: canSubmit)
   if (submitItem) {
     _moveableBoards = model._game->getMoveableBoards();
-    bool canSubmit = _moveableBoards.empty() && !model._game->gameEnd();
-    submitItem->setEnabled(canSubmit);
+    submitItem->setEnabled(model._game->canSubmit());
   }
 
   // Update Deselect button: enabled if there's a current move state to deselect
   // (i.e., not in the initial SELECT_FROM_BOARD phase or has selections made)
   if (deselectItem) {
     bool canDeselect = (model._currentMoveState.currentPhase != MovePhase::SELECT_FROM_BOARD ||
-                        model._currentMoveState.selectedBoard != nullptr) && !model._game->gameEnd();
+                        model._currentMoveState.selectedBoard != nullptr) && model._game->result() == Chess::GameResult::Ongoing;
     deselectItem->setEnabled(canDeselect);
   }
 }
@@ -532,10 +549,10 @@ void ChessController::handleUndoMove() {
 }
 
 void ChessController::handleSubmitMove() {
+  if (!model._game->canSubmit()) return;
   std::cout << "Submitting move..." << std::endl;
   view.finishAnimations();
 
-  // No validity check needed - button is disabled when invalid
   model._game->submitTurn();
   std::cout << "Move submitted successfully." << std::endl;
   clearSelection();

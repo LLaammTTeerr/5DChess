@@ -108,6 +108,7 @@ Only the assets the game loads are bundled (including the audio); the web build 
 | `FDCHESS_BUILD_GAME` | ON | Build the raylib game (`5dchess`) |
 | `FDCHESS_BUILD_TESTS` | ON | Build the unit/property tests (doctest) |
 | `FDCHESS_SANITIZE` | OFF | Enable AddressSanitizer + UBSan (GCC/Clang) |
+| `FDCHESS_BUILD_REFCHECK` | OFF | Build `tools/refcheck` (differential testing against 5d-chess-js, search benchmark) |
 
 ### Tests
 ```bash
@@ -116,6 +117,14 @@ cmake --build build-test -j
 ctest --test-dir build-test --output-on-failure
 ```
 The engine tests do not need raylib or a display. Drop `-DFDCHESS_SANITIZE=ON` for a plain run.
+
+### Engine docs and differential testing
+- [docs/RULES.md](docs/RULES.md): the rules the engine implements, their sources, and the deliberate differences from the
+  reference engine 5d-chess-js.
+- [docs/SEARCH.md](docs/SEARCH.md): how checkmate / stalemate are decided without blocking the game (the resumable
+  `TurnSearch`), why its pruning is safe, and the benchmark (`turnbench`).
+- `tools/refcheck/` (`-DFDCHESS_BUILD_REFCHECK=ON`, default OFF): plays random legal games, dumps every position with its full
+  move list and replays them in 5d-chess-js (`node tools/refcheck/compare.js --ref <5d-chess-js checkout> --bin <refcheck>`).
 
 ### Packaging
 ```bash
@@ -166,6 +175,8 @@ The game changes its working directory to the executable's folder, so it can be 
 │   ├── main.cpp               # Entry point
 │   └── chess.cpp              # Core rules engine (no raylib dependency)
 ├── tests/                     # doctest unit and property tests for the engine
+├── tools/                     # theme_preview, refcheck (differential tests against 5d-chess-js)
+├── docs/                      # RULES.md, SEARCH.md, screenshots
 └── README.md                  # This file
 ```
 
