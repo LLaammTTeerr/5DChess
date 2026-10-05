@@ -76,7 +76,7 @@ void checkMoveGenSoundness(const IGame& game, Coverage& cov) {
           REQUIRE(to.position.x() < game.dim());
           REQUIRE(to.position.y() >= 0);
           REQUIRE(to.position.y() < game.dim());
-          const int tl = to.board->getTimeLine()->ID();
+          const int tl = to.board->timeLineId();
           const int ht = to.board->halfTurnNumber();
           CAPTURE(piece->name());
           CAPTURE(key(from));
@@ -96,6 +96,21 @@ void checkMoveGenSoundness(const IGame& game, Coverage& cov) {
         }
       }
     }
+  }
+}
+
+// Plays up to `plies` random plies (submitting the turn when no move is left), undoing occasionally.
+void scribble(IGame& game, std::mt19937& rng, int plies) {
+  for (int i = 0; i < plies and not game.gameEnd(); ++i) {
+    if (game.getMoveableBoards().empty()) {
+      if (!game.undoable()) return;
+      game.submitTurn();
+      continue;
+    }
+    auto moves = game.allPseudoLegalMoves();
+    if (moves.empty()) return;
+    game.makeMove(moves[std::uniform_int_distribution<std::size_t>(0, moves.size() - 1)(rng)]);
+    if (std::uniform_int_distribution<int>(0, 5)(rng) == 0) game.undo();
   }
 }
 
@@ -122,6 +137,16 @@ void fuzzGame(unsigned seed, int plies, Coverage& cov) {
 
   for (int ply = 0; ply < plies and not game.gameEnd(); ++ply) {
     CAPTURE(ply);
+    if (std::uniform_int_distribution<int>(0, 7)(rng) == 0) {
+      // Clone, play random plies on the clone: the original must not notice.
+      const std::string pre = snapshot(game);
+      auto dumps = dumpAllBoards(game);
+      auto copy = game.clone();
+      CHECK(snapshot(*copy) == pre);
+      scribble(*copy, rng, 12);
+      CHECK(snapshot(game) == pre);
+      for (const auto& [board, dump] : dumps) CHECK(dumpBoard(board) == dump);
+    }
     if (game.getMoveableBoards().empty()) {
       REQUIRE(game.undoable()); // otherwise the game would be stuck
       const PieceColor colorBefore = game.getCurrentTurnColor();
@@ -135,7 +160,7 @@ void fuzzGame(unsigned seed, int plies, Coverage& cov) {
     }
 
     checkMoveGenSoundness(game, cov);
-    auto moves = allLegalMoves(game);
+    auto moves = game.allPseudoLegalMoves();
     if (moves.empty()) break;
     const Move move = moves[std::uniform_int_distribution<std::size_t>(0, moves.size() - 1)(rng)];
     CAPTURE(key(move.from));

@@ -16,7 +16,7 @@ TEST_CASE("standard game: initial position") {
   REQUIRE(game.getMoveableBoards().size() == 1);
 
   // 16 pawn moves (single + double step) and 4 knight moves, exactly as in 2D chess.
-  CHECK(allLegalMoves(game).size() == 20);
+  CHECK(game.allPseudoLegalMoves().size() == 20);
 }
 
 TEST_CASE("selecting an empty square or an enemy piece throws") {
@@ -91,7 +91,7 @@ TEST_CASE("a knight jumping back in time branches a new timeline") {
   auto branch = game.getTimeLines()[1];
   CHECK(branch->ID() == 1);
   CHECK(branch->forkAt() == 0);
-  CHECK(branch->parent() == game.getTimeLines()[0]);
+  CHECK(branch->parentId() == 0);
   REQUIRE(branch->size() == 1);
   CHECK(branch->back()->halfTurnNumber() == 1);
   REQUIRE(branch->back()->getPiece({1, 2}) != nullptr);
@@ -165,11 +165,11 @@ TEST_CASE("timeline invariants hold for every built-in game mode") {
   for (const auto& game : games) {
     CAPTURE(game->dim());
     CHECK_FALSE(game->getMoveableBoards().empty());
-    CHECK_FALSE(allLegalMoves(*game).empty());
+    CHECK_FALSE(game->allPseudoLegalMoves().empty());
     int whiteKings = 0, blackKings = 0;
     for (const auto& timeLine : game->getTimeLines()) {
       for (const auto& board : timeLine->getBoards()) {
-        CHECK(board->getTimeLine() == timeLine);
+        CHECK(board->timeLineId() == timeLine->ID());
         for (int x = 0; x < board->dim(); ++x)
           for (int y = 0; y < board->dim(); ++y)
             if (auto p = board->getPiece({x, y})) {
@@ -208,4 +208,89 @@ TEST_CASE("present does not skip a timeline after a move onto a board ahead in t
   game.submitTurn();
   // Timeline 0 only reached h3, so the present must be h3, not h5.
   CHECK(game.presentHalfTurn() == 3);
+}
+
+namespace {
+
+// Standard game after 1. e4 e5 followed by a knight time-jump, so a branch timeline exists.
+std::unique_ptr<StandardGame> branchedGame() {
+  auto game = std::make_unique<StandardGame>();
+  auto b0 = game->getMoveableBoards()[0];
+  game->makeMove({{b0, {4, 1}}, {b0, {4, 3}}});
+  game->submitTurn();
+  auto b1 = game->getMoveableBoards()[0];
+  game->makeMove({{b1, {4, 6}}, {b1, {4, 4}}});
+  game->submitTurn();
+  auto b2 = game->getMoveableBoards()[0];
+  game->makeMove({{b2, {1, 0}}, {game->getBoard(0, 0), {1, 2}}});
+  return game;
+}
+
+} // namespace
+
+TEST_CASE("clone copies the full state, including a pending turn") {
+  auto game = branchedGame();
+  auto copy = game->clone();
+  CHECK(snapshot(*copy) == snapshot(*game));
+  CHECK(copy->timeLineCount() == 2);
+  CHECK(copy->undoable());
+  CHECK(copy->bufferHalfTurn() == game->bufferHalfTurn());
+  CHECK(copy->timeLine(1)->parentId() == 0);
+  // TimeLine objects are deep-copied, Boards are shared.
+  CHECK(copy->timeLine(1) != game->timeLine(1));
+  CHECK(copy->getBoard(1, 1) == game->getBoard(1, 1));
+}
+
+TEST_CASE("moves on a clone do not affect the original, and vice versa") {
+  auto game = branchedGame();
+  auto copy = game->clone();
+  const std::string start = snapshot(*game);
+
+  // The clone undoes the branching move and finishes the turn differently; the original is untouched.
+  copy->undo();
+  CHECK(copy->timeLineCount() == 1);
+  CHECK(snapshot(*game) == start);
+  CHECK(game->timeLineCount() == 2);
+  auto cb = copy->getMoveableBoards()[0];
+  copy->makeMove({{cb, {0, 1}}, {cb, {0, 3}}});
+  copy->submitTurn();
+  CHECK(snapshot(*game) == start);
+  CHECK(game->undoable());
+  CHECK(game->getCurrentTurnColor() == PieceColor::PIECEWHITE);
+
+  // Now mutate the original; the clone's snapshot must stay put.
+  const std::string copySnapshot = snapshot(*copy);
+  game->undo();
+  auto gb = game->getMoveableBoards()[0];
+  game->makeMove({{gb, {7, 1}}, {gb, {7, 3}}});
+  game->submitTurn();
+  CHECK(snapshot(*copy) == copySnapshot);
+  CHECK(snapshot(*game) != copySnapshot);
+}
+
+TEST_CASE("timeline storage is keyed by ID and supports negative IDs") {
+  struct NegativeSandbox : IGame {
+    NegativeSandbox() : IGame(4) {
+      for (int id : {-2, -1, 0, 1}) _addTimeLine(std::make_shared<TimeLine>(4, id))->pushBack(std::make_shared<Board>(4, id));
+    }
+    using IGame::timeLine;
+  } game;
+  CHECK(game.timeLineIds() == std::vector<int>{-2, -1, 0, 1});
+  CHECK(game.minTimeLineId() == -2);
+  CHECK(game.maxTimeLineId() == 1);
+  CHECK(game.timeLineCount() == 4);
+  CHECK(game.hasTimeLine(-1));
+  CHECK_FALSE(game.hasTimeLine(2));
+  CHECK_FALSE(game.boardExists(-3, 0));
+  CHECK(game.boardExists(-2, 0));
+  CHECK(game.getTimeLines().front()->ID() == -2);
+  CHECK(game.getBoard(-1, 0)->timeLineId() == -1);
+
+  // A rook on timeline 0 slides over timeline -1 and captures on -2 along the timeline axis.
+  game.getBoard(0, 0)->placePiece({0, 0}, make<Rook>(PieceColor::PIECEWHITE));
+  game.getBoard(-2, 0)->placePiece({0, 0}, make<Pawn>(PieceColor::PIECEBLACK));
+  auto moves = movesAt(game, game.getBoard(0, 0), 0, 0);
+  CHECK(contains(moves, game.getBoard(-1, 0), 0, 0));
+  CHECK(contains(moves, game.getBoard(-2, 0), 0, 0));
+  CHECK(contains(moves, game.getBoard(1, 0), 0, 0));
 }

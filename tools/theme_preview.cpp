@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
     if (rc == 0) {
       for (int i = 0; i < turns; ++i)
         if (!playScriptedTurn(*game)) break;
-      std::cout << "timelines: " << game->getTimeLines().size() << ", half-turn: " << game->presentHalfTurn() << "\n";
+      std::cout << "timelines: " << game->timeLineCount() << ", half-turn: " << game->presentHalfTurn() << "\n";
 
       ChessModel model(game);
       ChessView view(Vector3{5000, 5000, 1});

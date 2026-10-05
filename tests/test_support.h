@@ -17,27 +17,26 @@ class Sandbox : public IGame {
 public:
   explicit Sandbox(int n, int timeLines = 1) : IGame(n) {
     for (int id = 0; id < timeLines; ++id) {
-      _timeLines.push_back(std::make_shared<TimeLine>(n, id));
-      _timeLines[id]->pushBack(std::make_shared<Board>(n, _timeLines[id]));
+      _addTimeLine(std::make_shared<TimeLine>(n, id))->pushBack(std::make_shared<Board>(n, id));
     }
   }
 
   // Timeline i holds boardCounts[i] empty boards (half-turns 0..count-1); the present is set explicitly.
   Sandbox(int n, const std::vector<int>& boardCounts, int presentHalfTurn) : IGame(n) {
     for (int id = 0; id < static_cast<int>(boardCounts.size()); ++id) {
-      _timeLines.push_back(std::make_shared<TimeLine>(n, id));
+      auto timeLine = _addTimeLine(std::make_shared<TimeLine>(n, id));
       for (int h = 0; h < boardCounts[id]; ++h) {
-        _timeLines[id]->pushBack(std::make_shared<Board>(n, _timeLines[id], h));
+        timeLine->pushBack(std::make_shared<Board>(n, id, h));
       }
     }
     _presentHalfTurn = presentHalfTurn;
   }
 
   std::shared_ptr<Board> boardAt(int timeLineID, int halfTurn) const {
-    return _timeLines[timeLineID]->getBoardByHalfTurn(halfTurn);
+    return timeLine(timeLineID)->getBoardByHalfTurn(halfTurn);
   }
 
-  std::shared_ptr<Board> tip(int timeLineID) const { return _timeLines[timeLineID]->back(); }
+  std::shared_ptr<Board> tip(int timeLineID) const { return timeLine(timeLineID)->back(); }
 
   void place(int timeLineID, int x, int y, std::shared_ptr<Piece> piece) {
     tip(timeLineID)->placePiece({x, y}, std::move(piece));
@@ -59,7 +58,7 @@ inline bool contains(const std::vector<SelectedPosition>& moves, const std::shar
 }
 
 inline std::string key(const SelectedPosition& p) {
-  return std::to_string(p.board->getTimeLine()->ID()) + ":" + std::to_string(p.board->halfTurnNumber()) + ":" +
+  return std::to_string(p.board->timeLineId()) + ":" + std::to_string(p.board->halfTurnNumber()) + ":" +
          std::to_string(p.position.x()) + "," + std::to_string(p.position.y());
 }
 
@@ -69,7 +68,8 @@ inline std::string snapshot(const IGame& game) {
                     " color=" + std::to_string(int(game.getCurrentTurnColor())) +
                     " end=" + std::to_string(game.gameEnd()) + " undoable=" + std::to_string(game.undoable()) + "\n";
   for (const auto& timeLine : game.getTimeLines()) {
-    out += "T" + std::to_string(timeLine->ID()) + " fork=" + std::to_string(timeLine->forkAt()) + "\n";
+    out += "T" + std::to_string(timeLine->ID()) + " fork=" + std::to_string(timeLine->forkAt()) +
+           " parent=" + std::to_string(timeLine->parentId()) + "\n";
     for (const auto& board : timeLine->getBoards()) {
       out += " h" + std::to_string(board->halfTurnNumber()) + " ";
       for (int y = 0; y < board->dim(); ++y) {
@@ -85,24 +85,6 @@ inline std::string snapshot(const IGame& game) {
     }
   }
   return out;
-}
-
-// Every legal (from, to) pair available to the side to move.
-inline std::vector<Move> allLegalMoves(const IGame& game) {
-  std::vector<Move> result;
-  for (const auto& board : game.getMoveableBoards()) {
-    for (int x = 0; x < board->dim(); ++x) {
-      for (int y = 0; y < board->dim(); ++y) {
-        auto piece = board->getPiece({x, y});
-        if (!piece || piece->color() != game.getCurrentTurnColor()) continue;
-        SelectedPosition from(board, Position2D(x, y));
-        for (const auto& to : game.getMoveablePositions(from)) {
-          result.push_back(Move{from, to});
-        }
-      }
-    }
-  }
-  return result;
 }
 
 } // namespace test
