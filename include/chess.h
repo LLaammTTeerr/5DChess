@@ -6,6 +6,7 @@
 #include <vector>
 #include <optional>
 #include <queue>
+#include <map>
 #include <cassert>
 #include <functional>
 #include <cstdint>
@@ -277,9 +278,15 @@ public:
   }
 };
 
+/**
+ * A snapshot of one N x N position.
+ * @note Boards are IMMUTABLE once they have been pushed onto a TimeLine: every mutation (placePiece) must happen
+ * while the board is still being built. This is what makes it safe to share Board objects between
+ * IGame::clone()d games (structural sharing).
+ */
 class Board : public std::enable_shared_from_this<Board> {
 public:
-  Board(int N, std::shared_ptr<TimeLine> timeLine, int halfTurnNumber = 0);
+  Board(int N, int timeLineId, int halfTurnNumber = 0);
 
   /**
    * Get the dimension of the board.
@@ -307,10 +314,10 @@ public:
   std::shared_ptr<Piece> getPiece(Position2D position) const;
 
   /**
-   * Get the timeline this board belongs to.
-   * @return A shared pointer to the TimeLine object associated with this board.
+   * Get the ID of the timeline this board belongs to (immutable; may be negative).
+   * Use IGame::timeLine(id) to get the TimeLine object.
    */
-  std::shared_ptr<TimeLine> getTimeLine() const;
+  inline int timeLineId(void) const { return _timeLineId; }
 
   /**
    * Get the full turn number of the board.
@@ -324,16 +331,16 @@ public:
    */
   inline int halfTurnNumber(void) const { return _halfTurnNumber; }
 
-  std::shared_ptr<Board> createFork(std::shared_ptr<TimeLine> timeLine);
+  std::shared_ptr<Board> createFork(int timeLineId);
 private:
   int _N;
   int _halfTurnNumber;
   std::shared_ptr<Board> _previousBoard;
   std::vector<std::vector<std::shared_ptr<Piece>>> _pieces;
-  std::weak_ptr<TimeLine> _timeLine; // The timeline this board belongs to (non-owning: the timeline owns its boards)
+  int _timeLineId; // ID of the timeline this board belongs to
 };
 
-class TimeLine : public std::enable_shared_from_this<TimeLine> {
+class TimeLine {
 public:
   TimeLine(int N, int IDX = 0, int forkAt = -1);
 
@@ -380,12 +387,18 @@ public:
     return _history.back()->halfTurnNumber();
   }
 
+  static constexpr int NO_PARENT = INT_MIN;
+
   /**
-   * Get the parent timeline of the current timeline.
-   * @return A shared pointer to the parent timeline, or nullptr if there is no parent.
+   * Get the ID of the timeline this one was forked from, or NO_PARENT if it is an original timeline.
+   * (An ID rather than a pointer, so a TimeLine never points into another game.)
    */
-  inline std::shared_ptr<const TimeLine> parent(void) const {
-    return _parent;
+  inline int parentId(void) const {
+    return _parentId;
+  }
+
+  inline bool hasParent(void) const {
+    return _parentId != NO_PARENT;
   }
 
   inline int size(void) const {
@@ -394,7 +407,7 @@ public:
 
   /**
    * Push a new board state onto the timeline.
-   * @param board The board state to be added to the timeline.
+   * @param board The board state to be added to the timeline; it must be fully built and is immutable from now on.
    */
   void pushBack(std::shared_ptr<Board> board);
 
@@ -417,7 +430,7 @@ public:
   std::shared_ptr<TimeLine> createFork(int newID, int forkAt) {
     std::shared_ptr<TimeLine> forkedTimeLine = std::make_shared<TimeLine>(_N, newID);
     forkedTimeLine->_forkAt = forkAt;
-    forkedTimeLine->_parent = shared_from_this();
+    forkedTimeLine->_parentId = _ID;
     return forkedTimeLine;
   }
 private:
@@ -425,7 +438,7 @@ private:
   int _ID;
   int _forkAt;
   std::vector<std::shared_ptr<Board>> _history;
-  std::shared_ptr<TimeLine> _parent;
+  int _parentId = NO_PARENT;
 public:
   std::vector<std::shared_ptr<Board>> getBoards() const { return _history; }
 };
@@ -438,7 +451,7 @@ struct SelectedPosition {
   SelectedPosition(std::shared_ptr<Board> b, Position2D pos) : board(b), position(pos) {}
 
   inline Vector4D toVector4D(void) const {
-    return Vector4D(position.x(), position.y(), board->fullTurnNumber(), board->getTimeLine()->ID());
+    return Vector4D(position.x(), position.y(), board->fullTurnNumber(), board->timeLineId());
   }
 };
 
@@ -460,6 +473,15 @@ class IGame {
 public:
   IGame(int N) : _N(N), _presentHalfTurn(0), _currentTurnColor(PieceColor::PIECEWHITE) {}
   virtual ~IGame() = default;
+
+  /**
+   * Cheap full-state copy for search. TimeLine objects are deep-copied (their vectors of shared_ptr<Board> are
+   * copied) while the immutable Boards themselves are shared. All turn bookkeeping is copied too, so moves made on
+   * the clone never affect the original and vice versa. Moves/SelectedPositions taken from either game are valid
+   * in both (board identity is shared).
+   * @note The clone is a plain IGame; derived games only differ in their constructors.
+   */
+  std::unique_ptr<IGame> clone(void) const;
 
   /**
    * Get the dimension of the game.
@@ -538,7 +560,7 @@ public:
   bool boardExists(int timeLineID, int halfTurn) const;
 
   inline std::shared_ptr<Board> getBoard(int timeLineID, int halfTurn) const {
-    return _timeLines[timeLineID]->getBoardByHalfTurn(halfTurn);
+    return timeLine(timeLineID)->getBoardByHalfTurn(halfTurn);
   }
 
   inline bool gameEnd(void) const {
@@ -552,13 +574,13 @@ public:
 
   inline std::shared_ptr<Board> getNewBoard(void) const {
     assert(undoable());
-    return _timeLines[_undoBuffer.back().back()]->back();
+    return timeLine(_undoBuffer.back().back())->back();
   }
 protected:
   int _N;
   int _presentHalfTurn;
   std::vector<int> _nextHalfTurnBuffer;
-  std::vector<std::shared_ptr<TimeLine>> _timeLines;
+  std::map<int, std::shared_ptr<TimeLine>> _timeLines; // keyed (and ordered) by timeline ID; IDs may be negative
   std::vector<Move> _currentTurnMoves;
   PieceColor _currentTurnColor;
   std::vector<std::vector<int>> _undoBuffer;
@@ -566,13 +588,69 @@ protected:
   std::optional<PieceColor> _gameWinner;
 
   std::shared_ptr<Piece> _getPieceByVector4DFullTurn(Vector4D position) const;
-  inline void _pushBack(std::shared_ptr<TimeLine> timeLine) {
-    _timeLines.push_back(timeLine);
+  IGame(const IGame& other);
+  IGame& operator=(const IGame&) = delete;
+
+  /** Register a timeline under its own ID (which must not be in use yet). */
+  inline std::shared_ptr<TimeLine> _addTimeLine(std::shared_ptr<TimeLine> timeLine) {
+    const bool inserted = _timeLines.emplace(timeLine->ID(), timeLine).second;
+    assert(inserted);
+    (void)inserted;
+    return timeLine;
   }
+
+  /**
+   * ID for a timeline newly branched by `mover`. For now every new branch gets max+1.
+   * The next step (official multiverse rules) makes Black allocate min-1 (negative IDs) and White max+1.
+   */
+  int allocateTimeLineId(PieceColor mover) const;
 public:
-  inline std::vector<std::shared_ptr<TimeLine>> getTimeLines(void) const {
-    return _timeLines;
+  /** The timeline with the given ID (must exist). */
+  inline std::shared_ptr<TimeLine> timeLine(int id) const {
+    auto it = _timeLines.find(id);
+    assert(it != _timeLines.end());
+    return it->second;
   }
+
+  inline bool hasTimeLine(int id) const {
+    return _timeLines.find(id) != _timeLines.end();
+  }
+
+  /** All timeline IDs in ascending order. */
+  std::vector<int> timeLineIds(void) const {
+    std::vector<int> ids;
+    ids.reserve(_timeLines.size());
+    for (const auto& kv : _timeLines) ids.push_back(kv.first);
+    return ids;
+  }
+
+  inline int minTimeLineId(void) const {
+    assert(!_timeLines.empty());
+    return _timeLines.begin()->first;
+  }
+
+  inline int maxTimeLineId(void) const {
+    assert(!_timeLines.empty());
+    return _timeLines.rbegin()->first;
+  }
+
+  inline int timeLineCount(void) const {
+    return static_cast<int>(_timeLines.size());
+  }
+
+  /** All timelines in ascending ID order. */
+  inline std::vector<std::shared_ptr<TimeLine>> getTimeLines(void) const {
+    std::vector<std::shared_ptr<TimeLine>> result;
+    result.reserve(_timeLines.size());
+    for (const auto& kv : _timeLines) result.push_back(kv.second);
+    return result;
+  }
+
+  /**
+   * Every (from, to) pair, for every own piece on every moveable board, that getMoveablePositions offers
+   * to the side to move.
+   */
+  std::vector<Move> allPseudoLegalMoves(void) const;
 
   void undo(void);
 

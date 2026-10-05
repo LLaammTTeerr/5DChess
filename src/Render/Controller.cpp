@@ -263,7 +263,7 @@ void ChessController::handleSelectedToPosition(Chess::SelectedPosition selectedP
     newestBoardView->setBoardTexture(&ResourceManager::getInstance().getTexture2D("mainChessBoard"));
     newestBoardView->setRenderArea({
         static_cast<float>(newestBoard->halfTurnNumber()) * (BOARD_WORLD_SIZE + HORIZONTAL_SPACING),
-        static_cast<float>(newestBoard->getTimeLine()->ID()) * (BOARD_WORLD_SIZE + VERTICAL_SPACING),
+        static_cast<float>(newestBoard->timeLineId()) * (BOARD_WORLD_SIZE + VERTICAL_SPACING),
         BOARD_WORLD_SIZE,
         BOARD_WORLD_SIZE
     });
@@ -338,7 +338,7 @@ std::vector<std::shared_ptr<BoardView>> ChessController::computeBoardView2DsFrom
     boardView->setBoardTexture(&ResourceManager::getInstance().getTexture2D("mainChessBoard"));
     boardView->setRenderArea({
         static_cast<float>(board->halfTurnNumber()) * (BOARD_WORLD_SIZE + HORIZONTAL_SPACING),
-        static_cast<float>(board->getTimeLine()->ID()) * (BOARD_WORLD_SIZE + VERTICAL_SPACING),
+        static_cast<float>(board->timeLineId()) * (BOARD_WORLD_SIZE + VERTICAL_SPACING),
         BOARD_WORLD_SIZE,
         BOARD_WORLD_SIZE
     });
@@ -438,7 +438,7 @@ HudData ChessController::computeHud() const {
   HudData hud;
   hud.whiteToMove = model._game->getCurrentTurnColor() == Chess::PieceColor::PIECEWHITE;
   hud.fullTurn = model._game->presentFullTurn() + 1;
-  hud.timelineCount = static_cast<int>(model._game->getTimeLines().size());
+  hud.timelineCount = model._game->timeLineCount();
   if (model._game->gameEnd()) {
     hud.hint = "";
   } else if (_moveableBoards.empty()) {
@@ -580,16 +580,15 @@ std::vector<TimelineArrowData> ChessController::computeBranchingArrows() const {
     auto timelines = model.getGame()->getTimeLines();
     
     for (const auto& timeline : timelines) {
-        auto parentTimeline = timeline->parent();
-        if (!parentTimeline) continue; // Skip main timeline
+        if (!timeline->hasParent()) continue; // Skip original timelines
         
         // Find the fork point board in parent timeline
         int forkPoint = timeline->forkAt();
         std::shared_ptr<Chess::Board> parentBoard = nullptr;
         
         try {
-            if (model.getGame()->boardExists(parentTimeline->ID(), forkPoint)) {
-                parentBoard = model.getGame()->getBoard(parentTimeline->ID(), forkPoint);
+            if (model.getGame()->boardExists(timeline->parentId(), forkPoint)) {
+                parentBoard = model.getGame()->getBoard(timeline->parentId(), forkPoint);
             }
         } catch (...) {
             continue; // Skip if board doesn't exist

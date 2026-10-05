@@ -16,7 +16,7 @@ Vector4D::Vector4D(int x, int y, int z, int w) : _data({x, y, z, w}) {}
 Piece::Piece(PieceColor color, std::shared_ptr<Board> board, Position2D position)
     : _color(color), _board(board), _position(position) {}
 
-Board::Board(int N, std::shared_ptr<TimeLine> timeLine, int halfTurnNumber) : _N(N), _halfTurnNumber(halfTurnNumber), _previousBoard(nullptr), _timeLine(timeLine) {
+Board::Board(int N, int timeLineId, int halfTurnNumber) : _N(N), _halfTurnNumber(halfTurnNumber), _previousBoard(nullptr), _timeLineId(timeLineId) {
   _pieces.resize(N, std::vector<std::shared_ptr<Piece>>(N, nullptr));
 }
 
@@ -36,8 +36,8 @@ std::shared_ptr<Piece> Board::getPiece(Position2D position) const {
   return _pieces[position.x()][position.y()];
 }
 
-std::shared_ptr<Board> Board::createFork(std::shared_ptr<TimeLine> timeLine) {
-  std::shared_ptr<Board> forkedBoard = std::make_shared<Board>(_N, timeLine);
+std::shared_ptr<Board> Board::createFork(int timeLineId) {
+  std::shared_ptr<Board> forkedBoard = std::make_shared<Board>(_N, timeLineId);
   for (int x = 0; x < _N; ++x) {
     for (int y = 0; y < _N; ++y) {
       std::shared_ptr<Piece> piece = _pieces[x][y];
@@ -51,11 +51,7 @@ std::shared_ptr<Board> Board::createFork(std::shared_ptr<TimeLine> timeLine) {
   return forkedBoard;
 }
 
-std::shared_ptr<TimeLine> Board::getTimeLine() const {
-  return _timeLine.lock();
-}
-
-TimeLine::TimeLine(int N, int IDX, int forkAt) : _N(N), _ID(IDX), _forkAt(forkAt), _parent(nullptr) {}
+TimeLine::TimeLine(int N, int IDX, int forkAt) : _N(N), _ID(IDX), _forkAt(forkAt), _parentId(NO_PARENT) {}
 
 void TimeLine::pushBack(std::shared_ptr<Board> board) {
   _history.push_back(board);
@@ -63,7 +59,7 @@ void TimeLine::pushBack(std::shared_ptr<Board> board) {
 
 std::vector<std::shared_ptr<Board>> IGame::getMoveableBoards(void) const {
   std::vector<std::shared_ptr<Board>> moveableBoards;
-  for (std::shared_ptr<TimeLine> timeLine: _timeLines) {
+  for (const auto& [id, timeLine] : _timeLines) {
     if (timeLine->fullTurnNumber() == presentFullTurn() && timeLine->halfTurnNumber() == _presentHalfTurn) {
       moveableBoards.push_back(timeLine->back());
     }
@@ -73,17 +69,16 @@ std::vector<std::shared_ptr<Board>> IGame::getMoveableBoards(void) const {
 
 bool IGame::canMakeMoveFromBoard(std::shared_ptr<Board> board) const {
   return board
-    and board->getTimeLine()->fullTurnNumber() == presentFullTurn()
+    and timeLine(board->timeLineId())->fullTurnNumber() == presentFullTurn()
     and board->halfTurnNumber() == _presentHalfTurn
-    and board->getTimeLine()->halfTurnNumber() == _presentHalfTurn;
+    and timeLine(board->timeLineId())->halfTurnNumber() == _presentHalfTurn;
 }
 
 bool IGame::boardExists(int timeLineID, int halfTurn) const {
-  if (timeLineID >= 0 && timeLineID < static_cast<int>(_timeLines.size())) {
-    int pos = halfTurn - _timeLines[timeLineID]->forkAt() - 1;
-    return pos >= 0 && pos < static_cast<int>(_timeLines[timeLineID]->size());
-  }
-  return false;
+  auto it = _timeLines.find(timeLineID);
+  if (it == _timeLines.end()) return false;
+  int pos = halfTurn - it->second->forkAt() - 1;
+  return pos >= 0 && pos < static_cast<int>(it->second->size());
 }
 
 std::shared_ptr<Piece> IGame::_getPieceByVector4DFullTurn(Vector4D position) const {
@@ -91,8 +86,8 @@ std::shared_ptr<Piece> IGame::_getPieceByVector4DFullTurn(Vector4D position) con
   int y = position.y();
   int halfTurn = 2 * position.z() + int(_currentTurnColor);
   int timeLineID = position.w();
-  assert(timeLineID >= 0 && timeLineID < static_cast<int>(_timeLines.size()));
-  std::shared_ptr<const Board> board = _timeLines[timeLineID]->getBoardByHalfTurn(halfTurn);
+  assert(hasTimeLine(timeLineID));
+  std::shared_ptr<const Board> board = timeLine(timeLineID)->getBoardByHalfTurn(halfTurn);
   assert(board != nullptr);
   assert(x >= 0 && x < board->dim() && y >= 0 && y < board->dim());
   return board->getPiece(Position2D(x, y));
@@ -108,10 +103,9 @@ void IGame::undo(void) {
   std::reverse(lastUndo.begin(), lastUndo.end());
 
   for (int timeLineID : lastUndo) {
-    _timeLines[timeLineID]->popBack();
-    if (_timeLines[timeLineID]->size() == 0) {
-      assert(static_cast<int>(_timeLines.size()) - 1 == timeLineID);
-      _timeLines.pop_back();
+    timeLine(timeLineID)->popBack();
+    if (timeLine(timeLineID)->size() == 0) {
+      _timeLines.erase(timeLineID);
     }
   }
 
@@ -234,7 +228,7 @@ std::vector<SelectedPosition> IGame::getMoveablePositions(SelectedPosition selec
         break;
     }
 
-    for (int nw = from.w() - 1; nw >= 0; nw -= 1) {
+    for (int nw = from.w() - 1; nw >= minTimeLineId(); nw -= 1) {
       if (not boardExists(nw, 2 * from.z() + parity)) {
         break;
       }
@@ -247,7 +241,7 @@ std::vector<SelectedPosition> IGame::getMoveablePositions(SelectedPosition selec
         break;
     }
 
-    for (int nw = from.w() + 1; nw < static_cast<int>(_timeLines.size()); nw += 1) {
+    for (int nw = from.w() + 1; nw <= maxTimeLineId(); nw += 1) {
       if (not boardExists(nw, 2 * from.z() + parity)) {
         break;
       }
@@ -389,7 +383,7 @@ std::vector<SelectedPosition> IGame::getMoveablePositions(SelectedPosition selec
         maxD = std::min(maxD, selected.board->fullTurnNumber() + 1);
       }
       if (ONBIT(3)) {
-        maxD = std::min(maxD, (int) _timeLines.size());
+        maxD = std::min(maxD, maxTimeLineId() - minTimeLineId() + 1);
       }
       #undef ONBIT
       // Value-returning helper: the range-init temporary stays alive for the whole loop.
@@ -509,8 +503,9 @@ void IGame::makeMove(Move move) {
     _gameWinner = _currentTurnColor;
   }
   _currentTurnMoves.push_back(move);
-  std::shared_ptr<Board> newFromBoard = move.from.board->createFork(move.from.board->getTimeLine());
-  move.from.board->getTimeLine()->pushBack(newFromBoard);
+  const int fromTimeLineId = move.from.board->timeLineId();
+  // Boards are immutable once pushed to a timeline: finish building each new board before pushing it.
+  std::shared_ptr<Board> newFromBoard = move.from.board->createFork(fromTimeLineId);
   newFromBoard->placePiece(move.from.position, nullptr);
   if (move.to.position.y() == 0 and piece->name() == "pawn" and piece->color() == PieceColor::PIECEBLACK) {
     piece = std::make_shared<Queen>(PieceColor::PIECEBLACK);
@@ -518,25 +513,28 @@ void IGame::makeMove(Move move) {
   if (move.to.position.y() == dim() - 1 and piece->name() == "pawn" and piece->color() == PieceColor::PIECEWHITE) {
     piece = std::make_shared<Queen>(PieceColor::PIECEWHITE);
   }
-  list.push_back(newFromBoard->getTimeLine()->ID());
+  list.push_back(fromTimeLineId);
   if (move.to.board == move.from.board) {
     newFromBoard->placePiece(move.to.position, piece->clone());
+    timeLine(fromTimeLineId)->pushBack(newFromBoard);
     _nextHalfTurnBuffer.push_back(newFromBoard->halfTurnNumber());
     _undoBuffer.push_back(list);
     return;
   }
+  timeLine(fromTimeLineId)->pushBack(newFromBoard);
 
-  std::shared_ptr<TimeLine> toTimeLine = move.to.board->halfTurnNumber() == move.to.board->getTimeLine()->halfTurnNumber()
-    ? move.to.board->getTimeLine()
-    : move.to.board->getTimeLine()->createFork(_timeLines.size(), move.to.board->halfTurnNumber());
+  const int toBoardTimeLineId = move.to.board->timeLineId();
+  std::shared_ptr<TimeLine> toTimeLine = move.to.board->halfTurnNumber() == timeLine(toBoardTimeLineId)->halfTurnNumber()
+    ? timeLine(toBoardTimeLineId)
+    : timeLine(toBoardTimeLineId)->createFork(allocateTimeLineId(_currentTurnColor), move.to.board->halfTurnNumber());
 
-  if (toTimeLine != move.to.board->getTimeLine()) {
-    _timeLines.push_back(toTimeLine);
+  if (toTimeLine->ID() != toBoardTimeLineId) {
+    _addTimeLine(toTimeLine);
   }
 
   list.push_back(toTimeLine->ID());
 
-  std::shared_ptr<Board> newToBoard = move.to.board->getTimeLine()->getBoardByHalfTurn(move.to.board->halfTurnNumber())->createFork(toTimeLine);
+  std::shared_ptr<Board> newToBoard = timeLine(toBoardTimeLineId)->getBoardByHalfTurn(move.to.board->halfTurnNumber())->createFork(toTimeLine->ID());
   newToBoard->placePiece(move.to.position, piece->clone());
   toTimeLine->pushBack(newToBoard);
 
@@ -544,6 +542,47 @@ void IGame::makeMove(Move move) {
   // that is already ahead); the present must not skip past it.
   _nextHalfTurnBuffer.push_back(std::min(newFromBoard->halfTurnNumber(), newToBoard->halfTurnNumber()));
   _undoBuffer.push_back(list);
+}
+
+int IGame::allocateTimeLineId(PieceColor /*mover*/) const {
+  // NOTE: the next step (official multiverse rules) makes Black allocate minTimeLineId() - 1 and
+  // White maxTimeLineId() + 1. For now both colours get max + 1 (behaviour-preserving).
+  return maxTimeLineId() + 1;
+}
+
+IGame::IGame(const IGame& other)
+  : _N(other._N),
+    _presentHalfTurn(other._presentHalfTurn),
+    _nextHalfTurnBuffer(other._nextHalfTurnBuffer),
+    _currentTurnMoves(other._currentTurnMoves),
+    _currentTurnColor(other._currentTurnColor),
+    _undoBuffer(other._undoBuffer),
+    _rule(other._rule),
+    _gameWinner(other._gameWinner) {
+  for (const auto& [id, tl] : other._timeLines) {
+    _timeLines.emplace(id, std::make_shared<TimeLine>(*tl)); // copies the board vector; Boards are shared (immutable)
+  }
+}
+
+std::unique_ptr<IGame> IGame::clone(void) const {
+  return std::unique_ptr<IGame>(new IGame(*this));
+}
+
+std::vector<Move> IGame::allPseudoLegalMoves(void) const {
+  std::vector<Move> result;
+  for (const auto& board : getMoveableBoards()) {
+    for (int x = 0; x < board->dim(); ++x) {
+      for (int y = 0; y < board->dim(); ++y) {
+        auto piece = board->getPiece({x, y});
+        if (!piece || piece->color() != _currentTurnColor) continue;
+        SelectedPosition from(board, Position2D(x, y));
+        for (const auto& to : getMoveablePositions(from)) {
+          result.push_back(Move{from, to});
+        }
+      }
+    }
+  }
+  return result;
 }
 
 void IGame::submitTurn(void) {
@@ -557,8 +596,8 @@ void IGame::submitTurn(void) {
 
 const std::string NameOfGame<StandardGame>::value = "Standard";
 StandardGame::StandardGame(void) : IGame(Constant::BOARD_SIZE) {
-  _timeLines.push_back(std::make_shared<TimeLine>(dim()));
-  std::shared_ptr<Board> board = std::make_shared<Board>(dim(), _timeLines[0]);
+  _addTimeLine(std::make_shared<TimeLine>(dim()));
+  std::shared_ptr<Board> board = std::make_shared<Board>(dim(), 0);
   for (int i = 0; i < dim(); i += 1) {
     board->placePiece({i, 1}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
     board->placePiece({i, 6}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
@@ -580,14 +619,14 @@ StandardGame::StandardGame(void) : IGame(Constant::BOARD_SIZE) {
   board->placePiece({5, 7}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
   board->placePiece({6, 7}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
   board->placePiece({7, 7}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
-  _timeLines[0]->pushBack(board);
+  _timeLines.at(0)->pushBack(board);
 }
 
 const std::string NameOfGame<CustomGameEmitBishop>::value = "Simplify - No Bishop";
 CustomGameEmitBishop::CustomGameEmitBishop(void) : IGame(Constant::BOARD_SIZE_EMIT_BISHOP) {
   _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
-  _timeLines.push_back(std::make_shared<TimeLine>(dim()));
-  std::shared_ptr<Board> board = std::make_shared<Board>(dim(), _timeLines[0]);
+  _addTimeLine(std::make_shared<TimeLine>(dim()));
+  std::shared_ptr<Board> board = std::make_shared<Board>(dim(), 0);
   for (int i = 0; i < dim(); i += 1) {
     board->placePiece({i, 1}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
     board->placePiece({i, 4}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
@@ -605,14 +644,14 @@ CustomGameEmitBishop::CustomGameEmitBishop(void) : IGame(Constant::BOARD_SIZE_EM
   board->placePiece({3, 5}, std::make_shared<King>(PieceColor::PIECEBLACK));
   board->placePiece({4, 5}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
   board->placePiece({5, 5}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
-  _timeLines[0]->pushBack(board);
+  _timeLines.at(0)->pushBack(board);
 }
 
 const std::string NameOfGame<CustomGameEmitKnight>::value = "Simplify - No Knight";
 CustomGameEmitKnight::CustomGameEmitKnight(void) : IGame(Constant::BOARD_SIZE_EMIT_KNIGHT) {
   _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
-  _timeLines.push_back(std::make_shared<TimeLine>(dim()));
-  std::shared_ptr<Board> board = std::make_shared<Board>(dim(), _timeLines[0]);
+  _addTimeLine(std::make_shared<TimeLine>(dim()));
+  std::shared_ptr<Board> board = std::make_shared<Board>(dim(), 0);
   for (int i = 0; i < dim(); i += 1) {
     board->placePiece({i, 1}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
     board->placePiece({i, 4}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
@@ -630,14 +669,14 @@ CustomGameEmitKnight::CustomGameEmitKnight(void) : IGame(Constant::BOARD_SIZE_EM
   board->placePiece({3, 5}, std::make_shared<King>(PieceColor::PIECEBLACK));
   board->placePiece({4, 5}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
   board->placePiece({5, 5}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
-  _timeLines[0]->pushBack(board);
+  _timeLines.at(0)->pushBack(board);
 }
 
 const std::string NameOfGame<CustomGameEmitQueen>::value = "Simplify - No Queen";
 CustomGameEmitQueen::CustomGameEmitQueen(void) : IGame(Constant::BOARD_SIZE_EMIT_QUEEN) {
   _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
-  _timeLines.push_back(std::make_shared<TimeLine>(dim()));
-  std::shared_ptr<Board> board = std::make_shared<Board>(dim(), _timeLines[0]);
+  _addTimeLine(std::make_shared<TimeLine>(dim()));
+  std::shared_ptr<Board> board = std::make_shared<Board>(dim(), 0);
   for (int i = 0; i < dim(); i += 1) {
     board->placePiece({i, 1}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
     board->placePiece({i, 5}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
@@ -657,14 +696,14 @@ CustomGameEmitQueen::CustomGameEmitQueen(void) : IGame(Constant::BOARD_SIZE_EMIT
   board->placePiece({4, 6}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
   board->placePiece({5, 6}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
   board->placePiece({6, 6}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
-  _timeLines[0]->pushBack(board);
+  _timeLines.at(0)->pushBack(board);
 }
 
 const std::string NameOfGame<CustomGameEmitRook>::value = "Simplify - No Rook";
 CustomGameEmitRook::CustomGameEmitRook(void) : IGame(Constant::BOARD_SIZE_EMIT_ROOK) {
   _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
-  _timeLines.push_back(std::make_shared<TimeLine>(dim()));
-  std::shared_ptr<Board> board = std::make_shared<Board>(dim(), _timeLines[0]);
+  _addTimeLine(std::make_shared<TimeLine>(dim()));
+  std::shared_ptr<Board> board = std::make_shared<Board>(dim(), 0);
   for (int i = 0; i < dim(); i += 1) {
     board->placePiece({i, 1}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
     board->placePiece({i, 4}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
@@ -682,14 +721,14 @@ CustomGameEmitRook::CustomGameEmitRook(void) : IGame(Constant::BOARD_SIZE_EMIT_R
   board->placePiece({3, 5}, std::make_shared<King>(PieceColor::PIECEBLACK));
   board->placePiece({4, 5}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
   board->placePiece({5, 5}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
-  _timeLines[0]->pushBack(board);
+  _timeLines.at(0)->pushBack(board);
 }
 
 const std::string NameOfGame<CustomGameKVB>::value = "Simplify - Knight vs Bishop";
 CustomGameKVB::CustomGameKVB(void) : IGame(Constant::BOARD_SIZE_K_VS_B) {
   _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
-  _timeLines.push_back(std::make_shared<TimeLine>(dim()));
-  std::shared_ptr<Board> board = std::make_shared<Board>(dim(), _timeLines[0]);
+  _addTimeLine(std::make_shared<TimeLine>(dim()));
+  std::shared_ptr<Board> board = std::make_shared<Board>(dim(), 0);
   for (int i = 0; i < dim(); i += 1) {
     board->placePiece({i, 1}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
     board->placePiece({i, 4}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
@@ -707,16 +746,16 @@ CustomGameKVB::CustomGameKVB(void) : IGame(Constant::BOARD_SIZE_K_VS_B) {
   board->placePiece({3, 5}, std::make_shared<King>(PieceColor::PIECEBLACK));
   board->placePiece({4, 5}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
   board->placePiece({5, 5}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
-  _timeLines[0]->pushBack(board);
+  _timeLines.at(0)->pushBack(board);
 }
 
 const std::string NameOfGame<MiscGameTimeLineInvasion>::value = "Misc - Time Line Invasion";
 MiscGameTimeLineInvasion::MiscGameTimeLineInvasion(void) : IGame(Constant::BOARD_SIZE_TIME_LINE_INVASION) {
   _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
-  _timeLines.push_back(std::make_shared<TimeLine>(dim(), 0));
-  _timeLines.push_back(std::make_shared<TimeLine>(dim(), 1));
-  std::shared_ptr<Board> board0 = std::make_shared<Board>(dim(), _timeLines[0]);
-  std::shared_ptr<Board> board1 = std::make_shared<Board>(dim(), _timeLines[1]);
+  _addTimeLine(std::make_shared<TimeLine>(dim(), 0));
+  _addTimeLine(std::make_shared<TimeLine>(dim(), 1));
+  std::shared_ptr<Board> board0 = std::make_shared<Board>(dim(), 0);
+  std::shared_ptr<Board> board1 = std::make_shared<Board>(dim(), 1);
 
   board0->placePiece({0, dim() - 1}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
   board0->placePiece({1, dim() - 1}, std::make_shared<Bishop>(PieceColor::PIECEBLACK));
@@ -737,19 +776,19 @@ MiscGameTimeLineInvasion::MiscGameTimeLineInvasion(void) : IGame(Constant::BOARD
     board1->placePiece({i, 1}, std::make_shared<Pawn>(PieceColor::PIECEWHITE));
     board1->placePiece({i, dim() - 1}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
   }
-  _timeLines[0]->pushBack(board0);
-  _timeLines[1]->pushBack(board1);
+  _timeLines.at(0)->pushBack(board0);
+  _timeLines.at(1)->pushBack(board1);
 }
 
 const std::string NameOfGame<MiscGameTimeLineBattle>::value = "Misc - Time Line Battle";
 MiscGameTimeLineBattle::MiscGameTimeLineBattle(void) : IGame(Constant::BOARD_SIZE_TIME_LINE_BATTLE) {
   _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
-  _timeLines.push_back(std::make_shared<TimeLine>(dim(), 0));
-  _timeLines.push_back(std::make_shared<TimeLine>(dim(), 1));
-  _timeLines.push_back(std::make_shared<TimeLine>(dim(), 2));
-  std::shared_ptr<Board> board0 = std::make_shared<Board>(dim(), _timeLines[0]);
-  std::shared_ptr<Board> board1 = std::make_shared<Board>(dim(), _timeLines[1]);
-  std::shared_ptr<Board> board2 = std::make_shared<Board>(dim(), _timeLines[2]);
+  _addTimeLine(std::make_shared<TimeLine>(dim(), 0));
+  _addTimeLine(std::make_shared<TimeLine>(dim(), 1));
+  _addTimeLine(std::make_shared<TimeLine>(dim(), 2));
+  std::shared_ptr<Board> board0 = std::make_shared<Board>(dim(), 0);
+  std::shared_ptr<Board> board1 = std::make_shared<Board>(dim(), 1);
+  std::shared_ptr<Board> board2 = std::make_shared<Board>(dim(), 2);
 
   board0->placePiece({0, dim() - 1}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
   board0->placePiece({1, dim() - 1}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
@@ -793,18 +832,18 @@ MiscGameTimeLineBattle::MiscGameTimeLineBattle(void) : IGame(Constant::BOARD_SIZ
     board2->placePiece({i, dim() - 1}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
   }
 
-  _timeLines[0]->pushBack(board0);
-  _timeLines[1]->pushBack(board1);
-  _timeLines[2]->pushBack(board2);
+  _timeLines.at(0)->pushBack(board0);
+  _timeLines.at(1)->pushBack(board1);
+  _timeLines.at(2)->pushBack(board2);
 }
 
 const std::string NameOfGame<MiscGameTimeLineFragment>::value = "Misc - Time Line Fragment";
 MiscGameTimeLineFragment::MiscGameTimeLineFragment(void) : IGame(Constant::BOARD_SIZE_TIME_LINE_FRAGMENT) {
   _rule.pawnCanMakeTwoMoveOnFirstTurn = false;
-  _timeLines.push_back(std::make_shared<TimeLine>(dim(), 0, 0));
-  _timeLines.push_back(std::make_shared<TimeLine>(dim(), 1));
-  std::shared_ptr<Board> board0 = std::make_shared<Board>(dim(), _timeLines[0], 1);
-  std::shared_ptr<Board> board1 = std::make_shared<Board>(dim(), _timeLines[1], 0);
+  _addTimeLine(std::make_shared<TimeLine>(dim(), 0, 0));
+  _addTimeLine(std::make_shared<TimeLine>(dim(), 1));
+  std::shared_ptr<Board> board0 = std::make_shared<Board>(dim(), 0, 1);
+  std::shared_ptr<Board> board1 = std::make_shared<Board>(dim(), 1, 0);
 
   board0->placePiece({0, dim() - 1}, std::make_shared<King>(PieceColor::PIECEBLACK));
   board0->placePiece({1, dim() - 1}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
@@ -824,8 +863,8 @@ MiscGameTimeLineFragment::MiscGameTimeLineFragment(void) : IGame(Constant::BOARD
   board1->placePiece({2, dim() - 1}, std::make_shared<Rook>(PieceColor::PIECEBLACK));
   board1->placePiece({3, dim() - 1}, std::make_shared<Knight>(PieceColor::PIECEBLACK));
 
-  _timeLines[0]->pushBack(board0);
-  _timeLines[1]->pushBack(board1);
+  _timeLines.at(0)->pushBack(board0);
+  _timeLines.at(1)->pushBack(board1);
 }
 
 const int Constant::BOARD_SIZE = 8;
