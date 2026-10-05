@@ -1,4 +1,9 @@
 #include "chess.h"
+
+#ifdef NDEBUG
+#error "chess.cpp must be built with assertions enabled (NDEBUG undefined)"
+#endif
+
 #include <stdexcept>
 #include <iostream>
 #include <climits>
@@ -47,7 +52,7 @@ std::shared_ptr<Board> Board::createFork(std::shared_ptr<TimeLine> timeLine) {
 }
 
 std::shared_ptr<TimeLine> Board::getTimeLine() const {
-  return _timeLine;
+  return _timeLine.lock();
 }
 
 TimeLine::TimeLine(int N, int IDX, int forkAt) : _N(N), _ID(IDX), _forkAt(forkAt), _parent(nullptr) {}
@@ -74,9 +79,9 @@ bool IGame::canMakeMoveFromBoard(std::shared_ptr<Board> board) const {
 }
 
 bool IGame::boardExists(int timeLineID, int halfTurn) const {
-  if (timeLineID >= 0 && timeLineID < _timeLines.size()) {
+  if (timeLineID >= 0 && timeLineID < static_cast<int>(_timeLines.size())) {
     int pos = halfTurn - _timeLines[timeLineID]->forkAt() - 1;
-    return pos >= 0 && pos < _timeLines[timeLineID]->size();
+    return pos >= 0 && pos < static_cast<int>(_timeLines[timeLineID]->size());
   }
   return false;
 }
@@ -86,7 +91,7 @@ std::shared_ptr<Piece> IGame::_getPieceByVector4DFullTurn(Vector4D position) con
   int y = position.y();
   int halfTurn = 2 * position.z() + int(_currentTurnColor);
   int timeLineID = position.w();
-  assert(timeLineID >= 0 && timeLineID < _timeLines.size());
+  assert(timeLineID >= 0 && timeLineID < static_cast<int>(_timeLines.size()));
   std::shared_ptr<const Board> board = _timeLines[timeLineID]->getBoardByHalfTurn(halfTurn);
   assert(board != nullptr);
   assert(x >= 0 && x < board->dim() && y >= 0 && y < board->dim());
@@ -105,13 +110,15 @@ void IGame::undo(void) {
   for (int timeLineID : lastUndo) {
     _timeLines[timeLineID]->popBack();
     if (_timeLines[timeLineID]->size() == 0) {
-      assert(_timeLines.size() - 1 == timeLineID);
+      assert(static_cast<int>(_timeLines.size()) - 1 == timeLineID);
       _timeLines.pop_back();
     }
   }
 
   _currentTurnMoves.pop_back();
   _nextHalfTurnBuffer.pop_back();
+  // Only the last move can have ended the game, and it is the one being undone.
+  _gameWinner.reset();
 }
 
 std::vector<Vector4D> genKnightMoves(const Vector4D& from) {
@@ -240,7 +247,7 @@ std::vector<SelectedPosition> IGame::getMoveablePositions(SelectedPosition selec
         break;
     }
 
-    for (int nw = from.w() + 1; nw < _timeLines.size(); nw += 1) {
+    for (int nw = from.w() + 1; nw < static_cast<int>(_timeLines.size()); nw += 1) {
       if (not boardExists(nw, 2 * from.z() + parity)) {
         break;
       }
@@ -330,7 +337,7 @@ std::vector<SelectedPosition> IGame::getMoveablePositions(SelectedPosition selec
         if (targetPiece != nullptr and targetPiece->color() == _currentTurnColor) {
           break;
         }
-        moveablePositions.emplace_back(getBoard(nw, 2 * from.z() + 1), Position2D(nx, from.y()));
+        moveablePositions.emplace_back(getBoard(nw, 2 * from.z() + parity), Position2D(nx, from.y()));
         if (targetPiece != nullptr) {
           break;
         }
@@ -347,7 +354,7 @@ std::vector<SelectedPosition> IGame::getMoveablePositions(SelectedPosition selec
         if (targetPiece != nullptr and targetPiece->color() == _currentTurnColor) {
           break;
         }
-        moveablePositions.emplace_back(getBoard(nw, 2 * from.z() + 1), Position2D(from.x(), ny));
+        moveablePositions.emplace_back(getBoard(nw, 2 * from.z() + parity), Position2D(from.x(), ny));
         if (targetPiece != nullptr) {
           break;
         }
@@ -376,7 +383,7 @@ std::vector<SelectedPosition> IGame::getMoveablePositions(SelectedPosition selec
       #define ONBIT(n) ((mask) & (1 << (n)))
       int maxD = INT_MAX;
       if (ONBIT(0) || ONBIT(1)) {
-        maxD = std::min(maxD, dim() - 1);
+        maxD = std::min(maxD, dim());
       }
       if (ONBIT(2)) {
         maxD = std::min(maxD, selected.board->fullTurnNumber() + 1);
@@ -385,10 +392,14 @@ std::vector<SelectedPosition> IGame::getMoveablePositions(SelectedPosition selec
         maxD = std::min(maxD, (int) _timeLines.size());
       }
       #undef ONBIT
-      for (int s0 : (mask & 1) ? std::initializer_list<int>{-1, +1} : std::initializer_list<int>{0})
-      for (int s1 : (mask & 2) ? std::initializer_list<int>{-1, +1} : std::initializer_list<int>{0})
-      for (int s2 : (mask & 4) ? std::initializer_list<int>{-1, +1} : std::initializer_list<int>{0})
-      for (int s3 : (mask & 8) ? std::initializer_list<int>{-1, +1} : std::initializer_list<int>{0}) {
+      // Value-returning helper: the range-init temporary stays alive for the whole loop.
+      auto signs = [mask](int bit) {
+        return (mask & bit) ? std::vector<int>{-1, +1} : std::vector<int>{0};
+      };
+      for (int s0 : signs(1))
+      for (int s1 : signs(2))
+      for (int s2 : signs(4))
+      for (int s3 : signs(8)) {
         for (int d = 1; d < maxD; d += 1) {
           int nx = from.x() + s0 * d;
           int ny = from.y() + s1 * d;
@@ -487,6 +498,7 @@ std::vector<SelectedPosition> IGame::getMoveablePositions(SelectedPosition selec
 }
 
 void IGame::makeMove(Move move) {
+  assert(!gameEnd());
   std::vector<int> list;
   std::shared_ptr<Piece> piece = move.from.board->getPiece(move.from.position);
   assert(piece != nullptr);
@@ -528,11 +540,14 @@ void IGame::makeMove(Move move) {
   newToBoard->placePiece(move.to.position, piece->clone());
   toTimeLine->pushBack(newToBoard);
 
-  _nextHalfTurnBuffer.push_back(newToBoard->halfTurnNumber());
+  // The new board of the source timeline may lie behind the destination's (e.g. when jumping to a timeline
+  // that is already ahead); the present must not skip past it.
+  _nextHalfTurnBuffer.push_back(std::min(newFromBoard->halfTurnNumber(), newToBoard->halfTurnNumber()));
   _undoBuffer.push_back(list);
 }
 
 void IGame::submitTurn(void) {
+  assert(!_nextHalfTurnBuffer.empty());
   _currentTurnMoves.clear();
   _currentTurnColor = opposite(_currentTurnColor);
   _presentHalfTurn = *std::min_element(_nextHalfTurnBuffer.begin(), _nextHalfTurnBuffer.end());

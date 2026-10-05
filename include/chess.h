@@ -39,16 +39,6 @@ public:
   inline int w(void) const {
     return _data[3];
   }
-
-  inline int operator * (const Vector4D& other) const {
-    return _data[0] * other._data[0] + _data[1] * other._data[1] +
-           _data[2] * other._data[2] + _data[3] * other._data[3];
-  }
-
-  inline int operator - (const Vector4D& other) const {
-    return _data[0] - other._data[0] + _data[1] - other._data[1] +
-           _data[2] - other._data[2] + _data[3] - other._data[3];
-  }
 private:
   std::array<int, 4> _data;
 };
@@ -138,8 +128,9 @@ public:
    * @return A shared pointer to the Board object this piece is on.
    * This method returns the board that this piece is currently placed on.
    * If the piece is not on any board, it returns a null pointer.
+   * @note The piece only holds a weak reference to its board (the board owns the piece).
    */
-  inline std::shared_ptr<Board> getBoard(void) const { return _board; }
+  inline std::shared_ptr<Board> getBoard(void) const { return _board.lock(); }
 
   /**
    * Get the position of this piece on the board.
@@ -162,7 +153,7 @@ public:
   }
 protected:
   PieceColor _color;
-  std::shared_ptr<Board> _board;
+  std::weak_ptr<Board> _board; // Non-owning: the board owns the piece, so a shared_ptr would be a cycle
   Position2D _position;
 };
 
@@ -339,7 +330,7 @@ private:
   int _halfTurnNumber;
   std::shared_ptr<Board> _previousBoard;
   std::vector<std::vector<std::shared_ptr<Piece>>> _pieces;
-  std::shared_ptr<TimeLine> _timeLine; // The timeline this board belongs to
+  std::weak_ptr<TimeLine> _timeLine; // The timeline this board belongs to (non-owning: the timeline owns its boards)
 };
 
 class TimeLine : public std::enable_shared_from_this<TimeLine> {
@@ -419,7 +410,7 @@ public:
 
   inline std::shared_ptr<Board> getBoardByHalfTurn(int halfTurn) const {
     int pos = halfTurn - _forkAt - 1;
-    assert(pos >= 0 && pos < _history.size());
+    assert(pos >= 0 && pos < static_cast<int>(_history.size()));
     return _history[pos];
   }
 
@@ -503,6 +494,7 @@ public:
 
   /**
    * Apply the turn state to the game.
+   * @note At least one move must have been made this turn (asserted).
    * @param turnState The TurnState object contain  // Apply the completed turn
   // One turn might consist of multiple moves
   // This method applies all moves in the current turn to the game stateing the moves to apply.
@@ -525,6 +517,11 @@ public:
    */
   std::vector<SelectedPosition> getMoveablePositions(SelectedPosition selected) const;
 
+  /**
+   * Make a move for the current player.
+   * @param move The move to make; the source must hold a piece of the current turn's color.
+   * @note The game must not have ended (asserted). Capturing a king ends the game; undo() reverts that.
+   */
   void makeMove(Move move);
 
   /**

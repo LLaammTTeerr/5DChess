@@ -1,0 +1,96 @@
+cmake_minimum_required(VERSION 3.28)
+
+project(5DChess
+  VERSION 0.1.0
+  DESCRIPTION "Multidimensional chess with timeline mechanics"
+  LANGUAGES C CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Build type" FORCE)
+endif()
+
+option(FDCHESS_BUILD_GAME "Build the raylib game executable" ON)
+option(FDCHESS_BUILD_TESTS "Build the unit/property test suite" ON)
+option(FDCHESS_SANITIZE "Build with AddressSanitizer + UndefinedBehaviorSanitizer" OFF)
+
+if(FDCHESS_SANITIZE AND NOT MSVC)
+  add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer)
+  add_link_options(-fsanitize=address,undefined)
+endif()
+
+include(FetchContent)
+
+# --- Rules engine (no graphics dependency) -----------------------------------
+add_library(chess_core STATIC src/chess.cpp)
+target_include_directories(chess_core PUBLIC include)
+# The engine uses assert() as its validation layer: keep it on in every config.
+target_compile_options(chess_core PRIVATE $<IF:$<CXX_COMPILER_ID:MSVC>,/UNDEBUG,-UNDEBUG>)
+if(MSVC)
+  target_compile_options(chess_core PRIVATE /W4)
+else()
+  target_compile_options(chess_core PRIVATE -Wall -Wextra)
+endif()
+
+# --- Game ---------------------------------------------------------------------
+if(FDCHESS_BUILD_GAME)
+  find_package(raylib 5.0 QUIET)
+  if(NOT raylib_FOUND)
+    message(STATUS "raylib not found on the system, fetching raylib 5.5")
+    set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(BUILD_GAMES OFF CACHE BOOL "" FORCE)
+    set(GLFW_BUILD_WAYLAND OFF CACHE BOOL "" FORCE)
+    set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "" FORCE)
+    FetchContent_Declare(raylib
+      URL https://github.com/raysan5/raylib/archive/refs/tags/5.5.tar.gz
+      URL_HASH SHA256=aea98ecf5bc5c5e0b789a76de0083a21a70457050ea4cc2aec7566935f5e258e
+      DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+      EXCLUDE_FROM_ALL) # keeps raylib's own install() rules out of our package
+    FetchContent_MakeAvailable(raylib)
+  endif()
+
+  file(GLOB_RECURSE GAME_SOURCES CONFIGURE_DEPENDS src/*.cpp)
+  list(REMOVE_ITEM GAME_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/chess.cpp)
+
+  add_executable(5dchess ${GAME_SOURCES})
+  target_include_directories(5dchess PRIVATE
+    include
+    include/Commands
+    include/GameStates
+    include/GameStates/ConcreteGameStates
+    include/Menu
+    include/Render
+    include/Scene
+    include/Scene/ConcreteScene)
+  target_compile_definitions(5dchess PRIVATE FDCHESS_VERSION="${PROJECT_VERSION}")
+  target_link_libraries(5dchess PRIVATE chess_core raylib)
+  if(APPLE)
+    target_link_libraries(5dchess PRIVATE
+      "-framework OpenGL" "-framework Cocoa" "-framework IOKit" "-framework CoreAudio" "-framework CoreVideo")
+  endif()
+
+  # Copy assets next to the binary so it runs from the build directory.
+  add_custom_command(TARGET 5dchess POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+      ${CMAKE_CURRENT_SOURCE_DIR}/assets $<TARGET_FILE_DIR:5dchess>/assets)
+
+  install(TARGETS 5dchess RUNTIME DESTINATION .)
+  install(DIRECTORY assets DESTINATION .)
+  install(FILES README.md LICENSE DESTINATION . OPTIONAL)
+
+  set(CPACK_PACKAGE_NAME 5DChess)
+  set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+  set(CPACK_GENERATOR ZIP)
+  set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY ON)
+  include(CPack)
+endif()
+
+# --- Tests --------------------------------------------------------------------
+if(FDCHESS_BUILD_TESTS)
+  enable_testing()
+  add_subdirectory(tests)
+endif()
