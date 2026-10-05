@@ -1,10 +1,16 @@
-# 5D Chess Game
+# 5DChess
 
-A modern implementation of multidimensional chess featuring timeline mechanics, built with C++ and Raylib graphics library.
+Chess with multiverse time travel: a 5D Chess game with timelines, built in C++20 with raylib, for desktop and the browser.
 
-**Play in your browser: <https://llaammtteerr.github.io/5DChess/>** (available after the next release).
+[![CI](https://github.com/LLaammTTeerr/5DChess/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/LLaammTTeerr/5DChess/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/LLaammTTeerr/5DChess)](https://github.com/LLaammTTeerr/5DChess/releases/latest)
+[![Pages deploy](https://github.com/LLaammTTeerr/5DChess/actions/workflows/pages.yml/badge.svg)](https://github.com/LLaammTTeerr/5DChess/actions/workflows/pages.yml)
 
-![A standard game from White's side with the e-pawn selected and its legal squares highlighted](docs/screenshots/standard-game.png)
+**▶ Play in your browser: <https://llaammtteerr.github.io/5DChess/>**
+
+**⬇ Download for Linux/macOS/Windows: <https://github.com/LLaammTTeerr/5DChess/releases/latest>**
+
+![The animated main menu: title, tagline, idling Pixel creatures and the menu on the left](docs/screenshots/main-menu.png)
 
 ## Table of Contents
 - [Overview](#overview)
@@ -16,6 +22,8 @@ A modern implementation of multidimensional chess featuring timeline mechanics, 
 - [Project Structure](#project-structure)
 - [Controls](#controls)
 - [Features](#features)
+- [Roadmap](#roadmap)
+- [Known limitations](#known-limitations)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 
@@ -30,6 +38,12 @@ This project implements a 5D Chess game with an advanced UI system featuring:
 - Modular rendering pipeline
 
 ## Screenshots
+
+![A standard game from White's side with the e-pawn selected and its legal squares highlighted](docs/screenshots/standard-game.png)
+
+![A piece sliding to its new square in the Pixel theme](docs/screenshots/move.gif)
+
+*Pieces slide, new boards grow in, and a banner announces the next turn.*
 
 <table>
   <tr>
@@ -85,7 +99,7 @@ emcmake cmake -S . -B build-web -DCMAKE_BUILD_TYPE=Release -DFDCHESS_BUILD_TESTS
 cmake --build build-web -j
 python3 -m http.server 8765 -d build-web   # then open http://localhost:8765/5dchess.html
 ```
-Only the assets the game loads are bundled (including the audio). Releases are deployed to GitHub Pages by `.github/workflows/pages.yml`.
+Only the assets the game loads are bundled (including the audio); the web build has no Exit menu item. Releases are deployed to GitHub Pages by `.github/workflows/pages.yml`.
 
 ### CMake options
 
@@ -175,22 +189,23 @@ The game changes its working directory to the executable's folder, so it can be 
 
 ### Core Gameplay
 - **5D Chess Mechanics**: Move pieces across time and parallel universes
-- **Timeline Visualization**: Clear representation of temporal moves
+- **Timeline Visualization**: Boards branch into new timelines, with arrows showing the branch
 - **Legal Move Highlighting**: Visual guides for valid moves
 - **Undo**: Take back moves within the current turn before submitting (no redo)
+- **Board orientation**: Boards are drawn from White's side
 
 ### User Interface
-- **Dynamic Menus**: Context-sensitive navigation
-- **Multiple View Modes**: Button and list-based menu layouts
-- **Camera**: Smooth auto-centering and auto-zoom (spring-damped), plus manual pan and zoom
-- **Motion**: shared motion tokens and easing (`include/Render/Motion.h`); pieces slide or arc across boards, new boards grow in, selection lifts, a turn banner announces the side to move, scenes cross-fade, and the main menu is an animated hero. Animations never delay game state or input. Settings -> Display -> **Motion: Reduced** turns everything into instant changes or short cross-fades
-- **Pixel blink**: Pixel-theme pieces blink at random intervals when zoomed in
-- **Responsive Design**: Adaptive layouts for different screen sizes
-- **Warm cream + terracotta theme**: shared design tokens (`include/Render/UITheme.h`), rounded buttons with smooth hover and a pointing-hand cursor, a status HUD (side to move, turn, next-step hint), a controls hint bar and an end-of-game card
+- **Runs everywhere**: native on Linux, macOS and Windows, and in the browser (WebAssembly build)
+- **Animated main menu**: a code-drawn hero with a drifting field of timeline boards and idling Pixel creatures
+- **Motion**: shared tokens and easing (`include/Render/Motion.h`); pieces slide or arc across boards, new boards grow in, selected pieces lift, menus stagger in, scenes cross-fade, and a turn banner announces the side to move. Animations never delay game state or input. Settings -> Display -> **Motion: Reduced** makes changes instant or short cross-fades
+- **Pixel theme with blinking creatures**: Pixel-theme pieces blink at random intervals when zoomed in
+- **HUD and controls bar**: side to move, turn, next-step hint, and an end-of-game card
+- **Camera**: smooth auto-centering and auto-zoom (spring-damped), plus manual pan and zoom
+- **Menus**: button and list layouts, rounded buttons with smooth hover, warm cream + terracotta theme (`include/Render/UITheme.h`)
 
 ### Audio
-- **Background music**: pick a track in Settings → Music (default: Off, so the game starts silent). The choice is global and persists across scenes; the track is streamed and starts after your first click.
-- **Sound effects**: move, capture, game won and menu-button clicks; toggle them with "Sound effects" in Settings → Music. Check, castle, promotion and draw sounds are bundled but wait for those rules to exist.
+- **Background music**: three CC0 piano tracks, off by default; pick one in Settings → Music. The choice is global and persists across scenes; the track is streamed and starts after your first click (browser autoplay policy).
+- **Sound effects**: move, capture, game won and menu-button clicks, with an on/off toggle ("Sound effects" in Settings → Music). Check, castle, promotion and draw sounds are bundled but wait for those rules to exist.
 - Without an audio device the game runs silently.
 
 ### Piece Themes
@@ -210,6 +225,16 @@ theme_preview <Classic|Modern|Fantasy|Pixel> <Standard|Battle|Invasion|Fragment>
 - **Design Patterns**: Command, State, Strategy, Composite, Singleton
 - **Resource Management**: Efficient asset loading and caching
 - **Extensible Framework**: Easy addition of new features and game modes
+
+## Roadmap
+
+- **v0.4.0**: official 5D Chess rules (check, checkmate, active timelines, castling, en passant, promotion choice), three board view styles (Deep space by default, Atlas, Blueprint), and a codebase refactor.
+- **v0.5.0**: AI opponent, save/load, puzzles and an interactive guide.
+
+## Known limitations
+
+- The current rules are simplified (you win by capturing the king) until v0.4.0.
+- The Puzzles and Guide menu items are placeholders.
 
 ## Troubleshooting
 
