@@ -4,6 +4,8 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <tuple>
+#include "Render/Motion.h"
 
 // Forward declarations
 class BoardView;
@@ -29,6 +31,9 @@ struct TimelineArrow {
     float thickness;
     std::string type;
     bool isAnimated;
+    int keyTimeline = 0;   // identity of the arrow: (type, destination board timeline, half turn)
+    int keyHalfTurn = 0;
+    bool isBranch = false;
 };
 
 /// @brief Animation state for arrow effects
@@ -56,6 +61,9 @@ public:
     /// @brief Clear all arrows
     void clear();
 
+    /// @brief New input: arrows that are still drawing in jump to complete
+    void finishAnimations() { _active.clear(); }
+
 private:
     /// @brief Generate arrows from Controller-provided data
     void generateArrowsFromData(const std::vector<TimelineArrowData>& arrowData);
@@ -64,12 +72,22 @@ private:
     Vector2 calculateArrowPosition(std::shared_ptr<BoardView> boardView, bool isStart) const;
 
     /// @brief Draw curved arrow for branching
-    void drawCurvedArrow(Vector2 start, Vector2 end, Color color, float thickness, float animationOffset) const;
+    void drawCurvedArrow(Vector2 start, Vector2 end, Color color, float thickness, float animationOffset, float progress) const;
 
     /// @brief Draw animated dashed line for progression
-    void drawAnimatedDashedLine(Vector2 start, Vector2 end, Color color, float thickness, float dashOffset) const;
+    void drawAnimatedDashedLine(Vector2 start, Vector2 end, Color color, float thickness, float dashOffset, float progress) const;
 
 private:
+    // Arrows that appeared after the first sync draw themselves progressively (persistent: arrows are rebuilt each frame)
+    struct ArrowAnim { bool branch; int timeline; int halfTurn; UI::Motion::Tween t; };
+    struct ArrowKey { bool branch; int timeline; int halfTurn;
+        bool operator<(const ArrowKey& o) const { return std::tie(branch, timeline, halfTurn) < std::tie(o.branch, o.timeline, o.halfTurn); } };
+    std::vector<ArrowAnim> _active;       // only unfinished ones; absent == fully drawn
+    std::vector<ArrowKey> _known;         // sorted keys seen last sync
+    std::vector<ArrowKey> _scratch;
+    bool _seeded = false;
+    float progressOf(const TimelineArrow& arrow) const;
+
     std::vector<TimelineArrow> _arrows;
     ArrowAnimationState _animationState;
 };

@@ -8,6 +8,9 @@
 #include "Render/BoardView.h"
 #include "Render/TimelineArrowRenderer.h"
 #include "Render/PresentLineRenderer.h"
+#include "Render/Motion.h"
+#include <vector>
+#include <functional>
 
 
 /// @brief Screen-space HUD content supplied by the controller
@@ -16,6 +19,18 @@ struct HudData {
   int fullTurn = 1;        // 1-based full-turn number shown to the player
   int timelineCount = 1;
   std::string hint;        // e.g. "Select a board"
+};
+
+/// A piece travelling between squares. Visual only: the model already holds the finished move and the
+/// destination piece is hidden on its board until the flight lands.
+struct MoveFlight {
+  std::string piece;                  // e.g. "white_pawn"
+  std::string victim;                 // captured piece (empty if none)
+  BoardKey srcKey{0, 0};              // board holding the source square (== dstKey for same-board moves)
+  BoardKey dstKey{0, 0};              // newly created board holding the moved piece
+  Chess::Position2D srcPos = {0, 0};
+  Chess::Position2D dstPos = {0, 0};
+  int dim = 8;
 };
 
 class ChessView {
@@ -46,7 +61,7 @@ private:
   HudData _hud;
 public:
   virtual void render_hoverSquare() const;
-  virtual void updateHud(const HudData& hud) { _hud = hud; }
+  virtual void updateHud(const HudData& hud);
   /// @brief Top-centre status pill and bottom controls bar (screen space, unaffected by the camera)
   virtual void renderHud() const;
   virtual void handleMouseSelection(); 
@@ -69,6 +84,17 @@ private:
 public:
   virtual void clearBoardViews();
   virtual void addBoardView(std::shared_ptr<BoardView> boardView);
+  /// Call once after the per-frame clearBoardViews()/addBoardView() pass: detects newly created boards (grow-in) and
+  /// applies persistent motion state (enter progress, hidden squares, blink) to this frame's board views.
+  void endBoardViewSync();
+
+  // ---- Motion (all visual; state never waits for it) ----
+  /// A move was just made: animate the piece from its source to its destination square.
+  void startMoveFlight(const MoveFlight& flight);
+  /// New input: running move/board/arrow animations jump to their end.
+  void finishAnimations();
+  /// Drive the end-of-game card (scrim fade, spring pop, king hop in the Pixel theme).
+  void setEndGame(bool ended, bool whiteWon);
 
 public:  
   // Focus camera on newest board
@@ -103,6 +129,48 @@ public:
   virtual void renderPresentLine() const;
   /// @param winnerText e.g. "White wins!" - drawn on a scrim with a centred card
   virtual void renderEndGameScreen(std::string winnerText) const;
+private:
+  // ---- Persistent motion state (BoardViews are rebuilt every frame, so nothing animated lives on them) ----
+  struct Flight {
+    MoveFlight info;
+    Vector2 from{}, to{};
+    float size = 0.0f;
+    float arcHeight = 0.0f;
+    UI::Motion::Tween move, victimFade;
+  };
+  std::vector<Flight> _flights;
+  struct BoardEnter { BoardKey key; UI::Motion::Tween t; };
+  std::vector<BoardEnter> _enters;
+  std::vector<BoardKey> _knownBoards, _scratchKeys; // sorted
+  bool _boardsSeeded = false;
+
+  // selection lift + legal-target pop
+  UI::Motion::Spring _lift;
+  std::vector<float> _dotDelay;
+  float _dotClock = 0.0f;
+
+  // hover tint fade
+  struct HoverSlot { BoardKey key{0, 0}; Chess::Position2D pos = {-1, -1}; float alpha = 0.0f; };
+  HoverSlot _hoverCur, _hoverOld;
+  BoardView* findBoardView(BoardKey key) const;
+
+  // turn banner + HUD chip
+  bool _hudSeeded = false;
+  bool _bannerActive = false;
+  bool _bannerWhite = true;
+  float _bannerClock = 0.0f;
+  UI::Motion::Tween _chipWhite; // 0 = black chip, 1 = white chip
+  void renderTurnBanner() const;
+
+  // end of game
+  bool _endActive = false;
+  bool _endWhiteWon = true;
+  float _endClock = 0.0f;
+  UI::Motion::Tween _endScrim;
+  UI::Motion::Spring _endPop;
+
+  void updateMotion(float dt);
+  void render_flights() const;
 public:
   ~ChessView() = default;
 };

@@ -30,6 +30,17 @@ void ThemeManager::ensureInitialized() {
 
 void ThemeManager::setTheme(std::unique_ptr<IPieceTheme> newTheme) {
     _theme = std::move(newTheme);
+    _textureCache.clear();
+}
+
+const PieceTextures& ThemeManager::getPieceTextures(const std::string& pieceName) {
+    auto it = _textureCache.find(pieceName);
+    if (it != _textureCache.end()) return it->second;
+    ensureInitialized();
+    PieceTextures t;
+    t.open = &_theme->getTexture(pieceName);
+    if (_theme->hasBlink()) t.blink = &_theme->getTexture(pieceName + "_blink");
+    return _textureCache.emplace(pieceName, t).first->second;
 }
 
 Texture2D& ThemeManager::getPieceTexture(const std::string& pieceName) {

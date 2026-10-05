@@ -2,6 +2,8 @@
 #include <raylib.h>
 #include <iostream>
 #include <memory>
+#include <string>
+#include <unordered_map>
 
 /* Interface for PieceTheme */
 class IPieceTheme  {
@@ -34,12 +36,21 @@ public:
   bool hasBlink() const override { return true; }
 };
 
+/// Resolved textures of one piece in the current theme (cached; pointers stay valid until the theme changes)
+struct PieceTextures {
+  Texture2D* open = nullptr;
+  Texture2D* blink = nullptr; // eyes closed; nullptr when the theme has no blink frame
+};
+
 // singleton class to manage themes
 class ThemeManager {
 public:
   static ThemeManager& getInstance();
   void setTheme(std::unique_ptr<IPieceTheme> newTheme);
   Texture2D& getPieceTexture(const std::string& pieceName);
+  /// Cached lookup for the per-frame hot path (no string building after the first call per piece)
+  const PieceTextures& getPieceTextures(const std::string& pieceName);
+  bool isPixelTheme() { return currentThemeHasBlink(); }
   bool currentThemeHasBlink() { ensureInitialized(); return _theme->hasBlink(); }
 
   ThemeManager(const ThemeManager&) = delete;
@@ -50,5 +61,6 @@ private:
   ThemeManager() = default;
   ~ThemeManager() = default;
   std::unique_ptr<IPieceTheme> _theme;
+  std::unordered_map<std::string, PieceTextures> _textureCache;
   void ensureInitialized();
 };

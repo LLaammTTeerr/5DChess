@@ -15,6 +15,15 @@ const extern int STANDARD_BOARD_DIM;
 
 class ChessView;
 
+/// Stable identity of a board: (timeline ID, half turn). Board views are rebuilt every frame, so persistent
+/// view-side animation state is keyed by this instead of by object.
+using BoardKey = std::pair<int, int>;
+inline BoardKey boardKeyOf(const Chess::Board& b) { return {b.timeLineId(), b.halfTurnNumber()}; }
+/// World-space area of a board (same layout the controller uses when it builds board views)
+Rectangle boardWorldArea(BoardKey key);
+/// World-space rectangle of an engine square on a board with the given area (the view is rotated 180 degrees)
+Rectangle squareRectFor(const Rectangle& area, int dim, Chess::Position2D pos);
+
 // interface for board view, this is the interface that converting model data to view data
 // This interface is used to render a single board
 // It is used to render the board and handle input events
@@ -27,8 +36,14 @@ public:
 
     virtual void render() const = 0;
     virtual void render_highlightBoundaries() const = 0;
-    virtual void render_highlightedPositions(std::vector<Chess::Position2D> positions) const = 0;
-    virtual void render_hoverSquare(Chess::Position2D position) const = 0;
+    /// Legal-target marker (dot, or capture ring on an occupied square); scale animates the pop-in
+    virtual void render_legalTarget(Chess::Position2D position, float scale) const = 0;
+    virtual void render_hoverSquare(Chess::Position2D position, float alpha = 1.0f) const = 0;
+    /// Selected piece drawn raised (lift 0..1) with a small shadow; the board skips it in render_pieces()
+    virtual void render_liftedPiece(Chess::Position2D position, float lift) const = 0;
+    virtual Rectangle squareWorldRect(Chess::Position2D position) const = 0;
+    /// Name of the piece on a square ("white_pawn") or nullptr
+    virtual const std::string* pieceNameAt(Chess::Position2D position) const = 0;
 
     virtual void setBoardTexture(Texture2D* texture) = 0;
 
@@ -60,11 +75,31 @@ protected:
   /// Piece position and piece name
   std::vector<std::pair<Chess::Position2D, std::string>> _piecePositions;
   int _boardDim = 8;
+  static constexpr int kMaxHidden = 3;
+  Chess::Position2D _hidden[kMaxHidden] = {{-1, -1}, {-1, -1}, {-1, -1}};
+  int _hiddenCount = 0;
+  float _enter = 1.0f;
+  bool _blinkEnabled = false;
+  unsigned _blinkSeed = 0;
+  bool isHiddenSquare(Chess::Position2D p) const {
+    for (int i = 0; i < _hiddenCount; ++i) if (_hidden[i] == p) return true;
+    return false;
+  }
 
 public:
   virtual void render_pieces() const = 0;
   virtual void render_highlightPiece(Chess::Position2D piecePosition) const = 0;
   virtual void setBoardDim(int dim) { _boardDim = dim; }
+  int boardDim() const { return _boardDim; }
+
+  // ---- Motion state, (re)applied by ChessView every frame ----
+  /// 0..1: the board grows from 0.92x and fades in while < 1
+  void setEnterProgress(float p) { _enter = p; }
+  /// Squares whose piece is drawn by an overlay instead (moving or lifted pieces)
+  void clearHiddenSquares() { _hiddenCount = 0; }
+  void hideSquare(Chess::Position2D pos) { if (_hiddenCount < kMaxHidden) _hidden[_hiddenCount++] = pos; }
+  /// Pixel theme: swap in the eyes-closed frame at random intervals (seeded per board)
+  void setBlink(bool enabled, unsigned seed) { _blinkEnabled = enabled; _blinkSeed = seed; }
 
   /// True when the current player may still move from this board (drawn with an accent border)
   virtual void setMoveable(bool moveable) { _moveable = moveable; }
@@ -104,8 +139,11 @@ public:
   void render_pieces() const override;
   void render_highlightPiece(Chess::Position2D piecePosition) const override;
   void render_highlightBoundaries() const override;
-  void render_highlightedPositions(std::vector<Chess::Position2D> positions) const override;
-  void render_hoverSquare(Chess::Position2D position) const override;
+  void render_legalTarget(Chess::Position2D position, float scale) const override;
+  void render_hoverSquare(Chess::Position2D position, float alpha = 1.0f) const override;
+  void render_liftedPiece(Chess::Position2D position, float lift) const override;
+  Rectangle squareWorldRect(Chess::Position2D position) const override { return squareRect(position); }
+  const std::string* pieceNameAt(Chess::Position2D position) const override;
 
   void setPiecePositions(const std::vector<std::pair<Chess::Position2D, std::string>>& piecePositions) override {
     _piecePositions = piecePositions;
