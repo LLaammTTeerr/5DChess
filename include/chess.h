@@ -555,6 +555,8 @@ public:
   Status step(int nodeBudget);
   Status status(void) const;
   long long nodes(void) const;
+  /** How often the search restarted with a new ranking (see Options::restartLimit); for tests and statistics. */
+  long long restarts(void) const;
 
   /** The moves of a legal turn, in playing order; valid when status() == Found. They refer to boards of the game. */
   const std::vector<Step>& turn(void) const;

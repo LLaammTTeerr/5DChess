@@ -125,12 +125,16 @@ void checkTurn(const IGame& original, const TurnSearch& search) {
 } // namespace
 
 TEST_CASE("TurnSearch agrees with an exhaustive search on random small multiverses") {
+  long long restarts = 0;
   int compared = 0, found = 0, none = 0, skipped = 0, pendingCases = 0, bySideBlack = 0, fewTurns = 0;
   for (unsigned seed = 1; seed <= 260; ++seed) {
     std::mt19937 rng(seed * 7919u);
     const int n = seed % 3 == 0 ? 5 : 4;
     static const int lineChoices[] = {1, 1, 2, 2, 3, 4};
-    auto game = randomPosition(rng, n, lineChoices[rng() % 6], rng() % 2 == 0, seed % 5 != 0);
+    // One draw per statement: the evaluation order of function arguments is unspecified.
+    const int lines = lineChoices[rng() % 6];
+    const bool created = rng() % 2 == 0;
+    auto game = randomPosition(rng, n, lines, created, seed % 5 != 0);
     // On about half the seeds a pseudo-legal move is already pending (the search must continue the turn).
     bool pendingMove = false;
     if (rng() % 2 == 0) {
@@ -166,6 +170,7 @@ TEST_CASE("TurnSearch agrees with an exhaustive search on random small multivers
       REQUIRE(st != TurnSearch::Status::Running);
       CHECK((st == TurnSearch::Status::Found) == (truth == Truth::Found));
       if (st == TurnSearch::Status::Found) checkTurn(*game, search);
+      if (config >= 6) restarts += search.restarts();
     }
     (truth == Truth::Found ? found : none)++;
     pendingCases += pendingMove;
@@ -183,9 +188,10 @@ TEST_CASE("TurnSearch agrees with an exhaustive search on random small multivers
   CHECK(bySideBlack > 30);
   CHECK(compared - bySideBlack > 30);
   CHECK(fewTurns > 10);
+  CHECK(restarts > 0); // the restartLimit configs must really restart, or the cross-check proves nothing
   MESSAGE("compared " << compared << " (" << found << " with a legal turn, " << none << " without; " << bySideBlack
           << " with Black to move, " << pendingCases << " with a pending move, " << fewTurns
-          << " Found with <= 6 first moves), skipped " << skipped);
+          << " Found with <= 6 first moves), skipped " << skipped << "; restarts in the restartLimit configs " << restarts);
 }
 
 TEST_CASE("kingCapturable agrees with threatsAgainst") {

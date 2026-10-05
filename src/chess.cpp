@@ -683,7 +683,7 @@ struct TurnSearch::Impl {
   std::vector<int> trail;
   int phase = 1; // 1: optional boards only when they obviously matter (fast, incomplete); 2: everything (complete)
   std::vector<long long> bidFail;
-  long long restartLimit = 20000, restartAt = 20000;
+  long long restartLimit = 20000, restartAt = 20000, restartCount = 0;
   size_t initCursor = 0; // candidates whose dead flags have been computed so far
   std::vector<char> consumed;
   // Search ---------------------------------------------------------------------------------------------------------
@@ -1138,10 +1138,14 @@ struct TurnSearch::Impl {
 
   // F5: every mandatory board must still have a way out.
   //
-  // Only the root's kind == 2 candidates (forkCands, from the root's tips) are scanned for the fork way out. That is
-  // sufficient because a fork cannot rescue a mandatory board in any other way:
+  // Only the root's kind == 2 candidates (forkCands, from the root's tips) are scanned for the fork way out, and only
+  // when the fork can matter: f.activationLowers, or f.nextActive with a fork ending before the present; a candidate
+  // also counts only while its source is alive and, when no timeline has been created yet, not fully dead
+  // (noTimelineCreated() && nodeFullDead). That is sufficient because a fork cannot rescue a mandatory board in any
+  // other way:
   //  - The mover's own inactive line cannot produce an active fork: a timeline the mover creates is inactive, so a fork
-  //    out of it never becomes an active line that must be played or can lower the present.
+  //    out of it never becomes an active line that must be played or can lower the present (hence the f.nextActive
+  //    precondition: without it no new line is activated).
   //  - The opponent's inactive line is what can matter, since activating it lowers the present; that case is exactly
   //    f.activationLowers, which keeps the node unanalysed (see the end of this function).
   //  - Parity rules out a fork whose tip equals the present: the new tip is one half-turn after the target and belongs
@@ -1233,6 +1237,7 @@ struct TurnSearch::Impl {
     stack.back().next = 0;
     restartAt = nodeCount + restartLimit;
     restartLimit *= 2;
+    ++restartCount;
   }
 
   void pushFrame(int via, bool viaCreated) {
@@ -1489,6 +1494,8 @@ TurnSearch::TurnSearch(const IGame& game, Options options)
 TurnSearch::~TurnSearch() = default;
 
 TurnSearch::Status TurnSearch::step(int nodeBudget) { return _impl->run(nodeBudget); }
+
+long long TurnSearch::restarts(void) const { return _impl->restartCount; }
 
 TurnSearch::Status TurnSearch::status(void) const { return _impl->st; }
 

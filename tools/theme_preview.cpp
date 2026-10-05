@@ -78,6 +78,7 @@ bool playScriptedTurn(Chess::IGame& game) {
   }
   if (game.canSubmit()) {
     game.submitTurn();
+    game.resolveResult(2000000);  // the result is decided by a search that only runs on demand
     return game.result() == GameResult::Ongoing;
   }
   while (game.undoable()) game.undo();  // an illegal scripted turn: leave the game untouched
@@ -204,7 +205,7 @@ int main(int argc, char** argv) {
           controller.scriptedSelect(to);                // move: piece travels, new board(s) grow, arrow draws
           run(1.8f, anim);
           // Finish the turn with scripted moves on any other boards, then submit: turn banner
-          for (int guard = 0; !game->getMoveableBoards().empty() && guard < 16; ++guard) {
+          for (int guard = 0; !game->mandatoryBoards().empty() && guard < 16; ++guard) {
             SelectedPosition f2, t2;
             if (!findScriptedMove(*game, wantCross, f2, t2)) break;
             controller.scriptedSelect(f2);
@@ -212,7 +213,8 @@ int main(int argc, char** argv) {
             controller.scriptedSelect(t2);
             run(0.9f, anim);
           }
-          if (game->undoable() && game->getMoveableBoards().empty()) controller.scriptedSubmit();
+          if (game->mandatoryBoards().empty() && game->canSubmit()) controller.scriptedSubmit();
+          else std::cerr << "demo: could not submit the turn (mandatory boards left or turn illegal)\n";
           run(1.6f, anim);
           if (perfFrames > 0) {
             // A busy stretch: keep re-triggering selection + moves is out of scope, so just measure the steady state
