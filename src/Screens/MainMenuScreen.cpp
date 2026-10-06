@@ -1,7 +1,9 @@
 #include "App.h"
 #include "Screens/MainMenuScreen.h"
 #include "Screens/GuideScreen.h"
+#include "Screens/LoadScreen.h"
 #include "Screens/ModeSelectScreen.h"
+#include "Screens/PlayScreen.h"
 #include "Screens/SettingsScreen.h"
 #include "Render/PieceTheme.h"
 #include "Render/UITheme.h"
@@ -75,10 +77,22 @@ constexpr const char* kPieces[] = {"king", "queen", "rook", "bishop", "knight", 
 
 
 MainMenuScreen::MainMenuScreen() {
-  std::vector<std::string> labels = {"Versus", "Puzzles", "Guide", "Settings"};
+  // Continue only while there is an unfinished autosaved game to resume (the store deletes the autosave of a finished game)
+  // An autosave that cannot even be read as a record gets "Discard autosave" instead, so it is never a dead end.
+  switch (App::current().saves.autosaveSummary().state) {
+    case savegame::SlotSummary::State::Ready: _items.push_back(Item::Continue); break;
+    case savegame::SlotSummary::State::Unreadable: _items.push_back(Item::Discard); break;
+    case savegame::SlotSummary::State::Empty: break;
+  }
+  for (Item item : {Item::Versus, Item::Load, Item::Puzzles, Item::Guide, Item::Settings}) _items.push_back(item);
 #ifndef __EMSCRIPTEN__  // a browser tab has nothing to exit to
-  labels.push_back("Exit");
+  _items.push_back(Item::Exit);
 #endif
+  std::vector<std::string> labels;
+  for (Item item : _items) {
+    static const char* const names[] = {"Continue", "Discard autosave", "Versus", "Load game", "Puzzles", "Guide", "Settings", "Exit"};
+    labels.push_back(names[static_cast<int>(item)]);
+  }
   // Navigation column, vertically centred in the left 300 px
   const auto slots = ui::column({50.0f, 0.0f, 200.0f, static_cast<float>(GetScreenHeight())},
                                 static_cast<int>(labels.size()), UI::Space::buttonHeight, UI::Space::md);
@@ -95,12 +109,31 @@ void MainMenuScreen::update(App& app, float deltaTime) {
   _enterClock += dt;
 
   const bool nav = app.screens.navShown();  // hidden: still updated (hover eases out) but unreachable
-  switch (_nav.update(dt, nav)) {
-    case 0: app.screens.replace(std::make_unique<ModeSelectScreen>()); break;
-    case 2: app.screens.replace(std::make_unique<GuideScreen>()); break;
-    case 3: app.screens.replace(std::make_unique<SettingsScreen>()); break;
-    case 4: app.quit = true; break;  // Exit (absent in the web build)
-    default: break;                  // Puzzles is not written yet
+  if (!_notice.empty() && (_noticeClock += dt) > 4.0f) _notice.clear();
+  const int clicked = _nav.update(dt, nav);
+  if (clicked < 0) return;
+  switch (_items[clicked]) {
+    case Item::Continue: {
+      const savegame::LoadResult result = app.saves.loadAutosave();
+      if (result) app.screens.replace(std::make_unique<PlayScreen>(result.game, true));
+      else {
+        _notice = "This save can't be loaded"; // the file stays until the player discards it
+        _noticeClock = 0.0f;
+        _items[clicked] = Item::Discard;
+        _nav.setLabel(clicked, "Discard autosave");
+      }
+      break;
+    }
+    case Item::Discard:
+      app.saves.clearAutosave();
+      app.screens.replace(std::make_unique<MainMenuScreen>());
+      break;
+    case Item::Versus: app.screens.replace(std::make_unique<ModeSelectScreen>()); break;
+    case Item::Load: app.screens.replace(std::make_unique<LoadScreen>()); break;
+    case Item::Guide: app.screens.replace(std::make_unique<GuideScreen>()); break;
+    case Item::Settings: app.screens.replace(std::make_unique<SettingsScreen>()); break;
+    case Item::Exit: app.quit = true; break;  // absent in the web build
+    default: break;                           // Puzzles is not written yet
   }
 }
 
@@ -171,4 +204,6 @@ void MainMenuScreen::draw(App& app) const {
   }
 
   _nav.draw(app.screens.navAlpha());
+  if (!_notice.empty())
+    UI::drawTextCentered(UI::Fonts::button(), _notice.c_str(), cx, H - 60.0f, UI::Font::button, UI::Color::capture);
 }

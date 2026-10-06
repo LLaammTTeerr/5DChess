@@ -190,7 +190,7 @@ The game changes its working directory to the executable's folder, so it can be 
 │   └── soundeffect/           # Sound effects
 ├── include/                   # Header files
 │   ├── engine/                # Value API, .5dp positions, GameCatalog (no raylib)
-│   ├── services/              # Assets, settings and other app services
+│   ├── services/              # Assets, settings, saved games (SaveStore) and other app services
 │   ├── play/                  # The game screen's parts: Selection, BoardLayout, MultiverseView, BoardStyle, BoardScene, BoardRenderer, MoveAnimator, BoardCamera, Hud, TimelineArrows, PromotionPicker
 │   ├── Render/                # Motion tokens, UI theme, piece themes
 │   ├── Screens/               # One Screen per page of the game
@@ -217,11 +217,12 @@ The game changes its working directory to the executable's folder, so it can be 
 ### Menu Navigation
 - **Mouse**: Click to select menu items
 - **Hover**: Visual feedback on interactive elements
+- **Main menu**: *Continue* (only while an unfinished autosave exists), *Versus*, *Load game*; the Load screen lists the three slots (empty ones are disabled) with a Delete button each and, on desktop, *Paste record*
 
 ### Game Controls
 - **Mouse Click**: Select a piece, then click a highlighted square to move (hovering a square only tints it; legal targets appear after selecting a piece); a pawn reaching the last rank opens the promotion picker (or press Q / R / B / N)
 - **Drag / Mouse Wheel**: Pan and zoom the camera
-- **In-game buttons**: Undo, Deselect and Submit (greyed out when unavailable)
+- **In-game buttons**: Undo, Deselect and Submit (greyed out when unavailable); under Back, **Save** (opens the three save slots) and, on desktop, **Copy** (the game's record to the clipboard)
 
 ### Keyboard Shortcuts
 - **ESC**: Show or hide the navigation buttons (shown by default; Back returns to game selection)
@@ -236,8 +237,8 @@ The game changes its working directory to the executable's folder, so it can be 
 - **Board views**: Deep space (default), Atlas and Blueprint, chosen in Settings -> Display. Timelines are lanes labelled L0, L+1, L-1 (White's above L0, Black's below); a ruler on top counts turns (T1 T2 ... with w/b ticks); the present is marked; branches are drawn as connectors coloured by the player who created the timeline; a time-travel move shows a dashed arc with the moving piece. One renderer draws all three from `BoardStyle` data (`include/play/BoardStyle.h`)
 - **Rules at a glance**: boards you must move on, may move on, or cannot (history) are framed differently; boards of inactive timelines are dimmed and desaturated and tagged "inactive"; check draws a line from every attacker to the king; promotion asks which piece (no auto-queening)
 - **Legal Move Highlighting**: Visual guides for valid moves; Submit is enabled only when the whole turn is legal (otherwise the HUD says why, e.g. "Your king would be capturable")
-- **Notation and records (engine only)**: moves have a notation (`(L0T1)e2>(L0T1)e4`) and games can be written to and replayed from a `5dchess-record` ([docs/NOTATION.md](docs/NOTATION.md)); there is no save/load button in the app yet
 - **Guide**: main menu -> Guide teaches the rules in ten short pages (boards and time, time travel, timeline numbers, the present, the four axes, pawns, check, mate, special moves). Each page has a small live board you can play, with legal-move dots, and most have a "Try it" goal that shows a check mark when you get it (Left / Right keys turn the pages; Reset position starts the page over). It uses your chosen board view
+- **Save and load**: a game is stored as a text record (`5dchess-record 1`, moves like `(L0T1)e2>(L0T1)e4`, see [docs/NOTATION.md](docs/NOTATION.md)). Every submitted turn is **autosaved**, and the main menu then offers **Continue**, which resumes the game exactly (mode, history, side to move, present, time-travel branches). The game screen's **Save** button writes one of three slots (what each holds is listed: mode, turns, date); **Load game** in the main menu opens them (**Delete** removes one). Moves of a turn you have not submitted yet are *not* saved, by design (the panel warns you). **Copy** puts the game's record on the clipboard and **Paste record** (on the Load screen) starts from one, to share games as text (desktop only: a browser tab cannot read the clipboard). Loading a slot and then submitting a turn replaces the Continue game (the autosave follows the game you play). Overwriting a slot and deleting one ask twice. A save that cannot be loaded says so and is kept (an unreadable autosave is offered as "Discard autosave"). Files: `autosave.5dr`, `slot1.5dr` ... `slot3.5dr` next to `settings.txt` (browser: localStorage keys `5dchess.autosave`, `5dchess.slot1` ...); a finished game's autosave is removed
 - **Undo**: Take back moves within the current turn before submitting (no redo)
 - **Board orientation**: Boards are drawn from White's side
 
@@ -266,7 +267,7 @@ Configure with `-DFDCHESS_BUILD_TOOLS=ON` to also build `theme_preview`, which r
 ```bash
 theme_preview <Classic|Modern|Fantasy|Pixel> <Standard|Battle|Invasion|Fragment> <out.png> [turns] [--view "Deep space"|Atlas|Blueprint]
 ```
-`turns` defaults to 2; `--perf` measures frame times. `ui_script` runs the real game from a script with injected input (`clicksq 0 2 g1` clicks a square by name; `mode <id>` / `position <file.5dp>` open a game): see [tests/ui/README.md](tests/ui/README.md).
+`turns` defaults to 2; `--perf` measures frame times. `ui_script` runs the real game from a script with injected input (`clicksq 0 2 g1` clicks a square by name; `mode <id>` / `position <file.5dp>` / `record <file.5dr>` open a game; `slot <n> <file>` fills a save slot): see [tests/ui/README.md](tests/ui/README.md).
 
 ### Technical Features
 - **Engine without raylib**: a plain value API (`Piece`, `Board`), `.5dp` position files for the nine game modes, and a resumable background result search
@@ -279,14 +280,14 @@ theme_preview <Classic|Modern|Fantasy|Pixel> <Standard|Battle|Invasion|Fragment>
 - ~~Official 5D Chess rules~~ (check, checkmate, stalemate, active timelines, castling, en passant, promotion choice): done.
 - ~~v0.4.0~~: official rules, non-blocking result search, differential testing, `.5dp` position files, engine value API, UI screenshot tests, manifest-driven assets: done.
 - ~~v0.5.0~~: widget/screen UI rewrite, three board views (Deep space by default, Atlas, Blueprint), official-rules visuals, promotion picker, saved settings, move notation and game records in the engine: done.
-- **v0.6.0** (next): AI opponent, save/load in the UI, puzzles and an interactive guide.
+- **v0.6.0** (next): AI opponent, ~~save/load in the UI~~ (done, unreleased), puzzles and an interactive guide.
 
 ## Known limitations
 
 - In rare, huge positions the checkmate/stalemate search may not finish in reasonable time; the result then stays undecided ("Checking position...") and the game simply continues ([docs/SEARCH.md](docs/SEARCH.md)).
 - The rules engine is cross-checked against 5d-chess-js on Standard and the Simplify modes only; the Misc modes (Time Line Invasion, Battle, Fragment) are not cross-checked.
 - The Puzzles menu item is a placeholder; there is no AI opponent yet.
-- Games cannot be saved or loaded from the app (the engine can read and write records, see [docs/NOTATION.md](docs/NOTATION.md)).
+- Saves hold the submitted turns only (unsubmitted moves of the current turn are not saved). There are three slots and one autosave, no naming; the web build keeps them in the browser's localStorage and has no Copy / Paste record (a page cannot read the clipboard).
 
 ## Troubleshooting
 

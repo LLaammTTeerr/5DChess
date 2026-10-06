@@ -1,0 +1,36 @@
+# Save panel in the game, then the Load screen. Layout (1400x800): in game Save (72,77), Copy (178,77); the panel opens below
+# them, slot rows 440x40 at x=35, y=145+46*i (Slot 1 at (270,165)). Main menu with an autosave: Load game (150,340).
+# Load screen: slot rows 520x52 at x=377, y=140+64*i; Delete buttons 110 wide at x=913.
+wait 20
+click 150 250        # Versus
+wait 30
+click 690 154        # Standard
+wait 20
+click 808 712        # Play
+wait 120
+clicksq 0 0 e2
+wait 40
+clicksq 0 0 e4
+wait 40
+click 841 90         # Submit
+wait 90
+clicksq 0 1 e7       # Black's move, not submitted
+wait 60
+clicksq 0 1 e5
+wait 60
+click 72 77          # Save
+wait 20
+capture save-panel-pending-warning   # "Unsubmitted moves are not saved"
+click 270 165        # Slot 1
+wait 20
+capture save-panel-saved             # "Saved to slot 1 (unsubmitted moves left out)", the slot now lists the game
+click 125 25         # Back to the mode list
+wait 30
+click 700 712        # Back to the main menu
+wait 40
+click 150 340        # Load game
+wait 40
+capture load-screen                  # Slot 1 holds the game, the other two are empty and disabled
+click 290 166        # Slot 1
+wait 120
+capture load-slot-resumed            # Black to move; the unsubmitted move was not saved

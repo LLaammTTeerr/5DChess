@@ -95,6 +95,7 @@ class ButtonList {
 public:
   int selected = -1;       // index of the selected item or -1
   bool selectable = true;  // false: plain buttons (a navigation column), a click does not select
+  const Skin* skin = nullptr;  // for every item; nullptr: defaultSkin()
 
   ButtonList() = default;
   // `viewport` (optional) clips and scrolls the slots; `scrollbarW` reserves a scrollbar strip at its right edge.
@@ -105,6 +106,9 @@ public:
   // `interactive` false: the list is hidden or disabled (it still animates but takes no pointer).
   int update(float dt, bool interactive = true);
   void draw(float alpha = 1.0f) const;
+  /// A disabled item looks dimmed and ignores clicks (it still takes the pointer).
+  void setEnabled(size_t index, bool enabled) { if (index < items_.size()) items_[index].enabled = enabled; }
+  void setLabel(size_t index, std::string label) { if (index < items_.size()) items_[index].label = std::move(label); }
 
 private:
   std::vector<Button> items_;

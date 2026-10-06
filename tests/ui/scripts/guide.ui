@@ -1,8 +1,8 @@
 # The interactive Guide: main menu -> Guide, then every page (Right arrow turns the page), with the "Try it" goal played on
 # most of them. Squares are clicked by name (`clicksq <timeline> <half-turn> <square>`), see game-standard.ui.
-# Layout: the main menu's Guide item is at (150, 400); Submit is the third button of the action row at (842, 90).
+# Layout: the main menu's Guide item (the fourth of Versus, Load game, Puzzles, Guide, Settings, Exit) is at (150, 430); Submit is the third button of the action row at (842, 90).
 wait 20
-click 150 400        # Guide
+click 150 430        # Guide
 wait 40
 capture guide-01-boards-and-time
 clicksq 0 2 d2       # a pawn: its legal targets show

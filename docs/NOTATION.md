@@ -99,6 +99,16 @@ Reading is bounded like the position parser, so a hostile file cannot make it ru
 moves, and whatever the position parser allows in an embedded position. Each submitted turn arms a result search that copies
 the boards, which is why the turn count is capped well below the position format's board limit.
 
+## Saved games in the app
+
+The game stores records through `savegame::SaveStore` (`include/services/SaveStore.h`): the **autosave** (written after every
+submitted turn, deleted when the game ends) and three **slots**, as `autosave.5dr` / `slot1.5dr` ... `slot3.5dr` next to
+`settings.txt` (the browser's localStorage keys `5dchess.autosave`, `5dchess.slot1` ... on the web). A slot file is an ordinary
+record with one extra comment line after the magic, `# saved: 2026-10-06 14:32`, which the slot list shows. Only submitted
+turns are in a save: **the unsubmitted moves of the current turn are not saved, by design** (`writeRecord`'s `droppedPending`
+tells the Save panel to warn). Reading is bounded: a file over 1 MiB is not read, and any `ParseError` is shown as "This save
+can't be loaded" while the file is kept. "Copy" / "Paste record" move the same text through the clipboard (desktop only).
+
 ## API
 
 ```cpp

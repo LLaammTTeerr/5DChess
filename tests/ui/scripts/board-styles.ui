@@ -1,10 +1,10 @@
 # The three board views on the same Standard mid-game (two turns played, the white knight picked up on the present board):
 # Settings -> Display -> "Board view" is cycled through Atlas, Blueprint and back to Deep space (the default), and each time
-# a Standard game is opened with `mode standard`. Layout (1400x800): main menu Settings (150,460); Display tab (880,172);
+# a Standard game is opened with `mode standard`. Layout (1400x800): main menu Settings (150,490; (150,520) once a game left an autosave, Continue then being the top item); Display tab (880,172);
 # the Board view button is the first of the two Display options (700,468); in the game Back (125,25) leads to the mode list,
 # whose single Back button is (700,712). Squares are clicked by name, see game-standard.ui.
 wait 20
-click 150 460        # Settings
+click 150 490        # Settings
 wait 30
 click 880 172        # Display tab
 wait 20
@@ -32,7 +32,7 @@ click 125 25         # Back to the mode list ...
 wait 30
 click 700 712        # ... and to the main menu
 wait 30
-click 150 460        # Settings
+click 150 520        # Settings
 wait 30
 click 880 172        # Display tab
 wait 20
@@ -59,7 +59,7 @@ click 125 25
 wait 30
 click 700 712
 wait 30
-click 150 460
+click 150 520
 wait 30
 click 880 172
 wait 20

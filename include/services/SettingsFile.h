@@ -31,7 +31,7 @@ Platform currentPlatform();
 ///   Linux    $XDG_CONFIG_HOME/5dchess/settings.txt, else $HOME/.config/5dchess/settings.txt
 ///   macOS    $HOME/Library/Application Support/5DChess/settings.txt
 ///   Windows  %APPDATA%\5DChess\settings.txt
-/// `getenv` returns the variable's value or an empty string. Empty result: no usable location (no HOME / APPDATA).
-std::string pathFor(Platform platform, const std::function<std::string(const char*)>& getenv);
+/// `file` names another file of the same directory (the saved games use it). `getenv` returns the variable's value or an empty string. Empty result: no usable location (no HOME / APPDATA).
+std::string pathFor(Platform platform, const std::function<std::string(const char*)>& getenv, const std::string& file = "settings.txt");
 
 } // namespace settingsfile

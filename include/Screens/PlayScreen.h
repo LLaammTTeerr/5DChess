@@ -9,6 +9,7 @@
 #include "play/BoardScene.h"
 #include "play/MultiverseView.h"
 #include "play/PromotionPicker.h"
+#include "play/SaveMenu.h"
 #include "play/Hud.h"
 #include "play/MoveAnimator.h"
 #include "play/Selection.h"
@@ -21,7 +22,8 @@
 class PlayScreen : public Screen {
 public:
   explicit PlayScreen(const std::string& modeId); // a GameCatalog id
-  explicit PlayScreen(std::shared_ptr<Chess::IGame> game);
+  /// `isAutosave`: the game is the autosaved one (Continue), so it keeps the autosave up to date and deletes it when the game ends.
+  explicit PlayScreen(std::shared_ptr<Chess::IGame> game, bool isAutosave = false);
   void update(App& app, float dt) override;
   void draw(App& app) const override;
 
@@ -48,12 +50,15 @@ private:
   play::HudMotion _hudMotion;
   play::HudData _hud;
   play::ActionRow _actions;
+  play::SaveMenu _saveMenu;
   ui::Button _back = backButton();
 
   std::optional<Chess::Core::Coord> _hover;
   bool _ended = false;
   bool _embedded = false;
   float _rightInset = UI::Layout::sideInset;
+  bool _autosaveWarned = false; // "Could not autosave" was shown
+  bool _autosaving = false; // this game writes the autosave after each submitted turn (set by the first one, or by Continue)
 
   // Answers that are not free (a threat search over the multiverse), cached until the game's state changes
   bool _canSubmit = false, _noMandatoryBoard = true;
@@ -64,6 +69,7 @@ private:
   void makeMove(const Chess::Core::Move& move);
   void undo();
   void submitTurn();
+  void leave(App& app);
   void deselect();
   void clearSelection();
   /// After anything changed: rebuild what depends on the game state, button states, HUD, end of game.

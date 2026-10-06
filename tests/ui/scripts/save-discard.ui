@@ -1,0 +1,15 @@
+# A corrupted autosave is not a dead end: Continue says it cannot be loaded and turns into "Discard autosave".
+# Layout (1400x800): with an autosave the menu column is Continue (150,220), Versus (150,280) ...; Back on the mode list (700,712).
+wait 20
+slot 0 ../records/corrupt.5dr   # a record that looks fine from outside but whose move is illegal
+wait 5
+click 150 250        # Versus: leave the menu so that it is rebuilt with the autosave
+wait 30
+click 700 712        # Back
+wait 40
+click 150 220        # Continue
+wait 20
+capture discard-cannot-load   # "This save can't be loaded", the top button now reads "Discard autosave"
+click 150 220        # Discard autosave
+wait 40
+capture discard-after         # the menu is back to its first item Versus

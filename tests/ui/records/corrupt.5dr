@@ -1,0 +1,5 @@
+# Deliberately broken: the pawn cannot jump three squares. The Load screen must say it cannot be loaded and keep the slot.
+5dchess-record 1
+mode: standard
+# saved: 2026-01-01 12:00
+T1w: (L0T1)e2>(L0T1)e5

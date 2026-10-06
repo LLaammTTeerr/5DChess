@@ -28,6 +28,9 @@ struct EndCard {
   float clock = 0.0f;        // seconds since the game ended (king hop)
 };
 
+/// A panel in the style of the board view (the HUD's, and the save menu's); roundness 1 is a pill, smaller values suit tall panels.
+void drawPanel(Rectangle r, const BoardStyle& style, float alpha = 1.0f, float roundness = 1.0f);
+
 /// Screen space, unaffected by the camera: the top-centre status pill, the bottom controls bar and the turn banner.
 void drawHud(const HudData& hud, const BoardStyle& style);
 void drawEndCard(const EndCard& card);
