@@ -51,21 +51,21 @@ Platform currentPlatform() {
 #endif
 }
 
-std::string pathFor(Platform platform, const std::function<std::string(const char*)>& getenv) {
+std::string pathFor(Platform platform, const std::function<std::string(const char*)>& getenv, const std::string& file) {
   switch (platform) {
     case Platform::Windows: {
       const std::string appData = getenv("APPDATA");
-      return appData.empty() ? "" : appData + "\\5DChess\\settings.txt";
+      return appData.empty() ? "" : appData + "\\5DChess\\" + file;
     }
     case Platform::MacOS: {
       const std::string home = getenv("HOME");
-      return home.empty() ? "" : home + "/Library/Application Support/5DChess/settings.txt";
+      return home.empty() ? "" : home + "/Library/Application Support/5DChess/" + file;
     }
     case Platform::Linux: {
       const std::string xdg = getenv("XDG_CONFIG_HOME");
-      if (!xdg.empty() && xdg[0] == '/') return xdg + "/5dchess/settings.txt";
+      if (!xdg.empty() && xdg[0] == '/') return xdg + "/5dchess/" + file;
       const std::string home = getenv("HOME");
-      return home.empty() ? "" : home + "/.config/5dchess/settings.txt";
+      return home.empty() ? "" : home + "/.config/5dchess/" + file;
     }
   }
   return "";
