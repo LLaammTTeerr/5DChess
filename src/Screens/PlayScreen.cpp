@@ -21,12 +21,18 @@ PlayScreen::PlayScreen(std::shared_ptr<Chess::IGame> game) : _game(std::move(gam
   refresh();
 }
 
+void PlayScreen::embed(float rightInset) {
+  _embedded = true;
+  _rightInset = rightInset;
+  _camera.setInsets(UI::Layout::safeTop, _rightInset, UI::Layout::safeBottom, UI::Layout::laneLabelW);
+}
+
 void PlayScreen::update(App& app, float dt) {
   const play::BoardStyle& style = play::boardStyle(app.settings.boardView);
   _actions.setSkin(&style.skin);
   _back.skin = &style.skin;
   // The buttons come first: whatever has the pointer is not a click on the board
-  if (_back.update(dt, app.screens.navShown())) app.screens.replace(std::make_unique<ModeSelectScreen>());
+  if (!_embedded && _back.update(dt, app.screens.navShown())) app.screens.replace(std::make_unique<ModeSelectScreen>());
   switch (_actions.update(dt)) {
     case play::ActionRow::Action::Undo: undo(); break;
     case play::ActionRow::Action::Deselect: deselect(); break;
@@ -67,7 +73,7 @@ void PlayScreen::updatePicker(float dt, const play::BoardStyle& style) {
   const Vector2 a = _camera.worldToScreen({square.x, square.y}), b = _camera.worldToScreen({square.x + square.w, square.y + square.h});
   _picker.show(_game->getCurrentTurnColor());
   _picker.place({a.x, a.y, b.x - a.x, b.y - a.y},
-                {0.0f, UI::Layout::safeTop, static_cast<float>(GetScreenWidth()),
+                {0.0f, UI::Layout::safeTop, static_cast<float>(GetScreenWidth()) - (_embedded ? _rightInset : 0.0f),
                  static_cast<float>(GetScreenHeight()) - UI::Layout::safeTop});
   if (const auto piece = _picker.update(dt, style.grayPieces, &style.skin)) {
     _animator.finish();
@@ -84,7 +90,7 @@ void PlayScreen::boardInput() {
     _hover = square;
     if (square && Input::mousePressed(MOUSE_BUTTON_LEFT)) click(*square);
   }
-  _camera.handleInput();
+  if (!ui::pointerConsumed()) _camera.handleInput(); // not over a button or the Guide's panel
 }
 
 void PlayScreen::click(Coord square) {
@@ -230,7 +236,7 @@ void PlayScreen::draw(App& app) const {
   const bool ongoing = _game->result() == Chess::GameResult::Ongoing;
   const int dim = _game->dim();
   const float screenW = static_cast<float>(GetScreenWidth()), screenH = static_cast<float>(GetScreenHeight());
-  const Rectangle safe = {UI::Layout::laneLabelW, UI::Layout::safeTop, screenW - UI::Layout::laneLabelW - UI::Layout::sideInset,
+  const Rectangle safe = {UI::Layout::laneLabelW, UI::Layout::safeTop, screenW - UI::Layout::laneLabelW - _rightInset,
                           screenH - UI::Layout::safeTop - UI::Layout::safeBottom};
   const play::SceneFrame frame{style, _view, camera, dim, safe};
   const bool gray = style.grayPieces;
@@ -320,7 +326,8 @@ void PlayScreen::draw(App& app) const {
     play::EndCard card = _hudMotion.endCard();
     card.title = result == Chess::GameResult::WhiteWins ? "White wins!" : result == Chess::GameResult::BlackWins ? "Black wins!" : "Draw";
     card.reason = result == Chess::GameResult::Draw ? "Stalemate" : "Checkmate";
+    if (_embedded) card.footer = "Use Reset position to try again";
     play::drawEndCard(card);
   }
-  _back.draw(app.screens.navAlpha());
+  if (!_embedded) _back.draw(app.screens.navAlpha());
 }

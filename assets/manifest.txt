@@ -90,3 +90,6 @@ music music.solo backgroundmusic/solo-piano-4.ogg
 
 # Position files (one .5dp per starting position); the directory may not exist yet.
 dir positions/ positions/
+
+# The Guide's example positions (one .5dp per page).
+dir guide/ guide/

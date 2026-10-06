@@ -1,0 +1,7 @@
+5dchess-position 1
+title: Special moves
+size: 8
+rules: double-step castling
+to-move: white
+L0 T2b: 6k1/1P*1p4/8/4P*3/8/8/8/R3K2R
+L0 T3w: 6k1/1P*6/8/3p*P*3/8/8/8/R3K2R

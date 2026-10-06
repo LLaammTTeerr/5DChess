@@ -1,0 +1,12 @@
+5dchess-position 1
+title: Moving in four directions
+size: 8
+rules: double-step castling
+to-move: white
+L0 T1w: 1n2k3/pppp4/8/8/8/8/PPPP4/RN1QK3
+L0 T1b: 1n2k3/pppp4/8/8/8/3P*4/PPP5/RN1QK3
+L0 T2w: 1n2k3/ppp5/3p*4/8/8/3P*4/PPP5/RN1QK3
+L0 T2b: 1n2k3/ppp5/3p*4/8/8/3P*4/PPP5/R2QK3
+L1 parent: L0
+L1 T1b: 1n2k3/pppp4/8/8/8/1N*6/PPPP4/RN1QK3
+L1 T2w: 1n2k3/1ppp4/p*7/8/8/1N*6/PPPP4/RN1QK3

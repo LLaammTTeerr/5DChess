@@ -1,0 +1,122 @@
+# The interactive Guide: main menu -> Guide, then every page (Right arrow turns the page), with the "Try it" goal played on
+# most of them. Squares are clicked by name (`clicksq <timeline> <half-turn> <square>`), see game-standard.ui.
+# Layout: the main menu's Guide item is at (150, 400); Submit is the third button of the action row at (842, 90).
+wait 20
+click 150 400        # Guide
+wait 40
+capture guide-01-boards-and-time
+clicksq 0 2 d2       # a pawn: its legal targets show
+wait 40
+capture guide-01-pawn-selected
+clicksq 0 2 d4
+wait 60
+click 842 90         # Submit
+wait 60
+capture guide-01-turn-submitted
+
+key RIGHT
+wait 30
+capture guide-02-moving-through-time
+clicksq 0 2 b1       # the knight: dots on the older boards too
+wait 40
+capture guide-02-knight-selected
+clicksq 0 0 b3       # back to T1w: a new timeline
+wait 90
+capture guide-02-new-timeline
+
+key RIGHT
+wait 30
+capture guide-03-timeline-owners
+clicksq 0 3 b8       # Black's knight on the last board of L0
+wait 40
+capture guide-03-knight-selected
+clicksq 0 1 b6       # back to T1b of L0: L-1 appears below
+wait 90
+capture guide-03-black-timeline
+
+key RIGHT
+wait 30
+capture guide-04-present-and-active
+clicksq 0 4 a2
+wait 40
+clicksq 0 4 a3
+wait 60
+clicksq 1 4 a2
+wait 40
+clicksq 1 4 a3
+wait 60
+capture guide-04-both-moved
+click 842 90         # Submit
+wait 60
+capture guide-04-turn-submitted
+
+key RIGHT
+wait 30
+capture guide-05-four-axes
+clicksq 1 2 d1       # the queen reaches along all four axes
+wait 40
+capture guide-05-queen-selected
+clicksq 0 0 e2       # diagonally back in time and one timeline down: the first board of L0
+wait 90
+capture guide-05-changed-board
+
+key RIGHT
+wait 30
+capture guide-06-pawns
+clicksq 0 4 e4
+wait 40
+capture guide-06-pawn-selected
+clicksq 0 4 d5       # the capture
+wait 60
+capture guide-06-captured
+
+key RIGHT
+wait 30
+capture guide-07-check
+clicksq 1 4 h3
+wait 40
+clicksq 1 4 h4
+wait 60
+clicksq 0 4 e1
+wait 40
+clicksq 0 4 d1
+wait 60
+capture guide-07-out-of-check
+click 842 90         # Submit
+wait 60
+capture guide-07-turn-submitted
+
+key RIGHT
+wait 30
+capture guide-08-checkmate
+clicksq 0 0 a1
+wait 40
+clicksq 0 0 a8
+wait 60
+click 842 90         # Submit
+wait 120
+capture guide-08-mate
+
+key RIGHT
+wait 30
+capture guide-09-special-moves
+clicksq 0 4 e1       # castling targets g1 and c1
+wait 40
+capture guide-09-king-selected
+clicksq 0 4 e1       # deselect
+wait 20
+clicksq 0 4 b7
+wait 40
+clicksq 0 4 b8       # the promotion picker opens
+wait 40
+capture guide-09-promotion-picker
+key N
+wait 60
+capture guide-09-promoted
+
+key RIGHT
+wait 30
+capture guide-10-first-game
+key LEFT
+wait 30
+capture guide-09-back-with-left-arrow

@@ -21,6 +21,7 @@ struct HudData {
 /// The end-of-game card: scrim, centred card, and in the Pixel theme the winner's king hopping on top.
 struct EndCard {
   std::string title, reason; // "White wins!" / "Checkmate"
+  std::string footer = "Use Back to return to game selection"; // the line under the rule
   bool whiteWon = true, draw = false;
   float scrim = 1.0f;        // 0..1 fade of scrim and card
   float pop = 1.0f;          // spring scale of the card (slight overshoot)

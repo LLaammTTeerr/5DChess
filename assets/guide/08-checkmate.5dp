@@ -1,0 +1,6 @@
+5dchess-position 1
+title: Checkmate and stalemate
+size: 8
+rules: double-step castling
+to-move: white
+L0 T1w: 6k1/5ppp/8/8/8/8/8/R3K3
