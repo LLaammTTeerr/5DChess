@@ -59,6 +59,10 @@ Official-rules visuals: a board's frame says whether you must move on it (mandat
   </tr>
 </table>
 
+![The animated main menu](docs/screenshots/main-menu.png)
+
+*The main menu.*
+
 ![A piece sliding to its new square in the Pixel theme](docs/screenshots/move.gif)
 
 *Pieces slide, new boards grow in, and a banner announces the next turn.*
@@ -231,6 +235,7 @@ The game changes its working directory to the executable's folder, so it can be 
 - **Board views**: Deep space (default), Atlas and Blueprint, chosen in Settings -> Display. Timelines are lanes labelled L0, L+1, L-1 (White's above L0, Black's below); a ruler on top counts turns (T1 T2 ... with w/b ticks); the present is marked; branches are drawn as connectors coloured by the player who created the timeline; a time-travel move shows a dashed arc with the moving piece. One renderer draws all three from `BoardStyle` data (`include/play/BoardStyle.h`)
 - **Rules at a glance**: boards you must move on, may move on, or cannot (history) are framed differently; boards of inactive timelines are dimmed and desaturated and tagged "inactive"; check draws a line from every attacker to the king; promotion asks which piece (no auto-queening)
 - **Legal Move Highlighting**: Visual guides for valid moves; Submit is enabled only when the whole turn is legal (otherwise the HUD says why, e.g. "Your king would be capturable")
+- **Notation and records (engine only)**: moves have a notation (`(L0T1)e2>(L0T1)e4`) and games can be written to and replayed from a `5dchess-record` ([docs/NOTATION.md](docs/NOTATION.md)); there is no save/load button in the app yet
 - **Undo**: Take back moves within the current turn before submitting (no redo)
 - **Board orientation**: Boards are drawn from White's side
 
@@ -262,23 +267,24 @@ theme_preview <Classic|Modern|Fantasy|Pixel> <Standard|Battle|Invasion|Fragment>
 `turns` defaults to 2; `--perf` measures frame times. `ui_script` runs the real game from a script with injected input (`clicksq 0 2 g1` clicks a square by name; `mode <id>` / `position <file.5dp>` open a game): see [tests/ui/README.md](tests/ui/README.md).
 
 ### Technical Features
-- **Modular Architecture**: Clean separation of concerns (MVC pattern)
-- **Design Patterns**: Command, State, Strategy, Composite, Singleton
-- **Resource Management**: Efficient asset loading and caching
-- **Extensible Framework**: Easy addition of new features and game modes
+- **Engine without raylib**: a plain value API (`Piece`, `Board`), `.5dp` position files for the nine game modes, and a resumable background result search
+- **Screens and widgets**: one `Screen` per page on a `ScreenStack`, a small widget layer, and a game screen split into `play::` modules
+- **Manifest-driven assets** with loading and caching
+- **Game modes as data**: add a mode by adding a `.5dp` file
 
 ## Roadmap
 
 - ~~Official 5D Chess rules~~ (check, checkmate, stalemate, active timelines, castling, en passant, promotion choice): done.
 - ~~v0.4.0~~: official rules, non-blocking result search, differential testing, `.5dp` position files, engine value API, UI screenshot tests, manifest-driven assets: done.
-- ~~v0.5.0~~: finish the UI refactor, three board view styles (Deep space by default, Atlas, Blueprint), official-rules visuals, a promotion picker and saved settings: done (unreleased).
-- **v0.6.0**: AI opponent, save/load, puzzles and an interactive guide.
+- ~~v0.5.0~~: widget/screen UI rewrite, three board views (Deep space by default, Atlas, Blueprint), official-rules visuals, promotion picker, saved settings, move notation and game records in the engine: done.
+- **v0.6.0** (next): AI opponent, save/load in the UI, puzzles and an interactive guide.
 
 ## Known limitations
 
 - In rare, huge positions the checkmate/stalemate search may not finish in reasonable time; the result then stays undecided ("Checking position...") and the game simply continues ([docs/SEARCH.md](docs/SEARCH.md)).
 - The rules engine is cross-checked against 5d-chess-js on Standard and the Simplify modes only; the Misc modes (Time Line Invasion, Battle, Fragment) are not cross-checked.
-- The Puzzles and Guide menu items are placeholders.
+- The Puzzles and Guide menu items are placeholders; there is no AI opponent yet.
+- Games cannot be saved or loaded from the app (the engine can read and write records, see [docs/NOTATION.md](docs/NOTATION.md)).
 
 ## Troubleshooting
 
