@@ -14,7 +14,7 @@ struct Rect {
 };
 
 /// Where every board of a game sits in the world. A board is a grid cell: its column is the half-turn, its row the
-/// timeline id (negative ids lie above timeline 0). boardRect() is the pure (timeline, half-turn) -> rectangle
+/// timeline id, White's timelines (positive ids) above timeline 0 and Black's (negative ids) below it, as in the official game. boardRect() is the pure (timeline, half-turn) -> rectangle
 /// function; the BoardLayout object adds what depends on the game: the list of existing boards, their bounds, and the
 /// inverse mapping hitTest(). It is rebuilt only when the game's stateVersion() changes.
 class BoardLayout {

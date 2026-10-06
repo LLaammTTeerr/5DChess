@@ -9,7 +9,7 @@ using namespace test;
 using play::BoardLayout;
 using play::Rect;
 
-TEST_CASE("BoardLayout: boards sit on a grid of half-turn columns and timeline rows; negative timelines are above") {
+TEST_CASE("BoardLayout: boards sit on a grid of half-turn columns and timeline rows; White's (positive) timelines are above") {
   const Rect origin = BoardLayout::boardRect(0, 0);
   CHECK(origin.x == 0);
   CHECK(origin.y == 0);
@@ -17,9 +17,10 @@ TEST_CASE("BoardLayout: boards sit on a grid of half-turn columns and timeline r
   const Rect later = BoardLayout::boardRect(0, 3);
   CHECK(later.x == 3 * BoardLayout::kPitch);
   CHECK(later.y == origin.y);
-  CHECK(BoardLayout::boardRect(2, 0).y == 2 * BoardLayout::kPitch);
-  CHECK(BoardLayout::boardRect(-1, 0).y == -BoardLayout::kPitch);
-  CHECK(BoardLayout::boardRect(-1, 0).y < origin.y);
+  CHECK(BoardLayout::boardRect(2, 0).y == -2 * BoardLayout::kPitch);
+  CHECK(BoardLayout::boardRect(2, 0).y < origin.y);
+  CHECK(BoardLayout::boardRect(-1, 0).y == BoardLayout::kPitch);
+  CHECK(BoardLayout::boardRect(-1, 0).y > origin.y);
 }
 
 TEST_CASE("BoardLayout: squares have White at the bottom and the a-file on the left") {

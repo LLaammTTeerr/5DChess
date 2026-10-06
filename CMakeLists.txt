@@ -39,8 +39,9 @@ else()
   target_compile_options(chess_core PRIVATE -Wall -Wextra)
 endif()
 
-# --- Game-screen logic that needs no graphics (selection state machine, board layout) -----------------
-add_library(play_core STATIC src/play/Selection.cpp src/play/BoardLayout.cpp)
+# --- Game-screen logic that needs no graphics (selection state machine, board layout, multiverse snapshot, settings file text) -----------------
+add_library(play_core STATIC src/play/Selection.cpp src/play/BoardLayout.cpp src/play/MultiverseView.cpp
+  src/services/SettingsFile.cpp)
 target_link_libraries(play_core PUBLIC chess_core)
 if(MSVC)
   target_compile_options(play_core PRIVATE /W4)
@@ -74,7 +75,7 @@ if(FDCHESS_BUILD_GAME)
   file(GLOB_RECURSE GAME_SOURCES CONFIGURE_DEPENDS src/*.cpp)
   list(REMOVE_ITEM GAME_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/chess.cpp)
   list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/engine/") # engine sources are part of chess_core
-  list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/play/(Selection|BoardLayout)\\.cpp") # part of play_core
+  list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/play/(Selection|BoardLayout|MultiverseView)\\.cpp|/src/services/SettingsFile\\.cpp") # part of play_core
 
   add_executable(5dchess ${GAME_SOURCES})
   target_include_directories(5dchess PRIVATE

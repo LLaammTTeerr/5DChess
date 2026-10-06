@@ -89,7 +89,7 @@ TEST_CASE("Selection: boards the player can no longer move on cannot be picked f
   CHECK_FALSE(s.active());
 }
 
-TEST_CASE("Selection: a promoting pawn has one target square and four moves; the click picks the Queen") {
+TEST_CASE("Selection: a promoting pawn has one target square and four moves; the click opens a choice") {
   Sandbox game(5);
   game.place(0, 0, 3, make(PieceType::Pawn, PieceColor::PIECEWHITE));
   game.place(0, 4, 0, make(PieceType::King, PieceColor::PIECEWHITE));
@@ -99,9 +99,45 @@ TEST_CASE("Selection: a promoting pawn has one target square and four moves; the
   REQUIRE(s.click(pawn, game).kind == Intent::Kind::Select);
   CHECK(s.moves().size() == 4);
   CHECK(s.targets() == std::vector<Coord>{last});
+  CHECK_FALSE(s.promotionTarget());
+
   const Intent intent = s.click(last, game);
-  REQUIRE(intent.kind == Intent::Kind::Move);
+  REQUIRE(intent.kind == Intent::Kind::Promote);
   CHECK(intent.move.promotion == PieceType::Queen);
+  REQUIRE(s.promotionTarget());
+  CHECK(*s.promotionTarget() == last);
+  CHECK(s.active()); // the pawn stays selected while the player chooses
+  CHECK(s.promotionChoices().size() == 4);
+
+  const Intent knight = s.choosePromotion(PieceType::Knight);
+  REQUIRE(knight.kind == Intent::Kind::Move);
+  CHECK(knight.move.from == pawn);
+  CHECK(knight.move.to == last);
+  CHECK(knight.move.promotion == PieceType::Knight);
+  CHECK_FALSE(s.active());
+  CHECK_FALSE(s.promotionTarget());
+  game.makeMove(knight.move);
+  CHECK(game.board(0, 1).at(Position2D(0, 4))->type == PieceType::Knight);
+}
+
+TEST_CASE("Selection: a click elsewhere cancels the promotion choice but keeps the pawn selected") {
+  Sandbox game(5);
+  game.place(0, 0, 3, make(PieceType::Pawn, PieceColor::PIECEWHITE));
+  game.place(0, 4, 0, make(PieceType::King, PieceColor::PIECEWHITE));
+  game.place(0, 4, 4, make(PieceType::King, PieceColor::PIECEBLACK));
+  const Coord pawn{0, 3, 0, 0}, last{0, 4, 0, 0};
+  Selection s;
+  s.click(pawn, game);
+  REQUIRE(s.click(last, game).kind == Intent::Kind::Promote);
+  CHECK(s.click(Coord{2, 2, 0, 0}, game).kind == Intent::Kind::None);
+  CHECK_FALSE(s.promotionTarget());
+  CHECK(s.active());
+  CHECK(s.choosePromotion(PieceType::Rook).kind == Intent::Kind::None);
+  CHECK(s.click(last, game).kind == Intent::Kind::Promote); // reopens
+  s.cancelPromotion();
+  CHECK_FALSE(s.promotionTarget());
+  CHECK(s.active());
+  CHECK(s.click(pawn, game).kind == Intent::Kind::Clear);
 }
 
 TEST_CASE("Selection: clear() drops the selection") {

@@ -16,7 +16,8 @@ add_executable(chess_tests
   position_test.cpp
   notation_test.cpp
   selection_test.cpp
-  layout_test.cpp)
+  layout_test.cpp
+  view_test.cpp)
 target_link_libraries(chess_tests PRIVATE play_core chess_core doctest::doctest)
 target_compile_definitions(chess_tests PRIVATE FDCHESS_POSITIONS_DIR="${PROJECT_SOURCE_DIR}/assets/positions")
 target_compile_options(chess_tests PRIVATE $<IF:$<CXX_COMPILER_ID:MSVC>,/UNDEBUG,-UNDEBUG>)
