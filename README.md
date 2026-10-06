@@ -10,7 +10,7 @@ Chess with multiverse time travel: a 5D Chess game with timelines, built in C++2
 
 **⬇ Download for Linux/macOS/Windows: <https://github.com/LLaammTTeerr/5DChess/releases/latest>**
 
-![The animated main menu: title, tagline, idling Pixel creatures and the menu on the left](docs/screenshots/main-menu.png)
+![A Standard game in the Deep space board view: boards as lit windows on glowing threads, the present as an aurora, timelines labelled L0, L+1, L-1](docs/screenshots/hero.png)
 
 ## Table of Contents
 - [Overview](#overview)
@@ -31,6 +31,7 @@ Chess with multiverse time travel: a 5D Chess game with timelines, built in C++2
 
 This project implements a 5D Chess game with an advanced UI system featuring:
 - Multi-timeline chess mechanics
+- Three board views (Deep space, Atlas, Blueprint) that show every timeline at once: lanes, a turn ruler, the present, branches and time-travel jumps
 - Interactive board visualization with highlighting and an auto-focusing camera
 - Small widget layer (buttons, lists, toggles) and a screen stack with cross-fades
 - In-turn undo, deselect and submit controls
@@ -39,7 +40,24 @@ This project implements a 5D Chess game with an advanced UI system featuring:
 
 ## Screenshots
 
-![A standard game from White's side with the e-pawn selected and its legal squares highlighted](docs/screenshots/standard-game.png)
+Three board views, selectable in Settings -> Display -> *Board view* (the same Standard game in each):
+
+<table>
+  <tr>
+    <td width="33%"><img src="docs/screenshots/board-deep-space.png" alt="Deep space board view: indigo night sky, glowing boards, aurora present"><br><sub><b>Deep space</b> (default): glow encodes state; luminous branches in gold or violet by who branched.</sub></td>
+    <td width="33%"><img src="docs/screenshots/board-atlas.png" alt="Atlas board view: warm paper map with tinted timeline lanes and card boards"><br><sub><b>Atlas</b>: a paper map with tinted lanes, card boards and a terracotta present.</sub></td>
+    <td width="33%"><img src="docs/screenshots/board-blueprint.png" alt="Blueprint board view: monochrome ink on off-white with subway-style connectors"><br><sub><b>Blueprint</b>: ink on off-white, elbow connectors, colour only for what needs attention.</sub></td>
+  </tr>
+</table>
+
+Official-rules visuals: a board's frame says whether you must move on it (mandatory), may (optional) or not (history); inactive timelines are dimmed and tagged; a check draws a pulsing line from every attacker to the king; promotion opens a piece picker.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/rules-check.png" alt="A check: a red line from the attacking rook to the white king"><br><sub>Check: the attack line (it stays still under Reduce motion).</sub></td>
+    <td width="50%"><img src="docs/screenshots/rules-promotion.png" alt="The promotion picker above the square e8"><br><sub>Promotion: choose Queen, Rook, Bishop or Knight (Q / R / B / N).</sub></td>
+  </tr>
+</table>
 
 ![A piece sliding to its new square in the Pixel theme](docs/screenshots/move.gif)
 
@@ -51,8 +69,8 @@ This project implements a 5D Chess game with an advanced UI system featuring:
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/timelines.png" alt="Timeline Battle mode with nine timelines branching from the starting position"><br><sub>Timeline Battle: nine timelines branching from the start.</sub></td>
-    <td width="50%"><img src="docs/screenshots/settings.png" alt="Settings screen with the Pixel piece theme selected"><br><sub>Settings: choose a piece theme (Pixel selected).</sub></td>
+    <td width="50%"><img src="docs/screenshots/timelines.png" alt="Timeline Battle mode with nine timelines in the Deep space view"><br><sub>Timeline Battle: nine timelines branching from the start.</sub></td>
+    <td width="50%"><img src="docs/screenshots/settings.png" alt="Settings screen, Display tab with the Board view option"><br><sub>Settings -> Display: board view and Reduce motion (settings are saved).</sub></td>
   </tr>
 </table>
 
@@ -168,7 +186,7 @@ The game changes its working directory to the executable's folder, so it can be 
 ├── include/                   # Header files
 │   ├── engine/                # Value API, .5dp positions, GameCatalog (no raylib)
 │   ├── services/              # Assets, settings and other app services
-│   ├── play/                  # The game screen's parts: Selection, BoardLayout, BoardRenderer, MoveAnimator, BoardCamera, Hud, TimelineArrows
+│   ├── play/                  # The game screen's parts: Selection, BoardLayout, MultiverseView, BoardStyle, BoardScene, BoardRenderer, MoveAnimator, BoardCamera, Hud, TimelineArrows, PromotionPicker
 │   ├── Render/                # Motion tokens, UI theme, piece themes
 │   ├── Screens/               # One Screen per page of the game
 │   └── ui/                    # Widget layer and the Screen / ScreenStack model
@@ -196,7 +214,7 @@ The game changes its working directory to the executable's folder, so it can be 
 - **Hover**: Visual feedback on interactive elements
 
 ### Game Controls
-- **Mouse Click**: Select a piece, then click a highlighted square to move (hovering a square only tints it; legal targets appear after selecting a piece)
+- **Mouse Click**: Select a piece, then click a highlighted square to move (hovering a square only tints it; legal targets appear after selecting a piece); a pawn reaching the last rank opens the promotion picker (or press Q / R / B / N)
 - **Drag / Mouse Wheel**: Pan and zoom the camera
 - **In-game buttons**: Undo, Deselect and Submit (greyed out when unavailable)
 
@@ -210,7 +228,8 @@ The game changes its working directory to the executable's folder, so it can be 
 ### Core Gameplay
 - **Official 5D Chess rules**: moves across time and parallel universes, active/inactive timelines and the present, mandatory moves on the present boards, check through time, castling, en passant and promotion (see [docs/RULES.md](docs/RULES.md); checked against the reference engine 5d-chess-js)
 - **Winning**: you win by checkmate (the opponent has no legal turn and is in check); no legal turn without check is a stalemate and a draw. Kings are never captured. The position is checked in the background after every turn ("Checking position..."), so the game never freezes
-- **Timeline Visualization**: Boards branch into new timelines, with arrows showing the branch
+- **Board views**: Deep space (default), Atlas and Blueprint, chosen in Settings -> Display. Timelines are lanes labelled L0, L+1, L-1 (White's above L0, Black's below); a ruler on top counts turns (T1 T2 ... with w/b ticks); the present is marked; branches are drawn as connectors coloured by the player who created the timeline; a time-travel move shows a dashed arc with the moving piece. One renderer draws all three from `BoardStyle` data (`include/play/BoardStyle.h`)
+- **Rules at a glance**: boards you must move on, may move on, or cannot (history) are framed differently; boards of inactive timelines are dimmed and desaturated and tagged "inactive"; check draws a line from every attacker to the king; promotion asks which piece (no auto-queening)
 - **Legal Move Highlighting**: Visual guides for valid moves; Submit is enabled only when the whole turn is legal (otherwise the HUD says why, e.g. "Your king would be capturable")
 - **Undo**: Take back moves within the current turn before submitting (no redo)
 - **Board orientation**: Boards are drawn from White's side
@@ -220,7 +239,8 @@ The game changes its working directory to the executable's folder, so it can be 
 - **Animated main menu**: a code-drawn hero with a drifting field of timeline boards and idling Pixel creatures
 - **Motion**: shared tokens and easing (`include/Render/Motion.h`); pieces slide or arc across boards, new boards grow in, selected pieces lift, menus stagger in, screens cross-fade, and a turn banner announces the side to move. Animations never delay game state or input. Settings -> Display -> **Motion: Reduced** makes changes instant or short cross-fades
 - **Pixel theme with blinking creatures**: Pixel-theme pieces blink at random intervals when zoomed in
-- **HUD and controls bar**: side to move, turn, next-step hint, and an end-of-game card
+- **HUD and controls bar**: side to move, turn, next-step hint, and an end-of-game card; styled to match the board view (the menus stay cream)
+- **Settings are saved**: piece theme, board view, music, sound effects and Reduce motion persist between runs (`~/.config/5dchess/settings.txt` on Linux, `~/Library/Application Support/5DChess` on macOS, `%APPDATA%\5DChess` on Windows; the browser's localStorage on the web)
 - **Camera**: smooth auto-centering and auto-zoom (spring-damped), plus manual pan and zoom
 - **Menus**: button and list layouts, rounded buttons with smooth hover, warm cream + terracotta theme (`include/Render/UITheme.h`)
 
@@ -237,9 +257,9 @@ Four piece themes are available: Classic, Modern, Fantasy and Pixel. Choose one 
 ### Developer Tools
 Configure with `-DFDCHESS_BUILD_TOOLS=ON` to also build `theme_preview`, which renders a scripted game and saves a screenshot:
 ```bash
-theme_preview <Classic|Modern|Fantasy|Pixel> <Standard|Battle|Invasion|Fragment> <out.png> [turns]
+theme_preview <Classic|Modern|Fantasy|Pixel> <Standard|Battle|Invasion|Fragment> <out.png> [turns] [--view "Deep space"|Atlas|Blueprint]
 ```
-`turns` defaults to 2.
+`turns` defaults to 2; `--perf` measures frame times. `ui_script` runs the real game from a script with injected input (`clicksq 0 2 g1` clicks a square by name; `mode <id>` / `position <file.5dp>` open a game): see [tests/ui/README.md](tests/ui/README.md).
 
 ### Technical Features
 - **Modular Architecture**: Clean separation of concerns (MVC pattern)
@@ -251,7 +271,7 @@ theme_preview <Classic|Modern|Fantasy|Pixel> <Standard|Battle|Invasion|Fragment>
 
 - ~~Official 5D Chess rules~~ (check, checkmate, stalemate, active timelines, castling, en passant, promotion choice): done.
 - ~~v0.4.0~~: official rules, non-blocking result search, differential testing, `.5dp` position files, engine value API, UI screenshot tests, manifest-driven assets: done.
-- **v0.5.0**: finish the UI refactor and add three board view styles (Deep space by default, Atlas, Blueprint).
+- ~~v0.5.0~~: finish the UI refactor, three board view styles (Deep space by default, Atlas, Blueprint), official-rules visuals, a promotion picker and saved settings: done (unreleased).
 - **v0.6.0**: AI opponent, save/load, puzzles and an interactive guide.
 
 ## Known limitations
