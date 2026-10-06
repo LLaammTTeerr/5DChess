@@ -190,10 +190,10 @@ cmake --build build --config Release --target package   # produces 5DChess-<vers
 
 ### Releasing
 1. Bump `VERSION` in the `project()` call of `CMakeLists.txt`.
-2. Update `CHANGELOG.md` (move `[Unreleased]` entries under the new version).
+2. Update `CHANGELOG.md`: move the `[Unreleased]` entries under a new `## [X.Y.Z] - date` heading, optionally with a short summary paragraph on top. This section becomes the release notes.
 3. Tag and push: `git tag vX.Y.Z && git push origin vX.Y.Z`.
 
-The release workflow checks that the tag matches `VERSION`, builds on Linux/macOS/Windows, and publishes the ZIPs to a GitHub Release.
+The release workflow checks that the tag matches `VERSION` and that `CHANGELOG.md` has a `## [X.Y.Z]` section, builds on Linux/macOS/Windows, and publishes the ZIPs to a GitHub Release. The release notes are that CHANGELOG section (`scripts/changelog_section.sh X.Y.Z` prints it), a play/download line, and GitHub's list of merged PRs.
 
 ## Running
 
