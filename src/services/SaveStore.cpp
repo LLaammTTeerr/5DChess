@@ -116,6 +116,7 @@ LoadResult loadText(std::string_view text) {
   try {
     result.game = Chess::loadRecord(text);
     if (!result.game) result.error = "empty result";
+    else result.vsAi = play::findMeta(text); // a record that does not say it is a vs-Computer game is a hot-seat one
   } catch (const std::exception& e) {
     result.game.reset();
     result.error = e.what();
@@ -154,6 +155,7 @@ SlotSummary summarize(std::string_view text) {
     if (line[0] == '#') {
       constexpr std::string_view tag = "# saved:";
       if (line.substr(0, tag.size()) == tag) s.date = std::string(trim(line.substr(tag.size())).substr(0, 32));
+      if (play::parseMeta(line)) s.vsComputer = true;
       continue;
     }
     if (!magic) {
@@ -190,17 +192,18 @@ std::string SlotSummary::describe() const {
     case State::Unreadable: return "Unreadable save";
     case State::Ready: break;
   }
-  std::string out = title + " - " + std::to_string(turns) + (turns == 1 ? " turn" : " turns");
+  std::string out = title + (vsComputer ? " vs Computer" : "") + " - " + std::to_string(turns) + (turns == 1 ? " turn" : " turns");
   if (!date.empty()) out += " - " + date;
   return out;
 }
 
 // ---- SaveStore ---------------------------------------------------------------------------------------------------------
 
-bool SaveStore::autosave(const Chess::IGame& game) {
+bool SaveStore::autosave(const Chess::IGame& game, const play::VsAi* vs) {
   if (game.history().empty()) return false;
   try {
-    const std::string text = Chess::writeRecord(game);
+    std::string text = Chess::writeRecord(game);
+    if (vs) text = play::withMeta(text, *vs);
     if (text.size() > kMaxBytes) return false;
     return _storage->write("autosave", text);
   } catch (const std::exception&) { // a game without a start position (a test sandbox)
@@ -208,7 +211,7 @@ bool SaveStore::autosave(const Chess::IGame& game) {
   }
 }
 
-bool SaveStore::saveSlot(int slot, const Chess::IGame& game, const std::string& stamp, bool* droppedPending) {
+bool SaveStore::saveSlot(int slot, const Chess::IGame& game, const std::string& stamp, bool* droppedPending, const play::VsAi* vs) {
   if (slot < 0 || slot >= kSlots) return false;
   try {
     std::string text = Chess::writeRecord(game, droppedPending);
@@ -217,6 +220,7 @@ bool SaveStore::saveSlot(int slot, const Chess::IGame& game, const std::string& 
     std::string safeStamp = stamp;
     std::replace(safeStamp.begin(), safeStamp.end(), '\n', ' ');
     text.insert(eol == std::string::npos ? text.size() : eol + 1, "# saved: " + safeStamp + "\n");
+    if (vs) text = play::withMeta(text, *vs); // after the magic, before the date: both are comments
     if (text.size() > kMaxBytes) return false;
     return _storage->write(slotName(slot), text);
   } catch (const std::exception&) {
@@ -251,11 +255,11 @@ LoadResult SaveStore::load(const std::string& name) const {
   std::string text;
   switch (_storage->read(name, text)) {
     case ReadStatus::Ok: return loadText(text);
-    case ReadStatus::Missing: return {nullptr, "no such save"};
-    case ReadStatus::TooLarge: return {nullptr, "file too large"};
-    case ReadStatus::Error: return {nullptr, "file unreadable"};
+    case ReadStatus::Missing: return {nullptr, "no such save", std::nullopt};
+    case ReadStatus::TooLarge: return {nullptr, "file too large", std::nullopt};
+    case ReadStatus::Error: return {nullptr, "file unreadable", std::nullopt};
   }
-  return {nullptr, "file unreadable"};
+  return {nullptr, "file unreadable", std::nullopt};
 }
 
 } // namespace savegame

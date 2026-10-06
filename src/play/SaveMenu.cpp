@@ -58,13 +58,14 @@ void SaveMenu::openPanel() {
   }
   _slots = ui::ButtonList(labels, slots);
   _slots.selectable = false;
+  _slots.setEllipsize(true);
   _overwrite.clear();
   _open = true;
 }
 
-void SaveMenu::update(float dt, bool reachable, const BoardStyle& style, const Chess::IGame& game) {
+void SaveMenu::update(float dt, bool reachable, const BoardStyle& style, const Chess::IGame& game, const VsAi* vs, bool computerMoving) {
   _save.skin = _copy.skin = _slots.skin = &style.skin;
-  _pending = !game.pendingMoves().empty();
+  _pending = !game.pendingMoves().empty() && !computerMoving;
   if (!_message.empty()) {
     _messageClock += dt;
     if (_messageClock > kMessageSeconds) _message.clear();
@@ -81,7 +82,8 @@ void SaveMenu::update(float dt, bool reachable, const BoardStyle& style, const C
   }
   if (copyClicked) {
     try {
-      SetClipboardText(Chess::writeRecord(game).c_str());
+      const std::string record = Chess::writeRecord(game);
+      SetClipboardText((vs ? withMeta(record, *vs) : record).c_str());
       say("Record copied to clipboard", false);
     } catch (const std::exception&) {
       say("This game can't be copied", true);
@@ -112,7 +114,8 @@ void SaveMenu::update(float dt, bool reachable, const BoardStyle& style, const C
   if (clicked >= 0) {
     bool dropped = false;
     App& app = App::current();
-    if (app.saves.saveSlot(clicked, game, savegame::timestamp(), &dropped)) {
+    if (app.saves.saveSlot(clicked, game, savegame::timestamp(), &dropped, vs)) {
+      dropped = dropped && !computerMoving;
       say("Saved to slot " + std::to_string(clicked + 1) + (dropped ? " (unsubmitted moves left out)" : ""), dropped);
       openPanel(); // the slot list shows the new save
     } else {

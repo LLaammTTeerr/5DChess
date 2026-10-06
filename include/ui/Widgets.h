@@ -46,6 +46,7 @@ struct Button {
   Rectangle rect{};
   bool primary = false;
   bool enabled = true;
+  bool ellipsize = false;               // a label that still does not fit at the smallest size is cut and ends in "..."
   const Skin* skin = nullptr;           // nullptr: defaultSkin()
   const Texture2D* icon = nullptr;      // drawn centred instead of the label (e.g. a piece sprite)
 
@@ -108,6 +109,8 @@ public:
   void draw(float alpha = 1.0f) const;
   /// A disabled item looks dimmed and ignores clicks (it still takes the pointer).
   void setEnabled(size_t index, bool enabled) { if (index < items_.size()) items_[index].enabled = enabled; }
+  /// Long labels end in "..." instead of overflowing the button (save slot rows).
+  void setEllipsize(bool on) { for (Button& b : items_) b.ellipsize = on; }
   void setLabel(size_t index, std::string label) { if (index < items_.size()) items_[index].label = std::move(label); }
 
 private:

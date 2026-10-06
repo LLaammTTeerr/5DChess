@@ -16,6 +16,10 @@ struct HudData {
   bool bannerActive = false; // the "<Colour> to move" banner below the action row
   bool bannerWhite = true;
   float bannerClock = 0.0f;
+  float thinking = 0.0f;     // 0..1 fade of the computer's "thinking" indicator in the pill (0: not shown)
+  float thinkFraction = 0.0f;// 0..1 progress of its search (eased)
+  bool thinkBar = false;     // the search is running: show the bar (otherwise only the dots)
+  double clock = 0.0;        // seconds, for the indicator's dots
 };
 
 /// The end-of-game card: scrim, centred card, and in the Pixel theme the winner's king hopping on top.
@@ -42,6 +46,9 @@ public:
   void update(float dt);
   /// The side to move (a change starts the banner and the chip cross-fade; the first call only seeds).
   void setTurn(bool whiteToMove);
+  /// The computer is searching (`fraction`: Search::progress().fraction); the indicator fades in and out and its bar eases to the
+  /// value. Under Reduce motion it follows the value without easing and the dots do not pulse.
+  void setThinking(bool thinking, float fraction); // fraction < 0: no search yet, dots only
   /// The game ended (once) / is ongoing again.
   void setEnded(bool ended, bool whiteWon, bool draw);
 
@@ -56,6 +63,11 @@ private:
   bool _bannerActive = false;
   float _bannerClock = 0.0f;
   UI::Motion::Tween _chip;
+  bool _thinking = false;
+  bool _thinkBar = false;
+  float _thinkTarget = 0.0f, _thinkShown = 0.0f, _thinkVelocity = 0.0f;
+  UI::Motion::Tween _thinkFade;
+  double _clock = 0.0;
 
   bool _endActive = false, _endWhiteWon = true, _endDraw = false;
   float _endClock = 0.0f;

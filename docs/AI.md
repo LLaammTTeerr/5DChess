@@ -187,7 +187,43 @@ Hard vs Normal was not completed (each Hard game takes minutes). Losses to Easy 
 * No transposition table, no quiescence search, no move-ordering history: depth is bought with beams.
 * The first `step()` call can take a few milliseconds longer (cloning the game, the generator's first frame).
 
-## 7. Tuning and tools
+## 7. UI integration (Play vs Computer)
+
+`PlayScreen` (`src/Screens/PlayScreen.cpp`) runs the opponent; the pure parts (side, level, seed, record metadata, rebuilding a game a
+few turns back) are in `include/play/VsAi.h` and unit tested (`tests/vsai_test.cpp`).
+
+* **Time slicing.** The engine is clock-free; the screen is the only thing that looks at a clock. Each frame that it is the computer's turn
+  and the game's own legal-turn search is not pending, it calls `step(150)` in a loop, timing every slice and stopping when the time used plus the longest slice so far would exceed `kAiFrameBudget` (the `Search` itself is created in the frame before the first slice, since it clones the game):
+  **6 ms native, 4 ms on the web** (the browser's one thread also renders, mixes audio and runs the result search). One `step` is
+  about 0.1-0.3 ms natively, so the overshoot is small; the window stays responsive (pan, zoom, Esc, Back) and the frame times measured
+  are below. `ainodes` in `tools/ui_script` replaces the clock by a fixed number of nodes a frame for the screenshot tests.
+* **Seed.** A game has a seed (drawn when it starts, stored in the record); the search of a turn is seeded with
+  `searchSeed(seed, history().size())`. The same position at the same turn of the same game always gets the same answer, whatever the
+  slicing, the frame rate or Continue / Load in between (within one build of the engine: a later change to the evaluation or the
+  node costs can change what a saved game's computer would have played, and so a replayed game's later turns).
+* **Playing the turn.** When the search is `Done` (and at least half a second has passed, so an instant answer is a moment of thought and
+  not a flicker) the moves of `bestTurn()` are played one at a time through the same path as a click: flight animation, move sound, camera.
+  A move waits for the previous flight and 0.3 s; then `submitTurn()`. The board ignores clicks while it is the computer's turn
+  (the camera still pans and zooms), Submit and Deselect are disabled, Undo works as below.
+* **Thinking indicator.** The HUD pill says "Computer is thinking" with three dots and a thin bar that follows `progress().fraction`
+  (eased; the engine's own estimate, used as is). Under Reduce motion the bar follows the
+  value directly and the dots stay still. While the moves are played the pill says "Computer is moving".
+* **No turn.** If the game is over there is nothing to search (`result()` is not Ongoing: the normal end card shows). If the search
+  finds no turn although the game goes on (the legal-turn proof was cut off before), the screen stops asking and the side is played by hand.
+* **Undo.** `IGame::undo()` only takes back the moves of the unsubmitted turn, so the screen first does that, move by move. With nothing
+  pending, vs-Computer Undo takes back **the player's last turn and the computer's reply** (two turns) by replaying the game's history
+  without them (`play::replayPrefix`: a fresh game from `modeId()` / `startPosition()`, no record text, no blocking result search), or only
+  the player's turn when the computer is still thinking (its search is dropped). Playing Black, the computer's opening turn stays. It is
+  disabled while the computer plays its moves.
+* **Cancelling.** The search is dropped on Undo, Back, a new game, and when the game ends or changes hands; loading creates a new screen.
+  The search works on clones, so dropping it needs nothing else.
+
+Measured frame cost of `update()` plus drawing while the computer thinks (`FDCHESS_PERF=1`, Release, Hard, Standard opening, native
+under Xvfb): average 5.5 ms, worst 7.9 ms per frame. Web build (emsdk 4.0.10, headless Chrome with software GL, a full Easy game of 20
+turns): `update()` while the computer was busy averaged 0.2-0.5 ms with a worst of 3.9-7.8 ms (Easy decides in under a millisecond of
+search; the browser's frame gap there was dominated by software rendering, not by the search).
+
+## 8. Tuning and tools
 
 `tools/ai_bench` (`-DFDCHESS_BUILD_AIBENCH=ON`, Release):
 

@@ -22,6 +22,9 @@ settingsfile::Values toValues(const Settings& s) {
   v["music"] = s.music;
   v["sfx"] = settingsfile::fromBool(s.sfx);
   v["reduce_motion"] = settingsfile::fromBool(s.reduceMotion);
+  v["opponent"] = s.vsComputer ? "computer" : "two_players";
+  v["vs_side"] = play::name(s.vsSide);
+  v["vs_level"] = play::name(s.vsLevel);
   return v;
 }
 

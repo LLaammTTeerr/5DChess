@@ -7,11 +7,11 @@
 # White then has no legal turn and is not in check: "Draw" (Stalemate).
 # Squares are clicked by name (`clicksq <timeline> <half-turn> <square>`), see game-standard.ui; the waits let the camera
 # settle after every move (it refits as boards are added).
-# Layout (1400x800): Versus (150,250); mode row 8 (690,634); Play (808,712); Submit (841,90).
+# Layout (1400x800): Versus (150,250); mode row 8 (690,664); Play (808,712); Submit (841,90).
 wait 20
 click 150 250        # Versus
 wait 30
-click 690 634        # Misc - Time Line Fragment (row 8)
+click 690 664        # Misc - Time Line Fragment (row 8)
 wait 20
 click 808 712        # Play
 wait 120

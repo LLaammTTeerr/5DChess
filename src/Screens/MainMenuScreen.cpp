@@ -115,7 +115,7 @@ void MainMenuScreen::update(App& app, float deltaTime) {
   switch (_items[clicked]) {
     case Item::Continue: {
       const savegame::LoadResult result = app.saves.loadAutosave();
-      if (result) app.screens.replace(std::make_unique<PlayScreen>(result.game, true));
+      if (result) app.screens.replace(std::make_unique<PlayScreen>(result.game, true, result.vsAi));
       else {
         _notice = "This save can't be loaded"; // the file stays until the player discards it
         _noticeClock = 0.0f;

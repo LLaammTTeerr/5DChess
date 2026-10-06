@@ -109,6 +109,23 @@ turns are in a save: **the unsubmitted moves of the current turn are not saved, 
 tells the Save panel to warn). Reading is bounded: a file over 1 MiB is not read, and any `ParseError` is shown as "This save
 can't be loaded" while the file is kept. "Copy" / "Paste record" move the same text through the clipboard (desktop only).
 
+**Games against the computer** carry one more comment line after the magic (before or after `# saved:`):
+
+```
+5dchess-record 1
+# vs-computer: you=black level=normal seed=1234567890123
+# saved: 2026-10-06 14:32
+mode: standard
+T1w: (L0T1)e2>(L0T1)e4
+```
+
+`you` is the player's side (`white` or `black`: a "Random" choice is resolved once, when the game starts), `level` is `easy`, `normal` or
+`hard`, and `seed` is the game's seed (decimal, 64 bits); the AI's decision of a turn depends only on the position, the level and
+`searchSeed(seed, number of submitted turns)`, so the record replays the same game. Exactly those three fields, each once; a line that does
+not parse is just a comment, so the game loads as an ordinary two-player game, which is also what every record without the line is and what
+older versions make of one. `play::formatMeta` / `parseMeta` / `findMeta` (`include/play/VsAi.h`) write and read it; `loadRecord` itself
+ignores it. The slot list says "Standard vs Computer - 7 turns".
+
 ## API
 
 ```cpp

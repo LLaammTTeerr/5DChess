@@ -1,9 +1,9 @@
 # Versus: game-mode list, then select Standard so the Play button appears.
-# Mode rows are 380x48 at x=500, y=130+60*i (Standard is row 0). Back/Play are 200x44 at y=690.
+# Mode rows are 380x48 at x=500, y=160+60*i (Standard is row 0). Back/Play are 200x44 at y=690.
 wait 20
 click 150 250        # Versus
 wait 30
 capture versus-mode-list
-click 690 154        # Standard
+click 690 184        # Standard
 wait 20
 capture versus-standard-selected

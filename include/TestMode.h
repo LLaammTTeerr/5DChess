@@ -9,6 +9,9 @@ struct TestMode {
   bool reduceMotion = false;   // initial value of Settings::reduceMotion (read when App is constructed)
   bool audioDisabled = false;  // AudioManager::init() does not open a device
   unsigned seed = 0;           // seeds raylib's and the C RNG (the game currently has no other random source)
+  // The computer opponent's search: -1 steps it against a wall-clock budget (shipping behaviour), N > 0 steps exactly N nodes a frame
+  // (the frame it finishes at is then reproducible), 0 freezes it where it is (to capture the "thinking" HUD).
+  int aiNodesPerFrame = -1;
   double clock = 0.0;          // simulated seconds since start (advanced by App::frame in fixed-step mode)
 
   static TestMode& get() { static TestMode t; return t; }

@@ -28,9 +28,11 @@ available, otherwise Pillow.
 ## How determinism is achieved
 
 `TestMode` (include/TestMode.h, set only by `tools/ui_script.cpp`): fixed 1/60 s timestep, Reduce motion forced
-on, audio device never opened, RNG seeded. All pointer, keyboard and clock reads in the game go through
-`Input::` (include/Input.h), which reads raylib normally and a scripted state in test mode. The game has no
-`rand()`-style random source; blinks and the menu field are pure functions of the (fixed) clock. Reduce motion
+on, audio device never opened, RNG seeded, the computer opponent's search stepped a fixed number of nodes per frame
+(`aiNodesPerFrame`, so the frame at which it finishes does not depend on the machine's speed). All pointer, keyboard and clock
+reads in the game go through `Input::` (include/Input.h), which reads raylib normally and a scripted state in test mode. The only
+random source is the seed of a new game against the computer (raylib's generator, which the harness seeds); blinks and the menu
+field are pure functions of the (fixed) clock. Reduce motion
 means screenshots show the end state of animations (the Display tab reads "Motion: Reduced").
 
 ## Script language (`scripts/*.ui`)
@@ -46,11 +48,21 @@ game screenshot shows the Pixel pieces in the Atlas board view unless the script
 release frame. After a click that changes the camera (new boards appear) wait ~40-90 frames before the next one.
 Use `capture` after enough `wait` frames for scene cross-fades (about 10 frames under Reduce motion).
 
+`ainodes <n>` sets how many nodes of the computer opponent's search run each frame (400 until changed; 0 freezes it where it is,
+to capture the "thinking" HUD; `clock` is the shipped wall-clock budget, not reproducible, for `FDCHESS_PERF=1` measurements) and
+`waitai` runs frames until the computer has nothing left to do (it has replied and the game's own legal-turn search finished; the
+script fails after 5000 frames). A game with the computer is started through the real menus (Versus, Opponent: Computer, side, level,
+mode, Play) or by a record with the `# vs-computer:` line (`record`, `slot`).
+
 | script | captures |
 | --- | --- |
 | main-menu | menu at rest |
 | settings | tabs; Piece Theme with each of the six themes selected in turn (Pixel, Medieval, Bauhaus, Neon, Origami, Ink); Music; Display |
-| versus | mode list; Standard selected, Play visible |
+| versus | mode list (Two players, with the Opponent row); Standard selected, Play visible |
+| vs-setup | Opponent: Computer with the side and level rows and the level's description; Random / Hard; Black / Easy; Standard selected; back to Two players (the rows go, the list moves up) |
+| vs-play | vs Computer, Easy, as White: start, e2-e4 and Submit, the "Computer is thinking" HUD frozen mid-search, a click on the computer's pawn ignored, the computer's reply, the player in control again |
+| vs-undo | Undo against the computer: disabled at the start; after a round; an unsubmitted move first; then the whole round (player's turn and the reply); while the computer thinks (search cancelled) |
+| vs-save | the Load screen with two vs-Computer slots; loading a record as Black (the computer, White, has opened); a reply; Continue resumes the vs-Computer game from the autosave; Undo there |
 | game-standard | e2 selected, e2-e4, submit, black e7-e5, submit, knight time-travel jump creating a timeline (a branch connector and a jump arc) |
 | game-battle | Time Line Battle: start, pawn selected, three moves, submitted, black move |
 | endgame | Time Line Fragment: a two-turn checkmate; "Black wins!" / "Checkmate" card |

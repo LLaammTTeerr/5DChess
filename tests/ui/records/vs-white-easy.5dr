@@ -1,0 +1,5 @@
+5dchess-record 1
+# vs-computer: you=white level=easy seed=7
+mode: standard
+T1w: (L0T1)e2>(L0T1)e4
+T1b: (L0T1)e7>(L0T1)e5

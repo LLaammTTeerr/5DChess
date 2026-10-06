@@ -1,4 +1,5 @@
 #include "play/Hud.h"
+#include <algorithm>
 #include <cmath>
 #include <raylib.h>
 #include <rlgl.h>
@@ -81,7 +82,10 @@ void drawHud(const HudData& hud, const BoardStyle& st) {
   const float hintW = hud.hint.empty() ? 0.0f : MeasureTextEx(bodyFont, hud.hint.c_str(), UI::Font::body, 0).x;
   const float gap = UI::Space::md;
   float w = pad + chipD + UI::Space::sm + statusW + gap + 1 + gap + infoW + pad;
-  if (hintW > 0) w += gap + 1 + gap + hintW;
+  // The computer's indicator: three dots after the hint, a thin progress bar along the bottom of the pill
+  const float dotR = 2.5f, dotsW = 3 * dotR * 2 + 2 * UI::Space::xs + UI::Space::sm;
+  const bool thinking = hud.thinking > 0.003f && hintW > 0;
+  if (hintW > 0) w += gap + 1 + gap + hintW + (thinking ? dotsW : 0.0f);
 
   Rectangle pill = {std::floor((screenW - w) / 2), UI::Layout::hudPillY, w, h};
   drawPanel(pill, st);
@@ -113,6 +117,24 @@ void drawHud(const HudData& hud, const BoardStyle& st) {
     x += 1 + gap;
     DrawTextEx(bodyFont, hud.hint.c_str(), {std::floor(x), std::floor(cy - UI::Font::body / 2.0f - 1)}, UI::Font::body, 0,
                st.hudHint);
+    if (thinking) {
+      // Three dots that swell one after the other (still, at full strength, under Reduce motion), then the bar
+      const float a = UI::Motion::clamp01(hud.thinking);
+      float dx = x + hintW + UI::Space::sm + dotR;
+      for (int i = 0; i < 3; ++i, dx += dotR * 2 + UI::Space::xs) {
+        float pulse = 1.0f;
+        if (!UI::Motion::reduced()) pulse = 0.35f + 0.65f * (0.5f + 0.5f * std::sin(static_cast<float>(hud.clock) * 3.2f - i * 0.9f));
+        DrawCircleV({dx, cy + 5.0f}, dotR, UI::withAlpha(st.hudHint, static_cast<unsigned char>(255.0f * a * pulse)));
+      }
+    }
+  }
+  if (thinking && hud.thinkBar) {
+    const float a = UI::Motion::clamp01(hud.thinking);
+    const float inset = h / 2, barH = 3.0f;
+    const Rectangle track = {pill.x + inset, pill.y + h - 7.0f, pill.width - 2 * inset, barH};
+    DrawRectangleRounded(track, 1.0f, 4, UI::withAlpha(st.hudBorder, static_cast<unsigned char>(255.0f * a)));
+    const float fill = std::max(barH, track.width * UI::Motion::clamp01(hud.thinkFraction)); // never an empty bar: a dot at 0
+    DrawRectangleRounded({track.x, track.y, fill, barH}, 1.0f, 4, UI::withAlpha(st.hudHint, static_cast<unsigned char>(255.0f * a)));
   }
 
   // ---- Bottom controls bar (only real controls: see BoardCamera) ----
@@ -187,6 +209,12 @@ void drawEndCard(const EndCard& end) {
 HudMotion::HudMotion() { _endPop.init(0.0f, 260.0f, 0.62f); }
 
 void HudMotion::update(float dt) {
+  _clock += dt;
+  if (_thinking) {
+    if (UI::Motion::reduced()) _thinkShown = _thinkTarget;
+    else _thinkShown = UI::Motion::smoothDamp(_thinkShown, _thinkTarget, _thinkVelocity, 0.25f, dt);
+  }
+  _thinkFade.update(dt);
   if (_bannerActive) {
     _bannerClock += dt;
     if (_bannerClock >= 1.2f) _bannerActive = false;
@@ -212,6 +240,15 @@ void HudMotion::setTurn(bool whiteToMove) {
   _white = whiteToMove;
 }
 
+void HudMotion::setThinking(bool thinking, float fraction) {
+  _thinkBar = fraction >= 0.0f;
+  _thinkTarget = UI::Motion::clamp01(fraction);
+  if (thinking == _thinking) return;
+  _thinking = thinking;
+  if (thinking) _thinkShown = 0.0f, _thinkVelocity = 0.0f;
+  _thinkFade.start(_thinkFade.value(), thinking ? 1.0f : 0.0f, UI::Motion::base, UI::Motion::easeOutCubic, 0.0f, true);
+}
+
 void HudMotion::setEnded(bool ended, bool whiteWon, bool draw) {
   if (ended && !_endActive) {
     _endActive = true;
@@ -232,6 +269,10 @@ void HudMotion::apply(HudData& hud) const {
   hud.bannerActive = _bannerActive;
   hud.bannerWhite = _white;
   hud.bannerClock = _bannerClock;
+  hud.thinking = _thinkFade.value();
+  hud.thinkFraction = _thinkShown;
+  hud.thinkBar = _thinkBar;
+  hud.clock = _clock;
 }
 
 EndCard HudMotion::endCard() const {

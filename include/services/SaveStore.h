@@ -1,9 +1,11 @@
 #pragma once
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
 #include "chess.h"
+#include "play/VsAi.h"
 
 // Saved games: the autosave and three named slots, each stored as a game record (`5dchess-record 1`, see
 // docs/NOTATION.md) under a name in a Storage (a directory on desktop, the browser's localStorage on the web).
@@ -57,13 +59,15 @@ struct SlotSummary {
   std::string title; ///< the mode's name, "Custom position" for an embedded one
   int turns = 0;     ///< submitted turns
   std::string date;  ///< as written by saveSlot ("2026-10-06 14:32"), possibly empty
-  /// "Standard - 7 turns - 2026-10-06 14:32" / "Empty" / "Unreadable save"
+  bool vsComputer = false; ///< the record carries the vs-Computer metadata (docs/NOTATION.md)
+  /// "Standard - 7 turns - 2026-10-06 14:32" / "Standard vs Computer - 7 turns - ..." / "Empty" / "Unreadable save"
   std::string describe() const;
 };
 
 struct LoadResult {
   std::shared_ptr<Chess::IGame> game; ///< null on failure
   std::string error;                  ///< why, for a log; the UI says "This save can't be loaded"
+  std::optional<play::VsAi> vsAi;     ///< set when the record is a game against the computer (side, level, seed)
   explicit operator bool() const { return game != nullptr; }
 };
 
@@ -76,8 +80,9 @@ class SaveStore {
 public:
   explicit SaveStore(std::unique_ptr<Storage> storage) : _storage(std::move(storage)) {}
 
-  /// The record of the submitted turns (a game without any is not written). Returns whether it was stored.
-  bool autosave(const Chess::IGame& game);
+  /// The record of the submitted turns (a game without any is not written). Returns whether it was stored. `vs`: the game is
+  /// against the computer, which the record notes (a comment line, so older versions load it as an ordinary game).
+  bool autosave(const Chess::IGame& game, const play::VsAi* vs = nullptr);
   /// Is there an autosave file? (Cheap: it is not read; a game that ended deletes its autosave.)
   bool hasAutosave() const { return _storage->exists("autosave"); }
   LoadResult loadAutosave() const { return load("autosave"); }
@@ -86,7 +91,8 @@ public:
   void clearAutosave() { _storage->remove("autosave"); }
 
   /// `stamp` is the date line shown in the slot list (the caller owns the clock). `droppedPending` as in writeRecord.
-  bool saveSlot(int slot, const Chess::IGame& game, const std::string& stamp, bool* droppedPending = nullptr);
+  bool saveSlot(int slot, const Chess::IGame& game, const std::string& stamp, bool* droppedPending = nullptr,
+                const play::VsAi* vs = nullptr);
   SlotSummary slot(int slot) const;
   LoadResult loadSlot(int slot) const { return load(slotName(slot)); }
   void deleteSlot(int slot) { _storage->remove(slotName(slot)); }

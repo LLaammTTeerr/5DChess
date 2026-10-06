@@ -1,0 +1,31 @@
+# Saving and loading a game against the computer. The harness keeps saves in memory; tests/ui/records holds two vs-Computer records
+# (a comment line `# vs-computer: you=... level=... seed=...`, see docs/NOTATION.md).
+# Layout (1400x800): main menu without a save: Versus (150,250), Load game (150,310); with an autosave: Continue (150,220), Versus (150,280).
+#   Load screen slot rows (600,166+64*i); in game Back (125,25), Submit (841,90), Undo (558,90).
+wait 20
+slot 1 ../records/vs-white-easy.5dr      # the computer's reply to e4 is already in it: White to move
+slot 2 ../records/vs-black-easy.5dr      # Black to move, White's opening is the computer's
+click 150 310        # Load game
+wait 40
+capture vs-load-screen               # "Standard vs Computer - 2 turns" and "... - 1 turn"
+click 600 230        # slot 2: playing Black
+wait 120
+capture vs-load-black                # loaded as vs-Computer: Black to move, the player's turn, Undo disabled
+clicksq 0 1 c7
+wait 40
+clicksq 0 1 c5
+wait 40
+click 841 90         # Submit; the computer answers as White, and the autosave notes the mode
+waitai
+wait 90
+capture vs-load-black-replied
+click 125 25         # Back to the mode list
+wait 30
+click 700 712        # Back to the main menu
+wait 40
+click 150 220        # Continue
+wait 120
+capture vs-continue-resumed          # the same game with its three turns, Black to move
+click 558 90         # Undo: the player's turn and the computer's reply: back to the opening
+wait 60
+capture vs-continue-undo
