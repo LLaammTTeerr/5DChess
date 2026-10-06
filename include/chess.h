@@ -90,6 +90,13 @@ struct PlayedMove {
   constexpr bool operator==(const PlayedMove&) const = default;
 };
 
+/** The moves of one submitted turn and the present (half-turn) the turn started at. */
+struct PlayedTurn {
+  int presentHalfTurn = 0;
+  std::vector<PlayedMove> moves;
+  bool operator==(const PlayedTurn&) const = default;
+};
+
 } // namespace Core
 
 class Position2D;
@@ -657,7 +664,7 @@ protected:
   std::map<int, std::shared_ptr<TimeLine>> _timeLines; // keyed (and ordered) by timeline ID; IDs may be negative
   std::vector<Move> _currentTurnMoves;
   std::vector<Core::PlayedMove> _pendingMoves;           // _currentTurnMoves as values (with promotions)
-  std::vector<std::vector<Core::PlayedMove>> _history;   // submitted turns
+  std::vector<Core::PlayedTurn> _history;                // submitted turns
   std::string _startPosition;                            // set by Core::Position::makeGame
   std::string _modeId;                                   // set by GameCatalog::create
   PieceColor _currentTurnColor;
@@ -744,8 +751,8 @@ public:
 
   // --- Move history (for records, see include/engine/Notation.h) ------------------------------------------------------
 
-  /** The submitted turns so far, oldest first, each as the moves played in it (undone moves are not included). */
-  inline const std::vector<std::vector<Core::PlayedMove>>& history(void) const { return _history; }
+  /** The submitted turns so far, oldest first, each with the moves played in it (undone moves are not included). */
+  inline const std::vector<Core::PlayedTurn>& history(void) const { return _history; }
   /** The moves of the pending (unsubmitted) turn. */
   inline const std::vector<Core::PlayedMove>& pendingMoves(void) const { return _pendingMoves; }
   /** The position this game started from as .5dp text (empty for games not built from a Position), and the catalog id of the mode if any. */

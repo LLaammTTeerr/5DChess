@@ -28,7 +28,8 @@ endif()
 include(FetchContent)
 
 # --- Rules engine (no graphics dependency) -----------------------------------
-add_library(chess_core STATIC src/chess.cpp src/engine/Position.cpp src/engine/GameCatalog.cpp)
+add_library(chess_core STATIC src/chess.cpp src/engine/Position.cpp src/engine/GameCatalog.cpp
+  src/engine/Notation.cpp)
 target_include_directories(chess_core PUBLIC include)
 # The engine uses assert() as its validation layer: keep it on in every config.
 target_compile_options(chess_core PRIVATE $<IF:$<CXX_COMPILER_ID:MSVC>,/UNDEBUG,-UNDEBUG>)

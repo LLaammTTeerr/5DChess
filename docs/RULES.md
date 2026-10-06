@@ -86,8 +86,8 @@ h1 = Black to move, ...). A timeline's *tip* is its latest board. "Mover" is the
   modes disable castling.
 - **Promotion (S3, S4):** reaching the last rank (by a push or a capture) promotes to Queen, Rook, Bishop or Knight, chosen
   with `makeMove(move, promotion)` (default Queen). No promotion by timeline moves, since the rank does not change.
-- **"Unmoved" tracking:** every piece carries an `unmoved()` flag (true when placed, cleared when it moves, copied on
-  fork/clone). The pawn double step and castling depend on it.
+- **"Unmoved" tracking:** every piece carries an `unmoved` flag (a field of the `Piece` value; true when placed, cleared when it moves,
+  kept when a board is forked). The pawn double step and castling depend on it.
 
 ### Check and legality
 - **Check (S1, S3 `mate.checks`):** the mover is in check if, after passing on every mandatory board (copying it forward

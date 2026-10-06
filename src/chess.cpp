@@ -1546,9 +1546,9 @@ bool IGame::resolveResult(long long maxNodes) {
 
 void IGame::submitTurn(void) {
   assert(canSubmit());
-  _presentHalfTurn = bufferHalfTurn();
-  _history.push_back(std::move(_pendingMoves));
+  _history.push_back(Core::PlayedTurn{_presentHalfTurn, std::move(_pendingMoves)});
   _pendingMoves.clear();
+  _presentHalfTurn = bufferHalfTurn();
   _currentTurnMoves.clear();
   _currentTurnColor = opposite(_currentTurnColor);
   _undoBuffer.clear();
