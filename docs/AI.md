@@ -44,10 +44,15 @@ A resumable generator that builds turns move by move on its own clone of the gam
    `maxTravel` of them time jumps ("travel moves only when promising": a jump is promising if it captures, scores well or
    gives check).
 4. A child that completes the turn (`canSubmit()`) is a *leaf* = one candidate turn; the generator then goes on with the next
-   one. Moves of different boards are chosen in a fixed board order, so no turn is produced twice in another order.
+   one. A child counts against the beam only if it produced a leaf (dead ends are free, but the generator gives up after
+   `maxFailures` of them). Moves of different boards are chosen in a fixed board order; the few turns that still arise
+   twice (a lateral time jump listed in the first frame and in its own board's frame) are dropped by comparing sorted move sets.
 
-Not complete by design: beams, no moves on optional boards (except jumps that clear the obligation). When the generator
-finds nothing, `Search` falls back to `TurnSearch` (exact, any budget) and plays whatever legal turn it finds.
+Not complete by design: beams, and no moves on optional boards (except jumps that clear the obligation). **Fallback ladder**
+when the generator finds no turn at all (e.g. the only escape from check is a quiet jump of an optional board): (1) the first
+pass is repeated in *rescue mode* (optional-board moves included, unlimited jumps, wider beam), so the turns are still
+searched and evaluated; (2) only if that fails too, `TurnSearch` (exact) supplies a legal turn, which is then scored (mate /
+stalemate proof and static evaluation) and reported with `Progress::usedFallback`.
 
 ### Search (`src/ai/Search.cpp`)
 
@@ -56,15 +61,24 @@ last turn searched is the opponent's reply and a capture is never judged without
 the start of a side's turn; its children are the generator's turns; after a turn is generated the position is cloned and
 submitted (`submitTurn()`).
 
+* **Node cap.** `maxNodes` is a hard cap on everything: generator moves, proof chunks and turn clones all count (clones and
+  submits cost `4 + timelines`, a generator move `1 + 2/3 timelines`). It is tested at every logical point (a turn was
+  generated, a proof ended); the only work allowed past it is the first pass up to its first evaluated root turn, because a
+  legal turn is always returned. On many mandatory boards the root turn count and the proof size shrink (`scaleForBoards`).
+  Overshoot is at most one turn's work (a decision stays within ~1.05x of the cap).
 * **Mate / stalemate proof at every node.** After submitting, the game's own legal-turn proof (the `TurnSearch` armed by
   `submitTurn()`) is stepped for up to `probeNodes` nodes. "No legal turn" is a mate (`+-MateScore - ply`) or a stalemate
   (0). This is exact, so a mate in one is found whenever the mating turn is among the candidates, and a turn that allows a
   mate in one is avoided whenever the mating reply is among the opponent's candidates (the last ply uses a wide beam for that).
 * **Static evaluation at the horizon** (section 3), taken after the last turn of the line.
-* **Iterations are anytime.** The depth-1 pass visits all root turns (static eval + mate proof) and always completes; the
-  next iteration searches the root turns in the order of the previous one (so the best move is searched first and alpha-beta
-  prunes the rest). When the node limit is reached the decision is made from the last *completed* iteration, never from a
-  half-searched one.
+* **Mate claims.** Only a mate in one for us at the root counts as *proven* (it is verified by the engine's exact proof,
+  whatever the beams were): it ends the search and is always chosen. A deeper mate value comes through the opponent's beam
+  and may miss a defence, so it stays an (extremely high) score and the search keeps deepening. A proof that times out
+  (`probeNodes`) is treated as "not mate" and the static evaluation is used.
+* **Iterations are anytime.** The depth-1 pass visits root turns (static eval + mate proof) and is the only one that can be
+  cut short by the cap after a single turn; the next iteration searches the root turns in the order of the previous one (so the best move is searched first and alpha-beta
+  prunes the rest). When the node cap is reached the decision is made from the last *completed* iteration (or, in the first pass, from the root
+  turns evaluated so far), never from a half-searched one.
 * **Randomness.** Root turns within `margin` centipawns of the best are all candidates; one is picked with a seeded
   SplitMix64 (a proven mate is always chosen). Alpha-beta runs with the root window `[best - margin - 1, inf)`, so every
   turn that can be chosen has an exact value.
@@ -106,9 +120,9 @@ runs once per candidate move). Weights are in `EvalWeights` (`include/ai/Eval.h`
 
 | Level | Deepest iteration | Root beam / turns | Randomness | Node limit |
 |---|---|---|---|---|
-| Easy | 1 turn (own turn + mate proof) | 5 / 8 | any turn within 120 cp of the best | 4 000 |
-| Normal | 4 turns | 16 / 60 | within 8 cp | 150 000 |
-| Hard | 6 turns | 24 / 80 | none (ties by seed) | 900 000 |
+| Easy | 1 turn (own turn + mate proof; jumps allowed, 1 per node) | 5 / 8 | any turn within 120 cp of the best | 10 000 |
+| Normal | 4 turns | 16 / 60 | within 8 cp | 300 000 |
+| Hard | 6 turns | 24 / 80 | none (ties by seed) | 1 200 000 |
 
 Beams narrow towards the leaves; exact numbers are in `levelParams()` (`src/ai/Search.cpp`).
 
@@ -123,9 +137,18 @@ Beams narrow towards the leaves; exact numbers are in `levelParams()` (`src/ai/S
 | Timeline Battle opening | Easy / Normal / Hard | 1 000 / 218 000 / 946 000 | 0.6 / 146 / 620 ms | 0.4 / 0.6 / 0.8 ms |
 | Timeline Battle, after 12 turns | Easy / Normal / Hard | 2 200 / 150 000 / 905 000 | 2 / 178 / 970 ms | 0.9 / 1.3 / 1.5 ms |
 
-Throughput is 0.4-1.5 M nodes/s. Targets (Normal <= 1-2 s, Easy <= 0.3 s) are met with a wide margin; Hard is the
-"think for a few seconds" level (the node limit is soft: an iteration in progress when it is reached is dropped, but the
-depth-1 pass and the mate proofs always finish).
+Throughput is 0.8-1.8 M nodes/s (the node counts of the opening/midgame table above are from before the cap change and
+are only indicative; Easy is weak through depth and beam, not through blindness to jumps). The cap is hard. On big
+multiverses (`ai_bench big`: positions with 15-19 timelines and 2-13 mandatory boards, Release, one core):
+
+| Level (cap) | Nodes / cap | Time |
+|---|---|---|
+| Easy (10 000) | 0.23-0.65 | 2-5 ms |
+| Normal (300 000) | 0.64-1.03 | 0.24-0.43 s |
+| Hard (1 200 000) | 1.00-1.00 | 1.1-1.9 s |
+
+Before the cap fix the same kind of positions cost Normal up to 2.6x its cap (6.9M nodes, 12.8 s on a 17-timeline position)
+and Hard up to 4.5 s.
 
 Self-play (`ai_bench selfplay --games 18 --turns 40`, nine modes, colours alternate, unfinished games adjudicated by material
 > 300 cp, so a score is wins + draws/2):
@@ -143,9 +166,9 @@ Hard vs Normal was not completed (each Hard game takes minutes). Losses to Easy 
 * Turn generation is a beam: a mate or a defence that needs one particular move on a *second* board, among many equal ones, can
   be missed unless it gives check on its board (check detection is same-board geometry; discovered and cross-board checks
   are not detected, they rank by score). The mate proof itself is exact.
-* Optional boards are not used (only jumps that clear the obligation), so the AI never makes "extra" moves on boards it is not
-  obliged to move on. Jumps are limited per node (`maxTravel`); big multiverses are searched shallowly because a node costs
-  more (the node limit counts that, so time stays roughly constant).
+* Optional boards are used only in rescue mode (when nothing else is legal); otherwise only jumps that clear the obligation,
+  so the AI does not make "extra" moves on boards it is not obliged to move on. Jumps are limited per node (`maxTravel`); big multiverses are searched shallowly because a node costs
+  more (the node cap counts that, so time stays roughly constant).
 * The evaluation knows nothing about timeline strategy (who controls more active timelines, the present). It is a material
   engine that sees tactics through search; weights are untuned beyond the self-play below.
 * No transposition table, no quiescence search, no move-ordering history: depth is bought with beams.
@@ -162,7 +185,7 @@ cmake --build build-bench -j --target ai_bench
 ./build-bench/tools/ai_bench/ai_bench selfplay --games 18 --turns 40 --a hard --b easy [--mode ID] [--game K]
 ```
 
-`speed` prints time per decision and nodes/s per level on an opening and a midgame position; `selfplay` plays A against B
+`big` plays cheap turns to a 15-timeline multiverse and prints nodes against the cap and the time at every level; `file POS.5dp` decides one position; `speed` prints time per decision and nodes/s per level on an opening and a midgame position; `selfplay` plays A against B
 (colours alternate, the nine modes cycle), adjudicates unfinished games by material (> 300 cp) and prints the score;
 `--game K` replays one game and prints every turn in notation. To tune: change `EvalWeights` or `levelParams()`, run
 `selfplay` with a few dozen games per pair (scores of 18 games are noisy: +-2.5 points), and keep a change only if it holds

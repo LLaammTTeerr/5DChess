@@ -1,6 +1,9 @@
 // ai_bench: AI speed and self-play (Release build, -DFDCHESS_BUILD_AIBENCH=ON; see docs/AI.md).
 //
 //   ai_bench speed [--mode ID]                      time per decision of each level on an opening and a midgame position
+//   ai_bench big [--mode ID] [--games N]            node cap check on big multiverses: plays cheap turns until a game has many timelines
+//                                                   / mandatory boards, then every level decides there (nodes vs its cap, time)
+//   ai_bench file POSITION.5dp                      one decision of every level on a position file
 //   ai_bench selfplay [--games N] [--turns T] [--a easy|normal|hard] [--b ...] [--mode ID]
 //                                                   A vs B over N games (colours alternate, modes cycle unless --mode),
 //                                                   at most T turns each; unfinished games are adjudicated by material
@@ -8,11 +11,14 @@
 #include "ai/Play.h"
 #include "engine/GameCatalog.h"
 #include "engine/Notation.h"
+#include "engine/Position.h"
 
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
+#include <sstream>
 #include <string>
 
 using namespace Chess;
@@ -61,6 +67,45 @@ void speed(const std::string& mode) {
       std::printf("%-26s %-7s %10lld %12.1f %12.0f %10.1f\n", p.name.c_str(), levelName(level), nodes / reps, total / reps * 1000,
                   double(nodes) / total, maxStep);
     }
+  }
+}
+
+void big(const std::string& mode, int games) {
+  GameCatalog::setDirectory(FDCHESS_POSITIONS_DIR);
+  std::printf("%-5s %-7s %5s %5s %10s %10s %8s %10s\n", "game", "level", "tl", "mand", "nodes", "cap", "x cap", "ms");
+  for (int g = 0; g < games; ++g) {
+    auto game = GameCatalog::create(mode);
+    for (int t = 0; t < 80 and game->result() == GameResult::Ongoing and game->timeLineCount() < 15; ++t) {
+      if (!ai::playTurn(*game, {ai::Level::Normal, std::uint64_t(g * 977 + t + 1), 1500})) break;
+    }
+    if (game->result() != GameResult::Ongoing) continue;
+    if (std::getenv("AI_DUMP") and std::atoi(std::getenv("AI_DUMP")) == g) std::fputs(Core::writePosition(Core::Position::fromGame(*game)).c_str(), stderr);
+    for (ai::Level level : {ai::Level::Easy, ai::Level::Normal, ai::Level::Hard}) {
+      ai::Search s(*game, {level, 1});
+      const auto t0 = Clock::now();
+      while (s.step(500) == ai::Search::Status::Running) {}
+      const double ms = secondsSince(t0) * 1000;
+      const long long cap = level == ai::Level::Easy ? 10000 : level == ai::Level::Normal ? 300000 : 1200000;
+      std::printf("%-5d %-7s %5d %5zu %10lld %10lld %8.2f %10.0f\n", g, levelName(level), game->timeLineCount(), game->mandatoryBoards().size(),
+                  s.progress().nodes, cap, double(s.progress().nodes) / double(cap), ms);
+    }
+    std::fflush(stdout);
+  }
+}
+
+/// One decision of every level on a position file (see docs/POSITIONS.md): nodes, time, whether the fallback was needed.
+void decide(const std::string& path) {
+  std::ifstream in(path);
+  std::stringstream text;
+  text << in.rdbuf();
+  const auto game = Core::parsePosition(text.str()).makeGame();
+  for (ai::Level level : {ai::Level::Easy, ai::Level::Normal, ai::Level::Hard}) {
+    ai::Search s(*game, {level, 1});
+    const auto t0 = Clock::now();
+    while (s.step(500) == ai::Search::Status::Running) {}
+    std::printf("%-7s nodes %9lld  %8.0f ms  depth %d  score %d  mate %d  fallback %d  turn %zu moves\n", levelName(level), s.progress().nodes,
+                secondsSince(t0) * 1000, s.progress().depth, s.progress().bestScore, s.progress().mateFound, s.progress().usedFallback,
+                s.bestTurn().size());
   }
 }
 
@@ -124,9 +169,11 @@ int main(int argc, char** argv) {
     else if (arg == "--b" and i + 1 < argc) b = argv[++i];
   }
   if (cmd == "speed") speed(mode.empty() ? "standard" : mode);
+  else if (cmd == "big") big(mode.empty() ? "timeline-invasion" : mode, games);
+  else if (cmd == "file" and argc > 2) decide(argv[2]);
   else if (cmd == "selfplay") selfplay(games, turns, parseLevel(a), parseLevel(b), mode, only);
   else {
-    std::fprintf(stderr, "usage: ai_bench speed|selfplay [options]\n");
+    std::fprintf(stderr, "usage: ai_bench speed|big|selfplay [options]\n");
     return 1;
   }
   return 0;

@@ -10,25 +10,38 @@
 //     discarded when a king of the mover can now be captured (permanent, see docs/SEARCH.md F2) and otherwise scored with
 //     the static evaluation of the position after it;
 //   * the best `beam` survivors become children, in score order, at most `maxTravel` of them time jumps;
+//     A child that yields no turn (every continuation leaves a king capturable) does not use up a beam slot; the generator
+//     explores at most `maxFailures` such dead ends in all (then it reports Done), so they cost a bounded amount of work;
 //   * a child that completes the turn (canSubmit) is a leaf: advance() returns Leaf with game() standing in the finished,
 //     not yet submitted position; the next advance() undoes it and goes on.
 //
-// Moves of different boards are chosen in a fixed board order, so no turn is produced twice in another move order.
+// Moves of different boards are chosen in a fixed board order; the few turns that still come out in two orders (a lateral time
+// jump listed in the first frame and in its own board's frame) are filtered by comparing the sorted move sets.
 // Leaves come out best-first along the first frames, so cutting the enumeration short loses the least.
-// Not complete (beam, no moves on optional boards): ai::Search falls back to TurnSearch when it yields nothing.
+// Not complete (beam; optional boards only in rescue mode): ai::Search retries in rescue mode, then falls back to TurnSearch.
 
 #include "ai/Eval.h"
 #include "chess.h"
 
+#include <array>
 #include <memory>
+#include <set>
 #include <vector>
 
 namespace Chess::ai {
 
+constexpr int NoLimit = 1 << 20;
+
 struct GenParams {
   int beam = 6;       ///< children kept per frame at depth 0
-  int deepBeam = 3;   ///< children kept per frame at depth >= 1
-  int maxTravel = 2;  ///< time jumps among them
+  int deepBeam = 3;   ///< children kept per frame at depth >= 1 (a child counts only when it yields a turn)
+  int maxTravel = 2;  ///< time jumps among them (NoLimit = all)
+  /** Rescue mode (used when the normal generator finds no turn at all): moves on optional boards are candidates too, so that a
+   *  quiet move of a board the mover does not have to move on (e.g. a jump that answers a check) is found. */
+  bool optionalBoards = false;
+  /** Children that yield no turn (dead ends) the whole generator may explore before it gives up; bounds the work in positions
+   *  where almost every move leaves a king capturable. */
+  int maxFailures = 64;
   /** Moves after which the moved piece attacks a king of the opponent on its board (a mate threat the static score cannot
    *  see) are ordered before all others and are exempt from the time-jump limit. Same-board attacks only: discovered and
    *  cross-board checks are not detected. */
@@ -62,7 +75,9 @@ private:
     std::vector<Core::Move> moves;
     std::vector<Cand> cands;
     std::size_t scan = 0, next = 0;
-    int taken = 0, travel = 0;
+    int taken = 0;       ///< children that yielded at least one turn
+    int travel = 0;
+    bool yielded = false;///< the child being explored has produced a turn
   };
 
   std::unique_ptr<IGame> _game;
@@ -71,10 +86,13 @@ private:
   std::vector<Frame> _stack;
   bool _started = false;
   bool _undoLeaf = false;
+  int _failures = 0;
+  std::set<std::vector<std::array<int, 8>>> _seen; ///< move sets of the leaves returned so far
 
   void generateMoves(Frame& f);
+  std::vector<std::array<int, 8>> turnKey() const;
   /** Work of one move tried: a node costs more in positions with many timelines (copies, threat tests); at least 1. */
-  long long cost() const { return 1 + _game->timeLineCount() / 3; }
+  long long cost() const { return 1 + _game->timeLineCount() * 2 / 3; }
 };
 
 } // namespace Chess::ai

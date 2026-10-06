@@ -1,0 +1,67 @@
+5dchess-position 1
+title: AI node-cap fixture (15 timelines, 2 mandatory boards, heavy in check)
+size: 5
+rules: none
+to-move: white
+L-3 parent: L-1
+L-3 T4w: brkbb*/ppk*pp/5/5/PPPP1
+L-2 parent: L0
+L-2 T4w: brkb1/ppk*pp/3p*1/1P*3/P1PP1
+L-2 T4b: brkb1/ppk*pp/1P*1p*1/5/P1PP1
+L-2 T5w: brkb1/pp1pp/1P*1p*1/5/P1PP1
+L-1 parent: L0
+L-1 T3w: brkbb*/ppppp/3P*1/5/PPPP1
+L-1 T3b: brkbb*/ppP*pp/5/5/PPPP1
+L-1 T4w: br1bb*/ppP*pp/5/5/PPPP1
+L-1 T4b: bQ*1bb*/pp1pp/5/5/PPPP1
+L0 T1w: brkbn/ppppp/5/5/PPPPP
+L0 T1b: brkbn/ppppp/5/4P*/PPPP1
+L0 T2w: brkb1/ppppp/3n*1/4P*/PPPP1
+L0 T2b: brkb1/ppppp/3P*1/5/PPPP1
+L0 T3w: brkb1/pp1pp/3p*1/5/PPPP1
+L0 T3b: brkb1/pp1pp/3p*1/1P*3/P1PP1
+L0 T4w: brk2/pp1pp/3p*1/1P*3/P1PP1
+L0 T4b: brk2/pp1pp/3p*1/P*P*3/2PP1
+L1 T1w: ppppp/5/5/PPPPP/BRKBN
+L1 T1b: ppppp/5/3N*1/PPPPP/BRKB1
+L1 T2w: pp1pp/2p*2/3N*1/PPPPP/BRKB1
+L1 T2b: pp1pp/2p*2/5/PPPPP/BRKB1
+L1 T3w: pp2p/2p*2/5/PPPPP/BRKB1
+L1 T3b: pp2p/2p*2/5/PPPPP/BRK2
+L1 T4w: pp2p/5/2p*2/PPPPP/BRK2
+L1 T4b: pp2p/5/2p*2/PPPPP/BR3
+L2 parent: L1
+L2 T1b: pppN*p/5/5/PPPPP/BRKBN
+L2 T2w: pppp*p/5/5/PPPPP/BRKBN
+L2 T2b: pppp*p/5/5/PPPPP/BRKB1
+L2 T3w: 1ppp*p/p*4/5/PPPPP/BRKB1
+L2 T3b: 1ppp*p/p*4/5/PPPPP/BRK2
+L2 T4w: 1ppp*p/5/p*4/PPPPP/BRK2
+L2 T4b: 1ppp*p/5/p*4/PPPPP/BR3
+L3 parent: L1
+L3 T2b: pp1pp/2p*2/3N*N*/PPPPP/BRKB1
+L3 T3w: pp1pp/5/3p*N*/PPPPP/BRKB1
+L3 T3b: pp1pp/5/3p*1/PPPPP/BRKB1
+L3 T4w: pp1pp/5/5/PPp*PP/BRKB1
+L3 T4b: pp1pp/5/5/PPp*PP/BRK2
+L4 parent: L1
+L4 T2b: pp1pp/2p*2/3N*1/PPPPP/BRKBB*
+L4 T3w: pp1pp/5/3p*1/PPPPP/BRKBB*
+L4 T3b: pp1pp/5/3p*1/PPPPP/BRK1B*
+L4 T4w: pp1pp/5/5/PPPPp*/BRK1B*
+L4 T4b: pp1pp/5/5/PPPPp*/BRK2
+L5 parent: L1
+L5 T3b: pp2p/2p*2/5/PPPPP/BRKBB*
+L5 T4w: pp3/2p*1p*/5/PPPPP/BRKBB*
+L6 parent: L1
+L6 T2b: pp1pp/2p*2/3N*N*/PPPPP/BRKB1
+L7 parent: L3
+L7 T3b: pp1pp/5/3p*N*/PPPPP/BRKBB*
+L8 parent: L3
+L8 T3b: pp1pp/5/3p*N*/PPPPP/BRKBB*
+L9 parent: L3
+L9 T3b: pp1pp/5/3p*N*/PPPPP/BRKBB*
+L10 parent: L3
+L10 T4b: pp1pp/5/5/PPK*PP/BRKB1
+L11 parent: L2
+L11 T4b: 1ppp*p/5/p*4/PPPPP/BRKK*1

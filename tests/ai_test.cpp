@@ -1,5 +1,5 @@
 // Tests of the AI opponent engine (include/ai, docs/AI.md): legality of what it returns, mate finding, safety, determinism,
-// the step budget, and a self-play smoke test.
+// the node cap, the fallback, the step budget, and a self-play property test.
 #include <doctest/doctest.h>
 
 #include "ai/Eval.h"
@@ -9,6 +9,8 @@
 #include "engine/Position.h"
 #include "test_support.h"
 
+#include <fstream>
+#include <sstream>
 #include <string>
 
 using namespace Chess;
@@ -22,6 +24,14 @@ std::shared_ptr<IGame> fromText(const std::string& text) { return Core::parsePos
 std::string singleBoard(const char* rows, const char* toMove = "white") {
   return std::string("5dchess-position 1\nsize: 8\nrules: double-step castling\nto-move: ") + toMove + "\nL0 T1" +
          (std::string(toMove) == "white" ? "w" : "b") + ": " + rows + "\n";
+}
+
+std::shared_ptr<IGame> fixture(const char* name) {
+  std::ifstream in(std::string(FDCHESS_AI_POSITIONS_DIR) + "/" + name);
+  REQUIRE(in.good());
+  std::stringstream text;
+  text << in.rdbuf();
+  return fromText(text.str());
 }
 
 ai::Search::Status runToEnd(ai::Search& s, int budget = 300, int maxSteps = 1000000) {
@@ -252,38 +262,147 @@ TEST_CASE("the AI continues pending moves and leaves the game it was given untou
   runToEnd(search);
   CHECK(snapshot(*game) == before);
   REQUIRE(search.hasTurn());
-  // A game with a pending move: the result continues it.
-  game->makeMove(Core::Move{{4, 1, 0, 0}, {4, 3, 0, 0}});
-  ai::Search more(*game, {ai::Level::Easy, 2});
-  runToEnd(more);
-  if (more.hasTurn()) CHECK(legal(*game, more.bestTurn()));
+
+  // Two boards to move on, one move already made: the result is exactly the missing move, on the other board.
+  const std::string text =
+      "5dchess-position 1\nsize: 8\nrules: double-step castling\nto-move: white\n"
+      "L0 T1w: 4k3/8/8/8/8/8/4P3/4K3\n"
+      "L1 T1w: 4k3/8/8/8/8/8/3P4/4K3\n";
+  for (ai::Level level : {ai::Level::Easy, ai::Level::Normal, ai::Level::Hard}) {
+    auto two = fromText(text);
+    REQUIRE(two->mandatoryBoards().size() == 2);
+    const Core::Move first = parseMove("(L0T1)e2>(L0T1)e3", PieceColor::PIECEWHITE);
+    two->makeMove(first);
+    REQUIRE_FALSE(two->canSubmit());
+    ai::Search more(*two, {level, 2, 3000});
+    REQUIRE(runToEnd(more) == ai::Search::Status::Done);
+    REQUIRE(more.hasTurn());
+    CHECK_FALSE(more.progress().usedFallback);
+    REQUIRE(more.bestTurn().size() == 1);
+    CHECK(more.bestTurn()[0].from.l == 1);
+    CHECK(legal(*two, more.bestTurn()));
+    CHECK(two->pendingMoves().size() == 1); // untouched
+  }
 }
 
-TEST_CASE("self-play smoke: Hard (small budget) scores at least as well as Easy over a few short games") {
-  double hard = 0;
-  const int games = 6;
-  for (int g = 0; g < games; ++g) {
-    const bool hardWhite = g % 2 == 0;
-    auto game = newGame("standard");
-    for (int turn = 0; turn < 12 and game->result() == GameResult::Ongoing; ++turn) {
-      const bool whiteToMove = game->getCurrentTurnColor() == PieceColor::PIECEWHITE;
-      const bool isHard = whiteToMove == hardWhite;
-      ai::Options opt = isHard ? ai::Options{ai::Level::Hard, std::uint64_t(g * 100 + turn + 1), 4000}
-                               : ai::Options{ai::Level::Easy, std::uint64_t(g * 100 + turn + 1)};
-      if (!ai::playTurn(*game, opt, nullptr, 500, 20000)) break;
+TEST_CASE("self-play against random turns: every AI turn is legal, the AI is never mated and ends ahead on material") {
+  // Fixed seeds, short games, small budgets. The random side plays any legal turn; a search with even a little depth must stay
+  // ahead of it on material overall and must never be mated.
+  const char* modes[] = {"standard", "timeline-battle", "knight-vs-bishop"};
+  int game = 0, total = 0;
+  for (const char* mode : modes) {
+    for (ai::Level level : {ai::Level::Normal, ai::Level::Hard}) {
+      std::mt19937 rng(1000u + unsigned(game));
+      auto g = newGame(mode);
+      const bool aiWhite = game % 2 == 0;
+      const PieceColor ai = aiWhite ? PieceColor::PIECEWHITE : PieceColor::PIECEBLACK;
+      for (int turn = 0; turn < 10 and g->result() == GameResult::Ongoing; ++turn) {
+        if (g->getCurrentTurnColor() == ai) {
+          if (!ai::playTurn(*g, {level, std::uint64_t(game * 100 + turn + 1), 4000}, nullptr, 500, 20000)) break;
+        } else {
+          if (!buildRandomTurn(*g, rng, [](IGame&, Move&) {})) break;
+          g->submitTurn();
+          g->resolveResult(20000);
+        }
+      }
+      INFO(std::string(mode) << ", AI plays " << (aiWhite ? "white" : "black") << ", level " << int(level));
+      CHECK(g->result() != (aiWhite ? GameResult::BlackWins : GameResult::WhiteWins));
+      const int e = ai::evaluate(*g, ai);
+      CHECK(e > -200);
+      total += e;
+      ++game;
     }
-    const PieceColor hardColor = hardWhite ? PieceColor::PIECEWHITE : PieceColor::PIECEBLACK;
-    switch (game->result()) {
-      case GameResult::WhiteWins: hard += hardWhite ? 1 : 0; break;
-      case GameResult::BlackWins: hard += hardWhite ? 0 : 1; break;
-      case GameResult::Draw: hard += 0.5; break;
-      case GameResult::Ongoing: {
-        const int e = ai::evaluate(*game, hardColor);
-        hard += e > 150 ? 1 : e < -150 ? 0 : 0.5;
-        break;
+  }
+  CHECK(total > 2000); // over six games (measured: about 6200): a clear material lead on average
+}
+
+TEST_CASE("a quiet jump from an optional board is found without the fallback, at every level") {
+  // White (to move on L0 T1w, the only mandatory board) is mated on that board: Ra1 checks Kh1, g1 is on the rook's line, no
+  // move of L0 helps and none of its pieces may travel. L1 (ahead of the present, so optional) holds White's bishop a1 and rook
+  // g1: Ba1 jumps to L0 and takes the rook; Rg1 jumps to g1 on L0 and blocks. Those jumps are the only legal turns, and they
+  // are moves of a board the generator is not obliged to look at.
+  const std::string text =
+      "5dchess-position 1\nsize: 8\nrules: none\nto-move: white\n"
+      "L0 T1w: 7k/8/8/8/8/8/6PP/r6K\n"
+      "L1 T2w: 4k3/8/8/8/8/8/6PP/B3K1RR\n";
+  {
+    auto check = fromText(text);
+    REQUIRE(check->mandatoryBoards().size() == 1);
+    REQUIRE(check->getMoveableBoards().size() == 2);
+    REQUIRE(check->findLegalTurn(100000) == TurnSearch::Status::Found);
+    for (int y = 0; y < 8; ++y) {
+      for (int x = 0; x < 8; ++x) {
+        const Cell c = check->getBoard(0, 0)->cell(x, y);
+        if (c.empty() or c.color() != PieceColor::PIECEWHITE) continue;
+        for (const Core::Move& m : check->legalMovesFrom({int8_t(x), int8_t(y), 0, 0})) {
+          auto copy = check->clone();
+          copy->makeMove(m);
+          CHECK_FALSE(copy->canSubmit()); // nothing on the mandatory board resolves the check
+        }
       }
     }
   }
-  INFO("Hard scored " << hard << " / " << games);
-  CHECK(hard >= games / 2.0); // loose on purpose; see tools/ai_bench for the real numbers
+  for (ai::Level level : {ai::Level::Easy, ai::Level::Normal, ai::Level::Hard}) {
+    auto game = fromText(text);
+    ai::Search search(*game, {level, 3});
+    REQUIRE(runToEnd(search) == ai::Search::Status::Done);
+    REQUIRE(search.hasTurn());
+    CHECK_FALSE(search.progress().usedFallback);
+    CHECK(legal(*game, search.bestTurn()));
+    REQUIRE(search.bestTurn().size() == 1);
+    CHECK(search.bestTurn()[0].from.l == 1); // a move of the optional board
+    CHECK(search.progress().depth >= 1);
+  }
+}
+
+TEST_CASE("a free piece is taken with a time jump at every level (Easy included)") {
+  // L0 has three boards; the present is the tip T2w. A black queen stands unprotected on c1 of T1w; it is gone from T1b on (Black's own time travel cannot bring it back). The
+  // White knight a1 on the tip jumps back one turn and two files (a knight move across time) and takes it there, creating a
+  // timeline: worth a queen at every level. No move on the tip itself wins anything.
+  const std::string text =
+      "5dchess-position 1\nsize: 8\nrules: none\nto-move: white\n"
+      "L0 T1w: 4k3/8/8/8/8/8/8/N1q4K\n"
+      "L0 T1b: 4k3/8/8/8/8/8/8/N6K\n"
+      "L0 T2w: 4k3/8/8/8/8/8/8/N6K\n";
+  const Core::Coord target{2, 0, 0, 0};
+  {
+    auto base = fromText(text);
+    REQUIRE(base->mandatoryBoards().size() == 1);
+    bool exists = false;
+    for (const Core::Move& m : base->legalMovesFrom({0, 0, 2, 0})) exists = exists or m.to == target;
+    REQUIRE(exists);
+  }
+  for (ai::Level level : {ai::Level::Easy, ai::Level::Normal, ai::Level::Hard}) {
+    auto game = fromText(text);
+    ai::Search search(*game, {level, 1});
+    REQUIRE(runToEnd(search) == ai::Search::Status::Done);
+    REQUIRE(search.hasTurn());
+    CHECK_FALSE(search.progress().usedFallback);
+    REQUIRE(search.bestTurn().size() == 1);
+    if (level == ai::Level::Hard) { // equally good lines exist for a deep search (take it a move later): it must see the win
+      CHECK(search.progress().bestScore > 500);
+      continue;
+    }
+    INFO("level " << int(level) << " plays to (" << int(search.bestTurn()[0].to.x) << "," << int(search.bestTurn()[0].to.y) << ") t" << search.bestTurn()[0].to.t << " l" << search.bestTurn()[0].to.l << " score " << search.progress().bestScore);
+    CHECK(search.bestTurn()[0].to == target);
+  }
+}
+
+TEST_CASE("the node limit caps the whole decision, also on big multiverses") {
+  // Fixtures: 15 timelines with 13 and with 2 mandatory boards (the second one has check after check). Every level, first pass
+  // and probes and turn generation included, stays within 1.5x of its cap; Easy at its real cap, the others at small caps so that
+  // Debug + ASan stays fast (the logic is the same, only the numbers are smaller).
+  struct Case { ai::Level level; long long cap; };
+  for (const char* name : {"big-13-boards.5dp", "big-2-boards.5dp"}) {
+    for (const Case& c : {Case{ai::Level::Easy, 10000}, Case{ai::Level::Normal, 20000}, Case{ai::Level::Hard, 40000}}) {
+      auto game = fixture(name);
+      REQUIRE(game->timeLineCount() >= 15);
+      ai::Search search(*game, {c.level, 1, c.level == ai::Level::Easy ? 0 : c.cap});
+      REQUIRE(runToEnd(search, 500) == ai::Search::Status::Done);
+      INFO(name << " level " << int(c.level) << " nodes " << search.progress().nodes);
+      CHECK(search.progress().nodes <= c.cap * 3 / 2);
+      REQUIRE(search.hasTurn());
+      CHECK(legal(*game, search.bestTurn()));
+    }
+  }
 }

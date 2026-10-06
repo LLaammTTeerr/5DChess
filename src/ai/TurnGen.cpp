@@ -52,8 +52,17 @@ void TurnGen::generateMoves(Frame& f) {
   auto boards = _game->mandatoryBoards(); // (a copy: sorted below)
   if (boards.empty()) return;
   std::sort(boards.begin(), boards.end(), [](const auto& a, const auto& b) { return a->timeLineId() < b->timeLineId(); });
-  // Every move of the first board; from the others only time jumps, which can clear the obligation to move on the whole
-  // present (a jump that creates a timeline moves the present back) and so are the way out of some checks.
+  const std::size_t mandatory = boards.size();
+  if (_params.optionalBoards) {
+    auto movable = _game->getMoveableBoards();
+    for (const auto& b : movable) {
+      const bool known = std::any_of(boards.begin(), boards.begin() + std::ptrdiff_t(mandatory), [&](const auto& m) { return m->timeLineId() == b->timeLineId(); });
+      if (!known) boards.push_back(b);
+    }
+  }
+  // Every move of the first board; from the other mandatory boards only time jumps, which can clear the obligation to move
+  // on the whole present (a jump that creates a timeline moves the present back) and so are the way out of some checks.
+  // Rescue mode adds every move of the optional boards.
   for (std::size_t i = 0; i < boards.size(); ++i) {
     const auto& board = boards[i];
     for (int y = 0; y < board->dim(); ++y) {
@@ -62,11 +71,21 @@ void TurnGen::generateMoves(Frame& f) {
         if (c.empty() or c.color() != _mover) continue;
         const Core::Coord from{int8_t(x), int8_t(y), int16_t(board->halfTurnNumber()), int16_t(board->timeLineId())};
         for (const Core::Move& m : _game->legalMovesFrom(from)) {
-          if (i == 0 or isTravel(m)) f.moves.push_back(m);
+          if (i == 0 or i >= mandatory or isTravel(m)) f.moves.push_back(m);
         }
       }
     }
   }
+}
+
+std::vector<std::array<int, 8>> TurnGen::turnKey() const {
+  std::vector<std::array<int, 8>> key;
+  for (const auto& pm : _game->pendingMoves()) {
+    const Core::Move& m = pm.move;
+    key.push_back({m.from.x, m.from.y, m.from.t, m.from.l, m.to.x, m.to.y, m.to.t, m.to.l});
+  }
+  std::sort(key.begin(), key.end());
+  return key;
 }
 
 TurnGen::Result TurnGen::advance(long long& budget) {
@@ -101,22 +120,28 @@ TurnGen::Result TurnGen::advance(long long& budget) {
     }
     const int beam = _stack.size() == 1 ? _params.beam : _params.deepBeam;
     bool descended = false;
-    while (f.next < f.cands.size() and f.taken < beam) {
+    while (f.next < f.cands.size() and f.taken < beam and _failures < _params.maxFailures) {
       const Cand& cand = f.cands[f.next++];
       const Core::Move m = cand.move;
       if (isTravel(m) and !cand.check) {
         if (f.travel >= _params.maxTravel) continue;
         ++f.travel;
       }
-      ++f.taken;
       budget -= cost();
       _game->makeMove(m);
       if (_game->canSubmit()) {
+        ++f.taken;
+        for (std::size_t i = 0; i + 1 < _stack.size(); ++i) _stack[i].yielded = true;
+        if (!_seen.insert(turnKey()).second) { // the same set of moves in another order
+          _game->undo();
+          continue;
+        }
         _undoLeaf = true;
         return Result::Leaf;
       }
       if (_game->mandatoryBoards().empty()) { // nothing left to move on yet not submittable: dead end
         _game->undo();
+        ++_failures;
         continue;
       }
       _stack.emplace_back(); // the move stays made; undone when the child frame is exhausted
@@ -125,7 +150,13 @@ TurnGen::Result TurnGen::advance(long long& budget) {
     }
     if (descended) continue;
     _stack.pop_back();
-    if (!_stack.empty()) _game->undo();
+    if (!_stack.empty()) {
+      _game->undo();
+      Frame& parent = _stack.back();
+      if (parent.yielded) ++parent.taken; // a child counts against the beam only if it produced a turn
+      else ++_failures;
+      parent.yielded = false;
+    }
   }
 }
 

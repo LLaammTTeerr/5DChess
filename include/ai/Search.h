@@ -31,7 +31,8 @@ struct Progress {
   int candidatesDone = 0;       ///< of those, how many are evaluated
   int depth = 0;                ///< turns searched by the last completed iteration (0 until the first one is done)
   int bestScore = 0;            ///< centipawns for the side to move after that iteration; ~MateScore when a mate is proven
-  bool mateFound = false;       ///< a turn that leaves the opponent without a legal turn was found
+  bool mateFound = false;       ///< a turn that leaves the opponent without a legal turn was found (proven by the engine: a mate in one)
+  bool usedFallback = false;    ///< the turn comes from the engine's exhaustive search (TurnSearch), not from the AI's generator
   double fraction = 0;          ///< 0..1 estimate of the budget used (for a progress bar)
 };
 

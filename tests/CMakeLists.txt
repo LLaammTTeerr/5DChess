@@ -25,6 +25,7 @@ add_executable(chess_tests
 target_link_libraries(chess_tests PRIVATE play_core ai_core chess_core doctest::doctest)
 target_compile_definitions(chess_tests PRIVATE FDCHESS_POSITIONS_DIR="${PROJECT_SOURCE_DIR}/assets/positions"
   FDCHESS_UI_POSITIONS_DIR="${PROJECT_SOURCE_DIR}/tests/ui/positions"
+  FDCHESS_AI_POSITIONS_DIR="${PROJECT_SOURCE_DIR}/tests/ai"
   FDCHESS_GUIDE_DIR="${PROJECT_SOURCE_DIR}/assets/guide")
 target_compile_options(chess_tests PRIVATE $<IF:$<CXX_COMPILER_ID:MSVC>,/UNDEBUG,-UNDEBUG>)
 

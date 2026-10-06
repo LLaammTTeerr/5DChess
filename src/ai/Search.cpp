@@ -18,7 +18,7 @@ constexpr int ProbeChunk = 32; ///< nodes of the opponent's legal-turn proof per
 constexpr int Depths[] = {1, 2, 4, 6};
 
 struct LevelParams {
-  long long maxNodes;     ///< soft limit on the nodes of one decision (the depth-1 pass always completes)
+  long long maxNodes;     ///< hard cap on the nodes of one decision (probes and turn generation included); see Impl::capHit
   int maxPlies;           ///< deepest iteration: 1, 2, 4 or 6 turns
   GenParams gen[MaxPlies];///< candidate-turn beam of the inner plies (ply 0 = our turn)
   int leafCap[MaxPlies];  ///< turns considered per node at those plies
@@ -30,6 +30,7 @@ struct LevelParams {
 
 GenParams gp(int beam, int deepBeam, int maxTravel) {
   GenParams g;
+  g.maxFailures = 16 + 2 * beam;
   g.beam = beam;
   g.deepBeam = deepBeam;
   g.maxTravel = maxTravel;
@@ -40,15 +41,15 @@ LevelParams levelParams(Level level) {
   LevelParams p{};
   switch (level) {
     case Level::Easy:
-      p.maxNodes = 4000;
+      p.maxNodes = 10000;
       p.maxPlies = 1;
-      p.gen[0] = gp(5, 2, 0);
+      p.gen[0] = gp(5, 2, 1);
       p.leafCap[0] = 8;
       p.margin = 120;
       p.probeNodes = 600;
       break;
     case Level::Normal:
-      p.maxNodes = 150000;
+      p.maxNodes = 300000;
       p.maxPlies = 4;
       p.gen[0] = gp(16, 4, 3);
       p.gen[1] = gp(10, 3, 2);
@@ -62,7 +63,7 @@ LevelParams levelParams(Level level) {
       p.probeNodes = 3000;
       break;
     case Level::Hard:
-      p.maxNodes = 900000;
+      p.maxNodes = 1200000;
       p.maxPlies = 6;
       p.gen[0] = gp(24, 5, 4);
       p.gen[1] = gp(14, 4, 3);
@@ -135,10 +136,13 @@ struct Search::Impl {
   std::vector<Candidate> candidates;// iterCands of the last completed iteration: what the decision is made from
   int rootDone = 0;
   bool mate = false;
-  bool aborted = false;         // the node limit was reached inside the running iteration
+  bool aborted = false;         // the node cap was reached inside the running iteration
+  bool rescued = false;         // the first pass found no turn: it was repeated with the rescue generator
+  bool usedFallback = false;    // the turn comes from TurnSearch, not from the generator
   const long long* liveBudget = nullptr; // budget of the stepPly call in progress, and its value when it began
   long long liveBase = 0;
 
+  GenParams rescue;
   std::unique_ptr<TurnSearch> fallback;
   long long nodes = 0;
   std::vector<Core::Move> result;
@@ -148,11 +152,20 @@ struct Search::Impl {
       : options(o), params(levelParams(o.level)), start(game.clone()), me(game.getCurrentTurnColor()), rng{o.seed} {
     basePending = game.pendingMoves().size();
     if (o.maxNodes > 0) params.maxNodes = o.maxNodes;
+    scaleForBoards(int(start->mandatoryBoards().size()));
     if (game.result() != GameResult::Ongoing) {
       phase = Phase::Finished;
       return;
     }
     startIteration();
+  }
+
+  /** A turn on `mand` mandatory boards costs about `mand` times more to generate and probe: fewer turns, shorter proofs. */
+  void scaleForBoards(int mand) {
+    const int scale = 1 + std::max(0, mand - 1) / 2;
+    if (scale == 1) return;
+    params.leafCap[0] = std::max(8, params.leafCap[0] / scale);
+    params.probeNodes = std::max(300, params.probeNodes / scale);
   }
 
   bool hasNextIteration() const {
@@ -179,7 +192,32 @@ struct Search::Impl {
    *  is complete, an iteration ends), where this value does not depend on how the caller slices its budget. */
   long long total() const { return nodes + (liveBudget ? liveBase - *liveBudget : 0); }
 
+  /** The node cap is hard: every node counts (generator moves, proof chunks), and it is tested at every logical point where the
+   *  count does not depend on how the caller slices its budget (a turn was generated, a proof ended). The first pass is the only
+   *  work that may go on past it, and only until one root turn is evaluated: a legal turn is always returned. */
+  bool capHit() const { return total() >= params.maxNodes and (depthDone >= 1 or rootDone >= 1); }
+
+  static long long leafCost(int timelines) { return 4 + timelines; }
+
+  /** Cap reached: abandon the running iteration. */
+  bool abortIteration() {
+    aborted = true;
+    stack.clear();
+    return true;
+  }
+
+  GenParams rescueParams() const {
+    GenParams g = params.gen[0];
+    g.beam = std::max(g.beam, 24);
+    g.deepBeam = std::max(g.deepBeam, 6);
+    g.maxTravel = NoLimit;
+    g.optionalBoards = true;
+    g.maxFailures = 400;
+    return g;
+  }
+
   const GenParams& genParams(std::size_t depth) const {
+    if (rescued) return rescue;
     return depth > 0 and int(depth) + 1 == plies ? params.horizon : params.gen[depth];
   }
   int leafCap(std::size_t depth) const {
@@ -210,8 +248,7 @@ struct Search::Impl {
       iterList.push_back({p.moves, v});
       const int floor = iterCands.empty() ? -Inf : bestRoot() - params.margin - 1;
       if (v > floor) iterCands.push_back({p.moves, v});
-      if (v >= MateScore - MaxPlies - 1) mate = true;
-      if (depthDone >= 1 and total() >= params.maxNodes) aborted = true; // the depth-1 pass always completes
+      if (capHit()) aborted = true;
       return mate or aborted; // a proven mate: nothing can beat it
     }
     p.alpha = std::max(p.alpha, v);
@@ -254,20 +291,26 @@ struct Search::Impl {
 
   /** The running iteration has searched everything (or proved a mate). */
   void endIteration() {
-    if (aborted and !mate) { // out of nodes: decide with the last completed iteration
+    if (aborted and !mate) { // out of nodes: decide with the last completed iteration (or the root turns of the first pass)
+      if (candidates.empty()) candidates = iterCands;
       conclude();
       return;
     }
     if (iterCands.empty()) { // no turn found by the generator at all
-      if (candidates.empty()) startFallback();
-      else conclude();
+      if (!candidates.empty()) conclude();
+      else if (!rescued) { // retry with optional boards and unlimited jumps before giving up the evaluation
+        rescued = true;
+        rescue = rescueParams();
+        iteration = -1;
+        startIteration();
+      } else startFallback();
       return;
     }
     candidates = iterCands;
     depthDone = plies;
     rootList = iterList;
     std::stable_sort(rootList.begin(), rootList.end(), [](const Candidate& a, const Candidate& b) { return a.value > b.value; });
-    if (mate or !hasNextIteration() or nodes >= params.maxNodes) conclude();
+    if (mate or !hasNextIteration() or nodes >= params.maxNodes or rescued) conclude();
     else startIteration();
   }
 
@@ -316,6 +359,21 @@ struct Search::Impl {
       std::vector<Core::Move> moves;
       for (const auto& s : fallback->turn()) moves.push_back(Core::Move{s.move.from.coord(), s.move.to.coord(), s.promotion});
       if (verified(moves)) {
+        // Not a candidate of the generator, but still scored (mate / stalemate proof, then static evaluation) so that
+        // progress() reports what it is worth.
+        auto after = start->clone();
+        for (const Core::Move& m : moves) after->makeMove(m);
+        after->submitTurn();
+        after->resolveResult(params.probeNodes);
+        int value = evaluate(*after, me, params.gen[0].weights);
+        if (after->result() != GameResult::Ongoing) {
+          const bool win = (after->result() == GameResult::WhiteWins and me == PieceColor::PIECEWHITE) or
+                           (after->result() == GameResult::BlackWins and me == PieceColor::PIECEBLACK);
+          value = win ? MateScore : 0;
+          mate = win;
+        }
+        candidates.assign(1, Candidate{moves, value});
+        usedFallback = true;
         result = std::move(moves);
         hasResult = true;
       }
@@ -380,7 +438,9 @@ struct Search::Impl {
           finishPly();
           return;
         }
+        if (capHit()) { abortIteration(); return; }
         ++p.leaves;
+        budget -= leafCost(p.leaf->timeLineCount()); // cloning and submitting a turn is real work too
         p.child = p.leaf->clone();
         p.child->submitTurn(); // arms the opponent's legal-turn proof
         p.probed = 0;
@@ -393,12 +453,14 @@ struct Search::Impl {
         budget -= chunk;
         p.probed += int(chunk);
         if (p.child->resultPending() and p.probed < params.probeNodes) return;
+        if (capHit()) { abortIteration(); return; }
         const GameResult r = p.child->result();
         if (r != GameResult::Ongoing) { // the opponent has no legal turn: mate (a win for us) or stalemate
           const bool win = (r == GameResult::WhiteWins and p.mover == PieceColor::PIECEWHITE) or
                            (r == GameResult::BlackWins and p.mover == PieceColor::PIECEBLACK);
           p.child.reset();
           p.phase = Ply::Phase::Gen;
+          if (win and depth == 0) mate = true; // proven by the engine: a mate in one for us, exact whatever the beams were
           if (update(depth, win ? MateScore - int(depth) : 0)) decided();
           return;
         }
@@ -439,6 +501,7 @@ Progress Search::progress() const {
   const auto& cs = _impl->candidates;
   p.bestScore = cs.empty() ? 0 : std::max_element(cs.begin(), cs.end(), [](const Candidate& a, const Candidate& b) { return a.value < b.value; })->value;
   p.mateFound = _impl->mate;
+  p.usedFallback = _impl->usedFallback;
   p.fraction = status() == Status::Done ? 1.0 : std::min(0.99, double(_impl->nodes) / double(_impl->params.maxNodes));
   return p;
 }
