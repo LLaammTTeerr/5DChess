@@ -39,7 +39,7 @@ One command per line, `#` starts a comment: `wait <frames>`, `move <x> <y>`, `cl
 `key <NAME>`, `capture <name>` (writes `<name>.png`; names must be unique across scripts). Coordinates are real
 screen pixels; each script documents the layout it derives them from. The game screen is driven by name instead:
 `clicksq <timeline> <half-turn> <square>` clicks a square (e.g. `clicksq 0 2 g1`) wherever the camera has put it, so
-scripts do not depend on the zoom. `mode <catalog id>` and `position <file.5dp>` (relative to the script's directory,
+scripts do not depend on the zoom. `clicksq` also targets the Guide's page. `mode <catalog id>` and `position <file.5dp>` (relative to the script's directory,
 e.g. `../positions/check.5dp`) open a game directly; follow them with `wait`. The harness runs with defaults, so every
 game screenshot is in the Deep space board view unless the script changes it in Settings. A `click` is hover frame, press frame,
 release frame. After a click that changes the camera (new boards appear) wait ~40-90 frames before the next one.
@@ -56,6 +56,7 @@ Use `capture` after enough `wait` frames for scene cross-fades (about 10 frames 
 | nav-toggle | ESC hides and restores the nav buttons; none left hovered |
 | stalemate | Time Line Fragment: a six-turn stalemate through time travel; "Draw" / "Stalemate" card |
 | board-styles | Settings -> Display -> Board view cycled through Atlas, Blueprint and Deep space; the same Standard mid-game (knight picked up) in each |
+| guide | main menu -> Guide, every page (Right arrow) and the "Try it" goal played on most of them: selected piece with its dots, the check mark, the mate card, the promotion picker; Left arrow goes back; the last page's Standard-game button |
 | rules-visuals | tests/ui/positions: check (attack line from the rook to the king), an inactive timeline (dimmed, tagged), the promotion picker and a chosen promotion |
 
 ## Tolerance

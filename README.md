@@ -31,6 +31,7 @@ Chess with multiverse time travel: a 5D Chess game with timelines, built in C++2
 
 This project implements a 5D Chess game with an advanced UI system featuring:
 - Multi-timeline chess mechanics
+- An interactive Guide: ten short lessons on live boards, with things to try
 - Three board views (Deep space, Atlas, Blueprint) that show every timeline at once: lanes, a turn ruler, the present, branches and time-travel jumps
 - Interactive board visualization with highlighting and an auto-focusing camera
 - Small widget layer (buttons, lists, toggles) and a screen stack with cross-fades
@@ -236,6 +237,7 @@ The game changes its working directory to the executable's folder, so it can be 
 - **Rules at a glance**: boards you must move on, may move on, or cannot (history) are framed differently; boards of inactive timelines are dimmed and desaturated and tagged "inactive"; check draws a line from every attacker to the king; promotion asks which piece (no auto-queening)
 - **Legal Move Highlighting**: Visual guides for valid moves; Submit is enabled only when the whole turn is legal (otherwise the HUD says why, e.g. "Your king would be capturable")
 - **Notation and records (engine only)**: moves have a notation (`(L0T1)e2>(L0T1)e4`) and games can be written to and replayed from a `5dchess-record` ([docs/NOTATION.md](docs/NOTATION.md)); there is no save/load button in the app yet
+- **Guide**: main menu -> Guide teaches the rules in ten short pages (boards and time, time travel, timeline numbers, the present, the four axes, pawns, check, mate, special moves). Each page has a small live board you can play, with legal-move dots, and most have a "Try it" goal that shows a check mark when you get it (Left / Right keys turn the pages; Reset position starts the page over). It uses your chosen board view
 - **Undo**: Take back moves within the current turn before submitting (no redo)
 - **Board orientation**: Boards are drawn from White's side
 
@@ -283,7 +285,7 @@ theme_preview <Classic|Modern|Fantasy|Pixel> <Standard|Battle|Invasion|Fragment>
 
 - In rare, huge positions the checkmate/stalemate search may not finish in reasonable time; the result then stays undecided ("Checking position...") and the game simply continues ([docs/SEARCH.md](docs/SEARCH.md)).
 - The rules engine is cross-checked against 5d-chess-js on Standard and the Simplify modes only; the Misc modes (Time Line Invasion, Battle, Fragment) are not cross-checked.
-- The Puzzles and Guide menu items are placeholders; there is no AI opponent yet.
+- The Puzzles menu item is a placeholder; there is no AI opponent yet.
 - Games cannot be saved or loaded from the app (the engine can read and write records, see [docs/NOTATION.md](docs/NOTATION.md)).
 
 ## Troubleshooting

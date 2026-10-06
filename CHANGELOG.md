@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Interactive Guide** (main menu -> Guide): ten short pages, one rule each (boards and time, moving through time, timelines and who owns them, the present and active timelines, the four movement axes, pawns, check across timelines, checkmate and stalemate, special moves, your first game). Every page has a small live position you can play in the board view you chose (legal-move dots, Undo, Submit, the promotion picker) and, on nine of them, a "Try it" goal that shows a check mark when you reach it. Prev / Next, page dots, Left / Right arrow keys, Reset position and a button that starts a Standard game on the last page. The example positions are `assets/guide/*.5dp` (listed in the asset manifest, so the web build bundles them); the page texts and goal checks are in `include/guide/Guide.h`.
+- Tests: every guide position loads, every goal is met by its intended move or turn and not by a wrong one (`tests/guide_test.cpp`); UI screenshots of every page and goal (`tests/ui/scripts/guide.ui`). `ui_script`'s `clicksq` also works on the Guide.
+
 ## [0.5.0] - 2026-10-06
 
 ### Added
