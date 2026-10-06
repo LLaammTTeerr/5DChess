@@ -28,6 +28,7 @@
 #include "App.h"
 #include "engine/GameCatalog.h"
 #include "PieceTheme.h"
+#include "Input.h"
 #include "TestMode.h"
 #include "Render/UITheme.h"
 #include "Screens/PlayScreen.h"
@@ -137,6 +138,7 @@ int main(int argc, char** argv) {
   TestMode::get().audioDisabled = true;  // a screenshot tool: never open an audio device
   TestMode::get().reduceMotion = reduce;
   TestMode::get().active = true;  // scripted (idle) input: the real pointer must not hover a square in the shots
+  Input::scripted().position = {-100000.0f, -100000.0f};  // ... nor the scripted one
 
   int rc = 0;
   {
