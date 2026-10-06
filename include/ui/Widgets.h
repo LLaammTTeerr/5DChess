@@ -24,6 +24,18 @@ std::vector<Rectangle> column(Rectangle area, int n, float itemH, float gap, Ali
 // n items of width itemW side by side with `gap`, centred horizontally in area, each as tall as area.
 std::vector<Rectangle> row(Rectangle area, int n, float itemW, float gap);
 
+// ---- Skin -----------------------------------------------------------------------------------------------
+// The colours of a Button. The default is the cream + terracotta look of the menus; the game screen passes the
+// skin of the current board view (Deep space: dark, Atlas: paper, Blueprint: sharp ink on white).
+struct Skin {
+  Color surface, surfaceHover, border, borderHover, text;
+  Color primary, primaryHover, primaryPressed, onPrimary;
+  Color pressed, pressedText; // secondary button: background / border and text while pressed
+  Color disabledBg, disabledText;
+  float roundness = 0.25f;  // DrawRectangleRounded roundness; 0 = square corners
+};
+const Skin& defaultSkin();
+
 // ---- Button ---------------------------------------------------------------------------------------------
 // Secondary (outlined) or primary (filled) button with eased hover, a pressed look that only shows when the
 // press began on the button, a disabled look, a click sound and the pointing-hand cursor. A click fires on
@@ -34,6 +46,8 @@ struct Button {
   Rectangle rect{};
   bool primary = false;
   bool enabled = true;
+  const Skin* skin = nullptr;           // nullptr: defaultSkin()
+  const Texture2D* icon = nullptr;      // drawn centred instead of the label (e.g. a piece sprite)
 
   Button() = default;
   Button(std::string text, Rectangle r, bool isPrimary = false) : label(std::move(text)), rect(r), primary(isPrimary) {}
@@ -59,6 +73,18 @@ struct Toggle : Button {
 private:
   bool& value_;
   const char *on_, *off_;
+};
+
+// A button showing "<prefix><option>" that moves on to the next option (wrapping) when clicked.
+struct Cycle : Button {
+  Cycle(Rectangle r, std::string prefix, std::vector<std::string> options, int value);
+  bool update(float dt);
+  int value() const { return value_; }
+
+private:
+  std::string prefix_;
+  std::vector<std::string> options_;
+  int value_;
 };
 
 // ---- ButtonList -----------------------------------------------------------------------------------------

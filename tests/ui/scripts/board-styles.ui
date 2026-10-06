@@ -1,0 +1,84 @@
+# The three board views on the same Standard mid-game (two turns played, the white knight picked up on the present board):
+# Settings -> Display -> "Board view" is cycled through Atlas, Blueprint and back to Deep space (the default), and each time
+# a Standard game is opened with `mode standard`. Layout (1400x800): main menu Settings (150,460); Display tab (880,172);
+# the Board view button is the first of the two Display options (700,468); in the game Back (125,25) leads to the mode list,
+# whose single Back button is (700,712). Squares are clicked by name, see game-standard.ui.
+wait 20
+click 150 460        # Settings
+wait 30
+click 880 172        # Display tab
+wait 20
+click 700 468        # Board view: Atlas
+wait 10
+capture board-style-settings-atlas
+mode standard
+wait 40
+clicksq 0 0 e2
+wait 20
+clicksq 0 0 e4
+wait 20
+click 841 90         # Submit
+wait 60
+clicksq 0 1 e7
+wait 20
+clicksq 0 1 e5
+wait 20
+click 841 90
+wait 60
+clicksq 0 2 g1       # pick up the knight: its targets show on the present board
+wait 60
+capture board-style-atlas
+click 125 25         # Back to the mode list ...
+wait 30
+click 700 712        # ... and to the main menu
+wait 30
+click 150 460        # Settings
+wait 30
+click 880 172        # Display tab
+wait 20
+click 700 468        # Board view: Blueprint
+wait 10
+mode standard
+wait 40
+clicksq 0 0 e2
+wait 20
+clicksq 0 0 e4
+wait 20
+click 841 90
+wait 60
+clicksq 0 1 e7
+wait 20
+clicksq 0 1 e5
+wait 20
+click 841 90
+wait 60
+clicksq 0 2 g1
+wait 60
+capture board-style-blueprint
+click 125 25
+wait 30
+click 700 712
+wait 30
+click 150 460
+wait 30
+click 880 172
+wait 20
+click 700 468        # Board view: Deep space again
+wait 10
+mode standard
+wait 40
+clicksq 0 0 e2
+wait 20
+clicksq 0 0 e4
+wait 20
+click 841 90
+wait 60
+clicksq 0 1 e7
+wait 20
+clicksq 0 1 e5
+wait 20
+click 841 90
+wait 60
+clicksq 0 2 g1
+wait 60
+capture board-style-deep-space

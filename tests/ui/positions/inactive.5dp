@@ -1,0 +1,19 @@
+# White has created two timelines (L1, L2), Black none: L2 is inactive (only optional moves there), L0 and L1 are active.
+5dchess-position 1
+title: UI inactive timeline
+size: 8
+rules: double-step castling
+to-move: white
+L0 T1w: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
+L0 T1b: rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR
+L0 T2w: rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR
+L0 T2b: rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R
+L0 T3w: r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R
+L1 parent: L0
+L1 T1b: rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR
+L1 T2w: rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR
+L1 T2b: rnbqkbnr/pppp1ppp/8/4p3/4P3/3P4/PPP2PPP/RNBQKBNR
+L1 T3w: r1bqkbnr/pppp1ppp/2n5/4p3/4P3/3P4/PPP2PPP/RNBQKBNR
+L2 parent: L0
+L2 T2b: rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R
+L2 T3w: rnbqk1nr/pppp1ppp/5b2/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R

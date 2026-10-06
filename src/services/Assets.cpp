@@ -1,4 +1,5 @@
 #include "services/Assets.h"
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
@@ -45,6 +46,7 @@ Assets::Assets(const std::string& root) : _root(root) {
 
 Assets::~Assets() {
     for (auto& [id, t] : _textures) UnloadTexture(t);
+    for (auto& [id, t] : _grayTextures) UnloadTexture(t);
     const unsigned defaultTex = GetFontDefault().texture.id;
     for (auto& [key, f] : _fonts)
         if (f.texture.id != defaultTex) UnloadFont(f);
@@ -66,6 +68,26 @@ const Assets::Entry* Assets::entry(const std::map<std::string, Entry>& kind, con
 Texture2D& Assets::texture(const std::string& id) {
     entry(_textureFiles, id, "texture"); // throws for an unknown id; every known texture was loaded in the constructor
     return _textures.at(id);
+}
+
+Texture2D& Assets::grayTexture(const std::string& id) {
+    auto it = _grayTextures.find(id);
+    if (it != _grayTextures.end()) return it->second;
+    const Entry* e = entry(_textureFiles, id, "texture");
+    Image image = LoadImage(e->path.c_str());
+    // Grey by hand on RGBA: ImageColorGrayscale would switch to a 1-channel format and lose the alpha
+    ImageFormat(&image, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+    Color* px = static_cast<Color*>(image.data);
+    for (int i = 0; i < image.width * image.height; ++i) {
+        const float lum = 0.299f * px[i].r + 0.587f * px[i].g + 0.114f * px[i].b;
+        const float c = std::clamp((lum - 128.0f) * 1.1f + 128.0f, 0.0f, 255.0f); // a little contrast
+        px[i].r = px[i].g = px[i].b = static_cast<unsigned char>(c);
+    }
+    Texture2D t = LoadTextureFromImage(image);
+    UnloadImage(image);
+    if (t.id == 0) return texture(id); // cannot happen for a texture that loaded in the constructor; stay in colour
+    if (e->pointFilter) SetTextureFilter(t, TEXTURE_FILTER_POINT);
+    return _grayTextures.emplace(id, t).first->second;
 }
 
 Font Assets::font(const std::string& id, int size) {

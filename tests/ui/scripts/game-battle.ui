@@ -1,7 +1,6 @@
-# Misc - Time Line Battle: three 5x5 boards, all moveable for white. Layout (1400x800): Versus (150,280);
-# row 7 of the mode list (690,574); Play (808,712). Boards are 163 px at x 619..781, y 148 / 353 / 557
-# (32.7 px squares). After the first move a new board appears and the camera recentres: the left column is then
-# at x 517..679 (so the middle and bottom pawns are clicked at x=598). Submit is (841,90).
+# Misc - Time Line Battle: three 5x5 boards (timelines 0, 1 and 2), all moveable for white. Layout (1400x800): Versus
+# (150,280); row 7 of the mode list (690,574); Play (808,712); Submit (841,90). Squares are clicked by name
+# (`clicksq <timeline> <half-turn> <square>`), see game-standard.ui.
 wait 20
 click 150 280        # Versus
 wait 30
@@ -10,25 +9,25 @@ wait 20
 click 808 712        # Play
 wait 120
 capture game-battle-start
-click 700 295        # top board, centre white pawn
+clicksq 0 0 c1       # timeline 0: the pawn on the middle file
 wait 60
 capture game-battle-pawn-selected
-click 700 263        # one step forward
+clicksq 0 0 c2       # one step forward
 wait 40
-click 598 468        # middle board, centre white pawn
+clicksq 1 0 c2       # timeline 1
 wait 40
-click 598 434
+clicksq 1 0 c3
 wait 40
-click 598 638        # bottom board, centre white pawn
+clicksq 2 0 c3       # timeline 2
 wait 40
-click 598 605
+clicksq 2 0 c4
 wait 60
 capture game-battle-three-moves
 click 841 90         # Submit
 wait 90
 capture game-battle-white-submitted
-click 868 229        # black pawn on the top-right board (x 721..883)
+clicksq 0 1 e3       # a black pawn on timeline 0
 wait 40
-click 868 262
+clicksq 0 1 e2
 wait 60
 capture game-battle-black-move

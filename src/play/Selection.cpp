@@ -22,10 +22,16 @@ Intent Selection::click(std::optional<Coord> square, const Chess::IGame& game) {
   const Coord c = *square;
 
   if (_from) {
+    _promoting.reset(); // a click anywhere cancels an open promotion choice (a click on its target reopens it below)
     const auto it = std::find_if(_moves.begin(), _moves.end(), [&](const Chess::Core::Move& m) { return m.to == c; });
     if (it != _moves.end()) { // the first move to a square is the Queen promotion
-      intent.kind = Intent::Kind::Move;
       intent.move = *it;
+      if (std::count_if(_moves.begin(), _moves.end(), [&](const Chess::Core::Move& m) { return m.to == c; }) > 1) {
+        _promoting = c;
+        intent.kind = Intent::Kind::Promote;
+        return intent;
+      }
+      intent.kind = Intent::Kind::Move;
       clear();
       return intent;
     }
@@ -47,7 +53,28 @@ Intent Selection::click(std::optional<Coord> square, const Chess::IGame& game) {
   return intent;
 }
 
+std::vector<Chess::Core::Move> Selection::promotionChoices() const {
+  std::vector<Chess::Core::Move> choices;
+  if (_promoting)
+    for (const auto& m : _moves)
+      if (m.to == *_promoting) choices.push_back(m);
+  return choices;
+}
+
+Intent Selection::choosePromotion(Chess::PieceType piece) {
+  Intent intent;
+  for (const auto& m : promotionChoices()) {
+    if (m.promotion != piece) continue;
+    intent.kind = Intent::Kind::Move;
+    intent.move = m;
+    clear();
+    return intent;
+  }
+  return intent;
+}
+
 void Selection::clear() {
+  _promoting.reset();
   _from.reset();
   _moves.clear();
   _targets.clear();

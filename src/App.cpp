@@ -2,6 +2,7 @@
 #include "Input.h"
 #include "TestMode.h"
 #include "Screens/MainMenuScreen.h"
+#include "services/SettingsStore.h"
 #include "Render/UITheme.h"
 #include "engine/GameCatalog.h"
 #include <raylib.h>
@@ -23,7 +24,12 @@ App& App::current() {
 }
 
 App::App() {
-    settings.reduceMotion = TestMode::get().reduceMotion;
+    if (TestMode::get().active) {
+        settings.reduceMotion = TestMode::get().reduceMotion; // the harness is deterministic: no settings file
+    } else {
+        SettingsStore::load(settings);
+        _savedSettings = settings;
+    }
     audio.init(assets);
     Chess::GameCatalog::setDirectory(assets.root() + "positions"); // one assets root for everything
     screens.push(std::make_unique<MainMenuScreen>());
@@ -38,11 +44,16 @@ void App::frame(const std::function<void()>& beforePresent) {
     const double t0 = perf ? GetTime() : 0.0;
     audio.update();
     screens.update(*this, Input::frameTime());
+    if (!TestMode::get().active && !(settings == _savedSettings)) { // an option changed: write it down
+        SettingsStore::save(settings);
+        _savedSettings = settings;
+    }
 
     BeginDrawing();
     ClearBackground(UI::Color::bg);
 
     screens.draw(*this);
+    UI::restoreOpaqueAlpha(GetScreenWidth(), GetScreenHeight());
 
     const double cpuMs = perf ? (GetTime() - t0) * 1000.0 : 0.0; // before EndDrawing: it sleeps to hold the target FPS
     if (beforePresent) beforePresent();

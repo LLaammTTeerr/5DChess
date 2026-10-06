@@ -10,6 +10,11 @@
 //   wheel <dy>           mouse wheel delta for one frame
 //   key <KEYNAME>        press a key for one frame: A..Z, 0..9, ESCAPE, SPACE, ENTER, TAB, BACKSPACE, UP, ...
 //   capture <name>       render one more frame and write <outdir>/<name>.png (1400x800)
+//   mode <id>            replace the current screen with the game screen of a catalog mode (e.g. standard)
+//   position <file>      same, for a .5dp position file; relative paths are relative to the script's directory
+//   (both take effect on the next frame: follow them with `wait`)
+//   clicksq <l> <t> <sq>  click a square of the game screen by name wherever the camera has put it: timeline id l,
+//                        half-turn t of the board (0 = White's first), square like e2 (file a..h, rank 1..8)
 //
 // Determinism: fixed 1/60 s timestep, Reduce motion forced on, audio off, RNG seeded, scripted input
 // (see include/TestMode.h and include/Input.h).
@@ -27,6 +32,9 @@
 #include "App.h"
 #include "Input.h"
 #include "TestMode.h"
+#include "engine/GameCatalog.h"
+#include "engine/Position.h"
+#include "Screens/PlayScreen.h"
 #include "PieceTheme.h"
 #include "Render/UITheme.h"
 
@@ -42,6 +50,9 @@ struct FrameSpec {
   float wheel = 0.0f;
   int key = 0;          // KEY_* or 0
   std::string capture;  // non-empty: export the finished frame under this name
+  bool clickSquare = false;   // the pointer goes to a square of the game screen (resolved when the frame runs)
+  int sqL = 0, sqT = 0, sqX = 0, sqY = 0;
+  std::string mode, position; // non-empty: open the game screen of that catalog mode / .5dp file before this frame
   int line = 0;
 };
 
@@ -104,6 +115,25 @@ bool parseScript(const std::string& path, std::vector<FrameSpec>& out) {
       if (it == keyTable().end()) return fail("unknown key name");
       f.key = it->second;
       out.push_back(f);
+    } else if (cmd == "clicksq") {
+      std::string sq;
+      if (!(ss >> f.sqL >> f.sqT >> sq) || sq.size() != 2 || sq[0] < 'a' || sq[0] > 'h' || sq[1] < '1' || sq[1] > '8')
+        return fail("clicksq needs <timeline> <half-turn> <square, e.g. e2>");
+      f.sqX = sq[0] - 'a';
+      f.sqY = sq[1] - '1';
+      f.clickSquare = true;
+      f.setPos = true;
+      out.push_back(f);       // hover first (the position is filled in when the frame runs)
+      FrameSpec p; p.line = n; p.press = true;
+      out.push_back(p);
+      FrameSpec r; r.line = n; r.release = true;
+      out.push_back(r);
+    } else if (cmd == "mode") {
+      if (!(ss >> f.mode)) return fail("mode needs a catalog id");
+      out.push_back(f);
+    } else if (cmd == "position") {
+      if (!(ss >> f.position)) return fail("position needs a file");
+      out.push_back(f);
     } else if (cmd == "capture") {
       if (!(ss >> f.capture)) return fail("capture needs a name");
       out.push_back(f);
@@ -161,10 +191,30 @@ int main(int argc, char** argv) {
     int captured = 0;
     for (const FrameSpec& f : frames) {
       if (WindowShouldClose() || app.quit) break;
+      if (!f.mode.empty() || !f.position.empty()) {
+        std::shared_ptr<Chess::IGame> game;
+        try {
+          if (!f.mode.empty()) game = Chess::GameCatalog::create(f.mode);
+          else game = Chess::Core::loadPositionFile((scriptPath.parent_path() / f.position).string()).makeGame();
+        } catch (const std::exception& e) {
+          std::cerr << scriptPath.string() << ":" << f.line << ": " << e.what() << "\n";
+          rc = 2;
+        }
+        if (!game) { if (rc == 0) std::cerr << scriptPath.string() << ":" << f.line << ": unknown mode " << f.mode << "\n"; rc = 2; break; }
+        app.screens.replace(std::make_unique<PlayScreen>(game));
+      }
+      Vector2 target = f.pos;
+      if (f.clickSquare) {
+        auto* play = dynamic_cast<PlayScreen*>(app.screens.top());
+        if (!play) { std::cerr << scriptPath.string() << ":" << f.line << ": clicksq needs the game screen\n"; rc = 2; break; }
+        const Chess::Core::Coord c{static_cast<int8_t>(f.sqX), static_cast<int8_t>(f.sqY), static_cast<int16_t>(f.sqT), static_cast<int16_t>(f.sqL)};
+        if (!play->game().boardExists(c)) { std::cerr << scriptPath.string() << ":" << f.line << ": no board at timeline " << f.sqL << ", half-turn " << f.sqT << "\n"; rc = 2; break; }
+        target = play->squareToScreen(c);
+      }
       in.pressed[0] = f.press;
       if (f.press) in.down[0] = true;
       if (f.release) in.down[0] = false;
-      if (f.setPos) in.position = f.pos;
+      if (f.setPos) in.position = target;
       in.delta = {in.position.x - prev.x, in.position.y - prev.y};
       prev = in.position;
       in.wheel = f.wheel;

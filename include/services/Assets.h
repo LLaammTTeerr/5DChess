@@ -24,6 +24,8 @@ public:
     // Entries tagged web=no are skipped in the web build: asking for one is not an error (font() falls back
     // to the default font, sound()/music() come back invalid). Textures may not be web=no.
     Texture2D& texture(const std::string& id);
+    // The same texture in greyscale (Blueprint view, inactive timelines), made on first use and cached.
+    Texture2D& grayTexture(const std::string& id);
     // Display-size font with ASCII + the middle dot, cached per (id, size). Falls back to raylib's default
     // font when the file cannot be loaded.
     Font font(const std::string& id, int size);
@@ -39,7 +41,7 @@ private:
     std::string _root;
     std::set<std::string> _skipped; // web=no ids, web build only
     std::map<std::string, Entry> _textureFiles, _fontFiles, _soundFiles, _musicFiles;
-    std::unordered_map<std::string, Texture2D> _textures;
+    std::unordered_map<std::string, Texture2D> _textures, _grayTextures;
     std::map<std::pair<std::string, int>, Font> _fonts;
     std::unordered_map<std::string, Sound> _sounds;
     std::unordered_map<std::string, Music> _musics;

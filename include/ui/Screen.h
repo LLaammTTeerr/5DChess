@@ -34,6 +34,9 @@ public:
   void update(App& app, float dt);
   void draw(App& app) const;
 
+  /// The screen on top (nullptr when there is none): for developer tools that drive the game screen.
+  Screen* top() const { return _stack.empty() ? nullptr : _stack.back().get(); }
+
   bool navShown() const { return _navShown; }
   float navAlpha() const { return _navAlpha; }
 

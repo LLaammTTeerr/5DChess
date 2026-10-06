@@ -11,7 +11,7 @@ bool before(const BoardLayout::Slot& a, const BoardLayout::Slot& b) {
 } // namespace
 
 Rect BoardLayout::boardRect(int timeline, int halfTurn) {
-  return {static_cast<float>(halfTurn) * kPitch, static_cast<float>(timeline) * kPitch, kBoardSize, kBoardSize};
+  return {static_cast<float>(halfTurn) * kPitch, -static_cast<float>(timeline) * kPitch, kBoardSize, kBoardSize};
 }
 
 Rect BoardLayout::squareRect(const Rect& board, int dim, int x, int y) {
@@ -54,7 +54,7 @@ bool BoardLayout::contains(int timeline, int halfTurn) const {
 
 std::optional<Chess::Core::Coord> BoardLayout::hitTest(float worldX, float worldY) const {
   if (_boards.empty()) return std::nullopt;
-  const int timeline = static_cast<int>(std::floor(worldY / kPitch));
+  const int timeline = -static_cast<int>(std::floor(worldY / kPitch));
   const int halfTurn = static_cast<int>(std::floor(worldX / kPitch));
   if (timeline < _minTimeline || timeline > _maxTimeline || !contains(timeline, halfTurn)) return std::nullopt;
   const Rect area = boardRect(timeline, halfTurn);

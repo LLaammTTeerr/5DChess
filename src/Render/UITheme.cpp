@@ -1,6 +1,7 @@
 #include "Render/UITheme.h"
 #include "App.h"
 #include <cmath>
+#include <rlgl.h>
 #include <vector>
 
 namespace UI {
@@ -35,6 +36,19 @@ void drawCard(Rectangle r) {
     DrawRectangleRounded({r.x + 4, r.y + 6, r.width, r.height}, 0.08f, 8, Color::shadow);
     DrawRectangleRounded(r, 0.08f, 8, Color::surface);
     DrawRectangleRoundedLinesEx(r, 0.08f, 8, 1.0f, Color::border);
+}
+
+void restoreOpaqueAlpha(int width, int height) {
+#ifdef __EMSCRIPTEN__
+    rlDrawRenderBatchActive();            // everything drawn so far blends normally
+    rlColorMask(false, false, false, true);
+    DrawRectangle(0, 0, width, height, ::Color{255, 255, 255, 255}); // alpha 1 over alpha anything: (1 * 1) + dst * (1 - 1)
+    rlDrawRenderBatchActive();
+    rlColorMask(true, true, true, true);
+#else
+    (void)width;
+    (void)height;
+#endif
 }
 
 namespace Cursor {

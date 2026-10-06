@@ -19,6 +19,14 @@ Color lerpColor(Color a, Color b, float t) {
 }
 } // namespace
 
+const Skin& defaultSkin() {
+  static const Skin skin = {UI::Color::surface,    UI::Color::surfaceAlt,   UI::Color::border,        UI::Color::accent,
+                            UI::Color::text,       UI::Color::primary,      UI::Color::primaryHover,  UI::Color::primaryPressed,
+                            UI::Color::onAccent,   UI::Color::accentPressed, UI::Color::onAccent, UI::Color::disabledBg,   UI::Color::disabledText,
+                            UI::Space::radius};
+  return skin;
+}
+
 void beginFrame(bool pointerConsumed) { g_consumed = pointerConsumed; }
 bool pointerConsumed() { return g_consumed; }
 void consumePointer() { g_consumed = true; }
@@ -75,26 +83,39 @@ void Button::draw(float alpha) const {
   auto fade = [alpha](Color c) { c.a = static_cast<unsigned char>(c.a * alpha); return c; };
   const Rectangle r = {rect.x, rect.y + rise, rect.width, rect.height};
 
+  const Skin& k = skin ? *skin : defaultSkin();
   Color bg, border, text;
   float thickness = 1.0f;
   if (!enabled) {
-    bg = border = UI::Color::disabledBg;
-    text = UI::Color::disabledText;
+    bg = border = k.disabledBg;
+    text = k.disabledText;
   } else if (pressed_) {
-    bg = border = primary ? UI::Color::primaryPressed : UI::Color::accentPressed;
-    text = UI::Color::onAccent;
+    bg = border = primary ? k.primaryPressed : k.pressed;
+    text = primary ? k.onPrimary : k.pressedText;
   } else if (primary) {
-    bg = border = lerpColor(UI::Color::primary, UI::Color::primaryHover, hover_);
-    text = UI::Color::onAccent;
+    bg = border = lerpColor(k.primary, k.primaryHover, hover_);
+    text = k.onPrimary;
   } else {
-    bg = lerpColor(UI::Color::surface, UI::Color::surfaceAlt, hover_);
-    border = lerpColor(UI::Color::border, UI::Color::accent, hover_);
-    text = UI::Color::text;
+    bg = lerpColor(k.surface, k.surfaceHover, hover_);
+    border = lerpColor(k.border, k.borderHover, hover_);
+    text = k.text;
     thickness = 1.0f + hover_;
   }
-  DrawRectangleRounded(r, UI::Space::radius, 8, fade(bg));
-  DrawRectangleRoundedLinesEx(r, UI::Space::radius, 8, thickness, fade(border));
+  if (k.roundness > 0.0f) {
+    DrawRectangleRounded(r, k.roundness, 8, fade(bg));
+    DrawRectangleRoundedLinesEx(r, k.roundness, 8, thickness, fade(border));
+  } else {
+    DrawRectangleRec(r, fade(bg));
+    DrawRectangleLinesEx(r, thickness, fade(border));
+  }
 
+  if (icon) {
+    const float side = std::fmin(r.width, r.height) - 10.0f;
+    DrawTexturePro(*icon, {0, 0, static_cast<float>(icon->width), static_cast<float>(icon->height)},
+                   {std::floor(r.x + (r.width - side) / 2), std::floor(r.y + (r.height - side) / 2), side, side}, {0, 0}, 0.0f,
+                   fade(enabled ? WHITE : Color{255, 255, 255, 110}));
+    return;
+  }
   const ::Font font = UI::Fonts::button();
   float size = UI::Font::button;
   Vector2 ts = MeasureTextEx(font, label.c_str(), size, 0.0f);
@@ -114,6 +135,16 @@ bool Toggle::update(float dt) {
   if (!Button::update(dt)) return false;
   value_ = !value_;
   label = value_ ? on_ : off_;
+  return true;
+}
+
+Cycle::Cycle(Rectangle r, std::string prefix, std::vector<std::string> options, int value)
+    : Button(prefix + options.at(static_cast<size_t>(value)), r), prefix_(std::move(prefix)), options_(std::move(options)), value_(value) {}
+
+bool Cycle::update(float dt) {
+  if (!Button::update(dt)) return false;
+  value_ = (value_ + 1) % static_cast<int>(options_.size());
+  label = prefix_ + options_[static_cast<size_t>(value_)];
   return true;
 }
 

@@ -1,12 +1,13 @@
 # Stalemate in Time Line Fragment after six turns (ten moves), found with a random-playout search over the engine
-# (an exhaustive search is out of reach here: time travel makes the tree explode). Moves (file a is drawn on the left, White at the bottom):
-#   1. W  pawn d1-d2                                2. B  rook c4xc1, pawn b4-b3
-#   3. W  pawn d2-d3, rook c1xc4 (top board)         4. B  king a4-a3, rook c1-c3
-#   5. W  knight a1xb3, pawn d3 -> top board (forks) 6. B  bishop b4 back in time (forks)
+# (an exhaustive search is out of reach here: time travel makes the tree explode). Moves (squares as drawn: file a on the left,
+# White at the bottom; "T n" is the half-turn of the board the move is made on):
+#   1. W  a1-a2 (timeline 1)                          2. B  b4xb1 (tl 1), c4-c3 (tl 0)
+#   3. W  a2-a3 (tl 1), b1xb4 (tl 0)                  4. B  d4-d3 (tl 0), b1-b3 (tl 1)
+#   5. W  knight d1xc3 (tl 0), pawn a3 -> a3 of tl 0   6. B  bishop c4 (tl 1, T 5) back to c3 of T 3 (forks)
 # White then has no legal turn and is not in check: "Draw" (Stalemate).
-# The camera re-centres on the newest board after every move and zooms out as boards are added, so every click
-# below was read off the screenshot of the step before it (boards shrink from 252 px to 120 px).
-# Layout (1400x800): Versus (150,280); mode row 8 (690,634); Play (808,712).
+# Squares are clicked by name (`clicksq <timeline> <half-turn> <square>`), see game-standard.ui; the waits let the camera
+# settle after every move (it refits as boards are added).
+# Layout (1400x800): Versus (150,280); mode row 8 (690,634); Play (808,712); Submit (841,90).
 wait 20
 click 150 280        # Versus
 wait 30
@@ -15,60 +16,60 @@ wait 20
 click 808 712        # Play
 wait 120
 # turn 1 (White)
-click 447 687
+clicksq 1 0 a1
 wait 40
-click 447 623
+clicksq 1 0 a2
 wait 40
 click 841 90         # Submit
 wait 90
 # turn 2 (Black)
-click 827 498
+clicksq 1 1 b4
 wait 40
-click 827 686
+clicksq 1 1 b1
 wait 90
-click 731 181
+clicksq 0 1 c4
 wait 40
-click 731 244
+clicksq 0 1 c3
 wait 90
 click 841 90
 wait 90
 # turn 3 (White)
-click 922 624
+clicksq 1 2 a2
 wait 40
-click 922 561
+clicksq 1 2 a3
 wait 90
-click 827 371
+clicksq 0 2 b1
 wait 40
-click 827 181
+clicksq 0 2 b4
 wait 90
 click 841 90
 wait 90
 # turn 4 (Black)
-click 1270 181
+clicksq 0 3 d4
 wait 40
-click 1270 244
+clicksq 0 3 d3
 wait 90
-click 945 651
+clicksq 1 3 b1
 wait 40
-click 945 543
+clicksq 1 3 b3
 wait 90
 click 841 90
 wait 90
 # turn 5 (White)
-click 1325 380
+clicksq 0 4 d1
 wait 40
-click 1271 272
+clicksq 0 4 c3
 wait 90
-click 970 524
+clicksq 1 4 a3
 wait 40
-click 970 299
+clicksq 0 4 a3
 wait 90
 click 841 90
 wait 90
 # turn 6 (Black): the bishop travels back in time, creating a timeline
-click 1231 372
+clicksq 1 5 c4
 wait 40
-click 822 413
+clicksq 1 3 c3
 wait 90
 capture stalemate-last-move
 click 841 90         # Submit: White has no legal turn and is not in check

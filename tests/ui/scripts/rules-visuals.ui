@@ -1,0 +1,23 @@
+# Official-rules visuals on hand-made positions (tests/ui/positions/*.5dp), opened with `position`:
+#   check.5dp      White's king is attacked by the rook on e8: an attack line from the rook to the king (static under Reduce motion)
+#   promotion.5dp  White's pawn on e7: clicking e8 opens the promotion picker; N picks the knight
+#   inactive.5dp   Timeline L+2 is inactive: dimmed and desaturated, tagged "inactive"; L0 and L+1 hold the mandatory boards
+# Squares are clicked by name (`clicksq <timeline> <half-turn> <square>`), see game-standard.ui.
+wait 10
+position ../positions/check.5dp
+wait 60
+capture rules-check-attack-line
+position ../positions/inactive.5dp
+wait 60
+capture rules-inactive-timeline
+position ../positions/promotion.5dp
+wait 60
+clicksq 0 4 e7       # the pawn
+wait 40
+capture rules-promotion-selected
+clicksq 0 4 e8       # its promotion square: the picker opens
+wait 40
+capture rules-promotion-picker
+key N                # Knight
+wait 60
+capture rules-promotion-knight

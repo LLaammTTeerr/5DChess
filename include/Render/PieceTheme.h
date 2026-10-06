@@ -19,6 +19,8 @@ inline constexpr PieceTheme fantasy{"piece.fantasy.", false};
 inline constexpr PieceTheme pixel{"piece.pixel.", true}; // original pixel-art creatures
 // By Settings / theme_preview name ("Classic", "Modern", "Fantasy", "Pixel"); nullptr when unknown.
 const PieceTheme* byName(const std::string& name);
+// The name byName() finds the theme by ("Modern" for an unknown theme).
+const char* nameOf(const PieceTheme& theme);
 }
 
 /// Resolved textures of one piece in the current theme (cached; pointers stay valid until the theme changes)
@@ -34,11 +36,11 @@ public:
   void setTheme(const PieceTheme& theme);
   Texture2D& getPieceTexture(const std::string& pieceName);
   /// Cached lookup for the per-frame hot path (no string building after the first call per piece)
-  const PieceTextures& getPieceTextures(const std::string& pieceName);
+  const PieceTextures& getPieceTextures(const std::string& pieceName, bool gray = false);
   bool currentThemeHasBlink() const;
 
 private:
   Assets& _assets;
   Settings& _settings;
-  std::unordered_map<std::string, PieceTextures> _textureCache;
+  std::unordered_map<std::string, PieceTextures> _textureCache, _grayCache;
 };

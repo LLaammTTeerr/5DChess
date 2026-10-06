@@ -1,0 +1,7 @@
+# White's pawn on e7 promotes on e8: clicking e8 opens the piece picker.
+5dchess-position 1
+title: UI promotion
+size: 8
+rules: double-step castling
+to-move: white
+L0 T3w: 7k/4P3/8/8/8/8/8/K7

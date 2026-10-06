@@ -72,6 +72,7 @@ void ScreenStack::captureSnapshot(App& app) {
   BeginTextureMode(_snapshot);
   ClearBackground(UI::Color::bg);
   _stack.back()->draw(app);
+  UI::restoreOpaqueAlpha(GetScreenWidth(), GetScreenHeight());
   EndTextureMode();
   _hasSnapshot = true;
 }

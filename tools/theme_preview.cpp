@@ -14,6 +14,7 @@
 //   --perf [N]          after the scripted turns render N (default 600) frames with the animation running and
 //                       print average / p99 / max frame time (CPU render cost, no vsync)
 //   --reduce            enable Reduce motion
+//   --view NAME         board view: "Deep space" (default), "Atlas" or "Blueprint"
 #include <raylib.h>
 #include <algorithm>
 #include <chrono>
@@ -107,7 +108,7 @@ struct FrameClock {
 int main(int argc, char** argv) {
   if (argc < 4) {
     std::cerr << "usage: theme_preview <Classic|Modern|Fantasy|Pixel> <Standard|Battle|Invasion|Fragment> <out.png> [turns]"
-                 " [--demo same|cross] [--dump DIR] [--perf [N]] [--reduce]\n";
+                 " [--demo same|cross] [--dump DIR] [--perf [N]] [--reduce] [--view NAME]\n";
     return 2;
   }
   const std::string theme = argv[1], mode = argv[2];
@@ -116,11 +117,13 @@ int main(int argc, char** argv) {
   std::string demo, dumpDir;
   int perfFrames = 0;
   bool reduce = false;
+  std::string view;
   for (int i = 4; i < argc; ++i) {
     if (!std::strcmp(argv[i], "--demo") && i + 1 < argc) demo = argv[++i];
     else if (!std::strcmp(argv[i], "--dump") && i + 1 < argc) dumpDir = argv[++i];
     else if (!std::strcmp(argv[i], "--perf")) { perfFrames = (i + 1 < argc && argv[i + 1][0] != '-') ? std::atoi(argv[++i]) : 600; }
     else if (!std::strcmp(argv[i], "--reduce")) reduce = true;
+    else if (!std::strcmp(argv[i], "--view") && i + 1 < argc) view = argv[++i];
     else if (argv[i][0] != '-') turns = std::atoi(argv[i]);
   }
 
@@ -145,6 +148,7 @@ int main(int argc, char** argv) {
     App app;
     if (const PieceTheme* t = Themes::byName(theme)) app.themes.setTheme(*t);
     else { std::cerr << "unknown theme: " << theme << "\n"; rc = 2; }
+    if (!view.empty() && !boardview::fromName(view, app.settings.boardView)) { std::cerr << "unknown board view: " << view << "\n"; rc = 2; }
 
     auto game = rc == 0 ? makeGame(mode) : nullptr;
     if (rc == 0 && !game) { std::cerr << "unknown game mode: " << mode << "\n"; rc = 2; }

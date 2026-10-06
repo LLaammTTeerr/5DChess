@@ -4,6 +4,7 @@
 #include "Render/PieceTheme.h"
 #include "Render/UITheme.h"
 #include "Screens/MainMenuScreen.h"
+#include "play/BoardView.h"
 
 namespace {
 const char* const kThemes[] = {"Classic", "Modern", "Fantasy", "Pixel"};
@@ -20,13 +21,18 @@ void SettingsScreen::openTab(App& app, int tab) {
   _tab = tab;
   const float W = static_cast<float>(GetScreenWidth()), H = static_cast<float>(GetScreenHeight());
   // Themes sit in a column at the left (next to the preview); the other tabs centre theirs
-  const Rectangle area = tab == Theme ? Rectangle{50.0f, 0.0f, kOptionW, H} : Rectangle{(W - kOptionW) / 2, 100.0f, kOptionW, H};
+  const float displayW = 300.0f; // "Board view: Deep space" needs more room than the other options
+  const Rectangle area = tab == Theme ? Rectangle{50.0f, 0.0f, kOptionW, H}
+                         : tab == Display ? Rectangle{(W - displayW) / 2, 100.0f, displayW, H}
+                                          : Rectangle{(W - kOptionW) / 2, 100.0f, kOptionW, H};
   const auto& tracks = AudioManager::tracks();
-  const int count = tab == Theme ? static_cast<int>(std::size(kThemes)) : tab == Music ? static_cast<int>(tracks.size()) + 2 : 1;  // Music: Off, tracks, SFX toggle
+  // Music: Off, tracks, SFX toggle; Display: board view, motion toggle
+  const int count = tab == Theme ? static_cast<int>(std::size(kThemes)) : tab == Music ? static_cast<int>(tracks.size()) + 2 : 2;
   const auto slots = ui::column(area, count, UI::Space::buttonHeight, kOptionGap);
 
   std::vector<std::string> labels;
   _toggle.reset();
+  _boardView.reset();
   _options = {};
   if (tab == Theme) {
     labels.assign(std::begin(kThemes), std::end(kThemes));
@@ -35,6 +41,10 @@ void SettingsScreen::openTab(App& app, int tab) {
     for (const auto& track : tracks) labels.push_back(track.name);
     _toggle.emplace(slots.back(), app.settings.sfx, "Sound effects: On", "Sound effects: Off");
   } else {
+    std::vector<std::string> views;
+    for (BoardView v : boardview::all) views.push_back(boardview::name(v));
+    _boardView.emplace(slots[0], "Board view: ", views, static_cast<int>(app.settings.boardView));
+    _boardView->enterAfter(0.0f);
     _toggle.emplace(slots.back(), app.settings.reduceMotion, "Motion: Reduced", "Motion: Full");
   }
   if (_toggle) _toggle->enterAfter((count - 1) * UI::Motion::stagger);
@@ -57,6 +67,7 @@ void SettingsScreen::update(App& app, float dt) {
     app.audio.playMusic(picked == 0 ? AudioManager::offName() : AudioManager::tracks()[picked - 1].name);
   }
   if (_toggle) _toggle->update(dt);
+  if (_boardView && _boardView->update(dt)) app.settings.boardView = boardview::all[_boardView->value()];
 
   if (_back.update(dt, app.screens.navShown())) app.screens.replace(std::make_unique<MainMenuScreen>());
 }
@@ -66,6 +77,7 @@ void SettingsScreen::draw(App& app) const {
   _tabs.draw();
   _options.draw();
   if (_toggle) _toggle->draw();
+  if (_boardView) _boardView->draw();
 
   if (_tab == Theme && _themeIndex >= 0) {  // preview of the chosen piece theme
     for (const auto& [name, x] : {std::pair{"white_pawn", 300.0f}, {"black_king", 450.0f}, {"white_queen", 600.0f}}) {
