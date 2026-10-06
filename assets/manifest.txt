@@ -6,8 +6,6 @@
 # Textures are loaded at startup; fonts (per size), sounds and music on first use.
 # The Emscripten --preload-file list is generated from this file (CMakeLists.txt).
 
-texture board.main ChessBoardNoBound.png
-
 texture piece.classic.black_bishop images/Theme_0/black_bishop.png
 texture piece.classic.black_king images/Theme_0/black_king.png
 texture piece.classic.black_knight images/Theme_0/black_knight.png
