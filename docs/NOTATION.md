@@ -8,7 +8,7 @@ Replaying a record goes through the engine, so a record can only describe a lega
 
 ```
 (L0T3)e2>(L1T2)e4          a move from timeline 0, turn 3, square e2 to timeline 1, turn 2, square e4
-(L-1T2)a1>(L-1T2)a2        negative timelines are written with the sign; a leading + (L+1) is accepted when reading
+(L-1T2)a1>(L-1T2)a2        negative timelines are written with the sign; a single leading + (`L+1`) is accepted when reading, never written
 (L0T9)e7>(L0T9)e8=Q        a promotion carries the chosen piece
 ```
 
@@ -43,7 +43,7 @@ piece     = "Q" | "R" | "B" | "N"
 * Castling is the king's two-file step (`(L0T1)e1>(L0T1)g1`), en passant the pawn's diagonal
   step onto the empty square: as in the engine, the geometry says it, the notation has no extra mark. Captures are not marked.
 * Numbers are range-checked while reading (at most six characters, within the ranges above); anything else, including
-  `+1`, spaces, lower-case pieces and trailing text, is a `Core::ParseError`.
+  `+-1`, `++1`, spaces, lower-case pieces and trailing text, is a `Core::ParseError`.
 
 ## Records
 

@@ -185,7 +185,7 @@ TEST_CASE("position parser rejects malformed input with a line number") {
   CHECK(fails(head + "L-2000000000 T1w: 3/3/3\n", "timeline id out of range"));
   CHECK(fails(head + "L1001 T1w: 3/3/3\n", "timeline id out of range"));
   CHECK(fails(head + b + "L0 parent: L2000000000\n", "parent id out of range"));
-  CHECK(fails("5dchess-position 1\nsize: 3\nrules: none\nto-move: white\npresent: 2000000000\n" + b, "present out of range"));
+  CHECK(fails("5dchess-position 1\nsize: 3\nrules: none\nto-move: white\npresent: T2000000000w\n" + b, "turn out of range"));
   // timeline structure
   CHECK(fails(head + "L0 parent: L0\nL0 T1w: 3/3/3\n", "no original timeline"));
   CHECK(fails(head + "L0 parent: L1\nL0 T1w: 3/3/3\nL1 parent: L0\nL1 T1w: 3/3/3\n", "no original timeline"));
@@ -194,8 +194,8 @@ TEST_CASE("position parser rejects malformed input with a line number") {
   CHECK(fails(head + b + "L2 parent: L0\nL2 T1w: 3/3/3\n", "consecutive"));
   CHECK(fails(head + b + "L1 T1w: 3/3/3\nL2 T1w: 3/3/3\nL1 parent: L0\n", "original timelines (no parent) must have consecutive"));
   // present must be what the engine computes: the lowest latest half-turn of the active timelines
-  CHECK(fails(head + b + "present: 0\n", "must come before the first board"));
-  CHECK(fails("5dchess-position 1\nsize: 3\nrules: none\nto-move: white\npresent: 4\n" + b, "is not the lowest"));
+  CHECK(fails(head + b + "present: T1w\n", "must come before the first board"));
+  CHECK(fails("5dchess-position 1\nsize: 3\nrules: none\nto-move: white\npresent: T3w\n" + b, "is not the lowest"));
 }
 
 TEST_CASE("the present is computed over active timelines only") {

@@ -24,7 +24,7 @@
 //   size:     N, 1..8 (Board::MAX_DIM)
 //   rules:    any of  double-step  castling  (or "none")
 //   to-move:  white | black
-//   present:  half-turn of the present; optional; must equal the lowest half-turn among the latest boards of the
+//   present:  the present as a turn label (T3w = half-turn 4); optional; must equal the lowest half-turn among the latest boards of the
 //             ACTIVE timelines (the default; its parity must agree with to-move)
 // Board lines:  L<timeline> T<turn><w|b>: <rows>
 //   half-turn = 2 * turn + (b ? 1 : 0). A timeline's boards must have consecutive half-turns; the first one may start

@@ -42,16 +42,18 @@ struct Cursor {
     if (peek() != c) fail(std::string("expected '") + c + "' at position " + std::to_string(pos + 1));
     ++pos;
   }
-  // [-]digits, at most 6 characters, within lo..hi
+  // [sign] digits, at most 6 digits, within lo..hi; the sign is one optional '-' (or '+' when allowPlus)
   int number(const char* what, int lo, int hi, bool allowPlus = false) {
-    if (allowPlus and peek() == '+') ++pos;
     const size_t start = pos;
-    if (peek() == '-') ++pos;
+    if (peek() == '-' or (allowPlus and peek() == '+')) ++pos;
     while (!done() and text[pos] >= '0' and text[pos] <= '9') ++pos;
     int value = 0;
     const std::string_view digits = text.substr(start, pos - start);
-    if (digits.empty() or digits == "-" or digits.size() > 6) fail(std::string("bad number for ") + what);
-    std::from_chars(digits.data(), digits.data() + digits.size(), value);
+    const bool signedNumber = !digits.empty() and (digits.front() == '-' or digits.front() == '+');
+    const std::string_view number = signedNumber and digits.front() == '+' ? digits.substr(1) : digits;
+    if (digits.size() - (signedNumber ? 1 : 0) == 0 or digits.size() - (signedNumber ? 1 : 0) > 6)
+      fail(std::string("bad number for ") + what);
+    std::from_chars(number.data(), number.data() + number.size(), value);
     if (value < lo or value > hi) fail(std::string(what) + " out of range " + std::to_string(lo) + ".." + std::to_string(hi));
     return value;
   }

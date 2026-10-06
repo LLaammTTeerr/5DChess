@@ -21,7 +21,7 @@ using BoardKey = std::pair<int, int>;
 inline BoardKey boardKeyOf(const Chess::Board& b) { return {b.timeLineId(), b.halfTurnNumber()}; }
 /// World-space area of a board (same layout the controller uses when it builds board views)
 Rectangle boardWorldArea(BoardKey key);
-/// World-space rectangle of an engine square on a board with the given area (the view is rotated 180 degrees)
+/// World-space rectangle of an engine square on a board with the given area (White at the bottom, file a on the left)
 Rectangle squareRectFor(const Rectangle& area, int dim, Chess::Position2D pos);
 
 // interface for board view, this is the interface that converting model data to view data
@@ -121,7 +121,7 @@ private:
   /// World-space thickness that appears as `px` screen pixels at the current zoom
   float worldThickness(float px) const;
 
-  /// Engine file/row <-> on-screen column/row (0 = left/top); the board is rotated 180 degrees
+  /// Engine file/row <-> on-screen column/row (0 = left/top); columns are the files (a on the left), rows are flipped (White at the bottom)
   int colToScreen(int x) const;
   int screenToCol(int screenCol) const;
   int rowToScreen(int y) const;

@@ -6,9 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Move notation and game records: `toNotation` / `parseMove`, `writeRecord` / `loadRecord` (`include/engine/Notation.h`), e.g. `(L0T1)e2>(L0T1)e4`; a record replays through the engine and fails cleanly on malformed or illegal input ([docs/NOTATION.md](docs/NOTATION.md)). `IGame` keeps its move history.
+
 ### Changed
+- **The engine's x axis is now the displayed file** (a = 0 on the left, king on e1, as in the game and in 5d-chess-js); the nine `.5dp` files are mirrored and the "mirrored files" difference is gone. **Turns are 1-based**: `T1w` is the start board in `.5dp` files, `present:` is a turn label too (`present: T3w`), and in notation. `.5dp` files written by 0.4.0 must be updated (mirror the rows, add 1 to every turn number); `size:` is capped at 8.
+- `Piece` is a plain value (`type`, `color`, `unmoved`) and `Board` a fixed array of one-byte cells, so forking a board is a copy. Search and random games are faster: 2.2 vs 1.8-2.1 M nodes/s, 1000 random games in 42-46 s vs 55-56 s on the same machine ([docs/SEARCH.md](docs/SEARCH.md)).
 - UI architecture: one `Screen` per page (`MainMenuScreen`, `ModeSelectScreen` (was Versus), `SettingsScreen`, `PlayScreen` (was TestingScene)) on a `ScreenStack` that applies navigation at frame end and cross-fades. A small widget layer (`include/ui/Widgets.h`: `Button`, `ButtonList`, `Toggle`, `ui::column` / `ui::row`, a per-frame "pointer consumed" flag) replaces the four menu controllers, the Composite menu model, the ten `ICommand` classes, the GameState/Scene pairs and the SceneManager (about 2,800 lines net removed). Screenshots are unchanged.
 - **Space no longer toggles the navigation buttons; ESC does** (Space only duplicated ESC).
+
+### Removed
+- The legacy `IGame` subclasses (`StandardGame`, `CustomGame*`, `MiscGame*`), `NameOfGame`, `Constant`, `createGame<T>`, the `Piece` class hierarchy: `GameCatalog` and the `.5dp` files are the only source of game modes.
 
 ## [0.4.0] - 2026-10-06
 

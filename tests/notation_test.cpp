@@ -88,6 +88,13 @@ TEST_CASE("notation: every Core::Move round-trips through text") {
   }
 }
 
+TEST_CASE("notation: a leading + on a timeline is read, never written") {
+  const VMove m = parseMove("(L+1T1)e2>(L+1T1)e4", PieceColor::PIECEWHITE);
+  CHECK(m.from.l == 1);
+  CHECK(m.to.l == 1);
+  CHECK(toNotation(m) == "(L1T1)e2>(L1T1)e4");
+}
+
 TEST_CASE("notation: malformed moves are parse errors") {
   for (const char* text :
        {"", "e2>e4", "(L0T1)e2", "(L0T1)e2>", "(L0T1)e2>(L0T1)", "(L0T1)e2>(L0T1)e", "(L0T1)i2>(L0T1)e4",
@@ -95,7 +102,7 @@ TEST_CASE("notation: malformed moves are parse errors") {
         "(L0T1)e2>(L0T1)e4=P", "(L0T1)e2>(L0T1)e4=q", "(L0T1)e2>(L0T1)e4 ", " (L0T1)e2>(L0T1)e4", "(L0T1)e2>(L0T1)e4x",
         "(LT0)e2>(L0T1)e4", "(L0T)e2>(L0T1)e4", "(L-T0)e2>(L0T1)e4", "(L--1T0)e2>(L0T1)e4", "(L0T0)e2>(L0T1)e4",
         "(L1001T1)e2>(L0T1)e4", "(L-1001T1)e2>(L0T1)e4", "(L0T10002)e2>(L0T1)e4", "(L99999999999T1)e2>(L0T1)e4",
-        "(L0T1)e2<(L0T1)e4", "(L0T0]e2>(L0T1)e4", "(L0T0)e2>(L0T1)e4", "(L++1T1)e2>(L0T1)e4"}) {
+        "(L0T1)e2<(L0T1)e4", "(L0T0]e2>(L0T1)e4", "(L0T0)e2>(L0T1)e4", "(L++1T1)e2>(L0T1)e4", "(L+-1T1)e2>(L0T1)e4", "(L-+1T1)e2>(L0T1)e4", "(L+T1)e2>(L0T1)e4"}) {
     CAPTURE(text);
     CHECK_THROWS_AS(parseMove(text, PieceColor::PIECEWHITE), ParseError);
   }
@@ -108,7 +115,7 @@ TEST_CASE("record: format of a short game, and it replays") {
   CHECK(game->history().size() == 3);
   CHECK(game->presentHalfTurn() == 3);
   CHECK(game->getCurrentTurnColor() == PieceColor::PIECEBLACK);
-  // x = 4 is the engine's queen file: the pawn that moved is the one in front of the queen (docs/NOTATION.md).
+  // x = 4 is the e-file (the king's): e2-e4 moved the king's pawn.
   const auto& tip = *game->timeLine(0)->back();
   CHECK(tip.at({4, 3}).has_value());
   CHECK(tip.at({4, 3})->type == PieceType::Pawn);

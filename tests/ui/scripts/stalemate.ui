@@ -1,5 +1,5 @@
 # Stalemate in Time Line Fragment after six turns (ten moves), found with a random-playout search over the engine
-# (an exhaustive search is out of reach here: time travel makes the tree explode). Moves (file a is drawn on the right):
+# (an exhaustive search is out of reach here: time travel makes the tree explode). Moves (file a is drawn on the left, White at the bottom):
 #   1. W  pawn d1-d2                                2. B  rook c4xc1, pawn b4-b3
 #   3. W  pawn d2-d3, rook c1xc4 (top board)         4. B  king a4-a3, rook c1-c3
 #   5. W  knight a1xb3, pawn d3 -> top board (forks) 6. B  bishop b4 back in time (forks)

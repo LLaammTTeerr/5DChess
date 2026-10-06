@@ -38,6 +38,18 @@ int parseInt(std::string_view s, int line, const char* what, int lo = INT_MIN, i
   return value;
 }
 
+std::string turnLabel(int halfTurn) {
+  return "T" + std::to_string(halfTurn / 2 + 1) + (halfTurn % 2 == 0 ? "w" : "b");
+}
+
+// "T<turn><w|b>" -> half-turn (turns count from 1; w = even half-turn, b = odd)
+int parseTurnLabel(std::string_view s, int line) {
+  s = trim(s);
+  if (s.size() < 3 or s[0] != 'T' or (s.back() != 'w' and s.back() != 'b')) fail(line, "expected a turn label like T3w");
+  const int turn = parseInt(s.substr(1, s.size() - 2), line, "turn", 1, kMaxHalfTurn / 2);
+  return 2 * (turn - 1) + (s.back() == 'b' ? 1 : 0);
+}
+
 // ---- pieces ---------------------------------------------------------------------------------------------------------
 
 char letterOf(PieceType type) {
@@ -217,9 +229,6 @@ int defaultPresent(const Position& p) {
   return present;
 }
 
-std::string turnLabel(int halfTurn) {
-  return "T" + std::to_string(halfTurn / 2 + 1) + (halfTurn % 2 == 0 ? "w" : "b");
-}
 
 } // namespace
 
@@ -233,7 +242,7 @@ std::string writePosition(const Position& p) {
   if (p.castling) out += " castling";
   out += "\n";
   out += std::string("to-move: ") + (p.toMove == PieceColor::PIECEWHITE ? "white" : "black") + "\n";
-  if (!p.timelines.empty() and p.present != defaultPresent(p)) out += "present: " + std::to_string(p.present) + "\n";
+  if (!p.timelines.empty() and p.present != defaultPresent(p)) out += "present: " + turnLabel(p.present) + "\n";
   for (const auto& t : p.timelines) {
     if (t.parent) out += "L" + std::to_string(t.id) + " parent: L" + std::to_string(*t.parent) + "\n";
     for (const auto& b : t.boards)
@@ -313,7 +322,7 @@ Position parsePosition(std::string_view text) {
       else fail(lineNo, "to-move must be white or black");
       sawToMove = true;
     } else if (key == "present") {
-      p.present = parseInt(value, lineNo, "present", 0, kMaxHalfTurn);
+      p.present = parseTurnLabel(value, lineNo);
     } else {
       fail(lineNo, "unknown key '" + std::string(key) + "'");
     }
@@ -355,7 +364,7 @@ Position parsePosition(std::string_view text) {
   const int computed = defaultPresent(p);
   if (p.present == INT_MIN) p.present = computed;
   else if (p.present != computed)
-    fail(lineNo, "present " + std::to_string(p.present) + " is not the lowest latest half-turn of the active timelines (" +
+    fail(lineNo, "present " + turnLabel(p.present) + " is not the lowest latest half-turn of the active timelines (" +
                      std::to_string(computed) + ")");
   if ((p.present % 2 != 0) != (p.toMove == PieceColor::PIECEBLACK) or p.present < 0)
     fail(lineNo, "present half-turn does not match to-move");

@@ -38,7 +38,7 @@ marks a piece that has already moved: `P*` is a pawn that has moved. Setup posit
 | `size: N` | 1..8 (`Board::MAX_DIM`; the search and the one-byte board cells need N <= 8) |
 | `rules: double-step castling` | enabled rules, any of `double-step` (pawns may advance two squares on their first move) and `castling`, or `none` |
 | `to-move: white\|black` | side to move |
-| `present: H` | half-turn of the present; optional. It must equal what the engine computes: the lowest half-turn among the latest boards of the **active** timelines (below). Its parity must agree with `to-move` |
+| `present: T<turn><w\|b>` | the present, written like a board label (`T3w` = half-turn 4); optional. It must equal what the engine computes: the lowest half-turn among the latest boards of the **active** timelines (below). Its parity must agree with `to-move` |
 | `L<id> T<turn><w\|b>: rows` | the board of timeline `id` at half-turn `2*(turn-1) + (b ? 1 : 0)`: turns count from 1, so `T1w` is the first board of a game (half-turn 0). `L-1 T3w` is timeline -1, turn 3, White to move |
 | `L<id> parent: L<id>` | marks a timeline branched off by a player (original timelines have no parent) |
 
