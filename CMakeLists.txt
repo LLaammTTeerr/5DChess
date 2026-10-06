@@ -83,38 +83,39 @@ if(FDCHESS_BUILD_GAME)
   endif()
 
   if(EMSCRIPTEN)
-    # Web build: only the assets the game loads are embedded into the virtual
-    # filesystem: sound effects and the (small, CC0) background music, but not
-    # files the code never loads (buttons/, backgroundimage/, unused fonts,
-    # per-theme cancel icons, ...).
-    set(WEB_ASSETS
-      chess.png ChessBoardNoBound.png images/EndGame.png
-      fonts/PublicSans-Regular.ttf fonts/PublicSans-Bold.ttf fonts/Montserrat-Bold.ttf
-      fonts/Nunito-VariableFont_wght.ttf fonts/intelone-mono-font-family-regular.ttf
-      soundeffect/move.ogg soundeffect/capture.ogg soundeffect/castle.ogg soundeffect/check.ogg
-      soundeffect/promote.ogg soundeffect/game-won.ogg soundeffect/game-drawn.ogg soundeffect/click.ogg
-      backgroundmusic/calm-piano-vaporware.ogg backgroundmusic/slow-piano-intermission.ogg
-      backgroundmusic/solo-piano-4.ogg)
-    foreach(theme 0 1 2 3)
-      foreach(color black white)
-        foreach(piece bishop king knight pawn queen rook)
-          list(APPEND WEB_ASSETS images/Theme_${theme}/${color}_${piece}.png)
-          if(theme EQUAL 3)  # eyes-closed blink frames of the Pixel theme
-            list(APPEND WEB_ASSETS images/Theme_3/${color}_${piece}_blink.png)
-          endif()
-        endforeach()
-      endforeach()
+    # Web build: embed exactly what assets/manifest.txt lists (minus web=no entries) plus the manifest
+    # itself. A "dir" entry embeds a whole directory and is skipped while it does not exist yet.
+    set(MANIFEST ${CMAKE_CURRENT_SOURCE_DIR}/assets/manifest.txt)
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${MANIFEST})
+    set(WEB_ASSETS manifest.txt)
+    file(STRINGS ${MANIFEST} MANIFEST_LINES)
+    foreach(line ${MANIFEST_LINES})
+      string(STRIP "${line}" line)
+      if(line STREQUAL "" OR line MATCHES "^#")
+        continue()
+      endif()
+      string(REGEX REPLACE "[ \t]+" ";" fields "${line}")
+      list(GET fields 0 kind)
+      list(GET fields 2 path)
+      if(line MATCHES "[ \t]web=no([ \t]|$)")
+        continue()
+      endif()
+      if(kind STREQUAL "dir" AND NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/assets/${path})
+        continue()
+      endif()
+      list(APPEND WEB_ASSETS ${path})
     endforeach()
     set(WEB_LINK_OPTIONS -sUSE_GLFW=3 -sALLOW_MEMORY_GROWTH=1
       # raylib's bundled miniaudio ScriptProcessor callback reads Module.HEAPF32 (not exported by default)
       -sEXPORTED_RUNTIME_METHODS=HEAPF32
       "SHELL:--shell-file ${CMAKE_CURRENT_SOURCE_DIR}/web/shell.html")
     foreach(a ${WEB_ASSETS})
+      string(REGEX REPLACE "/$" "" a "${a}")
       list(APPEND WEB_LINK_OPTIONS "SHELL:--preload-file ${CMAKE_CURRENT_SOURCE_DIR}/assets/${a}@/assets/${a}")
     endforeach()
     target_link_options(5dchess PRIVATE ${WEB_LINK_OPTIONS})
     set_target_properties(5dchess PROPERTIES SUFFIX ".html")
-    set_property(TARGET 5dchess APPEND PROPERTY LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/web/shell.html)
+    set_property(TARGET 5dchess APPEND PROPERTY LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/web/shell.html ${MANIFEST})
   else()
     # Copy assets next to the binary so it runs from the build directory.
     add_custom_command(TARGET 5dchess POST_BUILD

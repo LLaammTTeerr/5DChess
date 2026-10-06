@@ -25,8 +25,9 @@
 #include <vector>
 #include <exception>
 #include "chess.h"
+#include "App.h"
 #include "PieceTheme.h"
-#include "ResourceManager.h"
+#include "TestMode.h"
 #include "Render/View.h"
 #include "Render/UITheme.h"
 #include "Render/Controller.h"
@@ -131,16 +132,13 @@ int main(int argc, char** argv) {
   SetConfigFlags(FLAG_MSAA_4X_HINT);
   InitWindow(1400, 800, "theme_preview");
   ChangeDirectory(GetApplicationDirectory());  // assets are copied next to the binary
-  UI::Motion::setReduced(reduce);
+  TestMode::get().audioDisabled = true;  // a screenshot tool: never open an audio device
+  TestMode::get().reduceMotion = reduce;
 
   int rc = 0;
   {
-    ResourceManager& resources = ResourceManager::getInstance();
-    ThemeManager& themes = ThemeManager::getInstance();
-    if (theme == "Classic") themes.setTheme(std::make_unique<ClassicTheme>());
-    else if (theme == "Modern") themes.setTheme(std::make_unique<ModernTheme>());
-    else if (theme == "Fantasy") themes.setTheme(std::make_unique<Modern2Theme>());
-    else if (theme == "Pixel") themes.setTheme(std::make_unique<PixelTheme>());
+    App app;
+    if (const PieceTheme* t = Themes::byName(theme)) app.themes.setTheme(*t);
     else { std::cerr << "unknown theme: " << theme << "\n"; rc = 2; }
 
     auto game = rc == 0 ? makeGame(mode) : nullptr;
@@ -237,8 +235,6 @@ int main(int argc, char** argv) {
       else std::cout << "wrote " << out << "\n";
       UnloadImage(shot);
     }
-    UI::Fonts::unloadAll();
-    resources.unloadAll();
   }
   CloseWindow();
   return rc;

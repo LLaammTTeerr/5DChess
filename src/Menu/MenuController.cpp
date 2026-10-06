@@ -13,7 +13,7 @@
 #include "Render/RenModel.h"
 #include "VersusScene.h" // Include VersusScene for VersusMenuController
 #include <cmath>
-#include "ResourceManager.h"
+#include "App.h"
 #include "PieceTheme.h"
 #include "Render/Motion.h"
 
@@ -88,7 +88,7 @@ void NavigationMenuController::handleInput() {
         itemViews[i]->setHovered(isHovered);
 
         if (isHovered && mouseClicked) {
-            AudioManager::instance().playSfx(Sfx::Click);
+            App::current().audio.playSfx(Sfx::Click);
             std::cout << "Clicked on:" << menuItems[i]->getTitle() << std::endl;
             auto command = menuItems[i]->cloneCommand();
             std::cout << "Command: " << (command ? command->getName() : "None") << std::endl;
@@ -154,7 +154,7 @@ void InGameMenuController::handleInput() {
         itemViews[i]->setHovered(isHovered);
 
         if (isHovered && mouseClicked) {
-            AudioManager::instance().playSfx(Sfx::Click);
+            App::current().audio.playSfx(Sfx::Click);
             std::cout << "Clicked on: " << menuItems[i]->getTitle() << std::endl;
             auto command = menuItems[i]->cloneCommand();
             if (command) {
@@ -246,7 +246,7 @@ void VersusMenuController::handleInput() {
             itemViews[i]->setSelected(static_cast<int>(i) == _selectedGameModeIndex);
 
             if (isHovered && mouseClicked) {
-                AudioManager::instance().playSfx(Sfx::Click);
+                App::current().audio.playSfx(Sfx::Click);
                 // Update selected game mode index
                 _selectedGameModeIndex = static_cast<int>(i);
 
@@ -376,7 +376,7 @@ void SettingMenuController::handleInput() {
         itemViews[i]->setHovered(isHovered);
 
         if (isHovered && mouseClicked) {
-            AudioManager::instance().playSfx(Sfx::Click);
+            App::current().audio.playSfx(Sfx::Click);
             if (i != _selectedSettingIndex) {
                 _selectedSettingIndex = static_cast<int>(i);
             }
@@ -392,12 +392,12 @@ void SettingMenuController::handleInput() {
             workerItemViews[i]->setHovered(isHovered);
 
             if (isHovered && mouseClicked) {
-                AudioManager::instance().playSfx(Sfx::Click);
+                App::current().audio.playSfx(Sfx::Click);
                 auto command = workerMenuItems[i]->cloneCommand();
                 if (dynamic_cast<SfxToggleCommand*>(command.get())) {
                     // A toggle is not a selection: keep the highlighted music, refresh its own label
                     command->execute();
-                    workerMenuItems[i]->setTitle(SfxToggleCommand::titleFor(AudioManager::instance().sfxEnabled()));
+                    workerMenuItems[i]->setTitle(SfxToggleCommand::titleFor(App::current().settings.sfx));
                 } else if (dynamic_cast<MotionToggleCommand*>(command.get())) {
                     command->execute();
                     workerMenuItems[i]->setTitle(MotionToggleCommand::titleFor(UI::Motion::reduced()));
@@ -453,7 +453,7 @@ void SettingMenuController::update() {
             if (_selectedSettingIndex == 1) {
                 const auto& items = _workerMenu->getChildren();
                 for (size_t i = 0; i < items.size(); ++i) {
-                    if (items[i]->getTitle() == AudioManager::instance().selectedMusic())
+                    if (items[i]->getTitle() == App::current().settings.music)
                         _selectedMusicIndex = static_cast<int>(i);
                 }
             }
@@ -501,7 +501,7 @@ void SettingMenuController::draw() const {
 }
 
 void SettingMenuController::renderPreviewPieceTheme() const {
-    Texture2D& previewPiece = ThemeManager::getInstance().getPieceTexture("white_pawn");
+    Texture2D& previewPiece = App::current().themes.getPieceTexture("white_pawn");
     DrawTexturePro(previewPiece, 
                        {0, 0, (float)previewPiece.width, (float)previewPiece.height}, 
                        {300, 300, 100.0f, 100.0f},
@@ -509,14 +509,14 @@ void SettingMenuController::renderPreviewPieceTheme() const {
                        0.0f, 
                        WHITE);
 
-    Texture2D& previewPiece2 = ThemeManager::getInstance().getPieceTexture("black_king");
+    Texture2D& previewPiece2 = App::current().themes.getPieceTexture("black_king");
     DrawTexturePro(previewPiece2, 
                        {0, 0, (float)previewPiece2.width, (float)previewPiece2.height}, 
                        {450, 300, 100.0f, 100.0f},
                        {0, 0}, 
                        0.0f, 
                        WHITE);  
-    Texture2D& previewPiece3 = ThemeManager::getInstance().getPieceTexture("white_queen");
+    Texture2D& previewPiece3 = App::current().themes.getPieceTexture("white_queen");
     DrawTexturePro(previewPiece3, 
                        {0, 0, (float)previewPiece3.width, (float)previewPiece3.height}, 
                        {600, 300, 100.0f, 100.0f},

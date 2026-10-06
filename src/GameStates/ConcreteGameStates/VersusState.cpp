@@ -6,7 +6,6 @@
 #include "Scene/ConcreteScene/VersusScene.h"
 #include "Scene/SceneManager.h"
 #include "GameStates/ConcreteGameStates/VersusState.h"
-#include "ResourceManager.h"
 #include "Menu/MenuItemView.h"
 
 

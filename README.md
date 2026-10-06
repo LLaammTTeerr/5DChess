@@ -158,8 +158,7 @@ The game changes its working directory to the executable's folder, so it can be 
 │   ├── images/                # Piece and board textures
 │   ├── fonts/                 # Custom fonts
 │   ├── backgroundmusic/       # Audio files
-│   ├── soundeffect/           # Sound effects
-│   └── buttons/               # UI button graphics
+│   └── soundeffect/           # Sound effects
 ├── include/                   # Header files
 │   ├── Commands/              # Menu and in-game commands (Command pattern)
 │   ├── GameStates/            # State pattern for game flow

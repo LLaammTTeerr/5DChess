@@ -199,7 +199,7 @@ public:
 class ExitCommand : public ICommand {
 public:
   ExitCommand() = default;
-  void execute() override; // asks the main loop to quit (see SceneManager::requestQuit)
+  void execute() override; // asks the main loop to quit (sets App::quit)
   virtual bool canUndo() const override { return false; }
   virtual bool canRedo() const override { return false; }
   void undo() override {}

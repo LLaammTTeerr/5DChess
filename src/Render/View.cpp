@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cfloat>
-#include "ResourceManager.h"
+#include "App.h"
 #include "Render/UITheme.h"
 #include "Render/Motion.h"
 #include <rlgl.h>
@@ -177,7 +177,7 @@ void ChessView::endBoardViewSync() {
     _boardsSeeded = true;
 
     // Re-apply persistent motion state to this frame's (fresh) board views
-    const bool blink = ThemeManager::getInstance().currentThemeHasBlink() && !reduced() &&
+    const bool blink = App::current().themes.currentThemeHasBlink() && !reduced() &&
                        _cameraController->getCamera2D()->zoom >= 0.8f; // skip blinking when zoomed far out
     const bool selected = _fromPosition.first && _fromPosition.first->getBoard() && _fromPosition.second.x() >= 0;
     const BoardKey selKey = selected ? boardKeyOf(*_fromPosition.first->getBoard()) : BoardKey{0, 0};
@@ -410,7 +410,7 @@ void ChessView::render_highlightedPositions() const {
 
 void ChessView::render_flights() const {
     if (_flights.empty() || _cameraController->isUsing3DRendering()) return;
-    ThemeManager& themes = ThemeManager::getInstance();
+    ThemeManager& themes = App::current().themes;
     BeginMode2D(*_cameraController->getCamera2D());
     for (const auto& f : _flights) {
         // Captured piece shrinks and fades where it stood (drawn under the mover)
@@ -580,9 +580,9 @@ void ChessView::renderEndGameScreen(std::string winnerText, std::string reason) 
     UI::drawTextCentered(UI::Fonts::body(), "Use Back to return to game selection", cx, card.y + 164, UI::Font::body, fa(UI::Color::primary));
 
     // Pixel theme: the winner's king hops a few times on top of the card
-    if (ThemeManager::getInstance().isPixelTheme() && !_endDraw) {
+    if (App::current().themes.currentThemeHasBlink() && !_endDraw) {
         const char* name = _endWhiteWon ? "white_king" : "black_king";
-        const PieceTextures& tex = ThemeManager::getInstance().getPieceTextures(name);
+        const PieceTextures& tex = App::current().themes.getPieceTextures(name);
         const float size = 64.0f;
         float hop = 0.0f;
         if (!reduced()) {

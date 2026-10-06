@@ -1,5 +1,5 @@
 #include "Render/Controller.h"
-#include "ResourceManager.h"
+#include "App.h"
 #include "MenuController.h"
 #include "MenuComponent.h"
 #include "MenuCommand.h"
@@ -85,7 +85,7 @@ void ChessController::update(float deltaTime) {
   }
 
   if (model._game->result() != Chess::GameResult::Ongoing) {
-    if (!_isGameEnd) AudioManager::instance().playSfx(Sfx::Win); // once, on the transition
+    if (!_isGameEnd) App::current().audio.playSfx(Sfx::Win); // once, on the transition
     _isGameEnd = true;
     return;
   }
@@ -290,7 +290,7 @@ void ChessController::handleSelectedToPosition(Chess::SelectedPosition selectedP
         {model._currentMoveState.targetBoard, model._currentMoveState.targetPosition}
     ));
     // TODO: Sfx::Check / Sfx::Castle / Sfx::Promote / Sfx::Draw once the rules implement them.
-    AudioManager::instance().playSfx(isCapture ? Sfx::Capture : Sfx::Move);
+    App::current().audio.playSfx(isCapture ? Sfx::Capture : Sfx::Move);
     model._currentMoveState.reset(); // Reset the move state after the move is made
     resetHighlightedBoard();
     resetHighlightedPositions();
@@ -306,7 +306,7 @@ void ChessController::handleSelectedToPosition(Chess::SelectedPosition selectedP
     // calculate the position of the newest board view, the boardview of the newest board is not set in this frame
     // so just calculate the position based on the board's half turn number and time line ID
     std::shared_ptr<BoardView> newestBoardView = std::make_shared<BoardView2D>();
-    newestBoardView->setBoardTexture(&ResourceManager::getInstance().getTexture2D("mainChessBoard"));
+    newestBoardView->setBoardTexture(&App::current().assets.texture("board.main"));
     newestBoardView->setRenderArea(boardWorldArea(boardKeyOf(*newestBoard)));
     view.focusOnNewestBoard(newestBoardView);
 }
@@ -377,7 +377,7 @@ std::vector<std::shared_ptr<BoardView>> ChessController::computeBoardView2DsFrom
 
   for (const auto& board : _currentBoard) {
     auto boardView = std::make_shared<BoardView2D>();
-    boardView->setBoardTexture(&ResourceManager::getInstance().getTexture2D("mainChessBoard"));
+    boardView->setBoardTexture(&App::current().assets.texture("board.main"));
     boardView->setRenderArea(boardWorldArea(boardKeyOf(*board)));
 
     std::vector<std::pair<Chess::Position2D, std::string>> piecePositions;

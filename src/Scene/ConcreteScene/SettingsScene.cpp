@@ -1,5 +1,5 @@
 #include "SettingsScene.h"
-#include "ResourceManager.h"
+#include "App.h"
 #include "Render/UITheme.h"
 #include "Render/Motion.h"
 #include <iostream>
@@ -58,7 +58,7 @@ void SettingsScene::init(void) {
 
     // Sound effects on/off toggle (title is refreshed by the controller after a click)
     std::shared_ptr<MenuComponent> SfxToggle = std::make_shared<MenuItem>(
-        SfxToggleCommand::titleFor(AudioManager::instance().sfxEnabled()), true);
+        SfxToggleCommand::titleFor(App::current().settings.sfx), true);
     SfxToggle->setCommand(std::make_unique<SfxToggleCommand>());
     MusicSection->addItem(SfxToggle);
 

@@ -5,7 +5,6 @@
 #include "Scene/ConcreteScene/TestingScene.h"
 #include "Scene/SceneManager.h"
 #include "Menu/MenuItemView.h"
-#include "ResourceManager.h"
 #include "TestingState.h"
 
 #include "Render/Controller.h"

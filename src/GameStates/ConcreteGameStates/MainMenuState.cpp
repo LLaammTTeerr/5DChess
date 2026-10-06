@@ -7,7 +7,6 @@
 #include "Scene/SceneManager.h"
 #include "GameStates/ConcreteGameStates/MainMenuState.h"
 #include "Menu/MenuItemView.h"
-#include "ResourceManager.h"
 // MainMenuState implementation
 void MainMenuState::onEnter(GameStateModel* context) {
     std::cout << "Entering Main Menu State" << std::endl;

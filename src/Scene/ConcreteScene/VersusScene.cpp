@@ -1,6 +1,5 @@
 #include "Input.h"
 #include "VersusScene.h"
-#include "ResourceManager.h"
 #include "Render/UITheme.h"
 #include "gameState.h"
 #include "MenuController.h"

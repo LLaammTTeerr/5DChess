@@ -1,40 +1,25 @@
 #pragma once
 #include <raylib.h>
-#include <iostream>
-#include <memory>
 #include <string>
 #include <unordered_map>
 
-/* Interface for PieceTheme */
-class IPieceTheme  {
-public:
-  virtual Texture2D& getTexture(const std::string& pieceName) = 0;
-  /// True when "<piece>_blink" textures (eyes closed) exist, e.g. "white_pawn_blink"
-  virtual bool hasBlink() const { return false; }
-  virtual ~IPieceTheme() = default;
-};
+class Assets;
+struct Settings;
 
-class ClassicTheme : public IPieceTheme {
-public:
-  Texture2D& getTexture(const std::string& pieceName) override;
+// A piece theme is just the asset-id prefix of its textures ("piece.pixel." + "white_pawn"), plus whether it
+// ships eyes-closed blink frames ("piece.pixel.white_pawn_blink").
+struct PieceTheme {
+  const char* prefix;
+  bool hasBlink;
 };
-
-class ModernTheme : public IPieceTheme {
-public:
-  Texture2D& getTexture(const std::string& pieceName) override;
-};
-
-class Modern2Theme : public IPieceTheme {
-public:
-  Texture2D& getTexture(const std::string& pieceName) override;
-};
-
-/* Original pixel-art creature pieces (assets/images/Theme_3) */
-class PixelTheme : public IPieceTheme {
-public:
-  Texture2D& getTexture(const std::string& pieceName) override;
-  bool hasBlink() const override { return true; }
-};
+namespace Themes {
+inline constexpr PieceTheme classic{"piece.classic.", false};
+inline constexpr PieceTheme modern{"piece.modern.", false};
+inline constexpr PieceTheme fantasy{"piece.fantasy.", false};
+inline constexpr PieceTheme pixel{"piece.pixel.", true}; // original pixel-art creatures
+// By Settings / theme_preview name ("Classic", "Modern", "Fantasy", "Pixel"); nullptr when unknown.
+const PieceTheme* byName(const std::string& name);
+}
 
 /// Resolved textures of one piece in the current theme (cached; pointers stay valid until the theme changes)
 struct PieceTextures {
@@ -42,25 +27,18 @@ struct PieceTextures {
   Texture2D* blink = nullptr; // eyes closed; nullptr when the theme has no blink frame
 };
 
-// singleton class to manage themes
+// Resolves piece textures for Settings::theme out of Assets. App owns one.
 class ThemeManager {
 public:
-  static ThemeManager& getInstance();
-  void setTheme(std::unique_ptr<IPieceTheme> newTheme);
+  ThemeManager(Assets& assets, Settings& settings) : _assets(assets), _settings(settings) {}
+  void setTheme(const PieceTheme& theme);
   Texture2D& getPieceTexture(const std::string& pieceName);
   /// Cached lookup for the per-frame hot path (no string building after the first call per piece)
   const PieceTextures& getPieceTextures(const std::string& pieceName);
-  bool isPixelTheme() { return currentThemeHasBlink(); }
-  bool currentThemeHasBlink() { ensureInitialized(); return _theme->hasBlink(); }
+  bool currentThemeHasBlink() const;
 
-  ThemeManager(const ThemeManager&) = delete;
-  ThemeManager(ThemeManager&&) = delete;
-  ThemeManager& operator=(const ThemeManager&) = delete;
-  ThemeManager& operator=(ThemeManager&&) = delete;
 private:
-  ThemeManager() = default;
-  ~ThemeManager() = default;
-  std::unique_ptr<IPieceTheme> _theme;
+  Assets& _assets;
+  Settings& _settings;
   std::unordered_map<std::string, PieceTextures> _textureCache;
-  void ensureInitialized();
 };

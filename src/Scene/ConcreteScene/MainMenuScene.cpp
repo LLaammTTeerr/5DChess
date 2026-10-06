@@ -1,5 +1,6 @@
+#include "App.h"
 #include "MainMenuScene.h"
-#include "ResourceManager.h"
+#include "Render/PieceTheme.h"
 #include "Render/UITheme.h"
 #include "Render/Motion.h"
 #include <cmath>
@@ -127,13 +128,13 @@ void MainMenuScene::render() {
   const float rowW = kCount * sprite + 6 * innerGap + 5 * outerGap;
   float x = std::floor(cx - rowW / 2.0f);
   const float baseY = blockTop + 218.0f;
-  ResourceManager& res = ResourceManager::getInstance();
+  Assets& assets = App::current().assets;
   for (int i = 0; i < kCount; ++i) {
     const int pieceIdx = i / 2;
     const bool white = (i % 2) == 0;
     const std::string name = std::string(white ? "white_" : "black_") + kPieces[pieceIdx];
     const bool closed = UI::Motion::blinkClosed(static_cast<unsigned>(i + 1) * 7919u, _time);
-    Texture2D& tex = res.getTexture2D(name + (closed ? "_blink_3" : "_3"));
+    Texture2D& tex = assets.texture(std::string(Themes::pixel.prefix) + name + (closed ? "_blink" : ""));
 
     // Staggered pop-in (30-50 ms per item), then a gentle two-pixel bob
     const float dur = reduced ? UI::Motion::fast : UI::Motion::base;
