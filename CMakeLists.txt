@@ -41,7 +41,7 @@ endif()
 
 # --- Game-screen logic that needs no graphics (selection state machine, board layout, multiverse snapshot, settings file text) -----------------
 add_library(play_core STATIC src/play/Selection.cpp src/play/BoardLayout.cpp src/play/MultiverseView.cpp
-  src/services/SettingsFile.cpp)
+  src/services/SettingsFile.cpp src/guide/Guide.cpp)
 target_link_libraries(play_core PUBLIC chess_core)
 if(MSVC)
   target_compile_options(play_core PRIVATE /W4)
@@ -75,6 +75,7 @@ if(FDCHESS_BUILD_GAME)
   file(GLOB_RECURSE GAME_SOURCES CONFIGURE_DEPENDS src/*.cpp)
   list(REMOVE_ITEM GAME_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/chess.cpp)
   list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/engine/") # engine sources are part of chess_core
+  list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/guide/")  # guide content (no graphics) is part of play_core
   list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/play/(Selection|BoardLayout|MultiverseView)\\.cpp|/src/services/SettingsFile\\.cpp") # part of play_core
 
   add_executable(5dchess ${GAME_SOURCES})
@@ -124,8 +125,9 @@ if(FDCHESS_BUILD_GAME)
     set_target_properties(5dchess PROPERTIES SUFFIX ".html")
     # A "dir" preload has no dependency on the files inside it: relink when a position file changes.
     file(GLOB POSITION_FILES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/assets/positions/*.5dp)
+    file(GLOB GUIDE_FILES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/assets/guide/*.5dp)
     set_property(TARGET 5dchess APPEND PROPERTY LINK_DEPENDS
-      ${CMAKE_CURRENT_SOURCE_DIR}/web/shell.html ${MANIFEST} ${POSITION_FILES})
+      ${CMAKE_CURRENT_SOURCE_DIR}/web/shell.html ${MANIFEST} ${POSITION_FILES} ${GUIDE_FILES})
   else()
     # Copy assets next to the binary so it runs from the build directory.
     add_custom_command(TARGET 5dchess POST_BUILD

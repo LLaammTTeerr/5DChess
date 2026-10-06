@@ -1,0 +1,8 @@
+5dchess-position 1
+title: Check across timelines
+size: 8
+rules: double-step castling
+to-move: white
+L0 T3w: 4k3/8/8/8/8/8/8/4K3
+L1 parent: L0
+L1 T3w: k7/8/8/8/8/7K/8/4r3

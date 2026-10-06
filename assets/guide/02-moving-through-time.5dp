@@ -1,0 +1,8 @@
+5dchess-position 1
+title: Moving through time
+size: 8
+rules: double-step castling
+to-move: white
+L0 T1w: 1n2k3/pppp4/8/8/8/8/PPPP4/1N2K3
+L0 T1b: 1n2k3/pppp4/8/8/8/3P*4/PPP5/1N2K3
+L0 T2w: 1n2k3/ppp5/3p*4/8/8/3P*4/PPP5/1N2K3

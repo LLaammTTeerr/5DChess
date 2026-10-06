@@ -1,0 +1,8 @@
+5dchess-position 1
+title: Pawns
+size: 8
+rules: double-step castling
+to-move: white
+L0 T3w: 4k3/8/8/3p4/4P*3/8/8/4K3
+L1 parent: L0
+L1 T3w: 4k3/8/8/8/2p5/1P*6/8/4K3
