@@ -16,8 +16,10 @@ every legal turn, not the AI's beam, and a ctest runs it over the whole set.
 * Make a turn and press Submit as in a game. **Any turn that checkmates is accepted**, not only the stored solution (the result of the
   submitted turn is the proof). Anything else shows "Not quite - try again" and the puzzle resets itself after a moment.
 * **Mate in 2:** after your first turn the engine first checks that *every* defence of Black loses to a mate in one (a first turn that
-  does not win by force is "Not quite"). Then `ai::Search` at Hard (node cap 20 000) picks Black's reply, which is played on the board,
-  and you play the mating turn.
+  does not win by force is "Not quite": Black's refuting defence is played on the board first, so you see why). Then `ai::Search` at Hard
+  (node cap 20 000) picks Black's reply, which is played on the board, and you play the mating turn. The proof is spread over frames
+  (a few milliseconds each, with a "Checking your idea... n%" status), so the web build keeps running smoothly.
+* **Show solution** after Black's reply plays a mating turn of the position on the board (not the stored reply).
 * Solving shows a card with **Next puzzle** / **Back to list** and a short flourish that Reduce motion turns off. Puzzle games never touch
   the autosave.
 
@@ -77,7 +79,8 @@ embeds new ones) and the CMake web target relinks when one changes.
 cmake -S . -B build -DFDCHESS_BUILD_TOOLS=ON          # or -DFDCHESS_BUILD_TESTS=ON: the tool needs no graphics
 cmake --build build --target puzzle_check
 build/tools/puzzle_check/puzzle_check assets/puzzles   # -v lists every winning first turn
-ctest --test-dir build                                 # runs the same over assets/puzzles (test "puzzle_check")
+ctest --test-dir build                                 # runs the same over assets/puzzles (test "puzzle_check"; not registered with
+                                                       # -DFDCHESS_SANITIZE=ON, where it takes minutes: tests/puzzle_test.cpp proves a few instead)
 ```
 
 `puzzles::validate` (`include/puzzles/Solver.h`) checks, exhaustively with the official-rules engine (`IGame`, the legal-turn proof of
@@ -92,8 +95,8 @@ ctest --test-dir build                                 # runs the same over asse
   timelines), so the puzzle cannot be solved on one board;
 * title, hint and the format of the lines (`tests/puzzle_test.cpp` also checks the shipped set).
 
-A turn is a set of moves, at most one from each board the mover can move on, so the enumeration (`puzzles::forEachTurn`) is complete,
-not sampled; it discards a partial turn as soon as a king of the mover can be captured (a capture stays possible whatever else is
+A turn is a set of moves, at most one from each board the mover can move on, so the enumeration (`puzzles::TurnEnumerator`, resumable;
+`puzzles::forEachTurn` is the loop over it) is complete, not sampled, and a turn is identified by the position it leads to; it discards a partial turn as soon as a king of the mover can be captured (a capture stays possible whatever else is
 played, SEARCH.md F2; the unit tests compare with the unpruned enumeration and with the full legal-turn proof). The time of a proof
 grows quickly with the number of timelines and pieces, which is why the mates in 2 are single-timeline positions: keep puzzles small.
 
@@ -125,8 +128,8 @@ the file.
 | `t2-02-bishop-in-time` Bishop in time | Time travel | mate in 1 | 2 | 1 |
 | `t2-03-two-turns-back` Two turns back | Time travel | mate in 1 | 2 | 1 |
 | `t2-04-knight-crossing` Knight crossing | Time travel | mate in 1 | 3 | 1 |
-| `t3-01-quiet-queen` Quiet queen | Deep | mate in 2 | 1 | 1 (6 defences) |
+| `t3-01-quiet-queen` Quiet knight | Deep | mate in 2 | 1 | 1 (6 defences) |
 | `t3-02-centre-stage` Centre stage | Deep | mate in 2 | 1 | 1 (5 defences) |
 | `t3-03-small-step` Small step | Deep | mate in 2 | 1 | 1 (5 defences) |
-| `t3-04-branch-point` Branch point | Deep | mate in 1, branching | 3 | 2 (the mating move plus a free extra move) |
+| `t3-04-branch-point` Branch point | Deep | mate in 1, branching | 3 | 2 (the mating move `(L0T4)c1>(L0T1)c4`, alone or with exactly one extra move, `(L-1T3)a3>d3`) |
 | `t3-05-two-branches` Two fronts | Deep | mate in 1, branching | 4 | 1 |

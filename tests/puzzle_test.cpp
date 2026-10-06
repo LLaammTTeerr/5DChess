@@ -8,8 +8,17 @@
 #include "puzzles/Solver.h"
 #include "test_support.h"
 
+#include <cctype>
 #include <set>
 #include <string>
+
+// Under the sanitizers the exhaustive proofs are about ten times slower: the heavy cases run on a few puzzles there (the `puzzle_check` ctest
+// is not registered in that configuration) and on all of them in the other jobs.
+#ifdef FDCHESS_SANITIZED
+constexpr bool kSanitized = true;
+#else
+constexpr bool kSanitized = false;
+#endif
 
 using namespace Chess;
 
@@ -154,6 +163,7 @@ TEST_CASE("puzzle: every mate in 1 of the set is proven, tier 2 needs travel, th
   size_t branching = 0;
   for (const auto& p : shipped()) {
     if (p.goal != puzzles::Goal::MateIn1) continue;
+    if (kSanitized && p.id != "t1-05-promotion" && p.id != "t2-02-bishop-in-time" && p.id != "t3-04-branch-point") continue;
     INFO(p.id);
     const puzzles::Report r = puzzles::validate(p);
     for (const auto& e : r.errors) MESSAGE(e);
@@ -165,7 +175,7 @@ TEST_CASE("puzzle: every mate in 1 of the set is proven, tier 2 needs travel, th
     }
     if (p.tier == 3 && r.branchingWins == r.winningFirstTurns) ++branching;
   }
-  CHECK(branching >= 2); // the "branching" mates: every mating turn creates a timeline
+  if (!kSanitized) CHECK(branching >= 2); // the "branching" mates: every mating turn creates a timeline
 }
 
 TEST_CASE("puzzle: any mating turn counts, not only the stored one") {
@@ -188,6 +198,7 @@ TEST_CASE("puzzle: any mating turn counts, not only the stored one") {
 
 TEST_CASE("puzzle: the turn enumeration is exact (pruned and unpruned agree, and agree with the mate proof)") {
   for (const char* id : {"t1-01-back-rank", "t1-05-promotion", "t2-02-bishop-in-time"}) {
+    if (kSanitized && std::string(id) == "t2-02-bishop-in-time") continue;
     shipped();
     const puzzles::Puzzle* p = puzzles::find(id);
     REQUIRE(p);
@@ -220,6 +231,7 @@ TEST_CASE("puzzle: a mate in 2 is proven for the stored first turn and refuted f
   CHECK(r.ok);
   CHECK(r.defences >= 2); // the engine's reply is a real choice
 
+  if (kSanitized) return; // the loop over every first turn below is the slow part
   const auto game = p->start();
   size_t refuted = 0, proven = 0;
   puzzles::forEachTurn(*game, [&](const puzzles::Turn& turn, const IGame&) {
@@ -237,4 +249,75 @@ TEST_CASE("puzzle: a mate in 2 is proven for the stored first turn and refuted f
   });
   CHECK(proven == r.winningFirstTurns);
   CHECK(refuted > 10);
+}
+
+TEST_CASE("puzzle: the resumable enumeration gives the same turns as forEachTurn, in small steps") {
+  shipped();
+  const puzzles::Puzzle* p = puzzles::find("t2-02-bishop-in-time");
+  REQUIRE(p);
+  const auto game = p->start();
+  std::vector<std::string> all, stepped;
+  puzzles::forEachTurn(*game, [&](const puzzles::Turn& turn, const IGame&) {
+    all.push_back(notation(turn));
+    return true;
+  });
+  puzzles::TurnEnumerator e(*game);
+  puzzles::Turn turn;
+  size_t calls = 0;
+  for (bool done = false; !done;) {
+    ++calls;
+    switch (e.next(3, turn)) { // three moves tried at a time
+      case puzzles::TurnEnumerator::Status::Turn: stepped.push_back(notation(turn)); break;
+      case puzzles::TurnEnumerator::Status::Running: break;
+      default: done = true;
+    }
+  }
+  CHECK(calls > stepped.size());
+  CHECK(stepped == all);
+  CHECK(all.size() > 50);
+  // the turns are distinct positions: no turn is listed twice
+  CHECK(std::set<std::string>(all.begin(), all.end()).size() == all.size());
+}
+
+TEST_CASE("puzzle: the defence prover works a few milliseconds at a time and agrees with the stored line") {
+  shipped();
+  const puzzles::Puzzle* p = puzzles::find("t3-03-small-step");
+  REQUIRE(p);
+  const auto first = puzzles::submitted(*p->start(), p->solution[0]);
+  REQUIRE(first);
+  puzzles::DefenceProver prover(*first);
+  int steps = 0;
+  while (prover.step(0.0) == puzzles::DefenceProver::Status::Running) { // zero milliseconds: one unit of work per call
+    ++steps;
+    CHECK(prover.fraction() <= 1.0);
+    REQUIRE(steps < 10'000'000);
+  }
+  CHECK(steps > 20); // many small steps, not one big one
+  CHECK(prover.status() == puzzles::DefenceProver::Status::Proven);
+  CHECK(prover.defenceCount() >= 2);
+  CHECK(prover.done() == prover.defenceCount());
+}
+
+TEST_CASE("puzzle: a hint that names a piece names the piece of the stored first move") {
+  const std::vector<std::string> names = {"king", "queen", "rook", "bishop", "knight", "pawn"};
+  for (const auto& p : shipped()) {
+    INFO(p.id << ": " << p.hint);
+    std::string text = p.hint;
+    for (char& c : text) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    size_t at = std::string::npos;
+    std::string word;
+    for (const auto& n : names) {
+      const size_t f = text.find(n);
+      if (f != std::string::npos && f < at) {
+        at = f;
+        word = n;
+      }
+    }
+    if (at == std::string::npos) continue;
+    const auto game = p.start();
+    const auto from = p.solution[0].front().from;
+    const auto piece = game->board(from.l, from.t).at(Position2D(from.x, from.y));
+    REQUIRE(piece);
+    CHECK(pieceName(piece->type) == word); // the first piece the hint talks about is the one to move
+  }
 }

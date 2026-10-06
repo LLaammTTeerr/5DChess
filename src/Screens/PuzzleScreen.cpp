@@ -19,6 +19,7 @@ constexpr float kCardPad = 14.0f;
 constexpr float kBoardInset = kPanelW + kPanelRight + 16.0f; // what the board keeps free at the right
 constexpr float kMoveGap = 0.55f;                            // seconds between the moves of a scripted line
 constexpr float kWrongSeconds = 2.4f;                        // "Not quite" stays this long, then the puzzle resets
+constexpr float kStuckSeconds = 3.0f;                        // a finished script whose turn never shows up resets the puzzle
 constexpr double kProofMilliseconds = 6.0;                   // per frame, spent on the proof of a mate in 2
 constexpr long long kDefenceNodes = 20000;                   // cap of the engine's search for Black's reply
 
@@ -226,7 +227,7 @@ void PuzzleScreen::judge() {
   }
   if (_puzzle->goal == puzzles::Goal::MateIn2 && _stage == 0) {
     try {
-      _prover = std::make_unique<puzzles::DefenceProver>(game);
+      _prover = std::make_unique<puzzles::DefenceProver>(game); // only clones the game: the work happens a few ms per frame
     } catch (const std::exception&) {
       wrong("Not quite - try again");
       return;
@@ -251,18 +252,49 @@ void PuzzleScreen::startReply() {
 }
 
 void PuzzleScreen::startSolution() {
-  openBoard(); // from the start position, whatever happened so far
+  _script.clear();
+  _scriptPos = 0;
+  // After Black's reply (stage 1) the reply on the board is the engine's, not the stored one: the solution is a mating turn of the
+  // position as it is.
+  if (_stage == 1 && _phase == Phase::Playing) {
+    const Chess::IGame& game = _board->game();
+    if (game.pendingMoves().empty() && game.result() == Chess::GameResult::Ongoing && !game.resultPending()) {
+      try {
+        if (const auto mate = puzzles::findMate(game)) {
+          for (const Chess::Core::Move& move : *mate) _script.push_back({false, move, kMoveGap});
+          _script.push_back({true, {}, 0.0f});
+        }
+      } catch (const std::exception&) {
+        _script.clear();
+      }
+    }
+  }
+  if (_script.empty()) {
+    openBoard(); // from the start position, whatever happened so far
+    for (size_t i = 0; i < _puzzle->solution.size(); ++i) {
+      for (const Chess::Core::Move& move : _puzzle->solution[i]) _script.push_back({false, move, kMoveGap});
+      _script.push_back({true, {}, i + 1 < _puzzle->solution.size() ? 1.1f : 0.0f});
+    }
+  }
   _board->setInputLocked(true);
   _board->highlight(std::nullopt);
-  _script.clear();
-  for (size_t i = 0; i < _puzzle->solution.size(); ++i) {
-    for (const Chess::Core::Move& move : _puzzle->solution[i]) _script.push_back({false, move, kMoveGap});
-    _script.push_back({true, {}, i + 1 < _puzzle->solution.size() ? 1.1f : 0.0f});
-  }
-  _scriptPos = 0;
   _scriptClock = 0.4f;
-  say("Solution: " + std::string(_puzzle->goal == puzzles::Goal::MateIn1 ? "one turn" : "White, Black's best reply, White") + ".");
+  _doneClock = 0.0f;
+  say("Solution: " + std::string(_puzzle->goal == puzzles::Goal::MateIn1 ? "one turn" : "White, Black's reply, White") + ".");
   setPhase(Phase::Solution);
+}
+
+bool PuzzleScreen::busy() const {
+  if (!_puzzle || !_board) return false;
+  switch (_phase) {
+    case Phase::Playing: return _board->game().history().size() > _turnsSeen; // submitted, not judged yet
+    case Phase::Judging:
+    case Phase::Proving:
+    case Phase::Searching:
+    case Phase::Replying:
+    case Phase::Solution: return true;
+    default: return false;
+  }
 }
 
 void PuzzleScreen::runScript(float dt) {
@@ -290,8 +322,8 @@ void PuzzleScreen::update(App& app, float dt) {
 
   const bool playing = _phase == Phase::Playing;
   const bool solved = _phase == Phase::Solved;
-  _hint.enabled = playing;
-  _hint.label = _hintLevel == 0 ? "Hint" : "Show piece";
+  _hint.enabled = playing && _hintLevel < 2; // nothing more to show after the piece
+  _hint.label = _hintLevel == 0 ? "Hint" : _hintLevel == 1 ? "Show piece" : "No more hints";
   _solution.enabled = !solved && _phase != Phase::Solution;
   _reset.label = _phase == Phase::Wrong ? "Try again" : "Reset";
   _reset.primary = _phase == Phase::Wrong;
@@ -321,6 +353,8 @@ void PuzzleScreen::update(App& app, float dt) {
   if (CheckCollisionPointRec(Input::mousePosition(), _panel)) ui::consumePointer(); // the panel is not a board
 
   _board->setInputLocked(!playing);
+  // A decided puzzle is not "Black to move" any more
+  _board->setHudTitle(_phase == Phase::Wrong ? "Not quite" : solved ? "Checkmate" : _phase == Phase::SolutionDone ? "Solution" : "");
   _board->update(app, dt);
 
   const Chess::IGame& game = _board->game();
@@ -338,8 +372,32 @@ void PuzzleScreen::update(App& app, float dt) {
       if (!game.resultPending()) judge();
       break;
     case Phase::Proving:
-      if (_prover->step(kProofMilliseconds) == puzzles::DefenceProver::Status::Proven) startReply();
-      else if (_prover->status() == puzzles::DefenceProver::Status::Refuted) wrong("Not quite - Black has a defence. Try again.");
+      try {
+        const auto status = _prover->step(kProofMilliseconds);
+        if (status == puzzles::DefenceProver::Status::Proven) {
+          startReply();
+        } else if (status == puzzles::DefenceProver::Status::Refuted) {
+          // Show why: Black plays the defence that escapes, then the puzzle resets
+          _defence = _prover->refutation();
+          if (_defence.empty()) {
+            wrong("Not quite - try again");
+          } else {
+            _script.clear();
+            for (const Chess::Core::Move& move : _defence) _script.push_back({false, move, kMoveGap});
+            _script.push_back({true, {}, 0.0f});
+            _scriptPos = 0;
+            _scriptClock = 0.35f;
+            _doneClock = 0.0f;
+            _refuting = true;
+            say("Black has a defence...");
+            setPhase(Phase::Replying);
+          }
+        } else {
+          say("Checking your idea... " + std::to_string(static_cast<int>(_prover->fraction() * 100.0)) + "%");
+        }
+      } catch (const std::exception&) { // a proof that ran out of budget: never take the app down
+        wrong("Not quite - try again");
+      }
       break;
     case Phase::Searching:
       if (_search->step(400) == Chess::ai::Search::Status::Done) {
@@ -349,11 +407,24 @@ void PuzzleScreen::update(App& app, float dt) {
         _script.push_back({true, {}, 0.0f});
         _scriptPos = 0;
         _scriptClock = 0.35f;
+        _doneClock = 0.0f;
+        _refuting = false;
         setPhase(Phase::Replying);
       }
       break;
     case Phase::Replying:
       runScript(step);
+      if (scriptDone()) _doneClock += step;
+      if (scriptDone() && _doneClock > kStuckSeconds && !(game.history().size() > _turnsSeen)) { // the reply never showed up: do not hang
+        reset();
+        break;
+      }
+      if (scriptDone() && !game.resultPending() && game.history().size() > _turnsSeen && _refuting) {
+        _turnsSeen = game.history().size();
+        _refuting = false;
+        wrong("Not quite - Black has a defence. Try again.");
+        break;
+      }
       if (scriptDone() && !game.resultPending() && game.history().size() > _turnsSeen) {
         _turnsSeen = game.history().size();
         _stage = 1;
@@ -371,6 +442,11 @@ void PuzzleScreen::update(App& app, float dt) {
       break;
     case Phase::Solution:
       runScript(step);
+      if (scriptDone()) _doneClock += step;
+      if (scriptDone() && _doneClock > kStuckSeconds && game.history().size() != _puzzle->solution.size()) { // a submit that did not take
+        reset();
+        break;
+      }
       if (scriptDone() && !game.resultPending() && game.history().size() == _puzzle->solution.size()) {
         say("That was the solution. Reset to try it yourself.");
         setPhase(Phase::SolutionDone);

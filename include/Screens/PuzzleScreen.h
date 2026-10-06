@@ -25,6 +25,9 @@ public:
   /// Developer tools: the game screen (to click squares by name).
   PlayScreen* board() const { return _board.get(); }
   int index() const { return _index; }
+  /// Developer tools (`waitai`): something is still going on that the player waits for (a submitted turn being judged, the proof, the
+  /// engine's reply, a scripted solution).
+  bool busy() const;
 
 private:
   enum class Phase { Playing, Judging, Proving, Searching, Replying, Wrong, Solved, Solution, SolutionDone };
@@ -48,6 +51,8 @@ private:
   Phase _phase = Phase::Playing;
   int _stage = 0;            // 0: White's first turn, 1: the second turn of a mate in 2 (after Black's reply)
   size_t _turnsSeen = 0;     // submitted turns of the board that were already judged
+  bool _refuting = false;    // the reply being played is the one that refutes the first turn (then: Not quite)
+  float _doneClock = 0.0f;   // seconds a finished script has been waiting for its turn to show up (soft-lock guard)
   int _hintLevel = 0;        // 0: nothing, 1: the hint text, 2: the piece to move is ringed
   std::string _message;
   Tone _tone = Tone::Info;

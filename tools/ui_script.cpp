@@ -19,7 +19,7 @@
 //   ainodes <n>          the computer opponent's search runs exactly n nodes a frame (so the frame at which it finishes is reproducible;
 //                        400 until changed); 0 freezes a running search where it is, to capture the "thinking" HUD; `ainodes clock` runs it
 //                        against the wall-clock budget as shipped (not reproducible frame by frame; for FDCHESS_PERF measurements); see TestMode::aiNodesPerFrame
-//   waitai               run frames until the computer has nothing to do (it has moved, or the game ended; at most 5000 frames, then the
+//   waitai               (also on a puzzle: until its judging, proof and replies are done) run frames until the computer has nothing to do (it has moved, or the game ended; at most 5000 frames, then the
 //                        script fails). Does nothing when the game is not against the computer
 //   clicksq <l> <t> <sq>  click a square of the game screen (or the Guide's page) by name wherever the camera has put it: timeline id l,
 //                        half-turn t of the board (0 = White's first), square like e2 (file a..h, rank 1..8)
@@ -262,8 +262,11 @@ int main(int argc, char** argv) {
         in.delta = {0, 0};
         int frames = 0;
         for (;;) {
-          auto* play = dynamic_cast<PlayScreen*>(app.screens.top());
-          if (!play || !play->aiBusy()) break;
+          Screen* top = app.screens.top();
+          bool busy = false;
+          if (auto* play = dynamic_cast<PlayScreen*>(top)) busy = play->aiBusy();
+          else if (auto* puzzle = dynamic_cast<PuzzleScreen*>(top)) busy = puzzle->busy(); // a puzzle's judging, proof and replies
+          if (!busy) break;
           if (++frames > 5000) { std::cerr << scriptPath.string() << ":" << f.line << ": waitai: the computer is still busy after 5000 frames\n"; rc = 2; break; }
           app.frame();
         }

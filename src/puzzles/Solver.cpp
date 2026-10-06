@@ -15,20 +15,48 @@ using Chess::PieceColor;
 
 namespace {
 
-struct Enumerator {
+GameResult winFor(PieceColor c) { return c == PieceColor::PIECEWHITE ? GameResult::WhiteWins : GameResult::BlackWins; }
+
+bool crossesBoards(const Turn& turn) {
+  return std::any_of(turn.begin(), turn.end(), [](const Chess::Core::Move& m) { return m.from.l != m.to.l || m.from.t != m.to.t; });
+}
+
+std::string turnText(const Turn& turn) {
+  std::string s;
+  for (const auto& m : turn) s += (s.empty() ? "" : " ") + Chess::toNotation(m, m.promotion != Chess::PieceType::Queen);
+  return s;
+}
+
+using Clock = std::chrono::steady_clock;
+double millisecondsSince(Clock::time_point start) { return std::chrono::duration<double, std::milli>(Clock::now() - start).count(); }
+
+} // namespace
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Turn enumeration: an explicit-stack depth-first search over the moves of the mover, so it can stop after any node.
+
+struct TurnEnumerator::Impl {
+  struct Frame {
+    std::vector<Chess::Core::Move> candidates;
+    size_t next = 0;
+    bool visited = false; // the turn made so far has been looked at, the candidates are computed
+    bool made = false;    // entered through a move (undone when the frame is left)
+    bool forked = false;
+  };
+
   std::unique_ptr<IGame> g;
-  const TurnVisitor& visit;
-  long long budget;
   bool prune;
-  long long nodes = 0;
-  bool stopped = false, exhausted = false;
+  long long maxNodes, nodes = 0;
   size_t bound = 0;
   Turn cur;
   int forks = 0;
+  std::vector<Frame> stack;
   std::set<std::string> seen;
 
-  Enumerator(const IGame& game, const TurnVisitor& v, long long maxNodes, bool pruneDead)
-      : g(game.clone()), visit(v), budget(maxNodes), prune(pruneDead) {}
+  Impl(const IGame& game, bool pruneDead, long long limit) : g(game.clone()), prune(pruneDead), maxNodes(limit) {
+    bound = g->getMoveableBoards().size();
+    stack.emplace_back();
+  }
 
   std::vector<Chess::Core::Move> candidates() const {
     std::vector<Chess::Core::Move> out;
@@ -48,68 +76,74 @@ struct Enumerator {
     return out;
   }
 
-  // The same set of moves in another order is the same turn, unless two of them create a timeline (the ids are handed out
-  // in creation order): then the order is part of the identity.
-  std::string key() const {
-    std::vector<std::string> parts;
-    for (const auto& m : cur) parts.push_back(Chess::toNotation(m, true));
-    if (forks < 2) std::sort(parts.begin(), parts.end());
-    std::string s;
-    for (const auto& p : parts) s += p + " ";
-    return s;
-  }
+  // A turn is the position it leads to: the same set of moves in another order (or two routes to the same boards) is one turn.
+  std::string fingerprint() const { return Chess::Core::writePosition(Chess::Core::Position::fromGame(*g)); }
 
-  void dfs() {
-    if (!cur.empty() && g->canSubmit() && seen.insert(key()).second) {
-      if (!visit(cur, *g)) {
-        stopped = true;
-        return;
+  Status run(long long budget, Turn& out) {
+    while (!stack.empty()) {
+      Frame& f = stack.back();
+      if (!f.visited) {
+        f.visited = true;
+        if (!cur.empty() && g->canSubmit() && seen.insert(fingerprint()).second) {
+          out = cur;
+          return Status::Turn;
+        }
+        if (cur.size() < bound) f.candidates = candidates();
       }
-    }
-    if (cur.size() >= bound) return;
-    const PieceColor mover = g->getCurrentTurnColor();
-    for (const auto& move : candidates()) {
-      if (nodes++ >= budget) {
-        exhausted = true;
-        return;
+      if (f.next >= f.candidates.size()) {
+        if (f.made) {
+          g->undo();
+          cur.pop_back();
+          forks -= f.forked;
+        }
+        stack.pop_back();
+        continue;
       }
+      if (nodes >= maxNodes) return Status::Limit;
+      if (budget-- <= 0) return Status::Running;
+      ++nodes;
+      const Chess::Core::Move move = f.candidates[f.next++];
+      const PieceColor mover = g->getCurrentTurnColor();
       const int lines = g->timeLineCount();
       g->makeMove(move);
-      const bool forked = g->timeLineCount() > lines;
       // A king the opponent can capture stays capturable whatever else is played (docs/SEARCH.md, F2): such a state
       // can never become a legal turn.
-      if (!prune || g->threatsAgainst(mover).empty()) {
-        cur.push_back(move);
-        forks += forked;
-        dfs();
-        forks -= forked;
-        cur.pop_back();
+      if (prune && !g->threatsAgainst(mover).empty()) {
+        g->undo();
+        continue;
       }
-      g->undo();
-      if (stopped || exhausted) return;
+      Frame child;
+      child.made = true;
+      child.forked = g->timeLineCount() > lines;
+      forks += child.forked;
+      cur.push_back(move);
+      stack.push_back(std::move(child)); // (invalidates `f`)
     }
+    return Status::Done;
   }
 };
 
-GameResult winFor(PieceColor c) { return c == PieceColor::PIECEWHITE ? GameResult::WhiteWins : GameResult::BlackWins; }
+using Status_ = TurnEnumerator::Status;
 
-bool crossesBoards(const Turn& turn) {
-  return std::any_of(turn.begin(), turn.end(), [](const Chess::Core::Move& m) { return m.from.l != m.to.l || m.from.t != m.to.t; });
-}
-
-std::string turnText(const Turn& turn) {
-  std::string s;
-  for (const auto& m : turn) s += (s.empty() ? "" : " ") + Chess::toNotation(m, m.promotion != Chess::PieceType::Queen);
-  return s;
-}
-
-} // namespace
+TurnEnumerator::TurnEnumerator(const IGame& game, bool prune, long long maxNodes) : _impl(new Impl(game, prune, maxNodes)) {}
+TurnEnumerator::~TurnEnumerator() = default;
+TurnEnumerator::Status TurnEnumerator::next(long long nodeBudget, Turn& turn) { return _impl->run(nodeBudget, turn); }
+const IGame& TurnEnumerator::pending() const { return *_impl->g; }
+long long TurnEnumerator::nodes() const { return _impl->nodes; }
 
 bool forEachTurn(const IGame& game, const TurnVisitor& visit, long long maxNodes, bool prune) {
-  Enumerator e(game, visit, maxNodes, prune);
-  e.bound = e.g->getMoveableBoards().size();
-  e.dfs();
-  return !e.exhausted;
+  TurnEnumerator e(game, prune, maxNodes);
+  Turn turn;
+  for (;;) {
+    switch (e.next(1'000'000, turn)) {
+      case Status_::Turn:
+        if (!visit(turn, e.pending())) return true;
+        break;
+      case Status_::Running: break;
+      case Status_::Done: return true;
+      case Status_::Limit: return false;
+    }
+  }
 }
 
 std::unique_ptr<IGame> submitted(const IGame& game, const Turn& turn, long long resolveNodes) {
@@ -150,32 +184,112 @@ std::optional<Turn> findMate(const IGame& game) {
   return found.front();
 }
 
-DefenceProver::DefenceProver(const IGame& game) : _game(game.clone()) {
-  const bool complete = forEachTurn(*_game, [&](const Turn& turn, const IGame&) {
-    _defences.push_back(turn);
-    return true;
-  });
-  if (!complete) throw std::runtime_error("too many defences to list");
-  if (_defences.empty()) _status = Status::Refuted; // nothing to prove: the game is over already (never a mate in 2)
-}
+using Status_ = TurnEnumerator::Status;
+
+struct DefenceProver::Impl {
+  std::unique_ptr<IGame> game;
+  std::unique_ptr<TurnEnumerator> defenceEnum;
+  std::vector<Turn> defences;
+  bool enumerated = false;
+  size_t next = 0; // the defence being checked
+  Status status = Status::Running;
+  Turn refutation;
+
+  // The check of one defence: first the position after it is made and its legal-turn proof resolved, then White's turns are tried.
+  std::unique_ptr<IGame> after;
+  bool resolving = false;
+  long long resolveNodes = 0;
+  std::unique_ptr<TurnEnumerator> mateEnum;
+
+  explicit Impl(const IGame& g) : game(g.clone()), defenceEnum(new TurnEnumerator(*game)) {}
+
+  void refute(const Turn& defence) {
+    refutation = defence;
+    status = Status::Refuted;
+  }
+
+  void finishDefence() {
+    after.reset();
+    mateEnum.reset();
+    resolving = false;
+    resolveNodes = 0;
+    if (++next == defences.size()) status = Status::Proven;
+  }
+
+  void work() {
+    if (!enumerated) {
+      Turn turn;
+      switch (defenceEnum->next(250, turn)) {
+        case Status_::Turn: defences.push_back(turn); break;
+        case Status_::Running: break;
+        case Status_::Done:
+          enumerated = true;
+          if (defences.empty()) status = Status::Refuted; // nothing to prove: the game is over already (never a mate in 2)
+          break;
+        case Status_::Limit: throw std::runtime_error("too many defences to list");
+      }
+      return;
+    }
+    const Turn& defence = defences[next];
+    if (!after && !resolving) {
+      auto g = game->clone();
+      for (const auto& move : defence) {
+        const auto offered = g->legalMovesFrom(move.from);
+        if (std::find(offered.begin(), offered.end(), move) == offered.end()) return refute(defence);
+        g->makeMove(move);
+      }
+      if (!g->canSubmit()) return refute(defence);
+      g->submitTurn();
+      after = std::move(g);
+      resolving = true;
+    }
+    if (resolving) {
+      if (after->resultPending()) {
+        after->stepResultSearch(2000);
+        resolveNodes += 2000;
+        if (resolveNodes > 50'000'000) throw std::runtime_error("the legal-turn proof did not finish");
+        return;
+      }
+      resolving = false;
+      if (after->result() != GameResult::Ongoing) return refute(defence);
+      mateEnum = std::make_unique<TurnEnumerator>(*after);
+      return;
+    }
+    Turn turn;
+    switch (mateEnum->next(250, turn)) {
+      case Status_::Turn:
+        if (mates(mateEnum->pending())) finishDefence();
+        break;
+      case Status_::Running: break;
+      case Status_::Done: refute(defence); break;
+      case Status_::Limit: throw std::runtime_error("too many turns to try");
+    }
+  }
+};
+
+DefenceProver::DefenceProver(const IGame& game) : _impl(new Impl(game)) {}
+DefenceProver::~DefenceProver() = default;
 
 DefenceProver::Status DefenceProver::step(double milliseconds) {
-  const auto start = std::chrono::steady_clock::now();
-  while (_status == Status::Running) {
-    const Turn& defence = _defences[_next];
-    const auto after = submitted(*_game, defence);
-    if (!after || after->result() != GameResult::Ongoing || !findMate(*after)) {
-      _refutation = defence;
-      _status = Status::Refuted;
-      break;
-    }
-    if (++_next == _defences.size()) {
-      _status = Status::Proven;
-      break;
-    }
-    if (std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count() >= milliseconds) break;
+  const auto start = Clock::now();
+  while (_impl->status == Status::Running) {
+    _impl->work();
+    if (_impl->status == Status::Running && millisecondsSince(start) >= milliseconds) break;
   }
-  return _status;
+  return _impl->status;
+}
+
+DefenceProver::Status DefenceProver::status() const { return _impl->status; }
+bool DefenceProver::enumerated() const { return _impl->enumerated; }
+size_t DefenceProver::defenceCount() const { return _impl->defences.size(); }
+size_t DefenceProver::done() const { return _impl->next; }
+const std::vector<Turn>& DefenceProver::defences() const { return _impl->defences; }
+const Turn& DefenceProver::refutation() const { return _impl->refutation; }
+
+double DefenceProver::fraction() const {
+  if (_impl->status == Status::Proven) return 1.0;
+  if (!_impl->enumerated) return 0.05;
+  return 0.1 + 0.9 * static_cast<double>(_impl->next) / static_cast<double>(std::max<size_t>(1, _impl->defences.size()));
 }
 
 Report validate(const Puzzle& puzzle) {

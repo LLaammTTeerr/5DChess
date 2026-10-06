@@ -1,0 +1,17 @@
+# A first turn of a mate in 2 that does not win by force (Kd1-e1 in "Small step", third row of the third column at (1124, 346)): the proof
+# finds a defence, Black plays it on the board, and "Not quite - Black has a defence" shows before the puzzle resets itself.
+wait 20
+click 150 370        # Puzzles
+wait 40
+click 1124 346       # Small step
+wait 40
+clicksq 0 2 d1
+wait 20
+clicksq 0 2 e1
+wait 60
+click 842 90         # Submit
+move 880 740
+wait 5
+waitai
+wait 20
+capture puzzles-refuted

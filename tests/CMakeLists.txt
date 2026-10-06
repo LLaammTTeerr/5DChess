@@ -32,10 +32,13 @@ target_compile_definitions(chess_tests PRIVATE FDCHESS_POSITIONS_DIR="${PROJECT_
   FDCHESS_GUIDE_DIR="${PROJECT_SOURCE_DIR}/assets/guide"
   FDCHESS_PUZZLES_DIR="${PROJECT_SOURCE_DIR}/assets/puzzles")
 target_compile_options(chess_tests PRIVATE $<IF:$<CXX_COMPILER_ID:MSVC>,/UNDEBUG,-UNDEBUG>)
+if(FDCHESS_SANITIZE)
+  target_compile_definitions(chess_tests PRIVATE FDCHESS_SANITIZED) # the exhaustive puzzle proofs run on fewer puzzles here
+endif()
 
 add_test(NAME chess_tests COMMAND chess_tests)
 
 # The exhaustive proof of every shipped puzzle (docs/PUZZLES.md): the stored solutions are legal and win, mates in 2 hold against every defence.
-if(TARGET puzzle_check)
+if(TARGET puzzle_check AND NOT FDCHESS_SANITIZE) # ~10 minutes under ASan; tests/puzzle_test.cpp covers a few puzzles there
   add_test(NAME puzzle_check COMMAND puzzle_check ${PROJECT_SOURCE_DIR}/assets/puzzles)
 endif()

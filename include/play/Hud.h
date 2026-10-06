@@ -12,6 +12,7 @@ struct HudData {
   int fullTurn = 1;          // 1-based full-turn number shown to the player
   int timelineCount = 1;
   std::string hint;          // e.g. "Select a piece"
+  std::string title;         // replaces "White to move" / "Black to move" in the pill when set (a puzzle that is decided)
   float chipWhite = 1.0f;    // 0 = black chip, 1 = white chip (cross-fades on a turn change)
   bool bannerActive = false; // the "<Colour> to move" banner below the action row
   bool bannerWhite = true;

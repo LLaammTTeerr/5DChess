@@ -54,7 +54,7 @@ void PlayScreen::update(App& app, float dt) {
   if (!_embedded && _back.update(dt, app.screens.navShown())) leave(app);
   if (!_embedded) _saveMenu.update(dt, app.screens.navShown(), style, *_game, _vs ? &*_vs : nullptr, _aiPlaying);
   const play::ActionRow::Action action = _actions.update(dt);
-  switch (_locked ? play::ActionRow::Action::None : action) {
+  switch (_locked ? play::ActionRow::Action::None : action) { // (Undo stays available on the computer's turn: it takes the turn back)
     case play::ActionRow::Action::Undo: undo(); break;
     case play::ActionRow::Action::Deselect: deselect(); break;
     case play::ActionRow::Action::Submit: submitTurn(); break;
@@ -106,8 +106,7 @@ void PlayScreen::updatePicker(float dt, const play::BoardStyle& style) {
 
 void PlayScreen::boardInput() {
   _hover.reset();
-  if (_locked) return; // a puzzle screen is driving the game
-  if (!ui::pointerConsumed() && !aiToMove()) { // the computer's turn: the boards only look and pan
+  if (!ui::pointerConsumed() && !inputBlocked()) { // the computer's turn, or a puzzle screen driving the game: the boards only look and pan
     const Vector2 world = _camera.screenToWorld(Input::mousePosition());
     const auto square = _layout.hitTest(world.x, world.y);
     _hover = square;
@@ -117,7 +116,7 @@ void PlayScreen::boardInput() {
 }
 
 void PlayScreen::click(Coord square) {
-  if (_ended || aiToMove()) return;
+  if (_ended || inputBlocked()) return;
   _animator.finish(); // new input: running move animations jump to their end
   _arrows.finish();
   perform(_selection.click(square, *_game));
@@ -186,11 +185,17 @@ Vector2 PlayScreen::squareToScreen(Coord c) const {
   return _camera.worldToScreen({sq.centerX(), sq.centerY()});
 }
 
+// Developer tools and the embedding puzzle screen (which locks the player out and plays the opponent itself): not blocked by the lock.
 void PlayScreen::submit() {
-  if (_canSubmit && !aiToMove()) submitTurn();
+  if (_canSubmit && !aiToMove()) doSubmit();
 }
 
 void PlayScreen::submitTurn() {
+  if (inputBlocked()) return;
+  doSubmit();
+}
+
+void PlayScreen::doSubmit() {
   if (!_canSubmit || aiToMove()) return;
   _animator.finish();
   _arrows.finish();
@@ -394,17 +399,20 @@ void PlayScreen::refresh() {
   const Chess::GameResult result = _game->result();
   const bool ongoing = result == Chess::GameResult::Ongoing;
   const bool aiTurn = aiToMove(); // the computer's turn: nothing to submit or deselect, and Undo only takes the player's turn back
-  _actions.setEnabled(ongoing && ((_game->undoable() && !aiTurn) || takeBackCount() > 0), _selection.active() && ongoing,
-                      _canSubmit && !aiTurn);
+  const bool blocked = inputBlocked();
+  _actions.setEnabled(ongoing && ((_game->undoable() && !blocked) || takeBackCount() > 0), _selection.active() && ongoing && !_locked,
+                      _canSubmit && !blocked);
 
   _hudMotion.setTurn(_game->getCurrentTurnColor() == Chess::PieceColor::PIECEWHITE);
   _hud.whiteToMove = _game->getCurrentTurnColor() == Chess::PieceColor::PIECEWHITE;
   _hud.fullTurn = _game->presentFullTurn() + 1;
   _hud.timelineCount = _game->timeLineCount();
   _hud.hint = hint();
+  _hud.title = _hudTitle;
   // The indicator shows for the whole of the computer's thinking; the bar once the search itself runs (its own progress, as is)
   _hudMotion.setThinking(aiTurn && !_aiPlaying, _search ? static_cast<float>(_search->progress().fraction) : -1.0f);
   _hudMotion.apply(_hud);
+  if (!_hudTitle.empty()) _hud.bannerActive = false;
   _hudMotion.setEnded(!ongoing, result == Chess::GameResult::WhiteWins, result == Chess::GameResult::Draw);
 
   if (!ongoing) {
