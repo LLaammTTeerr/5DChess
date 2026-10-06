@@ -4,17 +4,17 @@
 //
 // A move is written  (L0T3)e2>(L1T2)e4  or, for a promotion,  (L0T3)e7>(L0T3)e8=Q :
 //   (L<timeline>T<turn>)<file><rank>  for the source and for the target, joined by '>', then an optional =Q / =R / =B / =N.
-// <turn> is the full turn number of the board (half-turn / 2, so Black's boards of turn 3 are T3 as well: the side that
-// makes the move tells White's from Black's half-turn), <file> is a.. for x = 0.. (the engine's x, see docs/POSITIONS.md:
-// the engine's king is on the d-file) and <rank> is y + 1. Timelines may be negative: (L-1T2)a1.
+// <turn> is the full turn number of the board, counted from 1 (half-turn / 2 + 1, so Black's boards of turn 3 are T3 as well:
+// the side that makes the move tells White's from Black's half-turn), <file> is 'a' + x (a = the left file seen from White,
+// the king stands on e1), <rank> is y + 1, <timeline> may be negative or written with a leading '+' when read: (L-1T2)a1.
 //
 // A record is the starting position plus one line per submitted turn:
 //
 //   5dchess-record 1
 //   mode: standard                       (or an embedded `position:` ... `end-position` block)
-//   T0w: (L0T0)e2>(L0T0)e4
-//   T0b: (L0T0)e7>(L0T0)e5
-//   T1w: (L0T1)b1>(L0T1)c3               (several moves of one turn go on one line, separated by spaces)
+//   T1w: (L0T1)e2>(L0T1)e4
+//   T1b: (L0T1)e7>(L0T1)e5
+//   T2w: (L0T2)b1>(L0T2)c3               (several moves of one turn go on one line, separated by spaces)
 //
 // Everything that reads text is bounded and fails with Core::ParseError, never with undefined behaviour.
 
@@ -41,11 +41,12 @@ std::string toNotation(const Core::Move& move, bool promotes = false);
 Core::Move parseMove(std::string_view text, PieceColor mover);
 
 /**
- * The record of the submitted turns of `game` (moves of an unfinished turn are not part of it). The header names the
+ * The record of the submitted turns of `game`. The moves of an unfinished turn are NOT part of it; if `droppedPending` is
+ * given it is set to whether there were such moves, so that a save function can warn the player. The header names the
  * catalog mode if the game came from GameCatalog::create, otherwise it embeds the game's starting position. Throws
  * std::logic_error for a game that was not built from a Position (IGame::startPosition() is empty), e.g. test sandboxes.
  */
-std::string writeRecord(const IGame& game);
+std::string writeRecord(const IGame& game, bool* droppedPending = nullptr);
 
 /**
  * A game replayed from a record. Every move is checked against the engine (a legal move of the side to move, each

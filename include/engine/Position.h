@@ -7,7 +7,7 @@
 //   size: 8
 //   rules: double-step castling
 //   to-move: white
-//   L0 T0w: rnbkqbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBKQBNR
+//   L0 T1w: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
 //
 // Orientation. A board is N x N with N = `size`. The engine addresses a square as (x, y): x is the file (0 = left, the
 // "a" file) and y the rank (0 = White's back rank, White's pawns advance towards y = N-1). A board line lists the rows
@@ -28,8 +28,8 @@
 //             ACTIVE timelines (the default; its parity must agree with to-move)
 // Board lines:  L<timeline> T<turn><w|b>: <rows>
 //   half-turn = 2 * turn + (b ? 1 : 0). A timeline's boards must have consecutive half-turns; the first one may start
-//   later than T0w (the "Fragment" mode starts L0 at T0b). Several lines of the same timeline give its history.
-//   "L-1 T2w" is timeline -1, turn 2, White to move.
+//   later than T1w (the "Fragment" mode starts L0 at T1b). Several lines of the same timeline give its history.
+//   "L-1 T3w" is timeline -1, turn 3, White to move (turns count from 1).
 // Timeline lines:  L<timeline> parent: L<id>
 //   marks a timeline a player branched off (as opposed to the timelines the game started with).
 //

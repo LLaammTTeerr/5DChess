@@ -218,7 +218,7 @@ int defaultPresent(const Position& p) {
 }
 
 std::string turnLabel(int halfTurn) {
-  return "T" + std::to_string(halfTurn / 2) + (halfTurn % 2 == 0 ? "w" : "b");
+  return "T" + std::to_string(halfTurn / 2 + 1) + (halfTurn % 2 == 0 ? "w" : "b");
 }
 
 } // namespace
@@ -280,8 +280,8 @@ Position parsePosition(std::string_view text) {
         if (value.size() < 2 or value[0] != 'L') fail(lineNo, "expected 'parent: L<id>'");
         tl.parent = parseInt(value.substr(1), lineNo, "parent id", -kMaxTimelineId, kMaxTimelineId);
       } else if (what.size() >= 3 and what[0] == 'T' and (what.back() == 'w' or what.back() == 'b')) {
-        const int turn = parseInt(what.substr(1, what.size() - 2), lineNo, "turn", 0, kMaxHalfTurn / 2);
-        const int half = 2 * turn + (what.back() == 'b' ? 1 : 0);
+        const int turn = parseInt(what.substr(1, what.size() - 2), lineNo, "turn", 1, kMaxHalfTurn / 2);
+        const int half = 2 * (turn - 1) + (what.back() == 'b' ? 1 : 0);
         if (++totalBoards > kMaxBoards) fail(lineNo, "more than " + std::to_string(kMaxBoards) + " boards");
         if (!tl.boards.empty() and half != tl.boards.back().halfTurn + 1)
           fail(lineNo, "timeline L" + std::to_string(id) + ": boards must have consecutive half-turns");

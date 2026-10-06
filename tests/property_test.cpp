@@ -275,7 +275,7 @@ TEST_CASE("random games reach castling, en passant, promotion, pawn timeline mov
   // evidence that the rules are right. That is what the directed tests and tools/refcheck (a comparison with 5d-chess-js)
   // are for. This test makes sure the random games get anywhere near the interesting rules at all.
   Coverage cov;
-  for (unsigned seed = 1; seed <= 24; ++seed) coverWalk("standard", seed, 20, cov);
+  for (unsigned seed = 1; seed <= 60; ++seed) coverWalk("standard", seed, 20, cov);
   for (unsigned seed = 1; seed <= 5; ++seed) coverWalk("knight-vs-bishop", seed, 20, cov);
   for (unsigned seed = 1; seed <= 10; ++seed) coverWalk("timeline-fragment", seed, 20, cov);
   MESSAGE("castles " << cov.castles << ", en passant " << cov.enPassant << ", promotions " << cov.promotions

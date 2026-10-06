@@ -3,5 +3,5 @@ title: Misc - Time Line Invasion
 size: 5
 rules: none
 to-move: white
-L0 T0w: nbkrb/ppppp/5/5/PPPPP
-L1 T0w: ppppp/5/5/PPPPP/NBKRB
+L0 T1w: brkbn/ppppp/5/5/PPPPP
+L1 T1w: ppppp/5/5/PPPPP/BRKBN

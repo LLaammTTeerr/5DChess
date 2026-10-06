@@ -8,8 +8,8 @@ Replaying a record goes through the engine, so a record can only describe a lega
 
 ```
 (L0T3)e2>(L1T2)e4          a move from timeline 0, turn 3, square e2 to timeline 1, turn 2, square e4
-(L-1T2)a1>(L-1T2)a2        negative timelines are written with the sign
-(L0T1)e7>(L0T1)e8=Q        a promotion carries the chosen piece
+(L-1T2)a1>(L-1T2)a2        negative timelines are written with the sign; a leading + (L+1) is accepted when reading
+(L0T9)e7>(L0T9)e8=Q        a promotion carries the chosen piece
 ```
 
 Grammar (no spaces inside a move):
@@ -17,8 +17,8 @@ Grammar (no spaces inside a move):
 ```
 move      = square ">" square [ "=" piece ]
 square    = "(L" timeline "T" turn ")" file rank
-timeline  = [ "-" ] digits            -1000 .. 1000
-turn      = digits                    0 .. 10000
+timeline  = [ "+" | "-" ] digits      -1000 .. 1000 ("+" is only read, never written)
+turn      = digits                    1 .. 10000
 file      = "a" .. "h"                x = 0 .. 7
 rank      = "1" .. "8"                y = 0 .. 7
 piece     = "Q" | "R" | "B" | "N"
@@ -26,24 +26,21 @@ piece     = "Q" | "R" | "B" | "N"
 
 * **Timeline** `L<id>` is the engine's timeline ID, as in `.5dp` files ([POSITIONS.md](POSITIONS.md)); `L-1` is the first
   timeline created by Black, `L1` the first created by White.
-* **Turn** `T<n>` is the *full* turn number of the board, counted from 0 like `T0w` in position files: the board of
-  half-turn `h` is `T(h / 2)`. A move always starts from and lands on a board that ends on the mover's turn, so all its
-  boards are White's (even half-turns) or all Black's (odd). The text therefore does not say which: `parseMove(text, mover)`
-  takes the side, and inside a record it is the side to move. `(L0T3)` is half-turn 6 for White and 7 for Black.
-* **File** is `'a' + x`, **rank** is `y + 1`, with the engine's own coordinates (`x` = file from the left, `a` = 0;
-  `y` = 0 is White's back rank). The letters are therefore **not mirrored**: they show the squares exactly as the board text
-  in a `.5dp` file lists them, and in the engine's standard setup the **king stands on d1 and the queen on e1** (x = 3 and
-  4), the other way round from the notation of the game and of 5d-chess-js (queen d, king e). `e2>e4` in the standard
-  mode is the pawn in front of the *queen*. To get the letters of the game's notation, mirror the file within the board:
-  `file' = 'a' + (N - 1 - x)` for a board of N files (standard N = 8: `a <-> h`, `d <-> e`). This is the same mirroring
-  `tools/refcheck` applies when it compares the engine with 5d-chess-js ([RULES.md](RULES.md), difference 2). The
-  mirroring is not built in, so that a move's text does not depend on the board size.
+* **Turn** `T<n>` is the *full* turn number of the board, **counted from 1** like `T1w` in position files: the board of
+  half-turn `h` is `T(h / 2 + 1)`, so the starting board is `T1`. A move always starts from and lands on a board that ends on
+  the mover's turn, so all its boards are White's (even half-turns) or all Black's (odd). The text therefore does not say
+  which: `parseMove(text, mover)` takes the side, and inside a record it is the side to move. `(L0T4)` is half-turn 6 for
+  White and 7 for Black.
+* **File** is `'a' + x`, **rank** is `y + 1`: `a` is the left file seen from White's side and `y` = 0 is White's back rank, so
+  the squares read exactly as on the board the player sees and as in the board text of a `.5dp` file; the king of the
+  standard setup stands on e1, the queen on d1. This is also the convention of 5d-chess-js, whose boards are indexed the same
+  way, so `tools/refcheck` maps files one to one. Square names do not depend on the board size.
 * **Promotion** `=Q`, `=R`, `=B`, `=N` is the piece the pawn becomes. `toNotation(move, promotes)` writes it when
   `promotes` is true or `move.promotion` is not the default Queen; the game knows which moves promote (`IGame::history()`
   records `PlayedMove::promotes`), `Core::Move` alone does not. In a record the suffix is **required exactly when a pawn
   reaches the last rank** (so a Queen promotion is written `=Q`, a plain move never has a suffix); `loadRecord` rejects both
   omissions and extras, which makes the text of a game canonical.
-* Castling is the king's two-file step (`(L0T0)d1>(L0T0)b1` in the engine's mirrored setup), en passant the pawn's diagonal
+* Castling is the king's two-file step (`(L0T1)e1>(L0T1)g1`), en passant the pawn's diagonal
   step onto the empty square: as in the engine, the geometry says it, the notation has no extra mark. Captures are not marked.
 * Numbers are range-checked while reading (at most six characters, within the ranges above); anything else, including
   `+1`, spaces, lower-case pieces and trailing text, is a `Core::ParseError`.
@@ -53,12 +50,12 @@ piece     = "Q" | "R" | "B" | "N"
 ```
 5dchess-record 1
 mode: standard
-T0w: (L0T0)e2>(L0T0)e4
-T0b: (L0T0)e7>(L0T0)e5
-T1w: (L0T1)b1>(L0T1)c3
+T1w: (L0T1)e2>(L0T1)e4
+T1b: (L0T1)e7>(L0T1)e5
+T2w: (L0T2)b1>(L0T2)c3
 ```
 
-A turn with several moves lists them on one line, e.g. `T4w: (L0T4)... (L1T4)...` (one move on each timeline that had to be moved on).
+A turn with several moves lists them on one line, e.g. `T5w: (L0T5)... (L1T5)...` (one move on each timeline that had to be moved on).
 
 * The first non-comment line is `5dchess-record 1` (magic and version). `#` starts a comment line, blank lines are ignored,
   `\r` at the end of a line is ignored.
@@ -70,11 +67,12 @@ A turn with several moves lists them on one line, e.g. `T4w: (L0T4)... (L1T4)...
   `IGame::startPosition()`, i.e. the normalised position the game was built from). A `mode:` record depends on the file
   of that mode staying the same.
 * **One line per submitted turn**, in order: `T<n><w|b>: <move> <move> ...`. The label is the **present** when the turn
-  started (half-turn `h` is `T(h / 2)` followed by `w` for even, `b` for odd `h`) and must equal the replayed game's present,
-  which also says whose turn it is; it is a check, because a move into the past can pull the present back and then the same
-  side moves again in the next line. The moves of a turn are separated by single spaces, in the order they were played.
+  started (half-turn `h` is `T(h / 2 + 1)` followed by `w` for even, `b` for odd `h`) and must equal the replayed game's present,
+  which also says whose turn it is; it is a check, because a move into the past can pull the present back (a later
+  line can then start at an earlier turn than the line before it). The moves of a turn are separated by single spaces, in the order they were played.
   A turn has at least one move.
-* The moves of an unfinished turn are not written. The game result is not written either: it follows from the moves.
+* The moves of an unfinished turn are not written: `writeRecord(game, &droppedPending)` reports whether there were any, so that a
+  save function can warn the player. The game result is not written either: it follows from the moves.
 
 ### What `loadRecord` checks
 
@@ -97,7 +95,7 @@ equal those of the original (tested on random games of all modes, `tests/notatio
 ### Limits
 
 Reading is bounded like the position parser, so a hostile file cannot make it run or allocate without limit: at most
-4 MiB of text, 5000 turns, 256 moves per turn, 50 000 moves, timelines within -1000..1000 and turns up to 10000 in the
+4 MiB of text, 5000 turns, 256 moves per turn, 50 000 moves, timelines within -1000..1000 and turns 1..10000 in the
 moves, and whatever the position parser allows in an embedded position. Each submitted turn arms a result search that copies
 the boards, which is why the turn count is capped well below the position format's board limit.
 
@@ -106,10 +104,16 @@ the boards, which is why the turn count is capped well below the position format
 ```cpp
 std::string toNotation(const Core::Move&, bool promotes = false);
 Core::Move  parseMove(std::string_view text, PieceColor mover);        // throws Core::ParseError
-std::string writeRecord(const IGame&);                                  // std::logic_error if the game has no start position
+std::string writeRecord(const IGame&, bool* droppedPending = nullptr);                               // std::logic_error if the game has no start position
 std::shared_ptr<IGame> loadRecord(std::string_view text);               // throws Core::ParseError
 ```
 
 `IGame` keeps what a record needs: `history()` (the submitted turns, each a `Core::PlayedTurn` with the present it started
 at and its `Core::PlayedMove`s), `pendingMoves()`, `startPosition()` and `modeId()`. Games built directly in code (the
 engine's test sandboxes) have no start position and cannot be written as a record.
+
+## Differences from other notations
+
+Squares, turns (from 1), file letters and the sign of timelines follow the game and 5d-chess-js. The text itself is not
+Axioms' notation ([RULES.md](RULES.md) S4): a move names only its two squares (no piece letter, no capture or check marks,
+no `>>` for jumps), which is enough because the engine decides what the move does from the board.

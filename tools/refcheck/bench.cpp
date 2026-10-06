@@ -30,7 +30,7 @@ std::string mateText(int boards, bool bystanders) {
   const char* rows = bystanders ? "R6k/6pp/8/8/8/1ppppp2/8/K7" : "R6k/6pp/8/8/8/8/8/K7";
   for (int id = 0; id < boards; ++id) {
     const std::string l = "L" + std::to_string(id);
-    text += l + " T0w: " + rows + "\n" + l + " T0b: " + rows + "\n";
+    text += l + " T1w: " + rows + "\n" + l + " T1b: " + rows + "\n";
   }
   return text;
 }

@@ -15,8 +15,7 @@
 //   timeline ID n  ->  index l:  n > 0: 2n   n < 0: -2n-1   0: 0        (parse.js: even = White's, odd = Black's)
 //   half-turn h    ->  t = h  (the reference's turn index of the same board; board 0 = White to move)
 //   rank y         ->  r = y  (row 0 = White's back rank in both)
-//   file x         ->  f = N-1-x   (the engine's starting position has K on the d-file and Q on the e-file; the
-//                                   reference has Q on d and K on e, so the files are mirrored. Rules are symmetric.)
+//   file x         ->  f = x       (a = 0 on the left from White's side in both; K on the e-file)
 //   piece          ->  code: P 1, B 3, N 5, R 7, Q 9, K 11; White = code+1 (even), Black = code; negative = unmoved.
 // Pawn double steps and castling are controlled in the reference by the "unmoved" sign, so in modes where the
 // engine disables them the corresponding pieces are mapped as already moved.
@@ -66,7 +65,7 @@ const tlToIdx = (n) => (n > 0 ? 2 * n : n < 0 ? -2 * n - 1 : 0);
 const idxToTl = (l) => (l === 0 ? 0 : l % 2 === 0 ? l / 2 : -(l + 1) / 2);
 const PROMO = { 0: [10, 8, 4, 6], 1: [9, 7, 3, 5] }; // by colour (0 = White): Q R B N
 const NAMES = { 1: 'p', 3: 'b', 5: 'n', 7: 'r', 9: 'q', 11: 'k' };
-const sq = (n, r, f) => String.fromCharCode(97 + (n - 1 - f)) + (r + 1); // engine file letters: x = n-1-f
+const sq = (n, r, f) => String.fromCharCode(97 + f) + (r + 1); // file letters: x = f
 
 // ---------------------------------------------------------------------------------------------------------------
 // Vector tables.
@@ -101,7 +100,7 @@ function buildReference(init) {
     const rows = [];
     for (let r = 0; r < n; r++) {
       const row = [];
-      for (let f = 0; f < n; f++) row.push(normalize(init, cells[r * n + (n - 1 - f)]));
+      for (let f = 0; f < n; f++) row.push(normalize(init, cells[r * n + f]));
       rows.push(row);
     }
     boardFuncs.setTurn(raw, tlToIdx(tl), h, rows);
@@ -139,7 +138,7 @@ function fmtBoard(n, rows) {
   const out = [];
   for (let r = n - 1; r >= 0; r--) {
     let s = (r + 1) + ' ';
-    for (let f = n - 1; f >= 0; f--) { // print file a (x = 0) on the left: x = n-1-f
+    for (let f = 0; f < n; f++) { // print file a (x = 0) on the left
       const c = rows[r][f];
       if (!c) { s += '. '; continue; }
       const a = Math.abs(c);
@@ -157,7 +156,7 @@ function oursKeys(n, color, moves) {
   const keys = [];
   for (const m of moves) {
     const l = tlToIdx(m[0]), l2 = tlToIdx(m[4]);
-    const base = `${l},${m[1]},${m[3]},${n - 1 - m[2]}>${l2},${m[5]},${m[7]},${n - 1 - m[6]}`;
+    const base = `${l},${m[1]},${m[3]},${m[2]}>${l2},${m[5]},${m[7]},${m[6]}`;
     if (m[8] === 1) for (const p of PROMO[color]) keys.push(`${base}|${p}|`);
     else keys.push(`${base}|0|${m[8] === 2 ? 'castle' : m[8] === 3 ? 'ep' : ''}`);
   }
@@ -275,9 +274,9 @@ function runGame(mode, seed) {
         const [rt, rboard] = refTips[l];
         if (rt !== h) return fail('tip-time', { timeline: tl, ours: h, ref: rt });
         for (let r = 0; r < n; r++) for (let f = 0; f < n; f++) {
-          const o = normalize(init, cells[r * n + (n - 1 - f)]);
+          const o = normalize(init, cells[r * n + f]);
           if (o !== rboard[r][f]) {
-            const oRows = []; for (let rr = 0; rr < n; rr++) { oRows.push([]); for (let ff = 0; ff < n; ff++) oRows[rr].push(normalize(init, cells[rr * n + (n - 1 - ff)])); }
+            const oRows = []; for (let rr = 0; rr < n; rr++) { oRows.push([]); for (let ff = 0; ff < n; ff++) oRows[rr].push(normalize(init, cells[rr * n + ff])); }
             return fail('board-mismatch', { timeline: tl, half: h, square: sq(n, r, f), ours: o, ref: rboard[r][f],
               oursBoard: '\n' + fmtBoard(n, oRows), refBoard: '\n' + fmtBoard(n, rboard) });
           }

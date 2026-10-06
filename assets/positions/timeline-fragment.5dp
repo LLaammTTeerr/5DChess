@@ -3,5 +3,5 @@ title: Misc - Time Line Fragment
 size: 4
 rules: none
 to-move: white
-L0 T0b: kppp/4/4/NBRN
-L1 T0w: nbrn/4/4/KPPP
+L0 T1b: pppk/4/4/NRBN
+L1 T1w: nrbn/4/4/PPPK

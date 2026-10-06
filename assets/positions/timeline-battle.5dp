@@ -3,6 +3,6 @@ title: Misc - Time Line Battle
 size: 5
 rules: none
 to-move: white
-L0 T0w: rrkrr/bbqbb/ppppp/5/PPPPP
-L1 T0w: nnnnn/ppppp/5/PPPPP/NNNNN
-L2 T0w: ppppp/5/PPPPP/BBQBB/RRKRR
+L0 T1w: rrkrr/bbqbb/ppppp/5/PPPPP
+L1 T1w: nnnnn/ppppp/5/PPPPP/NNNNN
+L2 T1w: ppppp/5/PPPPP/BBQBB/RRKRR

@@ -126,6 +126,7 @@ The engine tests do not need raylib or a display. Drop `-DFDCHESS_SANITIZE=ON` f
 - [docs/RULES.md](docs/RULES.md): the rules the engine implements, their sources, and the deliberate differences from the
   reference engine 5d-chess-js.
 - [docs/POSITIONS.md](docs/POSITIONS.md): the `.5dp` position file format used by the nine game modes (`assets/positions/`).
+- [docs/NOTATION.md](docs/NOTATION.md): move notation (`(L0T1)e2>(L0T1)e4`) and the `5dchess-record` game record format.
 - [docs/SEARCH.md](docs/SEARCH.md): how checkmate / stalemate are decided without blocking the game (the resumable
   `TurnSearch`), why its pruning is safe, and the benchmark (`turnbench`).
 - `tools/refcheck/` (`-DFDCHESS_BUILD_REFCHECK=ON`, default OFF): plays random legal games, dumps every position with its full
@@ -182,7 +183,7 @@ The game changes its working directory to the executable's folder, so it can be 
 ├── tests/                     # doctest unit and property tests for the engine
 │   └── ui/                    # UI screenshot tests (scripts, baselines)
 ├── tools/                     # theme_preview, ui_script, refcheck (differential tests against 5d-chess-js)
-├── docs/                      # RULES.md, SEARCH.md, POSITIONS.md, screenshots
+├── docs/                      # RULES.md, SEARCH.md, POSITIONS.md, NOTATION.md, screenshots
 └── README.md                  # This file
 ```
 

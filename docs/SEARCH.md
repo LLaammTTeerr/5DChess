@@ -242,6 +242,10 @@ a plain value and `Board` a fixed array of one-byte cells (Release, same machine
 | 1000 random games (16 455 turns) | 56.1 / 54.8 s | 46.5 / 42.5 s |
 | checksum of the games | `ffa3b5ef7c15e8dc` | `ffa3b5ef7c15e8dc` |
 
+The checksum was identical before and after the value refactor. When the engine's x axis was later flipped (x = displayed file, king on
+e1) the random choices pick other moves, so the same seeds play different games: 1000 games = 17 069 turns, checksum
+`f98ecec2ac1af4c0`, 2.20 / 2.28 M nodes/s and 42.2 / 43.0 s.
+
 ## 8. Reproducing the comparison with 5d-chess-js
 
 The *rules* (not the search) are checked against the reference engine by `tools/refcheck/compare.js`; see its header and the

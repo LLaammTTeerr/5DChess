@@ -43,7 +43,8 @@ struct Cursor {
     ++pos;
   }
   // [-]digits, at most 6 characters, within lo..hi
-  int number(const char* what, int lo, int hi) {
+  int number(const char* what, int lo, int hi, bool allowPlus = false) {
+    if (allowPlus and peek() == '+') ++pos;
     const size_t start = pos;
     if (peek() == '-') ++pos;
     while (!done() and text[pos] >= '0' and text[pos] <= '9') ++pos;
@@ -59,9 +60,9 @@ struct Cursor {
 Coord parseCoord(Cursor& c, PieceColor mover) {
   c.expect('(');
   c.expect('L');
-  const int timeline = c.number("timeline", -kMaxTimelineId, kMaxTimelineId);
+  const int timeline = c.number("timeline", -kMaxTimelineId, kMaxTimelineId, true);
   c.expect('T');
-  const int turn = c.number("turn", 0, kMaxTurnNumber);
+  const int turn = c.number("turn", 1, kMaxTurnNumber);
   c.expect(')');
   const char file = c.peek();
   if (file < 'a' or file >= 'a' + Board::MAX_DIM) fail("file must be a letter a.." + std::string(1, char('a' + Board::MAX_DIM - 1)));
@@ -69,7 +70,7 @@ Coord parseCoord(Cursor& c, PieceColor mover) {
   const char rank = c.peek();
   if (rank < '1' or rank >= '1' + Board::MAX_DIM) fail("rank must be a digit 1.." + std::to_string(Board::MAX_DIM));
   ++c.pos;
-  return Coord{int8_t(file - 'a'), int8_t(rank - '1'), int16_t(2 * turn + (mover == PieceColor::PIECEBLACK ? 1 : 0)),
+  return Coord{int8_t(file - 'a'), int8_t(rank - '1'), int16_t(2 * (turn - 1) + (mover == PieceColor::PIECEBLACK ? 1 : 0)),
                int16_t(timeline)};
 }
 
@@ -101,12 +102,12 @@ ParsedMove parseMoveText(std::string_view text, PieceColor mover) {
 }
 
 std::string squareText(const Coord& c) {
-  return "(L" + std::to_string(c.l) + "T" + std::to_string(c.t / 2) + ")" + char('a' + c.x) + char('1' + c.y);
+  return "(L" + std::to_string(c.l) + "T" + std::to_string(c.t / 2 + 1) + ")" + char('a' + c.x) + char('1' + c.y);
 }
 
 // ---- records --------------------------------------------------------------------------------------------------------
 
-std::string turnLabel(int halfTurn) { return "T" + std::to_string(halfTurn / 2) + (halfTurn % 2 == 0 ? "w" : "b"); }
+std::string turnLabel(int halfTurn) { return "T" + std::to_string(halfTurn / 2 + 1) + (halfTurn % 2 == 0 ? "w" : "b"); }
 
 } // namespace
 
@@ -124,7 +125,8 @@ Core::Move parseMove(std::string_view text, PieceColor mover) {
   }
 }
 
-std::string writeRecord(const IGame& game) {
+std::string writeRecord(const IGame& game, bool* droppedPending) {
+  if (droppedPending) *droppedPending = !game.pendingMoves().empty();
   std::string out = "5dchess-record 1\n";
   if (!game.modeId().empty()) {
     out += "mode: " + game.modeId() + "\n";
