@@ -83,11 +83,12 @@ public:
   /// 0..1 progress of the attack lines drawing from attacker to king (1 when settled).
   float checkDrawOn() const;
 
-  /// The turn was handed over: the present column slides from half-turn `from` to `to`, and `boards` (the boards the new side
-  /// to move may move on, in column order) lift one after the other.
-  void handOver(int fromHalfTurn, int toHalfTurn, const std::vector<BoardKey>& boards);
+  /// The present moved from half-turn column `from` to `to`: the marker slides (presentSlide()) instead of jumping.
+  void presentMoved(int fromHalfTurn, int toHalfTurn);
   struct Slide { int from = 0, to = 0; float progress = 1.0f; bool active = false; };
   const Slide& presentSlide() const { return _slide; }
+  /// The turn was submitted: `boards` (the boards the new side to move may move on, in column order) lift one after the other.
+  void liftBoards(const std::vector<BoardKey>& boards);
 
   /// A move left board `from` for another board: it keeps an accent halo for a moment.
   void markSource(BoardKey from);
@@ -165,6 +166,8 @@ private:
   float _slideClock = 99.0f;
   struct Lift { BoardKey key; float delay; };
   std::vector<Lift> _lifts;
+  float _liftClock = 99.0f;
+  bool _lifting = false;
 
   BoardKey _sourceKey{0, 0};
   float _sourceClock = 99.0f;

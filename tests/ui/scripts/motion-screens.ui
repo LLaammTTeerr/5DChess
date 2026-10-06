@@ -1,0 +1,21 @@
+# Motion: Full, then screen changes: the incoming screen slides in 12 px while the old one fades, and a click made during the
+# fade reaches the new screen (it used to be swallowed): Versus, then the "No Knight" row 3 frames later.
+# Settings layout: Settings (150,490); Display tab (880,172); Motion cycle (700,532); Back (125,25). Main menu Versus (150,250);
+# "No Knight" row (690,304).
+wait 20
+click 150 490
+wait 30
+click 880 172
+wait 20
+click 700 532        # Motion: Reduced -> Full
+wait 10
+click 125 25         # Back: the main menu slides in from the left
+wait 4
+capture motion-screens-back-f4
+wait 40
+click 150 250        # Versus: forward, the mode list slides in from the right
+wait 2
+capture motion-screens-forward-f3
+click 690 304        # a click during the fade: it picks "Simplify - No Knight"
+wait 60
+capture motion-screens-click-through

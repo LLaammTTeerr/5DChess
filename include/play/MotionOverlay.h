@@ -31,8 +31,6 @@ private:
 /// (`paintBackground` draws the view's background). The lane grows from the side of its parent lane.
 void drawLaneUnfold(const std::vector<MoveAnimator::LaneUnfold>& lanes, const MultiverseView& view, const Camera2D& camera,
                     const std::function<void()>& paintBackground);
-/// The present column marker sliding to its new column: a band that leaves the old column and fades as it arrives.
-void drawPresentSlide(const MoveAnimator::Slide& slide, const Camera2D& camera, const BoardStyle& style);
 
 // ---- World space, before the boards (with the halos) ----
 /// The glow of a board (the target of the live arc, the source of the last time-travel move).

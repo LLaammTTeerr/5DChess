@@ -104,6 +104,7 @@ void MoveAnimator::finish() {
   _checkClock = 99.0f;
   _slide.active = false;
   _lifts.clear();
+  _lifting = false;
 }
 
 void MoveAnimator::select(const std::optional<Chess::Core::Coord>& from, const std::vector<Chess::Core::Coord>& targets, int dim) {
@@ -165,9 +166,9 @@ Vector2 MoveAnimator::boardOffset(BoardKey key, float zoom) const {
     dx = feedback::shakeOffset(_reject.clock / feedback::kShakeSeconds) * inv;
   if (_chromeNow.key == key) dy -= feedback::kChromeLiftPixels * easeOutCubic(_chromeNow.alpha) * inv;
   if (_chromeOld.key == key && _chromeOld.alpha > 0.0f) dy -= feedback::kChromeLiftPixels * easeOutCubic(_chromeOld.alpha) * inv;
-  if (_slide.active)
+  if (_lifting)
     for (const Lift& l : _lifts)
-      if (l.key == key) dy -= feedback::liftBump(_slideClock - l.delay) * inv;
+      if (l.key == key) dy -= feedback::liftBump(_liftClock - l.delay) * inv;
   return {dx, dy};
 }
 
@@ -209,10 +210,16 @@ float MoveAnimator::checkDrawOn() const {
   return easeOutCubic(_checkClock / feedback::kCheckDrawOnSeconds);
 }
 
-void MoveAnimator::handOver(int fromHalfTurn, int toHalfTurn, const std::vector<BoardKey>& boards) {
+void MoveAnimator::presentMoved(int fromHalfTurn, int toHalfTurn) {
   if (reduced() || fromHalfTurn == toHalfTurn) return;
   _slide = {fromHalfTurn, toHalfTurn, 0.0f, true};
   _slideClock = 0.0f;
+}
+
+void MoveAnimator::liftBoards(const std::vector<BoardKey>& boards) {
+  if (reduced()) return;
+  _lifting = true;
+  _liftClock = 0.0f;
   _lifts.clear();
   float delay = 0.0f;
   for (const BoardKey& b : boards) {
@@ -290,12 +297,15 @@ void MoveAnimator::updateFeedback(float dt) {
   }
   _lanes.erase(std::remove_if(_lanes.begin(), _lanes.end(), [](const Lane& l) { return l.clock >= feedback::kLaneUnfoldSeconds; }), _lanes.end());
 
-  // Turn hand-over
+  // The present marker's slide and the lift of the boards that got the move
   if (_slide.active) {
     _slideClock += dt;
     _slide.progress = easeInOutCubic(clamp01(_slideClock / feedback::kHandOverSeconds));
-    const float end = feedback::kHandOverSeconds + feedback::kLiftStagger * static_cast<float>(_lifts.size()) + 0.05f;
-    if (_slideClock >= end) { _slide.active = false; _lifts.clear(); }
+    if (_slideClock >= feedback::kHandOverSeconds) _slide.active = false;
+  }
+  if (_lifting) {
+    _liftClock += dt;
+    if (_liftClock >= feedback::kHandOverSeconds + feedback::kLiftStagger * static_cast<float>(_lifts.size())) { _lifting = false; _lifts.clear(); }
   }
 }
 

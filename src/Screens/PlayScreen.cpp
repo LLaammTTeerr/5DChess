@@ -513,13 +513,14 @@ void PlayScreen::rebuild() {
     if (!decided) App::current().audio.playSfx(Sfx::Check);
   }
   _lastKings = std::move(kings);
+  if (_checkSeeded && presentBefore != _view.presentHalfTurn) _animator.presentMoved(presentBefore, _view.presentHalfTurn); // the marker slides
   _checkSeeded = true;
   if (_slidePending) {
     _slidePending = false;
     std::vector<BoardKey> movers;
     for (const auto& b : _view.boards)
       if (b.role != play::BoardRole::Past) movers.push_back({b.timeline, b.halfTurn});
-    _animator.handOver(presentBefore, _view.presentHalfTurn, movers);
+    _animator.liftBoards(movers);
     if (!newCheck && !decided) App::current().audio.playSfx(Sfx::Submit);
   }
 }
@@ -591,9 +592,10 @@ void PlayScreen::draw(App& app) const {
 
   // Behind everything: the background, then lanes and the present column (they run under the HUD)
   _scene.drawBackground(style);
+  const auto& slide = _animator.presentSlide(); // the present marker slides to its new column
+  _scene.setPresentAt(slide.active ? UI::Motion::lerp(static_cast<float>(slide.from), static_cast<float>(slide.to), slide.progress) : -1.0f);
   if (!_layout.boards().empty()) _scene.drawLanes(frame, UI::Layout::rulerY);
   play::overlay::drawLaneUnfold(_animator.unfoldingLanes(), _view, camera, [&] { _scene.drawBackground(style); }); // new lane unfolds
-  play::overlay::drawPresentSlide(_animator.presentSlide(), camera, style);
 
   // The boards never draw over the HUD bars: they are clipped to the free area (plus a little for halos)
   constexpr float kClipPad = 12.0f;

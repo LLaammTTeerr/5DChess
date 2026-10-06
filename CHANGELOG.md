@@ -14,6 +14,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **End card buttons**: Rematch (same mode, side and level; fresh seed against the computer), Review board (dismisses the card, the pill keeps the result) and Back to menu; the scrim is lighter so the final position stays readable.
 - **Undo label and badge**: "Undo move" (a move of this turn) or "Undo turn" (against the computer), with a count badge when the turn has several moves.
 - HUD data for the camera: `HudData::cameraLabel`, `nextBoardLabel`, `rightInset`; `ActionRow` returns `Overview` / `NextBoard` (the buttons and the new controls line show as soon as the screen reports a camera label); `BoardScene::presentColumnX(t)` (world x of a fractional half-turn column) and `setPresentAt(t)` for the present-marker slide.
+- **Feedback motion** on the board view (Reduce motion keeps the static parts and drops the animation):
+  - a click that cannot do anything (an opponent's piece, a board that is history, a click on the boards while the computer thinks) shakes its card, flashes the square red and says why in red under the turn ruler (`Selection` returns a new `Rejected` intent with a reason);
+  - hovering a piece you can pick up shows its targets as hollow dots after 120 ms, with dashed arcs to the other boards they lie on;
+  - with a piece picked up, hovering a time-travel target draws its arc live, lights the target board and its ruler column and lane label;
+  - a move that creates a timeline unfolds the new lane from its parent, starts the branch connector with it and lets the piece leave 120 ms later; the board a time-travel move left keeps an accent halo for 1.5 s;
+  - a newly attacked king pulses twice and the attack line draws on from the attacker;
+  - Submit slides the present column to its new place and lifts the boards of the side to move one after the other; a hovered card frame lifts 2 px.
+- **Sound cues** (Kenney, CC0; they follow the sound-effects setting): Submit, a move that creates a timeline, a check, a refused click.
+- Screens slide in 12 px in the direction of travel (from the right going forward, from the left going back) while the old screen fades; a pressed button scales to 0.98.
+- Tests: `Selection` reasons and the feedback curves (`tests/selection_test.cpp`, `tests/feedback_test.cpp`); Motion: Full UI scripts with mid-animation captures (`motion-shake`, `motion-travel`, `motion-check`, `motion-screens`); `ui_script` gains `hoversq`.
 
 ### Changed
 - The "White / Black to move" banner no longer covers the turn ruler: after a turn change the pill's hint segment cross-fades to it for 1.2 s (and it is skipped while the computer is to move).
@@ -24,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The promotion picker opens above or below the board's card, on the side the promotion square is nearest, with a thin line to the square, instead of covering the neighbouring ranks.
 - Settings: every tab has the same two columns (options at the left, what they do at the right).
 - A wrong puzzle answer stays on the board until **Try again** is pressed (it used to reset itself after 2.4 s).
+- **Esc** now cancels what is open (the promotion choice, then the picked-up piece) instead of hiding the navigation buttons; those move to **H**.
+- The first click after a screen change is no longer swallowed by the cross-fade: it reaches the new screen.
+- The legal-target dots of a long-range piece all appear within 150 ms (the stagger is capped; it was up to 300 ms).
 - Release notes on GitHub now start with the version's CHANGELOG section (`scripts/changelog_section.sh`), followed by the list of merged PRs; the release workflow fails early if the section is missing.
 
 ## [1.0.0] - 2026-10-06

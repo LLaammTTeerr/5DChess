@@ -80,20 +80,6 @@ void drawLaneUnfold(const std::vector<MoveAnimator::LaneUnfold>& lanes, const Mu
   }
 }
 
-void drawPresentSlide(const MoveAnimator::Slide& slide, const Camera2D& camera, const BoardStyle& style) {
-  if (!slide.active || slide.progress >= 0.999f) return;
-  const float x = UI::Motion::lerp(columnX(camera, static_cast<float>(slide.from)), columnX(camera, static_cast<float>(slide.to)), slide.progress);
-  const float halfW = BoardLayout::kPitch * camera.zoom / 2.0f;
-  const float top = UI::Layout::rulerY, bottom = static_cast<float>(GetScreenHeight()) - 6.0f;
-  const float a = std::sin(slide.progress * 3.14159265f); // strongest mid-way
-  const Rectangle r = {x - halfW, top, 2.0f * halfW, bottom - top};
-  BeginScissorMode(0, static_cast<int>(top), GetScreenWidth(), static_cast<int>(bottom - top));
-  DrawRectangleRec(r, fade(style.accent, 0.20f * a));
-  DrawRectangle(static_cast<int>(r.x), static_cast<int>(top), 2, static_cast<int>(bottom - top), fade(style.accent, 0.55f * a));
-  DrawRectangle(static_cast<int>(r.x + r.width) - 2, static_cast<int>(top), 2, static_cast<int>(bottom - top), fade(style.accent, 0.55f * a));
-  EndScissorMode();
-}
-
 void drawBoardGlow(const Rect& board, float alpha, const BoardStyle& style, const SoftBox& soft, bool source) {
   if (alpha <= 0.01f) return;
   const Rectangle card = toRay(BoardLayout::cardRect(board));
