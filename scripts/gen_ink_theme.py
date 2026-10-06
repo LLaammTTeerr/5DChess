@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """Generate the "Ink" piece theme (assets/images/pieces/ink).
 
-East-Asian ink brush (sumi-e) tokens, with the sides told apart xiangqi-style by colour: vermilion vs black ink.
+East-Asian ink brush (sumi-e) tokens, with the sides told apart xiangqi-style by colour: vermilion on paper vs chalk on black lacquer.
 Every piece is a round paper/wood disc (warm paper with a seeded fibre texture and a thin darker rim, ~84% of the
 canvas wide).  On it a Western chess silhouette is painted in a handful of brush strokes, each a path of round
 stamps whose width follows a profile (loaded start, tapered tail), with seeded dry-brush streaks erased towards the
-tail, and a small square seal stamp near the upper right.  No glyphs or text of any kind: only abstract strokes.
+tail.  No glyphs or text of any kind: only abstract strokes.
 
   White : vermilion #B42A18 strokes and rim on bright paper #F3E9D2.
-  Black : black ink  #1B1A18 strokes and rim on greyer paper #D9CDB4 (so the sides also differ in greyscale).
+  Black : chalk-white ink #ECE1C8 strokes and rim on a black lacquer disc #2A2724 (a dark disc against White's bright
+          paper, so the sides differ strongly in value, i.e. in greyscale / Blueprint).
 
 Silhouettes: King = cross over a domed arch crown; Queen = five-pointed crown with pearls; Rook = three merlons on
 a tower; Bishop = mitre with a slit and ball; Knight = horse head in a few bold strokes (neck, muzzle, ear, mane);
@@ -33,7 +34,7 @@ DISC_R = 107.5  # 84% of 256 wide
 
 SIDES = {
     "white": {"ink": (0xB4, 0x2A, 0x18), "paper": (0xF3, 0xE9, 0xD2)},
-    "black": {"ink": (0x1B, 0x1A, 0x18), "paper": (0xD9, 0xCD, 0xB4)},
+    "black": {"ink": (0xEC, 0xE1, 0xC8), "paper": (0x2A, 0x27, 0x24)},
 }
 PIECES = ["king", "queen", "rook", "bishop", "knight", "pawn"]
 BASE_Y = 196
@@ -224,17 +225,6 @@ DRAW = {"king": king, "queen": queen, "rook": rook, "bishop": bishop, "knight": 
 
 
 # ---------------------------------------------------------------- token
-def seal(p, rng):
-    """Small square seal, upper right: filled square with an abstract paper-coloured L and dot."""
-    cx, cy, h = 172, 62, 8.5
-    jit = [rng.uniform(-0.8, 0.8) for _ in range(4)]
-    p.di.rounded_rectangle([(cx - h + jit[0]) * K, (cy - h + jit[1]) * K, (cx + h + jit[2]) * K, (cy + h + jit[3]) * K],
-                           radius=int(1.5 * K), fill=235)
-    p.hole_stroke((cx - 4, cy - 4), (cx - 4, cy + 3), 2.2)
-    p.hole_stroke((cx - 4, cy + 3), (cx + 3, cy + 3), 2.2)
-    p.hole(cx + 3, cy - 3, 1.7)
-
-
 def make_token(side, name):
     cfg = SIDES[side]
     ink, paper = cfg["ink"], cfg["paper"]
@@ -274,7 +264,6 @@ def make_token(side, name):
     img = Image.composite(Image.new("RGB", (BIG, BIG), ink), img, ring)
     p = Painter(rng)
     DRAW[name](p)
-    seal(p, rng)
     img = Image.composite(Image.new("RGB", (BIG, BIG), ink), img, p.result())
     rgb = img.resize((SIZE, SIZE), Image.LANCZOS)
     out = rgb.convert("RGBA")

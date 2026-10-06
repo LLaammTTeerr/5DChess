@@ -26,20 +26,12 @@ settingsfile::Values toValues(const Settings& s) {
 }
 
 void applyValues(const settingsfile::Values& v, Settings& s) {
-  auto find = [&v](const char* key) -> const std::string* {
-    const auto it = v.find(key);
-    return it == v.end() ? nullptr : &it->second;
-  };
-  if (const auto* theme = find("theme"))
-    if (const PieceTheme* t = Themes::byName(*theme)) s.theme = *t;
-  if (const auto* view = find("board_view")) boardview::fromName(*view, s.boardView);
-  if (const auto* music = find("music")) {
-    bool known = *music == AudioManager::offName();
-    for (const auto& track : AudioManager::tracks()) known = known || track.name == *music;
-    if (known) s.music = *music; // a track that no longer exists means "Off"
-  }
-  if (const auto* sfx = find("sfx")) s.sfx = settingsfile::toBool(*sfx, s.sfx);
-  if (const auto* reduce = find("reduce_motion")) s.reduceMotion = settingsfile::toBool(*reduce, s.reduceMotion);
+  apply(v, s, [](const std::string& music) {
+    if (music == AudioManager::offName()) return true;
+    for (const auto& track : AudioManager::tracks())
+      if (track.name == music) return true;
+    return false;
+  });
 }
 
 #ifndef __EMSCRIPTEN__

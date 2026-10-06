@@ -267,11 +267,11 @@ Six piece themes ship with the game, all original and drawn by code (no third-pa
 | Pixel | pixel-art creatures that blink and hop (point-sampled) | `scripts/gen_pixel_theme.py` |
 | Medieval | carved ivory with gold trim against dark walnut with brass trim, crimson cloth | `scripts/gen_medieval_theme.py` |
 | Bauhaus | flat modernist geometry in cream and near-black with red, yellow and blue accents | `scripts/gen_bauhaus_theme.py` |
-| Neon | glowing glass-tube signs, cyan for White and magenta for Black | `scripts/gen_neon_theme.py` |
+| Neon | glowing glass-tube signs, cyan on frosted glass for White and magenta on black glass for Black | `scripts/gen_neon_theme.py` |
 | Origami | low-poly folded paper, ivory against indigo | `scripts/gen_origami_theme.py` |
-| Ink | sumi-e brush strokes on paper discs, vermilion against black ink | `scripts/gen_ink_theme.py` |
+| Ink | sumi-e brush strokes on round tokens, vermilion on paper against chalk on black lacquer | `scripts/gen_ink_theme.py` |
 
-Regenerate a theme with `python3 scripts/gen_<id>_theme.py` (Python 3 with Pillow 10.1 or newer; the committed files were produced with 12.1). `--out DIR` sets the output directory (default `assets/images/pieces/<id>`) and `--sheet PATH` writes a preview contact sheet. The output is deterministic, so re-running rewrites byte-identical PNGs. All but Pixel are drawn at 4x and reduced with LANCZOS to 256x256 (sampled with mipmaps in the game), so they stay readable from full size down to about 16 px and in the greyscale Blueprint view, where the two sides differ by value.
+Regenerate a theme with `python3 scripts/gen_<id>_theme.py` (Python 3 with Pillow 10.1 or newer; the committed files were produced with 12.1). `--out DIR` sets the output directory (default `assets/images/pieces/<id>`) and `--sheet PATH` writes a preview contact sheet. The output is deterministic, so re-running rewrites byte-identical PNGs. `python3 scripts/gen_theme_sheet.py` recomposes the overview image above from the committed pieces. All but Pixel are drawn at 4x and reduced with LANCZOS to 256x256 (sampled with mipmaps in the game), so they stay readable from full size down to about 16 px and in the greyscale Blueprint view, where the two sides differ by value.
 
 ![Contact sheet of the twelve Pixel theme pieces](docs/screenshots/pixel-pieces.png)
 

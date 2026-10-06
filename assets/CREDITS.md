@@ -36,8 +36,8 @@ Each track's OpenGameArt.org page lists "License(s): CC0" at the retrieval date.
 
 Montserrat, Public Sans and Intel One Mono are licensed under the SIL Open Font License 1.1. Each font file's
 embedded licence field says so (Montserrat: https://github.com/JulietaUla/Montserrat; Public Sans: https://github.com/uswds/public-sans, based on Libre Franklin;
-Intel One Mono: https://github.com/intel/intel-one-mono, (C) 2023 Intel Corporation). The OFL licence texts are not
-yet bundled alongside the font files.
+Intel One Mono: https://github.com/intel/intel-one-mono, (C) 2023 Intel Corporation). The licence text is bundled as
+`assets/fonts/OFL.txt` (with each font's copyright notice); it is installed with the assets in release packages and embedded in the web build.
 
 ## Images
 

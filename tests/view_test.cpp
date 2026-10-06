@@ -4,6 +4,7 @@
 #include "engine/Position.h"
 #include "services/SettingsFile.h"
 #include "Render/PieceThemes.h"
+#include "services/SettingsStore.h"
 #include <filesystem>
 #include <fstream>
 #include <set>
@@ -197,8 +198,8 @@ TEST_CASE("piece themes: every theme's textures are in the manifest and on disk"
       CHECK_MESSAGE(std::filesystem::exists(assets / path), id << " -> " << path);
     }
   }
-  for (const char* name : Themes::names) {
-    const PieceTheme& theme = *Themes::byName(name);
+  for (const auto& entry : Themes::all) {
+    const PieceTheme& theme = *entry.theme;
     for (const char* side : {"white", "black"})
       for (const char* piece : {"king", "queen", "rook", "bishop", "knight", "pawn"}) {
         const std::string id = std::string(theme.prefix) + side + "_" + piece;
@@ -209,12 +210,32 @@ TEST_CASE("piece themes: every theme's textures are in the manifest and on disk"
 }
 
 TEST_CASE("piece themes: names round-trip; a removed theme's saved name is unknown, so the default Pixel stays") {
-  for (const char* name : Themes::names) {
-    REQUIRE(Themes::byName(name) != nullptr);
-    CHECK(std::string(Themes::nameOf(*Themes::byName(name))) == name);
+  for (const auto& entry : Themes::all) {
+    CHECK(Themes::byName(entry.name) == entry.theme);
+    CHECK(std::string(Themes::nameOf(*entry.theme)) == entry.name);
   }
-  CHECK(std::string(Themes::names[0]) == "Pixel"); // the default and the first Settings entry
-  // SettingsStore keeps the default unless byName finds the stored name.
-  for (const char* gone : {"Classic", "Modern", "Fantasy", "classic", ""}) CHECK(Themes::byName(gone) == nullptr);
+  CHECK(std::string(Themes::all[0].name) == "Pixel"); // the default and the first Settings entry
   CHECK(std::string(Themes::nameOf(PieceTheme{"piece.classic.", false})) == "Pixel");
+  CHECK(Themes::byName("") == nullptr);
+}
+
+TEST_CASE("settings: a stored theme switches; a removed or unknown theme keeps the default Pixel") {
+  const auto applied = [](const std::string& text) {
+    Settings s;
+    SettingsStore::apply(settingsfile::parse(text), s);
+    return std::string(Themes::nameOf(s.theme));
+  };
+  CHECK(applied("theme=Medieval\n") == "Medieval");
+  CHECK(applied("theme=Ink\nboard_view=Blueprint\n") == "Ink");
+  for (const char* gone : {"Modern", "Classic", "Fantasy", "pixel", ""}) CHECK(applied(std::string("theme=") + gone + "\n") == "Pixel");
+  Settings s;
+  SettingsStore::apply(settingsfile::parse("theme=Neon\n"), s);
+  SettingsStore::apply(settingsfile::parse("theme=Modern\n"), s); // a later unknown name leaves the earlier choice
+  CHECK(std::string(Themes::nameOf(s.theme)) == "Neon");
+  Settings other;
+  SettingsStore::apply(settingsfile::parse("board_view=Blueprint\nsfx=off\nreduce_motion=on\nmusic=Anything\n"), other);
+  CHECK(other.boardView == BoardView::Blueprint);
+  CHECK_FALSE(other.sfx);
+  CHECK(other.reduceMotion);
+  CHECK(other.music == "Anything"); // no predicate here: every track name is accepted
 }

@@ -17,10 +17,17 @@ inline constexpr PieceTheme neon{"piece.neon.", false};         // glowing line-
 inline constexpr PieceTheme origami{"piece.origami.", false};   // folded-paper pieces
 inline constexpr PieceTheme ink{"piece.ink.", false};           // brush-ink pieces
 
-// Settings / theme_preview names, in Settings-screen order.
-inline constexpr const char* names[] = {"Pixel", "Medieval", "Bauhaus", "Neon", "Origami", "Ink"};
+// The one table behind byName, nameOf and the Settings labels: Settings / theme_preview name -> theme, in
+// Settings-screen order. The first entry is the default (and nameOf's fallback).
+struct Entry {
+  const char* name;
+  const PieceTheme* theme;
+};
+inline constexpr Entry all[] = {{"Pixel", &pixel},   {"Medieval", &medieval}, {"Bauhaus", &bauhaus},
+                                {"Neon", &neon},     {"Origami", &origami},   {"Ink", &ink}};
+inline constexpr int count = static_cast<int>(sizeof(all) / sizeof(all[0]));
 // By name; nullptr when unknown (e.g. a theme that an older settings file names but that no longer ships).
 const PieceTheme* byName(const std::string& name);
 // The name byName() finds the theme by ("Pixel" for an unknown theme).
 const char* nameOf(const PieceTheme& theme);
-}
+} // namespace Themes

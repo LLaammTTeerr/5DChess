@@ -5,12 +5,12 @@ Original flat, modernist geometry in the Bauhaus / Swiss-poster tradition.  Ever
 circles, semicircles, quarter-circles, squares, rectangles and triangles; no gradients, no shading.  Primary
 accents mark the rank:
 
-  King   red circle head with a cross of two bars on top, trapezoid body
-  Queen  yellow ring head with a small blue dot above it, broad triangular body
+  King   red circle head under a tall cross of two bars, trapezoid body
+  Queen  wide yellow five-point crown with three blue dots, broad trapezoid body (the widest silhouette)
   Rook   blue square set in a rectangular tower with three square merlons
   Bishop tall triangle head with a red triangle inset and a yellow dot, rectangular stem
   Knight quarter-circle head, rectangular snout, red eye, yellow mane bar, blue neck square
-  Pawn   yellow circle head on a small trapezoid
+  Pawn   small yellow circle head on a short trapezoid
 
 White side: cream bodies (#F4EFE6) with a thick near-black (#1A1A1A) outline and inner strokes.
 Black side: near-black bodies (#1E1E1E) with a cream outline / inner strokes plus a hairline dark halo, so the
@@ -102,19 +102,17 @@ def king():
     return base() + [
         ([poly((96, 206), (160, 206), (148, 100), (108, 100))], "body"),
         ([rect(88, 90, 168, 106)], "body"),
-        ([rect(121, 14, 135, 52)], "body"),
-        ([rect(108, 24, 148, 38)], "body"),
-        ([circ(128, 68, 24)], "red"),
+        ([rect(120, 18, 136, 62)], "body"),
+        ([rect(102, 30, 154, 44)], "body"),
+        ([circ(128, 80, 21)], "red"),
     ]
 
 
 def queen():
     return base() + [
-        ([poly((128, 62), (176, 206), (80, 206))], "body"),
-        ([rect(86, 112, 170, 126)], "body"),
-        ([circ(128, 66, 25)], "yellow"),
-        ([circ(128, 66, 11)], "body"),
-        ([circ(128, 24, 9)], "blue"),
+        ([poly((90, 206), (166, 206), (182, 118), (74, 118))], "body"),
+        ([poly((64, 124), (64, 60), (96, 92), (128, 50), (160, 92), (192, 60), (192, 124))], "yellow"),
+        ([circ(64, 54, 8), circ(128, 40, 9), circ(192, 54, 8)], "blue"),
     ]
 
 
@@ -150,9 +148,9 @@ def knight():
 
 def pawn():
     return [([rect(76, 218, 180, 232)], "body"), ([rect(88, 208, 168, 220)], "body"),
-            ([poly((98, 208), (158, 208), (146, 130), (110, 130))], "body"),
-            ([rect(94, 120, 162, 134)], "body"),
-            ([circ(128, 96, 24)], "yellow")]
+            ([poly((98, 208), (158, 208), (146, 146), (110, 146))], "body"),
+            ([rect(94, 136, 162, 150)], "body"),
+            ([circ(128, 116, 17)], "yellow")]
 
 
 PIECES = {"king": king, "queen": queen, "rook": rook, "bishop": bishop, "knight": knight, "pawn": pawn}

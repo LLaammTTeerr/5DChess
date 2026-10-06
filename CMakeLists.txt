@@ -41,7 +41,7 @@ endif()
 
 # --- Game-screen logic that needs no graphics (selection state machine, board layout, multiverse snapshot, settings file text) -----------------
 add_library(play_core STATIC src/play/Selection.cpp src/play/BoardLayout.cpp src/play/MultiverseView.cpp
-  src/services/SettingsFile.cpp src/services/SaveStore.cpp src/guide/Guide.cpp src/Render/PieceThemes.cpp)
+  src/services/SettingsFile.cpp src/services/SaveStore.cpp src/guide/Guide.cpp src/Render/PieceThemes.cpp src/services/SettingsApply.cpp)
 target_link_libraries(play_core PUBLIC chess_core)
 if(MSVC)
   target_compile_options(play_core PRIVATE /W4)
@@ -76,7 +76,7 @@ if(FDCHESS_BUILD_GAME)
   list(REMOVE_ITEM GAME_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/chess.cpp)
   list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/engine/") # engine sources are part of chess_core
   list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/guide/")  # guide content (no graphics) is part of play_core
-  list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/play/(Selection|BoardLayout|MultiverseView)\\.cpp|/src/services/(SettingsFile|SaveStore)\\.cpp|/src/Render/PieceThemes\\.cpp") # part of play_core
+  list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/play/(Selection|BoardLayout|MultiverseView)\\.cpp|/src/services/(SettingsFile|SaveStore)\\.cpp|/src/Render/PieceThemes\\.cpp|/src/services/SettingsApply\\.cpp") # part of play_core
 
   add_executable(5dchess ${GAME_SOURCES})
   target_include_directories(5dchess PRIVATE

@@ -6,7 +6,7 @@ triangles and quads (one "paper" facet each).  A facet carries a value v in 0..1
 away from it); the light comes from the top-left, so left/upper facets are light and right/lower facets are dark.
 v is snapped to quarter steps and mapped onto three paper tones per side:
 
-  White: ivory   #FFFFFF / #EDE7DC / #CFC6B6, thin warm-grey outline and darker-ivory fold lines.
+  White: ivory   #FFFFFF / #EDE7DC / #CFC6B6, a dark-umber edge stroke (so White reads on light squares and in greyscale) and darker-ivory fold lines.
   Black: indigo  #3A4A8C / #2A3670 / #1A2250, near-black indigo outline and lighter periwinkle fold lines.
 
 Every facet edge is stroked with a crisp fold line, a seeded (deterministic) paper-grain noise is blended over the
@@ -32,13 +32,13 @@ K = 4
 SIZE = 256
 BIG = SIZE * K
 CX = 128.0
-OUTLINE_W = 2.6        # outer outline, in 256-units
 FOLD_W = 0.9           # fold line width
 
 SIDES = {
     "white": {
         "tones": ["#FFFFFF", "#EDE7DC", "#CFC6B6"],
-        "outline": "#5A5144",
+        "outline": "#2E281F",
+        "outline_w": 3.4,
         "fold": "#A39A89",
         "deep": "#9A917F",
         "grain": 5,
@@ -46,6 +46,7 @@ SIDES = {
     "black": {
         "tones": ["#3A4A8C", "#2A3670", "#1A2250"],
         "outline": "#5666B8",
+        "outline_w": 2.6,
         "fold": "#5C6DB4",
         "deep": "#0E1334",
         "grain": 4,
@@ -249,7 +250,7 @@ def render(name, side):
     shifted = ImageChops.add(canvas, Image.merge("RGB", (grain,) * 3), scale=1, offset=-128)
     canvas = Image.composite(shifted, canvas, mask)
     # outline = dilated silhouette painted under the facets
-    alpha = mask.filter(ImageFilter.MaxFilter(int(OUTLINE_W * K) * 2 + 1))
+    alpha = mask.filter(ImageFilter.MaxFilter(int(cfg["outline_w"] * K) * 2 + 1))
     # soft shadow under the plinth
     sh = Image.new("L", (BIG, BIG), 0)
     ImageDraw.Draw(sh).ellipse([c * K for c in (62, 216, 194, 238)], fill=110)

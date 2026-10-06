@@ -4,11 +4,11 @@
 Original synthwave neon-sign pieces drawn entirely by the code below.  Every piece is a glass tube bent into the
 silhouette outline plus a few inner detail lines (round joins = tube bends).  Each tube is painted as
 
-  * a dark translucent glass fill inside the silhouette (~80% opaque navy) so the piece reads on LIGHT squares,
+  * a translucent glass fill inside the silhouette (frosted ice blue for White, near-black for Black),
   * a tight Gaussian glow around the tubes (tight enough not to bleed into neighbouring squares),
   * a saturated tube body and a thin, near-white core line.
 
-White side: cyan / ice tubes (glow #19E3FF) on deep navy glass.  Black side: magenta / hot pink tubes
+White side: cyan / ice tubes (glow #19E3FF) on frosted ice-blue glass (light in value, so White also reads as the light side in greyscale / Blueprint).  Black side: magenta / hot pink tubes
 (glow #FF2BA6) on an almost black glass with dimmer tube and core, so the sides also differ by value alone
 (greyscale / Blueprint view).  A small mounting bracket (plate with two bolts) sits under every piece.
 
@@ -35,7 +35,7 @@ CORE_W = 2.4
 GLOW_SIGMA = 3.5
 
 SIDES = {
-    "white": dict(glass=(18, 24, 72), glass_a=0.80, glow=(25, 227, 255), tube=(40, 210, 245), core=(232, 255, 255),
+    "white": dict(glass=(200, 232, 248), glass_a=0.94, glow=(25, 227, 255), tube=(0, 168, 224), core=(225, 252, 255),
                   glow_a=0.9),
     "black": dict(glass=(3, 3, 14), glass_a=0.88, glow=(255, 43, 166), tube=(205, 25, 135), core=(255, 190, 235),
                   glow_a=0.6),

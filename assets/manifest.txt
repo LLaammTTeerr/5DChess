@@ -119,3 +119,6 @@ dir positions/ positions/
 
 # The Guide's example positions (one .5dp per page).
 dir guide/ guide/
+
+# The fonts' licence text, shipped next to them (a `dir` entry naming one file: it only matters for the web build).
+dir fonts/OFL.txt fonts/OFL.txt
