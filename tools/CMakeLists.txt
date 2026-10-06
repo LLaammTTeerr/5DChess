@@ -11,7 +11,7 @@ foreach(tool theme_preview ui_script)
     ${PROJECT_SOURCE_DIR}/include/Audio
     ${PROJECT_SOURCE_DIR}/include/Render)
   target_compile_definitions(${tool} PRIVATE FDCHESS_VERSION="${PROJECT_VERSION}")
-  target_link_libraries(${tool} PRIVATE chess_core raylib)
+  target_link_libraries(${tool} PRIVATE play_core chess_core raylib)
   if(APPLE)
     target_link_libraries(${tool} PRIVATE
       "-framework OpenGL" "-framework Cocoa" "-framework IOKit" "-framework CoreAudio" "-framework CoreVideo")

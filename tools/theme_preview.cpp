@@ -1,4 +1,4 @@
-// Developer tool: renders a real game through ChessModel/ChessView/ChessController
+// Developer tool: renders a real game through the PlayScreen
 // with a chosen piece theme and saves a screenshot, then exits.
 //
 //   theme_preview <Classic|Modern|Fantasy|Pixel> <game mode> <output.png> [turns] [options]
@@ -8,7 +8,7 @@
 // moves that jump between boards so extra timelines appear in multi-timeline modes.
 //
 // Options (motion tooling):
-//   --demo same|cross   play one animated move through the controller (select, move, submit) after the
+//   --demo same|cross   play one animated move through the game screen (select, move, submit) after the
 //                       scripted turns; "cross" prefers a board-to-board / time-travel move
 //   --dump DIR          write the animated frames as DIR/0000.png ... at 30 fps of simulated time
 //   --perf [N]          after the scripted turns render N (default 600) frames with the animation running and
@@ -28,11 +28,10 @@
 #include "App.h"
 #include "engine/GameCatalog.h"
 #include "PieceTheme.h"
+#include "Input.h"
 #include "TestMode.h"
-#include "Render/View.h"
 #include "Render/UITheme.h"
-#include "Render/Controller.h"
-#include "Render/RenModel.h"
+#include "Screens/PlayScreen.h"
 #include "Render/Motion.h"
 
 namespace {
@@ -49,7 +48,7 @@ std::shared_ptr<Chess::IGame> makeGame(const std::string& mode) {
 }
 
 // Finds a legal move on any moveable board without applying it. Cross-board moves win when preferCross.
-bool findScriptedMove(Chess::IGame& game, bool preferCross, Chess::SelectedPosition& bestFrom, Chess::SelectedPosition& bestTo) {
+bool findScriptedMove(const Chess::IGame& game, bool preferCross, Chess::Core::Move& best) {
   using namespace Chess;
   bool haveBest = false, cross = false;
   auto boards = game.mandatoryBoards();
@@ -57,13 +56,14 @@ bool findScriptedMove(Chess::IGame& game, bool preferCross, Chess::SelectedPosit
   for (const auto& board : boards) {
     for (int y = 0; y < game.dim() && !cross; ++y) {
       for (int x = 0; x < game.dim() && !cross; ++x) {
-        SelectedPosition from(board, Position2D(x, y));
-        std::vector<SelectedPosition> targets;
-        try { targets = game.getMoveablePositions(from); } catch (const std::exception&) { continue; }
-        for (const auto& to : targets) {
-          if (to.board->at(to.position) && to.board->at(to.position)->type == PieceType::King) continue;  // keep the game running
-          if (!haveBest || to.board != board) { bestFrom = from; bestTo = to; haveBest = true; }
-          if (preferCross && to.board != board) { cross = true; break; }
+        const Core::Coord from{static_cast<int8_t>(x), static_cast<int8_t>(y), static_cast<int16_t>(board->halfTurnNumber()),
+                               static_cast<int16_t>(board->timeLineId())};
+        for (const Core::Move& move : game.legalMovesFrom(from)) {
+          const auto target = game.board(move.to.l, move.to.t).at(Position2D(move.to.x, move.to.y));
+          if (target && target->type == PieceType::King) continue;  // keep the game running
+          const bool sameBoard = move.to.l == from.l && move.to.t == from.t;
+          if (!haveBest || !sameBoard) { best = move; haveBest = true; }
+          if (preferCross && !sameBoard) { cross = true; break; }
         }
       }
     }
@@ -76,9 +76,9 @@ bool findScriptedMove(Chess::IGame& game, bool preferCross, Chess::SelectedPosit
 bool playScriptedTurn(Chess::IGame& game) {
   using namespace Chess;
   for (int guard = 0; !game.mandatoryBoards().empty() && guard < 16; ++guard) {
-    SelectedPosition bestFrom, bestTo;
-    if (!findScriptedMove(game, true, bestFrom, bestTo)) break;
-    game.makeMove({bestFrom, bestTo});
+    Core::Move move;
+    if (!findScriptedMove(game, true, move)) break;
+    game.makeMove(move);
   }
   if (game.canSubmit()) {
     game.submitTurn();
@@ -137,6 +137,8 @@ int main(int argc, char** argv) {
   ChangeDirectory(GetApplicationDirectory());  // assets are copied next to the binary
   TestMode::get().audioDisabled = true;  // a screenshot tool: never open an audio device
   TestMode::get().reduceMotion = reduce;
+  TestMode::get().active = true;  // scripted (idle) input: the real pointer must not hover a square in the shots
+  Input::scripted().position = {-100000.0f, -100000.0f};  // ... nor the scripted one
 
   int rc = 0;
   {
@@ -152,19 +154,16 @@ int main(int argc, char** argv) {
         if (!playScriptedTurn(*game)) break;
       std::cout << "timelines: " << game->timeLineCount() << ", half-turn: " << game->presentHalfTurn() << "\n";
 
-      ChessModel model(game);
-      ChessView view(Vector3{5000, 5000, 1});
-      ChessController controller(model, view);
-      controller.update(0.0f);
+      PlayScreen screen(game);
       const float dt = 1.0f / 60.0f;
       double updateMs = 0, renderMs = 0; int splitFrames = 0;
       auto frame = [&](bool dump, int index) {
         const auto a0 = std::chrono::steady_clock::now();
-        controller.update(dt);
+        screen.update(app, dt);
         const auto a1 = std::chrono::steady_clock::now();
         BeginDrawing();
         ClearBackground(UI::Color::bg);
-        controller.render();
+        screen.draw(app);
         const auto a2 = std::chrono::steady_clock::now();
         EndDrawing();
         updateMs += std::chrono::duration<double, std::milli>(a1 - a0).count();
@@ -183,12 +182,13 @@ int main(int argc, char** argv) {
 
       if (!demo.empty() || perfFrames > 0) {
         using namespace Chess;
-        SelectedPosition from, to;
+        Core::Move move;
         const bool wantCross = demo != "same";
-        if (!findScriptedMove(*game, wantCross, from, to)) { std::cerr << "no legal move for the demo\n"; rc = 1; }
+        if (!findScriptedMove(*game, wantCross, move)) { std::cerr << "no legal move for the demo\n"; rc = 1; }
         else {
-          std::cout << "demo move: timeline " << from.board->timeLineId() << " -> " << to.board->timeLineId()
-                    << (to.board != from.board ? " (cross-board)" : " (same board)") << "\n";
+          const bool cross = move.from.l != move.to.l || move.from.t != move.to.t;
+          std::cout << "demo move: timeline " << move.from.l << " -> " << move.to.l
+                    << (cross ? " (cross-board)" : " (same board)") << "\n";
           FrameClock idle, anim;
           int n = 0;
           const bool dumping = !dumpDir.empty();
@@ -201,20 +201,20 @@ int main(int argc, char** argv) {
             }
           };
           run(0.8f, idle);                              // idle
-          controller.scriptedSelect(from);              // pick up the piece: lift + dots pop
+          screen.click(move.from);                      // pick up the piece: lift + dots pop
           run(1.3f, anim);
-          controller.scriptedSelect(to);                // move: piece travels, new board(s) grow, arrow draws
+          screen.click(move.to);                        // move: piece travels, new board(s) grow, arrow draws
           run(1.8f, anim);
           // Finish the turn with scripted moves on any other boards, then submit: turn banner
           for (int guard = 0; !game->mandatoryBoards().empty() && guard < 16; ++guard) {
-            SelectedPosition f2, t2;
-            if (!findScriptedMove(*game, wantCross, f2, t2)) break;
-            controller.scriptedSelect(f2);
+            Core::Move next;
+            if (!findScriptedMove(*game, wantCross, next)) break;
+            screen.click(next.from);
             run(0.5f, anim);
-            controller.scriptedSelect(t2);
+            screen.click(next.to);
             run(0.9f, anim);
           }
-          if (game->mandatoryBoards().empty() && game->canSubmit()) controller.scriptedSubmit();
+          if (game->mandatoryBoards().empty() && game->canSubmit()) screen.submit();
           else std::cerr << "demo: could not submit the turn (mandatory boards left or turn illegal)\n";
           run(1.6f, anim);
           if (perfFrames > 0) {

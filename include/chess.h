@@ -174,26 +174,6 @@ struct Cell {
 };
 
 /**
- * COMPATIBILITY SHIM for the UI (Board::getPiece): a nullable view of a piece with the old pointer-style accessors.
- * New code uses Board::at() and the fields of Piece. To be removed with the UI's last use of getPiece().
- */
-class PieceRef {
-public:
-  PieceRef(std::nullptr_t = nullptr) {}
-  PieceRef(const Piece& piece) : _piece(piece) {}
-  const PieceRef* operator->() const { return this; }
-  explicit operator bool() const { return _piece.has_value(); }
-  friend bool operator==(const PieceRef& r, std::nullptr_t) { return !r._piece; }
-  PieceColor color() const { return _piece->color; }
-  PieceType type() const { return _piece->type; }
-  bool unmoved() const { return _piece->unmoved; }
-  const std::string& name() const { return pieceName(_piece->type); }
-  char symbol() const { return pieceSymbol(_piece->type); }
-private:
-  std::optional<Piece> _piece;
-};
-
-/**
  * A snapshot of one N x N position, N <= MAX_DIM, stored as a fixed array of one-byte cells (index y * N + x), so forking
  * a board is a plain copy.
  * @note Boards are IMMUTABLE once they have been pushed onto a TimeLine: place() / clear() are only for building a board.
@@ -223,12 +203,6 @@ public:
   /** Put a piece on a square (replacing what is there) / empty a square. Only while the board is being built. */
   void place(Position2D position, const Piece& piece);
   void clear(Position2D position);
-
-  /** COMPATIBILITY SHIM for the UI, see PieceRef. */
-  inline PieceRef getPiece(Position2D position) const {
-    const auto piece = at(position);
-    return piece ? PieceRef(*piece) : PieceRef();
-  }
 
   /** The ID of the timeline this board belongs to (immutable; may be negative). */
   inline int timeLineId(void) const { return _timeLineId; }

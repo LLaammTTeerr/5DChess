@@ -1,0 +1,56 @@
+#include "play/Selection.h"
+#include <algorithm>
+
+namespace play {
+
+using Chess::Core::Coord;
+
+namespace {
+// A piece of the side to move, on a board it can still move on
+bool canPickUp(const Coord& c, const Chess::IGame& game) {
+  if (!game.boardExists(c)) return false;
+  const Chess::Board& board = game.board(c.l, c.t);
+  if (c.x < 0 || c.y < 0 || c.x >= board.dim() || c.y >= board.dim()) return false;
+  const auto piece = board.at(Chess::Position2D(c.x, c.y));
+  return piece && piece->color == game.getCurrentTurnColor() && game.canMakeMoveFromBoard(game.getBoard(c.l, c.t));
+}
+} // namespace
+
+Intent Selection::click(std::optional<Coord> square, const Chess::IGame& game) {
+  Intent intent;
+  if (!square || game.result() != Chess::GameResult::Ongoing) return intent;
+  const Coord c = *square;
+
+  if (_from) {
+    const auto it = std::find_if(_moves.begin(), _moves.end(), [&](const Chess::Core::Move& m) { return m.to == c; });
+    if (it != _moves.end()) { // the first move to a square is the Queen promotion
+      intent.kind = Intent::Kind::Move;
+      intent.move = *it;
+      clear();
+      return intent;
+    }
+    if (c == *_from) {
+      clear();
+      intent.kind = Intent::Kind::Clear;
+      return intent;
+    }
+  }
+  if (!canPickUp(c, game)) return intent;
+
+  _from = c;
+  _moves = game.legalMovesFrom(c);
+  _targets.clear();
+  for (const auto& m : _moves)
+    if (std::find(_targets.begin(), _targets.end(), m.to) == _targets.end()) _targets.push_back(m.to);
+  intent.kind = Intent::Kind::Select;
+  intent.from = c;
+  return intent;
+}
+
+void Selection::clear() {
+  _from.reset();
+  _moves.clear();
+  _targets.clear();
+}
+
+} // namespace play
