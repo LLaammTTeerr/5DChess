@@ -45,6 +45,10 @@ This project implements a 5D Chess game with an advanced UI system featuring:
 
 *Pieces slide, new boards grow in, and a banner announces the next turn.*
 
+![The end card after a checkmate](docs/screenshots/checkmate.png)
+
+*The game ends on checkmate; no legal turn without check is a stalemate (draw).*
+
 <table>
   <tr>
     <td width="50%"><img src="docs/screenshots/timelines.png" alt="Timeline Battle mode with nine timelines branching from the starting position"><br><sub>Timeline Battle: nine timelines branching from the start.</sub></td>
@@ -121,6 +125,7 @@ The engine tests do not need raylib or a display. Drop `-DFDCHESS_SANITIZE=ON` f
 ### Engine docs and differential testing
 - [docs/RULES.md](docs/RULES.md): the rules the engine implements, their sources, and the deliberate differences from the
   reference engine 5d-chess-js.
+- [docs/POSITIONS.md](docs/POSITIONS.md): the `.5dp` position file format used by the nine game modes (`assets/positions/`).
 - [docs/SEARCH.md](docs/SEARCH.md): how checkmate / stalemate are decided without blocking the game (the resumable
   `TurnSearch`), why its pruning is safe, and the benchmark (`turnbench`).
 - `tools/refcheck/` (`-DFDCHESS_BUILD_REFCHECK=ON`, default OFF): plays random legal games, dumps every position with its full
@@ -160,6 +165,8 @@ The game changes its working directory to the executable's folder, so it can be 
 │   ├── backgroundmusic/       # Audio files
 │   └── soundeffect/           # Sound effects
 ├── include/                   # Header files
+│   ├── engine/                # Value API, .5dp positions, GameCatalog (no raylib)
+│   ├── services/              # Assets, settings and other app services
 │   ├── Commands/              # Menu and in-game commands (Command pattern)
 │   ├── GameStates/            # State pattern for game flow
 │   ├── Menu/                  # Menu system (Composite pattern)
@@ -171,11 +178,15 @@ The game changes its working directory to the executable's folder, so it can be 
 │   ├── Menu/
 │   ├── Render/
 │   ├── Scene/
+│   ├── engine/                # Rules engine implementation
+│   ├── services/
+│   ├── App.cpp                # App context (assets, audio, settings, scenes)
 │   ├── main.cpp               # Entry point
 │   └── chess.cpp              # Core rules engine (no raylib dependency)
 ├── tests/                     # doctest unit and property tests for the engine
-├── tools/                     # theme_preview, refcheck (differential tests against 5d-chess-js)
-├── docs/                      # RULES.md, SEARCH.md, screenshots
+│   └── ui/                    # UI screenshot tests (scripts, baselines)
+├── tools/                     # theme_preview, ui_script, refcheck (differential tests against 5d-chess-js)
+├── docs/                      # RULES.md, SEARCH.md, POSITIONS.md, screenshots
 └── README.md                  # This file
 ```
 
@@ -240,8 +251,9 @@ theme_preview <Classic|Modern|Fantasy|Pixel> <Standard|Battle|Invasion|Fragment>
 ## Roadmap
 
 - ~~Official 5D Chess rules~~ (check, checkmate, stalemate, active timelines, castling, en passant, promotion choice): done.
-- **v0.4.0**: three board view styles (Deep space by default, Atlas, Blueprint) and a codebase refactor.
-- **v0.5.0**: AI opponent, save/load, puzzles and an interactive guide.
+- ~~v0.4.0~~: official rules, non-blocking result search, differential testing, `.5dp` position files, engine value API, UI screenshot tests, manifest-driven assets: done.
+- **v0.5.0**: finish the UI refactor and add three board view styles (Deep space by default, Atlas, Blueprint).
+- **v0.6.0**: AI opponent, save/load, puzzles and an interactive guide.
 
 ## Known limitations
 

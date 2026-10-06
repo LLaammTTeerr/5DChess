@@ -6,18 +6,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-06
+
 ### Added
+- Official 5D Chess rules engine ([docs/RULES.md](docs/RULES.md)) with check, checkmate and stalemate; Submit is enabled only when the turn is legal. Differential testing against the reference engine 5d-chess-js (`tools/refcheck`).
+- UI screenshot test harness (`tests/ui`, baselines in `tests/ui/baseline`) and a CI job that runs it.
+- MIT license.
 - Engine value API: `Chess::Core::Coord` / `Chess::Core::Move` (hashable, comparable, pointer-free) and `IGame::legalMovesFrom`, `makeMove(Core::Move)`, `boardExists(Coord)`, `board()`, `selected()`; the old shared_ptr API still works.
 - Position text format (`.5dp`, [docs/POSITIONS.md](docs/POSITIONS.md)) with parser/writer (`include/engine/Position.h`); `GameCatalog` loads the nine game modes from `assets/positions/*.5dp` and is the single mode registry for the menu, the scenes and the developer tools.
 
 ### Changed
-- Internal: one `App` context (src/App.cpp) owns Assets, audio, settings, theme and scenes; `assets/manifest.txt` is the single list of loaded assets and also generates the web build's preload list. The ResourceManager/ThemeManager/UI::Fonts singletons are gone. Unused assets (old buttons, backgrounds, `chess.png`, `images/EndGame.png`, Nunito and unused Montserrat fonts) were deleted.
+- Internal: one `App` context (src/App.cpp) owns Assets, audio, settings, theme and scenes; `assets/manifest.txt` is the single list of loaded assets and also generates the web build's preload list. The ResourceManager/ThemeManager/UI::Fonts singletons are gone.
+- CI: bumped actions/checkout (v7), cache (v6), upload-artifact (v7), download-artifact (v8) and softprops/action-gh-release (v3).
 - The engine now implements the official 5D Chess rules ([docs/RULES.md](docs/RULES.md)): active and inactive timelines, the present, mandatory boards, check through time and across timelines, castling, en passant and promotion choice, with every rule traced to its source and compared move by move against the reference engine 5d-chess-js (`tools/refcheck`; Standard and Simplify modes; the three multi-timeline Misc modes have no reference mapping).
 - Checkmate and stalemate end the game (the end card reads "White wins!" / "Black wins!" with "Checkmate", or "Draw" with "Stalemate"). Capturing a king no longer exists: such moves are never offered.
 - The "does the side to move have a legal turn?" result search is non-blocking: it runs a little each frame, the HUD shows "Checking position..." meanwhile, and the game never freezes ([docs/SEARCH.md](docs/SEARCH.md)).
 - Submit is enabled only when the turn is legal; when the turn would leave a king capturable the HUD says "Your king would be capturable". The present line is drawn at the present (the earliest end of the active timelines).
 - The HUD and menu cache the turn status until the game state changes (`IGame::stateVersion()`) instead of recomputing it every frame.
 - UI screenshot tests: the endgame script now plays a real two-turn checkmate and a new script a six-turn stalemate.
+
+### Removed
+- Unused assets (old buttons, backgrounds, `chess.png`, `images/EndGame.png`, Nunito and unused Montserrat fonts), for a smaller download.
 
 ### Fixed
 - "Simplify - No Bishop" was a copy of "No Knight" (bishops, no knights). It now has knights and no bishops (`omit-bishop`: rnqknr / PPPPPP / RNQKNR on 6x6); the test `omit-bishop fix` pins this.
@@ -101,7 +110,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dead and unused files and code.
 - Tracked `.DS_Store` and `.vscode` files.
 
-[Unreleased]: https://github.com/LLaammTTeerr/5DChess/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/LLaammTTeerr/5DChess/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/LLaammTTeerr/5DChess/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/LLaammTTeerr/5DChess/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/LLaammTTeerr/5DChess/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/LLaammTTeerr/5DChess/releases/tag/v0.1.0
