@@ -24,14 +24,17 @@
 //   size:     N, 1..16
 //   rules:    any of  double-step  castling  (or "none")
 //   to-move:  white | black
-//   present:  half-turn of the present; optional, default = the lowest half-turn among the timelines' latest boards
-//             (its parity must agree with to-move)
+//   present:  half-turn of the present; optional; must equal the lowest half-turn among the latest boards of the
+//             ACTIVE timelines (the default; its parity must agree with to-move)
 // Board lines:  L<timeline> T<turn><w|b>: <rows>
 //   half-turn = 2 * turn + (b ? 1 : 0). A timeline's boards must have consecutive half-turns; the first one may start
 //   later than T0w (the "Fragment" mode starts L0 at T0b). Several lines of the same timeline give its history.
 //   "L-1 T2w" is timeline -1, turn 2, White to move.
 // Timeline lines:  L<timeline> parent: L<id>
 //   marks a timeline a player branched off (as opposed to the timelines the game started with).
+//
+// Validation, limits and en passant (derived from the previous board of a timeline, so keep it) are described in
+// docs/POSITIONS.md.
 //
 // Position is plain data: parsePosition(writePosition(p)) == p, and Position::fromGame / Position::makeGame convert
 // from / to IGame. Not captured: the pending (unsubmitted) moves of a turn and the game result; snapshot between turns.

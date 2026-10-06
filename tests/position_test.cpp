@@ -193,6 +193,69 @@ TEST_CASE("position parser rejects malformed input with a line number") {
   CHECK(fails(head + "colour: red\n", "unknown key"));
   CHECK(fails(head, "no boards"));
   CHECK(fails("5dchess-position 1\nL0 T0w: 3/3/3\n", "'size'"));
+
+  const std::string b = "L0 T0w: 3/3/3\n";
+  // headers must precede the boards: a late 'size' would leave earlier boards with the wrong cell count
+  CHECK(fails(head + b + "size: 2\n", "must come before the first board"));
+  CHECK(fails(head + b + "rules: castling\n", "must come before the first board"));
+  CHECK(fails("5dchess-position 1\nsize: 3\nsize: 4\nrules: none\nto-move: white\n" + b, "duplicate"));
+  // numbers are bounded, never overflowed
+  CHECK(fails(head + "L0 T2000000000w: 3/3/3\n", "turn out of range"));
+  CHECK(fails(head + "L0 T99999999999999999999w: 3/3/3\n", "turn out of range"));
+  CHECK(fails(head + "L0 T-1w: 3/3/3\n", "turn out of range"));
+  CHECK(fails(head + "L0 T0w: 99999999999999999999/3/3\n", "row is longer"));
+  CHECK(fails(head + "L0 T0w: 4000000000/3/3\n", "row is longer"));
+  CHECK(fails("5dchess-position 1\nsize: 99999999999\nrules: none\nto-move: white\n", "size out of range"));
+  CHECK(fails(head + "L40000 T0w: 3/3/3\n", "timeline id out of range"));
+  CHECK(fails(head + "L-2000000000 T0w: 3/3/3\n", "timeline id out of range"));
+  CHECK(fails(head + "L1001 T0w: 3/3/3\n", "timeline id out of range"));
+  CHECK(fails(head + b + "L0 parent: L2000000000\n", "parent id out of range"));
+  CHECK(fails("5dchess-position 1\nsize: 3\nrules: none\nto-move: white\npresent: 2000000000\n" + b, "present out of range"));
+  // timeline structure
+  CHECK(fails(head + "L0 parent: L0\nL0 T0w: 3/3/3\n", "no original timeline"));
+  CHECK(fails(head + "L0 parent: L1\nL0 T0w: 3/3/3\nL1 parent: L0\nL1 T0w: 3/3/3\n", "no original timeline"));
+  CHECK(fails(head + b + "L1 parent: L0\nL1 T0w: 3/3/3\nL2 parent: L3\nL2 T0w: 3/3/3\nL3 parent: L2\nL3 T0w: 3/3/3\n", "cycle"));
+  CHECK(fails(head + b + "L2 T0w: 3/3/3\n", "consecutive"));
+  CHECK(fails(head + b + "L2 parent: L0\nL2 T0w: 3/3/3\n", "consecutive"));
+  CHECK(fails(head + b + "L1 T0w: 3/3/3\nL2 T0w: 3/3/3\nL1 parent: L0\n", "original timelines (no parent) must have consecutive"));
+  // present must be what the engine computes: the lowest latest half-turn of the active timelines
+  CHECK(fails(head + b + "present: 0\n", "must come before the first board"));
+  CHECK(fails("5dchess-position 1\nsize: 3\nrules: none\nto-move: white\npresent: 4\n" + b, "is not the lowest"));
+}
+
+TEST_CASE("the present is computed over active timelines only") {
+  // L0 is original (T0w), L1 (White's) is created at T3w: active would need Black to have created one. L-1 (Black's)
+  // is created: it is the first one by Black, active since White has created one. Present = min over active tips.
+  const std::string text =
+      "5dchess-position 1\nsize: 3\nrules: none\nto-move: white\n"
+      "L0 T0w: k1K/3/3\nL0 T0b: k1K/3/3\nL0 T1w: k1K/3/3\n"
+      "L1 parent: L0\nL1 T1b: k1K/3/3\nL1 T2w: k1K/3/3\n";
+  const Position p = parsePosition(text);
+  auto game = p.makeGame();
+  CHECK(p.present == game->presentHalfTurn());
+  CHECK(p.present == 2); // L0 is at T1w (2), L1 at T2w (4): the lowest tip
+  CHECK(parsePosition(writePosition(p)) == p);
+}
+
+TEST_CASE("en passant survives a write/parse round trip (it is derived from the previous board)") {
+  const std::string text =
+      "5dchess-position 1\nsize: 8\nrules: double-step\nto-move: white\n"
+      "L0 T2b: 4k3/4p3/8/3P*4/8/8/8/4K3\n"
+      "L0 T3w: 4k3/8/8/3P*p*3/8/8/8/4K3\n";
+  auto movesOfD5 = [](const Position& p) {
+    auto game = p.makeGame();
+    return game->legalMovesFrom(Coord{3, 4, int16_t(game->presentHalfTurn()), 0}).size();
+  };
+  const Position p = parsePosition(text);
+  CHECK(movesOfD5(p) == 2); // d6 and the en passant capture
+  CHECK(movesOfD5(parsePosition(writePosition(p))) == 2);
+  // a game played into an en passant position: the history is written, so the capture is still there
+  const Position again = Position::fromGame(*p.makeGame());
+  CHECK(again == p);
+  CHECK(movesOfD5(parsePosition(writePosition(again))) == 2);
+  // without the previous board there is nothing to derive it from (documented in docs/POSITIONS.md)
+  CHECK(movesOfD5(parsePosition("5dchess-position 1\nsize: 8\nrules: double-step\nto-move: white\n"
+                                "L0 T3w: 4k3/8/8/3P*p*3/8/8/8/4K3\n")) == 1);
 }
 
 TEST_CASE("catalog lists the nine modes in menu order") {

@@ -37,13 +37,14 @@ marks a piece that has already moved: `P*` is a pawn that has moved. Setup posit
 | `size: N` | 1..16 |
 | `rules: double-step castling` | enabled rules, any of `double-step` (pawns may advance two squares on their first move) and `castling`, or `none` |
 | `to-move: white\|black` | side to move |
-| `present: H` | half-turn of the present; optional, default = the lowest half-turn among the timelines' latest boards. Its parity must agree with `to-move` |
+| `present: H` | half-turn of the present; optional. It must equal what the engine computes: the lowest half-turn among the latest boards of the **active** timelines (below). Its parity must agree with `to-move` |
 | `L<id> T<turn><w\|b>: rows` | the board of timeline `id` at half-turn `2*turn + (b ? 1 : 0)`. `L-1 T2w` is timeline -1, turn 2, White to move |
 | `L<id> parent: L<id>` | marks a timeline branched off by a player (original timelines have no parent) |
 
-`#` starts a comment line and blank lines are ignored. Header lines (`size`, `to-move` at least) come before the first
-board line. The boards of one timeline must have consecutive half-turns, oldest first; one line gives a fresh start, more
-lines give its history. The first board of a timeline may start after `T0w`: *Misc - Time Line Fragment* starts its
+`#` starts a comment line and blank lines are ignored. All header lines (`title`, `size`, `rules`, `to-move`, `present`;
+`size` and `to-move` are required, `size` only once) come before the first board line; a header after a board is an
+error. The boards of one timeline must have consecutive half-turns, oldest first; one line gives a fresh start, more
+lines give its history (needed for en passant, below). The first board of a timeline may start after `T0w`: *Misc - Time Line Fragment* starts its
 timeline 0 at `T0b` (Black to move there, White to move on timeline 1, the present is half-turn 0):
 
 ```
@@ -51,8 +52,33 @@ L0 T0b: kppp/4/4/NBRN
 L1 T0w: nbrn/4/4/KPPP
 ```
 
+
+## Timeline structure (validated)
+
 A timeline's id is its sign convention: White's new timelines are above the original ids, Black's below
-(see [RULES.md](RULES.md)); a timeline with a `parent` line counts as created by a player.
+(see [RULES.md](RULES.md)); a timeline with a `parent` line counts as created by a player. The parser checks that
+
+- at least one timeline has no parent (the originals), and the originals have consecutive ids;
+- every timeline with a parent lies outside the original id range, all ids together are consecutive (the engine
+  allocates `max+1` / `min-1`), every parent exists and the parent chains end at an original (no cycles);
+- the **active** timelines are the originals plus the n-th timeline created by a player iff the opponent has created
+  at least n-1 (`IGame::isTimeLineActive`); the present is the lowest latest half-turn among them, so a lagging inactive
+  timeline does not hold the present back.
+
+## Limits
+
+`size` 1..16, timeline ids within -1000..1000, half-turns up to 20000 (`T10000w`), at most 20000 boards in all. The turn
+search sizes its arena by the id span and the board count (and `Core::Coord` stores the timeline and half-turn in
+int16), so a hostile file such as `L100000000` could otherwise allocate gigabytes; real games stay far below these caps.
+Numbers are range-checked while they are read, so overflowing input is a parse error, never undefined behaviour.
+
+## En passant
+
+A position has no `ep:` field. The engine derives en passant from the *previous board of the same timeline* (the enemy
+pawn must have stood unmoved two ranks behind on that board). `writePosition` always emits every board of every
+timeline, so round trips of a played game keep en passant. A hand-written or truncated position loses it unless you keep
+the board before the last one: give `L0 T2b` and `L0 T3w` for the capture to be available at `T3w`; with `L0 T3w` alone
+it is not. The first board of a timeline created by a branch has no previous board either, so no en passant there.
 
 ## What a position does not hold
 

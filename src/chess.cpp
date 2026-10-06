@@ -77,6 +77,7 @@ bool IGame::canMakeMoveFromBoard(std::shared_ptr<Board> board) const {
 }
 
 bool IGame::isTimeLineActive(int id) const {
+  assert(_origMin <= _origMax && "a game needs at least one original timeline");
   if (id >= _origMin and id <= _origMax) return true;
   const int whiteCreated = std::max(0, maxTimeLineId() - _origMax);
   const int blackCreated = std::max(0, _origMin - minTimeLineId());
@@ -760,6 +761,7 @@ struct TurnSearch::Impl {
     return c;
   }
   inline bool isActive(int id) const {
+    assert(origMin <= origMax && "a game needs at least one original timeline");
     if (id >= origMin && id <= origMax) return true;
     const int whiteCreated = std::max(0, maxId - origMax);
     const int blackCreated = std::max(0, origMin - minId);

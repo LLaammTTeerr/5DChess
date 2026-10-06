@@ -12,6 +12,11 @@ namespace Chess::Core {
 namespace {
 
 constexpr int kMaxSize = 16;
+// Bounds (see docs/POSITIONS.md): timeline ids must fit Core::Coord (int16) with room to spare, and the turn search sizes
+// its arena by the id span and the number of boards, so both are capped far above anything a real game reaches.
+constexpr int kMaxTimelineId = 1000;   // |id|; at most 2001 timelines
+constexpr int kMaxHalfTurn = 20000;    // fits Coord::t (int16)
+constexpr int kMaxBoards = 20000;      // across all timelines; at most 20000 * 256 bytes of search arena
 
 [[noreturn]] void fail(int line, const std::string& what) {
   throw ParseError("line " + std::to_string(line) + ": " + what);
@@ -23,11 +28,13 @@ std::string_view trim(std::string_view s) {
   return s;
 }
 
-int parseInt(std::string_view s, int line, const char* what) {
+int parseInt(std::string_view s, int line, const char* what, int lo = INT_MIN, int hi = INT_MAX) {
   s = trim(s);
   int value = 0;
   const auto [end, ec] = std::from_chars(s.data(), s.data() + s.size(), value);
-  if (s.empty() or ec != std::errc() or end != s.data() + s.size()) fail(line, std::string("bad number for ") + what);
+  if (s.empty() or ec == std::errc::invalid_argument or end != s.data() + s.size()) fail(line, std::string("bad number for ") + what);
+  if (ec != std::errc() or value < lo or value > hi)
+    fail(line, std::string(what) + " out of range " + std::to_string(lo) + ".." + std::to_string(hi));
   return value;
 }
 
@@ -87,7 +94,10 @@ BoardData parseBoard(std::string_view rows, int size, int halfTurn, int line) {
       x = 0;
     } else if (c >= '0' and c <= '9') {
       int n = 0;
-      while (i < rows.size() and rows[i] >= '0' and rows[i] <= '9') n = n * 10 + (rows[i++] - '0');
+      while (i < rows.size() and rows[i] >= '0' and rows[i] <= '9') {
+        n = n * 10 + (rows[i++] - '0');
+        if (n > size) fail(line, "row is longer than " + std::to_string(size));
+      }
       --i;
       x += n;
       if (x > size) fail(line, "row is longer than " + std::to_string(size));
@@ -182,9 +192,29 @@ std::shared_ptr<IGame> Position::makeGame() const {
 
 namespace {
 
+// The present is the lowest half-turn among the latest boards of the ACTIVE timelines; the activity rule is
+// IGame::isTimeLineActive: the original timelines (those without a parent) are active, and the n-th timeline a player
+// created (above the original ids: White, below: Black) is active iff the opponent has created at least n-1.
 int defaultPresent(const Position& p) {
+  int origMin = INT_MAX, origMax = INT_MIN, minId = INT_MAX, maxId = INT_MIN;
+  for (const auto& t : p.timelines) {
+    minId = std::min(minId, t.id);
+    maxId = std::max(maxId, t.id);
+    if (!t.parent) {
+      origMin = std::min(origMin, t.id);
+      origMax = std::max(origMax, t.id);
+    }
+  }
+  const bool hasOriginal = origMin <= origMax; // false only for a hand-built Position the parser would reject
+  const int whiteCreated = hasOriginal ? std::max(0, maxId - origMax) : 0;
+  const int blackCreated = hasOriginal ? std::max(0, origMin - minId) : 0;
   int present = INT_MAX;
-  for (const auto& t : p.timelines) present = std::min(present, t.boards.back().halfTurn);
+  for (const auto& t : p.timelines) {
+    bool active = true;
+    if (hasOriginal and (t.id < origMin or t.id > origMax))
+      active = t.id > origMax ? t.id - origMax <= blackCreated + 1 : origMin - t.id <= whiteCreated + 1;
+    if (active) present = std::min(present, t.boards.back().halfTurn);
+  }
   return present;
 }
 
@@ -216,7 +246,8 @@ std::string writePosition(const Position& p) {
 Position parsePosition(std::string_view text) {
   Position p;
   p.present = INT_MIN; // "not given"
-  bool sawMagic = false, sawSize = false, sawToMove = false;
+  bool sawMagic = false, sawSize = false, sawToMove = false, sawBoard = false;
+  int totalBoards = 0;
   std::map<int, TimelineData> lines;
   std::string_view rest = text;
   int lineNo = 0;
@@ -241,17 +272,18 @@ Position parsePosition(std::string_view text) {
       // "L<id> T<turn><w|b>: <rows>"  or  "L<id> parent: L<id>"
       if (!sawSize or !sawToMove) fail(lineNo, "'size' and 'to-move' must come before the boards");
       const size_t sp = key.find(' ');
-      const int id = parseInt(key.substr(1, sp - 1), lineNo, "timeline id");
+      const int id = parseInt(key.substr(1, sp - 1), lineNo, "timeline id", -kMaxTimelineId, kMaxTimelineId);
+      sawBoard = true;
       const std::string_view what = trim(key.substr(sp + 1));
       TimelineData& tl = lines.try_emplace(id).first->second;
       tl.id = id;
       if (what == "parent") {
         if (value.size() < 2 or value[0] != 'L') fail(lineNo, "expected 'parent: L<id>'");
-        tl.parent = parseInt(value.substr(1), lineNo, "parent id");
+        tl.parent = parseInt(value.substr(1), lineNo, "parent id", -kMaxTimelineId, kMaxTimelineId);
       } else if (what.size() >= 3 and what[0] == 'T' and (what.back() == 'w' or what.back() == 'b')) {
-        const int turn = parseInt(what.substr(1, what.size() - 2), lineNo, "turn");
-        if (turn < 0) fail(lineNo, "negative turn");
+        const int turn = parseInt(what.substr(1, what.size() - 2), lineNo, "turn", 0, kMaxHalfTurn / 2);
         const int half = 2 * turn + (what.back() == 'b' ? 1 : 0);
+        if (++totalBoards > kMaxBoards) fail(lineNo, "more than " + std::to_string(kMaxBoards) + " boards");
         if (!tl.boards.empty() and half != tl.boards.back().halfTurn + 1)
           fail(lineNo, "timeline L" + std::to_string(id) + ": boards must have consecutive half-turns");
         tl.boards.push_back(parseBoard(value, p.size, half, lineNo));
@@ -261,11 +293,12 @@ Position parsePosition(std::string_view text) {
       continue;
     }
 
+    if (sawBoard) fail(lineNo, "'" + std::string(key) + "' must come before the first board line");
     if (key == "title") {
       p.title = std::string(value);
     } else if (key == "size") {
-      p.size = parseInt(value, lineNo, "size");
-      if (p.size < 1 or p.size > kMaxSize) fail(lineNo, "size must be 1.." + std::to_string(kMaxSize));
+      if (sawSize) fail(lineNo, "duplicate 'size'");
+      p.size = parseInt(value, lineNo, "size", 1, kMaxSize);
       sawSize = true;
     } else if (key == "rules") {
       p.doubleStep = p.castling = false;
@@ -281,7 +314,7 @@ Position parsePosition(std::string_view text) {
       else fail(lineNo, "to-move must be white or black");
       sawToMove = true;
     } else if (key == "present") {
-      p.present = parseInt(value, lineNo, "present");
+      p.present = parseInt(value, lineNo, "present", 0, kMaxHalfTurn);
     } else {
       fail(lineNo, "unknown key '" + std::string(key) + "'");
     }
@@ -289,13 +322,42 @@ Position parsePosition(std::string_view text) {
   if (!sawMagic) fail(lineNo, "empty input");
   if (!sawSize or !sawToMove) fail(lineNo, "missing 'size' or 'to-move'");
 
-  for (auto& [id, tl] : lines) {
-    if (tl.boards.empty()) fail(lineNo, "timeline L" + std::to_string(id) + " has no boards");
-    if (tl.parent and !lines.count(*tl.parent)) fail(lineNo, "timeline L" + std::to_string(id) + ": unknown parent");
-    p.timelines.push_back(std::move(tl));
+  if (lines.empty()) fail(lineNo, "no boards");
+  // Timeline structure (the engine's activity rule relies on it): the timelines without a parent are the originals and
+  // have consecutive ids; every other id lies outside that range, all ids are consecutive, and parents form no cycle.
+  int origMin = INT_MAX, origMax = INT_MIN, previous = 0;
+  bool first = true;
+  for (const auto& [id, tl] : lines) {
+    const std::string name = "timeline L" + std::to_string(id);
+    if (tl.boards.empty()) fail(lineNo, name + " has no boards");
+    if (!first and id != previous + 1) fail(lineNo, name + ": timeline ids must be consecutive");
+    first = false;
+    previous = id;
+    if (tl.parent) {
+      if (!lines.count(*tl.parent)) fail(lineNo, name + ": unknown parent");
+      continue;
+    }
+    if (origMin <= origMax and id != origMax + 1) fail(lineNo, name + ": original timelines (no parent) must have consecutive ids");
+    origMin = std::min(origMin, id);
+    origMax = std::max(origMax, id);
   }
-  if (p.timelines.empty()) fail(lineNo, "no boards");
-  if (p.present == INT_MIN) p.present = defaultPresent(p);
+  if (origMin > origMax) fail(lineNo, "no original timeline (every timeline has a parent)");
+  for (const auto& [id, tl] : lines) {
+    if (!tl.parent) continue;
+    const std::string name = "timeline L" + std::to_string(id);
+    if (id >= origMin and id <= origMax) fail(lineNo, name + ": a timeline with a parent must lie outside the original ids");
+    const TimelineData* up = &tl;
+    for (size_t steps = 0; up->parent; ++steps) {
+      if (steps > lines.size()) fail(lineNo, name + ": parent chain is a cycle");
+      up = &lines.at(*up->parent);
+    }
+  }
+  for (auto& [id, tl] : lines) p.timelines.push_back(std::move(tl));
+  const int computed = defaultPresent(p);
+  if (p.present == INT_MIN) p.present = computed;
+  else if (p.present != computed)
+    fail(lineNo, "present " + std::to_string(p.present) + " is not the lowest latest half-turn of the active timelines (" +
+                     std::to_string(computed) + ")");
   if ((p.present % 2 != 0) != (p.toMove == PieceColor::PIECEBLACK) or p.present < 0)
     fail(lineNo, "present half-turn does not match to-move");
   return p;
