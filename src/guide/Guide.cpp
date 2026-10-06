@@ -82,7 +82,7 @@ const Goal kAxes = {"Make a move that lands on a different board.",
                     "That piece changed boards. Time and timelines are just more directions to move in.", changedBoard};
 const Goal kCapture = {"Capture a black pawn with a white pawn.",
                        "Pick a pawn that has a black pawn diagonally ahead of it, then click that pawn.",
-                       "Captured. Pawns only take diagonally forward.", pawnCapture};
+                       "Captured. On a board, pawns take diagonally forward.", pawnCapture};
 const Goal kEscape = {"Get out of check, then press Submit.",
                       "Move the king on L0 off the attacked square, and make a move on L+1 too.",
                       "Submitted: after your turn no king of yours can be captured.", turnSubmitted};
@@ -112,12 +112,12 @@ std::vector<Page> build() {
                "upwards and Black's downwards.",
                "", "03-timeline-owners.5dp", "", &kBlackTimeline, false});
   p.push_back({"The present and active timelines",
-               "The present is the earliest board among the active timelines. You must move on every board that lies on "
-               "the present before you can submit; boards elsewhere are optional. A timeline is inactive when its creator "
+               "The present is the earliest board among the active timelines. You must move on every board of an active "
+               "timeline that lies on the present before you can submit; boards elsewhere are optional. A timeline is inactive when its creator "
                "is more than one timeline ahead of the opponent: L+2 here is dimmed and never holds the present back.",
                "", "04-present-and-active.5dp", "", &kMandatory, false});
   p.push_back({"Moving in four axes",
-               "Every piece moves along four axes: file, rank, time and timeline. A rook slides along one axis, a bishop "
+               "Every piece except the pawn moves along four axes: file, rank, time and timeline. A rook slides along one axis, a bishop "
                "along two at once, a queen along any mix, and the king takes one step of the same kind. The knight "
                "jumps two along one axis and one along another. Select the queen to see how far it reaches.",
                "Other variants add unicorns and dragons, which slide diagonally across three or four axes at once. "
@@ -139,9 +139,11 @@ std::vector<Page> build() {
                "every board and timeline before it decides.",
                "", "08-checkmate.5dp", "", &kMate, false});
   p.push_back({"Special moves",
-               "Castling: an unmoved king and rook with nothing between them swap places, the king jumping two files. En "
-               "passant: a pawn that has just advanced two squares can be taken as if it had moved one. Promotion: a pawn "
-               "that reaches the last rank becomes a queen, rook, bishop or knight, which you pick.",
+               "Castling: the king moves two files towards an unmoved rook and the rook hops over it to the square the king "
+               "crossed. Neither may have moved, the squares between must be empty, and the king may not be in check or "
+               "pass through an attacked square on that board. En passant: a pawn that has just advanced two squares can "
+               "be taken as if it had moved one. Promotion: a pawn that reaches the last rank becomes a queen, rook, bishop "
+               "or knight, which you pick.",
                "Castling and en passant work within a single board. Try castling and e5xd6 on this one; Undo takes a move back.",
                "09-special-moves.5dp", "", &kPromote, false});
   p.push_back({"Your first game",

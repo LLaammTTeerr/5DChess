@@ -112,6 +112,11 @@ void GuideScreen::wrapStatus() {
   _statusText = statusText();
   _status.lines = wrap(UI::Fonts::body(), UI::Font::body, _statusText, kInnerW - 2 * kCardPad - (_done ? kCheckW : 0.0f));
   _status.height = static_cast<float>(_status.lines.size()) * kStatusLine;
+  if (_card.height > 0.0f) _card.height = cardHeight();
+}
+
+float GuideScreen::cardHeight() const {
+  return kCardPad + kSmallLine + 2.0f + _prompt.height + 8.0f + _status.height + kCardPad;
 }
 
 // Everything above the buttons flows from the top of the panel: step, title, text, note and the goal card
@@ -137,7 +142,8 @@ void GuideScreen::layout() {
     y = _prompt.y + _prompt.height + 8.0f;
     _status.y = y;
     wrapStatus();
-    _card = {_panel.x + kPad, _prompt.y - kCardPad - labelH, kInnerW, kCardPad + labelH + _prompt.height + 8.0f + _status.height + kCardPad};
+    _card = {_panel.x + kPad, _prompt.y - kCardPad - labelH, kInnerW, 1.0f};
+    _card.height = cardHeight();
   }
 }
 

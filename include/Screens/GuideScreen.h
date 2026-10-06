@@ -41,4 +41,5 @@ private:
   void layout();
   std::string statusText() const;
   void wrapStatus();
+  float cardHeight() const;
 };

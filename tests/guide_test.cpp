@@ -64,6 +64,13 @@ TEST_CASE("guide: ten pages, each with a title, text and a position that loads")
       CHECK(std::strlen(p.goal->hint) > 0);
       CHECK(std::strlen(p.goal->success) > 0);
       CHECK_FALSE(p.goal->met(*game)); // a goal must not be met before the player does anything
+      // The goal card shows these in the UI fonts (ASCII only) and wraps them at about 38 characters a line, in a card
+      // that has room for about five lines of status: "Not yet. " + hint is the longest text shown.
+      for (const char* s : {p.goal->prompt, p.goal->hint, p.goal->success})
+        for (const char* c = s; *c; ++c) CHECK(static_cast<unsigned char>(*c) < 0x80);
+      CHECK(std::strlen(p.goal->hint) + 9 <= 150);
+      CHECK(std::strlen(p.goal->success) <= 150);
+      CHECK(std::strlen(p.goal->prompt) <= 80);
     }
   }
   CHECK(page(10).startsGame);

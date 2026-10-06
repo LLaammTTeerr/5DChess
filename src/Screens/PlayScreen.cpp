@@ -73,7 +73,7 @@ void PlayScreen::updatePicker(float dt, const play::BoardStyle& style) {
   const Vector2 a = _camera.worldToScreen({square.x, square.y}), b = _camera.worldToScreen({square.x + square.w, square.y + square.h});
   _picker.show(_game->getCurrentTurnColor());
   _picker.place({a.x, a.y, b.x - a.x, b.y - a.y},
-                {0.0f, UI::Layout::safeTop, static_cast<float>(GetScreenWidth()),
+                {0.0f, UI::Layout::safeTop, static_cast<float>(GetScreenWidth()) - (_embedded ? _rightInset : 0.0f),
                  static_cast<float>(GetScreenHeight()) - UI::Layout::safeTop});
   if (const auto piece = _picker.update(dt, style.grayPieces, &style.skin)) {
     _animator.finish();
@@ -90,7 +90,7 @@ void PlayScreen::boardInput() {
     _hover = square;
     if (square && Input::mousePressed(MOUSE_BUTTON_LEFT)) click(*square);
   }
-  _camera.handleInput();
+  if (!ui::pointerConsumed()) _camera.handleInput(); // not over a button or the Guide's panel
 }
 
 void PlayScreen::click(Coord square) {
