@@ -116,7 +116,10 @@ if(FDCHESS_BUILD_GAME)
     endforeach()
     target_link_options(5dchess PRIVATE ${WEB_LINK_OPTIONS})
     set_target_properties(5dchess PROPERTIES SUFFIX ".html")
-    set_property(TARGET 5dchess APPEND PROPERTY LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/web/shell.html ${MANIFEST})
+    # A "dir" preload has no dependency on the files inside it: relink when a position file changes.
+    file(GLOB POSITION_FILES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/assets/positions/*.5dp)
+    set_property(TARGET 5dchess APPEND PROPERTY LINK_DEPENDS
+      ${CMAKE_CURRENT_SOURCE_DIR}/web/shell.html ${MANIFEST} ${POSITION_FILES})
   else()
     # Copy assets next to the binary so it runs from the build directory.
     add_custom_command(TARGET 5dchess POST_BUILD

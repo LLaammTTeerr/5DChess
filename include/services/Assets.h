@@ -14,6 +14,8 @@ class Assets {
 public:
     // `root` is prepended to every manifest path (the manifest itself is `root`/manifest.txt).
     explicit Assets(const std::string& root = "assets/");
+    /** The asset root given to the constructor (ends with '/'); other readers of assets/ (GameCatalog) use it too. */
+    const std::string& root() const { return _root; }
     ~Assets();
     Assets(const Assets&) = delete;
     Assets& operator=(const Assets&) = delete;
