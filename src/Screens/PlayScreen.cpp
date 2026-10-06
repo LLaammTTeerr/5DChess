@@ -11,7 +11,7 @@ PlayScreen::PlayScreen(const std::string& modeId)
 
 void PlayScreen::update(App& app, float dt) {
   // The buttons come first: whatever has the pointer is not a click on the board
-  if (app.screens.navShown() && _back.update(dt)) app.screens.replace(std::make_unique<ModeSelectScreen>());
+  if (_back.update(dt, app.screens.navShown())) app.screens.replace(std::make_unique<ModeSelectScreen>());
   _controller.handleInput(dt);
   _controller.update(dt);
 }

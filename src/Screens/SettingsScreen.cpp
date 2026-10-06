@@ -22,7 +22,7 @@ void SettingsScreen::openTab(App& app, int tab) {
   // Themes sit in a column at the left (next to the preview); the other tabs centre theirs
   const Rectangle area = tab == Theme ? Rectangle{50.0f, 0.0f, kOptionW, H} : Rectangle{(W - kOptionW) / 2, 100.0f, kOptionW, H};
   const auto& tracks = AudioManager::tracks();
-  const int count = tab == Theme ? 4 : tab == Music ? static_cast<int>(tracks.size()) + 2 : 1;  // Music: Off, tracks, SFX toggle
+  const int count = tab == Theme ? static_cast<int>(std::size(kThemes)) : tab == Music ? static_cast<int>(tracks.size()) + 2 : 1;  // Music: Off, tracks, SFX toggle
   const auto slots = ui::column(area, count, UI::Space::buttonHeight, kOptionGap);
 
   std::vector<std::string> labels;
@@ -58,7 +58,7 @@ void SettingsScreen::update(App& app, float dt) {
   }
   if (_toggle) _toggle->update(dt);
 
-  if (app.screens.navShown() && _back.update(dt)) app.screens.replace(std::make_unique<MainMenuScreen>());
+  if (_back.update(dt, app.screens.navShown())) app.screens.replace(std::make_unique<MainMenuScreen>());
 }
 
 void SettingsScreen::draw(App& app) const {

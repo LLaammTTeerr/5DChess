@@ -15,11 +15,9 @@ public:
   virtual ~Screen() = default;
   virtual void update(App& app, float dt) = 0;
   virtual void draw(App& app) const = 0;
-  // An overlay is drawn on top of the screen below it instead of replacing it (only the top screen updates).
-  virtual bool isOverlay() const { return false; }
 };
 
-// The Back button every sub-screen shows at the top left (a navigation control: ESC hides it, see below).
+// The top-left Back button (Settings and the game; a navigation control: ESC hides it, see below).
 ui::Button backButton();
 
 // Owns the screens. push / pop / replace are applied at the end of the frame's update (a screen can safely
@@ -31,7 +29,6 @@ public:
   ~ScreenStack();
 
   void push(std::unique_ptr<Screen> screen);
-  void pop();
   void replace(std::unique_ptr<Screen> screen);
 
   void update(App& app, float dt);
@@ -41,7 +38,7 @@ public:
   float navAlpha() const { return _navAlpha; }
 
 private:
-  struct Change { enum Kind { Push, Pop, Replace } kind; std::unique_ptr<Screen> screen; };
+  struct Change { enum Kind { Push, Replace } kind; std::unique_ptr<Screen> screen; };
 
   std::vector<std::unique_ptr<Screen>> _stack;
   std::vector<Change> _pending;

@@ -93,8 +93,8 @@ void MainMenuScreen::update(App& app, float deltaTime) {
   _enter.update(dt);
   _enterClock += dt;
 
-  if (!app.screens.navShown()) return;
-  switch (_nav.update(dt)) {
+  const bool nav = app.screens.navShown();  // hidden: still updated (hover eases out) but unreachable
+  switch (_nav.update(dt, nav)) {
     case 0: app.screens.replace(std::make_unique<ModeSelectScreen>()); break;
     case 3: app.screens.replace(std::make_unique<SettingsScreen>()); break;
     case 4: app.quit = true; break;  // Exit (absent in the web build)

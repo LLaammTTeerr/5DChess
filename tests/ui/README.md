@@ -49,6 +49,7 @@ Use `capture` after enough `wait` frames for scene cross-fades (about 10 frames 
 | game-standard | e2 selected, e2-e4, submit, black e7-e5, submit, knight time-travel jump creating a timeline |
 | game-battle | Time Line Battle: start, pawn selected, three moves, submitted, black move |
 | endgame | Time Line Fragment: a two-turn checkmate; "Black wins!" / "Checkmate" card |
+| nav-toggle | ESC hides and restores the nav buttons; none left hovered |
 | stalemate | Time Line Fragment: a six-turn stalemate through time travel; "Draw" / "Stalemate" card |
 
 ## Tolerance

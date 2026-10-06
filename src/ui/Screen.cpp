@@ -12,7 +12,6 @@ ui::Button backButton() {
 ScreenStack::~ScreenStack() { releaseSnapshot(); }
 
 void ScreenStack::push(std::unique_ptr<Screen> screen) { _pending.push_back({Change::Push, std::move(screen)}); }
-void ScreenStack::pop() { _pending.push_back({Change::Pop, nullptr}); }
 void ScreenStack::replace(std::unique_ptr<Screen> screen) { _pending.push_back({Change::Replace, std::move(screen)}); }
 
 void ScreenStack::update(App& app, float dt) {
@@ -42,9 +41,7 @@ void ScreenStack::update(App& app, float dt) {
 
 void ScreenStack::draw(App& app) const {
   UI::Cursor::beginFrame();
-  size_t first = _stack.size();
-  while (first > 0 && _stack[first - 1]->isOverlay()) --first;  // an overlay shows the screen below it
-  for (size_t i = first > 0 ? first - 1 : 0; i < _stack.size(); ++i) _stack[i]->draw(app);
+  if (!_stack.empty()) _stack.back()->draw(app);
 
   if (_hasSnapshot) {  // the outgoing screen fades out on top of the new one (which already takes input)
     const float a = 1.0f - _fade.progress();
@@ -60,8 +57,8 @@ void ScreenStack::applyPending(App& app) {
   if (_pending.empty()) return;
   captureSnapshot(app);  // cross-fade from what is on screen now
   for (Change& c : _pending) {
-    if (c.kind != Change::Push && !_stack.empty()) _stack.pop_back();
-    if (c.kind != Change::Pop) _stack.push_back(std::move(c.screen));
+    if (c.kind == Change::Replace && !_stack.empty()) _stack.pop_back();
+    _stack.push_back(std::move(c.screen));
   }
   _pending.clear();
   if (_hasSnapshot) _fade.start(0.0f, 1.0f, UI::Motion::base, UI::Motion::easeOutCubic, 0.0f, true);

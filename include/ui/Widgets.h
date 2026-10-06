@@ -76,7 +76,8 @@ public:
              float scrollbarW = 0.0f);
 
   // Returns the index clicked this frame, or -1 (it also becomes `selected` when selectable).
-  int update(float dt);
+  // `interactive` false: the list is hidden or disabled (it still animates but takes no pointer).
+  int update(float dt, bool interactive = true);
   void draw(float alpha = 1.0f) const;
 
 private:

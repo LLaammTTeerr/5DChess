@@ -17,7 +17,6 @@ Color lerpColor(Color a, Color b, float t) {
   auto ch = [t](unsigned char x, unsigned char y) { return static_cast<unsigned char>(x + (y - x) * t); };
   return {ch(a.r, b.r), ch(a.g, b.g), ch(a.b, b.b), ch(a.a, b.a)};
 }
-float clamp(float v, float lo, float hi) { return std::fmax(lo, std::fmin(hi, v)); }
 } // namespace
 
 void beginFrame(bool pointerConsumed) { g_consumed = pointerConsumed; }
@@ -71,8 +70,8 @@ void Button::draw(float alpha) const {
     alpha *= p;
     if (!UI::Motion::reduced()) rise = (1.0f - p) * 8.0f;
   }
-  if (hot_) UI::Cursor::requestHand();
   if (alpha <= 0.003f) return;
+  if (hot_) UI::Cursor::requestHand();
   auto fade = [alpha](Color c) { c.a = static_cast<unsigned char>(c.a * alpha); return c; };
   const Rectangle r = {rect.x, rect.y + rise, rect.width, rect.height};
 
@@ -139,17 +138,17 @@ Rectangle ButtonList::handle() const {
 
 void ButtonList::scrollInput() {
   const Vector2 mouse = Input::mousePosition();
-  if (const float wheel = Input::mouseWheel(); wheel != 0 && contains(view_, mouse))
-    scroll_ = clamp(scroll_ - wheel * 30.0f, 0.0f, maxScroll_);
-  if (Input::mousePressed(MOUSE_BUTTON_LEFT) && contains(scrollbar(), mouse)) dragging_ = true;
+  if (const float wheel = Input::mouseWheel(); !g_consumed && wheel != 0 && contains(view_, mouse))
+    scroll_ = std::clamp(scroll_ - wheel * 30.0f, 0.0f, maxScroll_);
+  if (!g_consumed && Input::mousePressed(MOUSE_BUTTON_LEFT) && contains(scrollbar(), mouse)) dragging_ = true;
   if (!Input::mouseDown(MOUSE_BUTTON_LEFT)) dragging_ = false;
   if (dragging_ && scrollbar().height > 0)  // the thumb follows the pointer along the track
-    scroll_ = clamp((mouse.y - scrollbar().y) / scrollbar().height * maxScroll_, 0.0f, maxScroll_);
+    scroll_ = std::clamp((mouse.y - scrollbar().y) / scrollbar().height * maxScroll_, 0.0f, maxScroll_);
 }
 
-int ButtonList::update(float dt) {
-  if (clipped() && scrollbarW_ > 0) scrollInput();
-  const bool inArea = !clipped() || contains(itemsArea(), Input::mousePosition());
+int ButtonList::update(float dt, bool interactive) {
+  if (interactive && clipped() && scrollbarW_ > 0) scrollInput();
+  const bool inArea = interactive && (!clipped() || contains(itemsArea(), Input::mousePosition()));
   int clicked = -1;
   for (size_t i = 0; i < items_.size(); ++i) {
     items_[i].rect = {slots_[i].x, slots_[i].y - scroll_, slots_[i].width, slots_[i].height};
@@ -183,7 +182,7 @@ void ButtonList::draw(float alpha) const {
   for (const Button& b : items_)
     if (!clipped() || (b.rect.y + b.rect.height >= view_.y && b.rect.y <= view_.y + view_.height)) b.draw(alpha);
 
-  const float a = clamp(alpha_.value, 0.0f, 1.0f) * alpha;
+  const float a = std::clamp(alpha_.value, 0.0f, 1.0f) * alpha;
   if (indicatorInit_ && a > 0.01f) {
     const Rectangle r = {x_.value, y_.value, w_.value, h_.value};
     auto fade = [a](Color c) { c.a = static_cast<unsigned char>(c.a * a); return c; };

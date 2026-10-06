@@ -42,9 +42,9 @@ void ModeSelectScreen::update(App& app, float dt) {
     _play.enterAfter(0.0f);
     layoutNavRow();
   }
-  if (!app.screens.navShown()) return;
-  if (_back.update(dt)) app.screens.replace(std::make_unique<MainMenuScreen>());
-  if (_canPlay && _play.update(dt))
+  const bool nav = app.screens.navShown();  // hidden: still updated (hover eases out) but unreachable
+  if (_back.update(dt, nav)) app.screens.replace(std::make_unique<MainMenuScreen>());
+  if (_canPlay && _play.update(dt, nav))
     app.screens.replace(std::make_unique<PlayScreen>(Chess::GameCatalog::modes()[_modes.selected].id));
 }
 

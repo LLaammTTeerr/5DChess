@@ -88,7 +88,6 @@ void ChessController::update(float deltaTime) {
 
 void ChessController::handleInput(float deltaTime) {
     // The action buttons get first dibs on the pointer: no board selection under a button
-    layoutButtons();
     if (_undo.update(deltaTime)) handleUndoMove();
     if (_deselect.update(deltaTime)) handleDeselectPosition();
     if (_submit.update(deltaTime)) handleSubmitMove();
@@ -430,7 +429,7 @@ void ChessController::render() const {
 void ChessController::layoutButtons() {
   // Just below the HUD pill (drawn at the top centre by ChessView)
   const auto slots = ui::row({0.0f, UI::Layout::actionRowY, static_cast<float>(GetScreenWidth()), UI::Space::buttonHeight}, 3,
-                             130.0f, UI::Space::buttonSpacing);
+                             UI::Space::actionButtonWidth, UI::Space::buttonSpacing);
   _undo.rect = slots[0];
   _deselect.rect = slots[1];
   _submit.rect = slots[2];

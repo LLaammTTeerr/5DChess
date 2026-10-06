@@ -50,7 +50,6 @@ public:
   virtual void update(float deltaTime);
   /// @param pointerBlocked true when the mouse is over UI drawn on top (no board selection/hover)
   virtual void handleInput(bool pointerBlocked = false);
-  void clearHover() { _hoverPosition = {nullptr, {-1, -1}}; }
   virtual void render() const;
 
 private:
