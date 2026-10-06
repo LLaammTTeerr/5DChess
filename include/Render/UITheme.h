@@ -81,7 +81,10 @@ inline constexpr float controlsBarH   = 32.0f;
 inline constexpr float controlsBarMargin = 12.0f; // gap between the bar and the window bottom
 inline constexpr float safeGap        = 12.0f;    // breathing room between UI and the boards
 inline constexpr float sideInset      = 24.0f;
-inline constexpr float safeTop    = actionRowBottom + safeGap;
+inline constexpr float rulerY         = actionRowBottom + 8.0f;  // the turn ruler (T1 T2 ...) under the action row
+inline constexpr float rulerH         = 30.0f;
+inline constexpr float laneLabelW     = 112.0f;  // left column of the lane labels (L0, L+1, ...)
+inline constexpr float safeTop    = rulerY + rulerH + 10.0f;
 inline constexpr float safeBottom = controlsBarH + controlsBarMargin + safeGap;
 }
 
@@ -93,6 +96,10 @@ void drawSceneTitle(const char* text, float y = 48.0f);
 void drawRoundedPanel(Rectangle r, ::Color fill, ::Color border, float borderThickness = 1.0f);
 // Rounded card with an offset darker rect as a shadow
 void drawCard(Rectangle r);
+// Web only (no-op elsewhere): blending leaves the alpha channel below 1 wherever something translucent was drawn, and a
+// WebGL canvas that has an alpha channel then shows the page behind it through those pixels (white blocks and halos).
+// Call at the end of a frame, or of a render texture, to write alpha = 1 back over everything drawn.
+void restoreOpaqueAlpha(int width, int height);
 // Colour with replaced alpha
 inline ::Color withAlpha(::Color c, unsigned char a) { return {c.r, c.g, c.b, a}; }
 

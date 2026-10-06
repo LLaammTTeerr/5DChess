@@ -24,6 +24,9 @@ public:
 
   ScreenStack screens;           // the screens; destroyed first (they hold textures)
   bool quit = false;             // set by the Exit button, honoured by the main loop
+private:
+  Settings _savedSettings;       // what was last written to the settings file (a change is saved once per frame)
+public:
 
   App();
   ~App();
