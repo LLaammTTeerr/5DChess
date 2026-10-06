@@ -3,4 +3,4 @@ title: Standard
 size: 8
 rules: double-step castling
 to-move: white
-L0 T0w: rnbkqbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBKQBNR
+L0 T1w: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR

@@ -7,3 +7,9 @@ target_compile_options(refcheck PRIVATE $<IF:$<CXX_COMPILER_ID:MSVC>,/W4,-Wall -
 # turnbench: timing of the legal-turn search (random games over all modes, constructed mates). Use a Release build.
 add_executable(turnbench turnbench.cpp)
 target_link_libraries(turnbench PRIVATE chess_core)
+
+# bench: nodes/s of the turn search and the time of N random games over all modes (Release build).
+add_executable(bench bench.cpp)
+target_link_libraries(bench PRIVATE chess_core)
+target_compile_definitions(bench PRIVATE FDCHESS_POSITIONS_DIR="${PROJECT_SOURCE_DIR}/assets/positions")
+target_compile_definitions(turnbench PRIVATE FDCHESS_POSITIONS_DIR="${PROJECT_SOURCE_DIR}/assets/positions")

@@ -61,7 +61,7 @@ bool findScriptedMove(Chess::IGame& game, bool preferCross, Chess::SelectedPosit
         std::vector<SelectedPosition> targets;
         try { targets = game.getMoveablePositions(from); } catch (const std::exception&) { continue; }
         for (const auto& to : targets) {
-          if (std::dynamic_pointer_cast<King>(to.board->getPiece(to.position))) continue;  // keep the game running
+          if (to.board->at(to.position) && to.board->at(to.position)->type == PieceType::King) continue;  // keep the game running
           if (!haveBest || to.board != board) { bestFrom = from; bestTo = to; haveBest = true; }
           if (preferCross && to.board != board) { cross = true; break; }
         }

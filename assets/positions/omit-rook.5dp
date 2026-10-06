@@ -3,4 +3,4 @@ title: Simplify - No Rook
 size: 6
 rules: castling
 to-move: white
-L0 T0w: nbqkbn/pppppp/6/6/PPPPPP/NBQKBN
+L0 T1w: nbkqbn/pppppp/6/6/PPPPPP/NBKQBN

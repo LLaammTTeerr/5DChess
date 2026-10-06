@@ -8,6 +8,7 @@
 //    and with "bystander" pawns that have many harmless moves: the time and node count to prove that no legal turn exists.
 // Build with -DFDCHESS_BUILD_REFCHECK=ON in a Release configuration.
 #include "chess.h"
+#include "engine/GameCatalog.h"
 
 #include <algorithm>
 #include <chrono>
@@ -36,14 +37,14 @@ public:
     _currentTurnColor = PieceColor::PIECEBLACK;
     for (int id = 0; id < boards; ++id) {
       auto b = timeLine(id)->back();
-      b->placePiece({7, 7}, std::make_shared<King>(PieceColor::PIECEBLACK));
-      b->placePiece({6, 6}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
-      b->placePiece({7, 6}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
+      b->place({7, 7}, Piece{PieceType::King, PieceColor::PIECEBLACK});
+      b->place({6, 6}, Piece{PieceType::Pawn, PieceColor::PIECEBLACK});
+      b->place({7, 6}, Piece{PieceType::Pawn, PieceColor::PIECEBLACK});
       if (bystanders) {
-        for (int x = 1; x <= 5; ++x) b->placePiece({x, 2}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
+        for (int x = 1; x <= 5; ++x) b->place({x, 2}, Piece{PieceType::Pawn, PieceColor::PIECEBLACK});
       }
-      b->placePiece({0, 7}, std::make_shared<Rook>(PieceColor::PIECEWHITE));
-      b->placePiece({0, 0}, std::make_shared<King>(PieceColor::PIECEWHITE));
+      b->place({0, 7}, Piece{PieceType::Rook, PieceColor::PIECEWHITE});
+      b->place({0, 0}, Piece{PieceType::King, PieceColor::PIECEWHITE});
     }
   }
 };
@@ -72,11 +73,11 @@ struct Stats {
   int unresolved = 0;
 };
 
-template <class G>
 void play(const char* name, int games, int turns, int frameNodes, Stats& stats) {
   for (int seed = 1; seed <= games; ++seed) {
     std::mt19937 rng(unsigned(seed) * 7919u);
-    G game;
+    const std::shared_ptr<IGame> gamePtr = GameCatalog::create(name);
+    IGame& game = *gamePtr;
     for (int t = 0; t < turns and game.result() == GameResult::Ongoing; ++t) {
       if (!buildTurn(game, rng)) break;
       const auto t0 = Clock::now();
@@ -112,15 +113,8 @@ int main(int argc, char** argv) {
     else if (a == "--frame-nodes" && i + 1 < argc) frameNodes = std::stoi(argv[++i]);
   }
   Stats st;
-  play<StandardGame>("standard", games, turns, frameNodes, st);
-  play<CustomGameEmitBishop>("emit_bishop", games, turns, frameNodes, st);
-  play<CustomGameEmitKnight>("emit_knight", games, turns, frameNodes, st);
-  play<CustomGameEmitQueen>("emit_queen", games, turns, frameNodes, st);
-  play<CustomGameEmitRook>("emit_rook", games, turns, frameNodes, st);
-  play<CustomGameKVB>("kvb", games, turns, frameNodes, st);
-  play<MiscGameTimeLineInvasion>("invasion", games, turns, frameNodes, st);
-  play<MiscGameTimeLineBattle>("battle", games, turns, frameNodes, st);
-  play<MiscGameTimeLineFragment>("fragment", games, turns, frameNodes, st);
+  GameCatalog::setDirectory(FDCHESS_POSITIONS_DIR);
+  for (const ModeInfo& mode : GameCatalog::modes()) play(mode.id.c_str(), games, turns, frameNodes, st);
   std::sort(st.perTurn.begin(), st.perTurn.end());
   const auto pct = [&](double p) { return st.perTurn[std::min(st.perTurn.size() - 1, std::size_t(double(st.perTurn.size()) * p))]; };
   std::printf("random games: %zu turns decided, %d ended in a win/draw, %d unresolved after 60 s\n", st.perTurn.size(), st.decided, st.unresolved);

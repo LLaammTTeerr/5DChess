@@ -68,7 +68,9 @@ std::shared_ptr<IGame> GameCatalog::create(const std::string& id) {
   const ModeInfo* mode = findById(id);
   if (mode == nullptr) return nullptr;
   try {
-    return Core::loadPositionFile(mode->positionFile).makeGame();
+    auto game = Core::loadPositionFile(mode->positionFile).makeGame();
+    game->setModeId(id);
+    return game;
   } catch (const std::exception& e) {
     std::cerr << "game mode '" << id << "' failed to load: " << e.what() << std::endl;
     return nullptr;

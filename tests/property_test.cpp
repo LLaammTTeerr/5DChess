@@ -17,21 +17,20 @@ namespace {
 constexpr std::array<unsigned, 6> kSeeds = {1u, 2u, 3u, 7u, 42u, 2024u};
 constexpr std::array<unsigned, 4> kFuzzSeeds = {1u, 2u};
 
-// Dump of a single board's contents, including each piece's back-reference to its board and square.
+// Dump of a single board's contents.
 std::string dumpBoard(const std::shared_ptr<Board>& board) {
   std::string out;
   for (int y = 0; y < board->dim(); ++y) {
     for (int x = 0; x < board->dim(); ++x) {
-      auto piece = board->getPiece({x, y});
+      auto piece = board->at({x, y});
       if (!piece) {
         out += '.';
         continue;
       }
-      char c = piece->symbol();
-      if (piece->color() == PieceColor::PIECEBLACK) c = char(c - 'A' + 'a');
+      char c = pieceSymbol(piece->type);
+      if (piece->color == PieceColor::PIECEBLACK) c = char(c - 'A' + 'a');
       out += c;
-      // The piece must know where it is.
-      if (piece->getBoard() != board or not(piece->getPosition() == Position2D(x, y))) out += '!';
+      if (piece->unmoved) out += '\'';
     }
     out += '/';
   }
@@ -75,13 +74,13 @@ struct Coverage {
 
 // What kind of move is this, judged before it is made.
 void classify(const IGame& game, const Move& m, Coverage& cov) {
-  auto piece = m.from.board->getPiece(m.from.position);
+  auto piece = m.from.board->at(m.from.position);
   const bool same = m.to.board == m.from.board;
   const int dx = m.to.position.x() - m.from.position.x();
-  const int lastRank = piece->color() == PieceColor::PIECEWHITE ? game.dim() - 1 : 0;
-  if (piece->type() == PieceType::King and same and std::abs(dx) == 2) ++cov.castles;
-  if (piece->type() == PieceType::Pawn) {
-    if (same and dx != 0 and m.to.board->getPiece(m.to.position) == nullptr) ++cov.enPassant;
+  const int lastRank = piece->color == PieceColor::PIECEWHITE ? game.dim() - 1 : 0;
+  if (piece->type == PieceType::King and same and std::abs(dx) == 2) ++cov.castles;
+  if (piece->type == PieceType::Pawn) {
+    if (same and dx != 0 and m.to.board->at(m.to.position) == std::nullopt) ++cov.enPassant;
     if (m.to.position.y() == lastRank) ++cov.promotions;
     if (!same) ++cov.pawnTimelineMoves;
   }
@@ -95,8 +94,8 @@ void checkMoveGenSoundness(const IGame& game, Coverage& cov) {
   for (const auto& board : game.getMoveableBoards()) {
     for (int x = 0; x < board->dim(); ++x) {
       for (int y = 0; y < board->dim(); ++y) {
-        auto piece = board->getPiece({x, y});
-        if (!piece or piece->color() != game.getCurrentTurnColor()) continue;
+        auto piece = board->at({x, y});
+        if (!piece or piece->color != game.getCurrentTurnColor()) continue;
         SelectedPosition from(board, Position2D(x, y));
         std::set<std::string> seen;
         for (const auto& to : game.getMoveablePositions(from)) {
@@ -108,18 +107,18 @@ void checkMoveGenSoundness(const IGame& game, Coverage& cov) {
           REQUIRE(to.position.y() < game.dim());
           const int tl = to.board->timeLineId();
           const int ht = to.board->halfTurnNumber();
-          CAPTURE(piece->name());
+          CAPTURE(pieceName(piece->type));
           CAPTURE(key(from));
           CAPTURE(key(to));
           REQUIRE(game.boardExists(tl, ht));
           CHECK(game.getBoard(tl, ht) == to.board);
           CHECK(ht % 2 == parity);
-          auto target = to.board->getPiece(to.position);
-          CHECK((target == nullptr or target->color() != game.getCurrentTurnColor()));
+          auto target = to.board->at(to.position);
+          CHECK((!target or target->color != game.getCurrentTurnColor()));
           CHECK(key(to) != key(from));
           CHECK(seen.insert(key(to)).second);
           if (to.board != board) ++cov.crossBoardMoves;
-          if (piece->name() == "knight") {
+          if (piece->type == PieceType::Knight) {
             ++cov.knightMoves;
             CHECK(sortedAbsDelta(from.toVector4D(), to.toVector4D()) == std::vector<int>{0, 0, 1, 2});
           }
@@ -167,10 +166,9 @@ void checkTimelineInvariants(const IGame& game, int origMin, int origMax) {
   CHECK(present % 2 == int(game.getCurrentTurnColor()));
 }
 
-template <class G>
-void fuzzGame(unsigned seed, int turns, Coverage& cov) {
+void fuzzGame(const std::string& mode, unsigned seed, int turns, Coverage& cov) {
   std::mt19937 rng(seed);
-  std::shared_ptr<IGame> gamePtr = createGame<G>();
+  std::shared_ptr<IGame> gamePtr = newGame(mode);
   IGame& game = *gamePtr;
   const int origMin = game.minTimeLineId();
   const int origMax = game.maxTimeLineId();
@@ -234,23 +232,23 @@ void fuzzGame(unsigned seed, int turns, Coverage& cov) {
 
 } // namespace
 
-TEST_CASE_TEMPLATE("random games keep the move generator sound and snapshots immutable", G, StandardGame,
-                   CustomGameEmitBishop, CustomGameEmitKnight, CustomGameEmitQueen, CustomGameEmitRook,
-                   CustomGameKVB, MiscGameTimeLineInvasion, MiscGameTimeLineBattle, MiscGameTimeLineFragment) {
-  Coverage cov;
-  for (unsigned seed : kFuzzSeeds) {
-    CAPTURE(seed);
-    CAPTURE(NameOfGame<G>::value);
-    fuzzGame<G>(seed, 8, cov);
+TEST_CASE("random games keep the move generator sound and snapshots immutable, in every game mode") {
+  for (const std::string& mode : allModeIds()) {
+    CAPTURE(mode);
+    Coverage cov;
+    for (unsigned seed : kFuzzSeeds) {
+      CAPTURE(seed);
+      fuzzGame(mode, seed, 8, cov);
+    }
+    CHECK(cov.moves > 0);
   }
-  CHECK(cov.moves > 0);
 }
 
 TEST_CASE("fuzz exercises knights and cross-board moves") {
   Coverage cov;
-  fuzzGame<StandardGame>(1u, 16, cov);
-  fuzzGame<CustomGameEmitKnight>(2u, 16, cov);
-  fuzzGame<MiscGameTimeLineBattle>(3u, 16, cov);
+  fuzzGame("standard", 1u, 16, cov);
+  fuzzGame("omit-knight", 2u, 16, cov);
+  fuzzGame("timeline-battle", 3u, 16, cov);
   CHECK(cov.knightMoves > 0);
   CHECK(cov.crossBoardMoves > 0);
   CHECK(cov.turns > 12);
@@ -259,10 +257,9 @@ TEST_CASE("fuzz exercises knights and cross-board moves") {
 }
 
 // Plays random legal turns without any of the property checks (fast), only to count what the games reach.
-template <class G>
-void coverWalk(unsigned seed, int turns, Coverage& cov) {
+void coverWalk(const std::string& mode, unsigned seed, int turns, Coverage& cov) {
   std::mt19937 rng(seed);
-  std::shared_ptr<IGame> game = createGame<G>();
+  std::shared_ptr<IGame> game = newGame(mode);
   for (int turn = 0; turn < turns and game->result() == GameResult::Ongoing; ++turn) {
     if (game->inCheck()) ++cov.inCheckAtTurnStart;
     if (!buildRandomTurn(*game, rng, [&](const IGame& g, const Move& m) { ++cov.moves; classify(g, m, cov); })) break;
@@ -278,9 +275,9 @@ TEST_CASE("random games reach castling, en passant, promotion, pawn timeline mov
   // evidence that the rules are right. That is what the directed tests and tools/refcheck (a comparison with 5d-chess-js)
   // are for. This test makes sure the random games get anywhere near the interesting rules at all.
   Coverage cov;
-  for (unsigned seed = 1; seed <= 24; ++seed) coverWalk<StandardGame>(seed, 20, cov);
-  for (unsigned seed = 1; seed <= 5; ++seed) coverWalk<CustomGameKVB>(seed, 20, cov);
-  for (unsigned seed = 1; seed <= 10; ++seed) coverWalk<MiscGameTimeLineFragment>(seed, 20, cov);
+  for (unsigned seed = 1; seed <= 60; ++seed) coverWalk("standard", seed, 20, cov);
+  for (unsigned seed = 1; seed <= 5; ++seed) coverWalk("knight-vs-bishop", seed, 20, cov);
+  for (unsigned seed = 1; seed <= 10; ++seed) coverWalk("timeline-fragment", seed, 20, cov);
   MESSAGE("castles " << cov.castles << ", en passant " << cov.enPassant << ", promotions " << cov.promotions
                      << ", pawn timeline moves " << cov.pawnTimelineMoves << ", in check at turn start "
                      << cov.inCheckAtTurnStart << ", optional-board moves " << cov.optionalBoardMoves << ", decided games "
@@ -315,20 +312,19 @@ TEST_CASE("rook, bishop and king moves are subsets of queen moves from the same 
       }
 
       // Pawns serve as inert blockers; the layout is identical in each sandbox, only the piece under test changes.
-      auto movesOf = [&](auto tag) {
-        using P = decltype(tag);
+      auto movesOf = [&](PieceType type) {
         Sandbox game(N, kTimeLines);
-        for (const auto& b : blockers) game.place(b.tl, b.x, b.y, make<Pawn>(b.color));
-        game.place(1, tx, ty, make<P>(PieceColor::PIECEWHITE));
+        for (const auto& b : blockers) game.place(b.tl, b.x, b.y, make(PieceType::Pawn, b.color));
+        game.place(1, tx, ty, make(type, PieceColor::PIECEWHITE));
         std::set<std::string> keys;
         for (const auto& m : movesAt(game, game.tip(1), tx, ty)) keys.insert(key(m));
         return keys;
       };
 
-      const auto queen = movesOf(Queen(PieceColor::PIECEWHITE));
-      for (const auto& [name, subset] : {std::pair<const char*, std::set<std::string>>{"rook", movesOf(Rook(PieceColor::PIECEWHITE))},
-                                         {"bishop", movesOf(Bishop(PieceColor::PIECEWHITE))},
-                                         {"king", movesOf(King(PieceColor::PIECEWHITE))}}) {
+      const auto queen = movesOf(PieceType::Queen);
+      for (const auto& [name, subset] : {std::pair<const char*, std::set<std::string>>{"rook", movesOf(PieceType::Rook)},
+                                         {"bishop", movesOf(PieceType::Bishop)},
+                                         {"king", movesOf(PieceType::King)}}) {
         CAPTURE(name);
         for (const auto& k : subset) {
           CAPTURE(k);

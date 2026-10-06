@@ -2,7 +2,7 @@
 # (a1 -> a2) on the white-moveable board, then Black plays pawn b4-b3 on the first board and bishop b4-a3 on the
 # second; White then has no legal turn and its king is attacked: "Black wins!" (Checkmate).
 # Layout (1400x800): Versus (150,280); mode row 8 (690,634); Play (808,712). Boards are 252 px (63.3 px squares, files
-# drawn mirrored): the white-moveable one at x 415..667, y 466..718; after white submits, black's boards sit at
+# a..h from the left): the white-moveable one at x 415..667, y 466..718; after white submits, black's boards sit at
 # x 732..985 (y 149..402 and y 466..718).
 wait 20
 click 150 280        # Versus

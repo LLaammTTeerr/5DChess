@@ -228,6 +228,24 @@ are used, which is independent of the position.
 The mates are Black to move on `k` identical 8x8 boards (king h8 boxed in by pawns g7/h7, White rook a8 giving check),
 "bystanders" adds five Black pawns per board with harmless moves.
 
+### Boards as values (`bench`)
+
+`tools/refcheck/bench.cpp` (target `bench`, same configuration as `turnbench`) measures the engine as a whole: the nodes per
+second of `TurnSearch` on the mates above (repeated, so that the time is measurable) and the time of 1000 seeded random games
+spread over all catalog modes (at most 30 turns each, every turn followed by its result search with a 50 000 node budget).
+Its checksum covers every move played, so two builds with the same checksum played the same games. Measured when `Piece` became
+a plain value and `Board` a fixed array of one-byte cells (Release, same machine, two runs each):
+
+| | Before (shared_ptr pieces) | After (value pieces) |
+|---|---|---|
+| `TurnSearch`, mates | 1.84 / 2.10 M nodes/s | 2.20 / 2.22 M nodes/s |
+| 1000 random games (16 455 turns) | 56.1 / 54.8 s | 46.5 / 42.5 s |
+| checksum of the games | `ffa3b5ef7c15e8dc` | `ffa3b5ef7c15e8dc` |
+
+The checksum was identical before and after the value refactor. When the engine's x axis was later flipped (x = displayed file, king on
+e1) the random choices pick other moves, so the same seeds play different games: 1000 games = 17 069 turns, checksum
+`f98ecec2ac1af4c0`, 2.20 / 2.28 M nodes/s and 42.2 / 43.0 s.
+
 ## 8. Reproducing the comparison with 5d-chess-js
 
 The *rules* (not the search) are checked against the reference engine by `tools/refcheck/compare.js`; see its header and the

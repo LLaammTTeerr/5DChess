@@ -27,7 +27,7 @@ Rectangle boardWorldArea(BoardKey key) {
 Rectangle squareRectFor(const Rectangle& area, int dim, Chess::Position2D pos) {
     const float sw = area.width / dim;
     const float sh = area.height / dim;
-    return Rectangle{area.x + (dim - 1 - pos.x()) * sw, area.y + (dim - 1 - pos.y()) * sh, sw, sh};
+    return Rectangle{area.x + pos.x() * sw, area.y + (dim - 1 - pos.y()) * sh, sw, sh};
 }
 
 namespace {
@@ -62,8 +62,8 @@ void BoardView2D::render() const {
     for (int x = 0; x < _boardDim; ++x) {
         for (int y = 0; y < _boardDim; ++y) {
             const Rectangle sq = squareRect(Chess::Position2D(x, y));
-            // Engine (0,0) is light; after the rotation it is White's bottom-right corner
-            const bool light = (x + y) % 2 == 0;
+            // Checkerboard: on an 8x8 board a1 (0,0) is dark; the corner opposite to it (N-1,0) is light
+            const bool light = (_boardDim - 1 - x + y) % 2 == 0;
             DrawRectangle(sq.x, sq.y, sq.width, sq.height,
                           fadeColor(light ? UI::Color::squareLight : UI::Color::squareDark, alpha));
         }
@@ -80,11 +80,11 @@ void BoardView2D::render() const {
     if (entering) rlPopMatrix();
 }
 
-// The view is the engine grid rotated 180 degrees: White (y=0) is at the BOTTOM and the
-// engine's x=0 file is at the RIGHT, which puts the queen on d1 and the king on e1.
+// The view is the engine grid flipped vertically: White (y=0) is at the BOTTOM and the
+// engine's x=0 file (a) is at the LEFT, which puts the queen on d1 and the king on e1.
 // Each mapping is its own inverse, so one helper serves both directions.
-int BoardView2D::colToScreen(int x) const { return _boardDim - 1 - x; }
-int BoardView2D::screenToCol(int screenCol) const { return _boardDim - 1 - screenCol; }
+int BoardView2D::colToScreen(int x) const { return x; }
+int BoardView2D::screenToCol(int screenCol) const { return screenCol; }
 int BoardView2D::rowToScreen(int y) const { return _boardDim - 1 - y; }
 int BoardView2D::screenToRow(int screenRow) const { return _boardDim - 1 - screenRow; }
 

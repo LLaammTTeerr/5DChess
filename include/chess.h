@@ -46,7 +46,7 @@ private:
   std::array<int, 4> _data;
 };
 
-enum class PieceColor : int {
+enum class PieceColor : uint8_t {
   PIECEWHITE = 0,
   PIECEBLACK = 1,
 };
@@ -55,7 +55,7 @@ inline constexpr PieceColor opposite(PieceColor c) {
   return c == PieceColor::PIECEWHITE ? PieceColor::PIECEBLACK : PieceColor::PIECEWHITE;
 }
 
-enum class PieceType : int { King, Queen, Rook, Bishop, Knight, Pawn };
+enum class PieceType : uint8_t { King, Queen, Rook, Bishop, Knight, Pawn };
 
 /**
  * Plain-value engine types (no pointers, so they can be hashed, compared, written to notation / puzzles / save files and
@@ -83,10 +83,24 @@ struct Move {
   constexpr bool operator==(const Move&) const = default;
 };
 
+/** A move as it was played: `promotes` tells whether a pawn reached the last rank (then `move.promotion` is what it became). */
+struct PlayedMove {
+  Move move;
+  bool promotes = false;
+  constexpr bool operator==(const PlayedMove&) const = default;
+};
+
+/** The moves of one submitted turn and the present (half-turn) the turn started at. */
+struct PlayedTurn {
+  int presentHalfTurn = 0;
+  std::vector<PlayedMove> moves;
+  bool operator==(const PlayedTurn&) const = default;
+};
+
 } // namespace Core
 
 class Position2D;
-class Piece;
+struct Piece;
 class Board;
 class TimeLine;
 class Multiverse;
@@ -126,276 +140,108 @@ private:
   int _y;
 };
 
-class Piece {
-public:
-  Piece(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1));
-  virtual ~Piece() = default;
-
-  virtual std::shared_ptr<Piece> clone() const = 0;
-
-  /** The kind of piece (what a promotion chooses between, what castling looks for, ...). */
-  virtual PieceType type(void) const = 0;
-
-  /**
-   * True until the piece has made a move. Needed for castling (king and rook) and the pawn double step.
-   * Copied by clone(), so a forked board keeps the flags of the board it was forked from.
-   */
-  inline bool unmoved(void) const { return _unmoved; }
-  inline void setUnmoved(bool unmoved) { _unmoved = unmoved; }
-
-  /**
-   * Get the color of the piece.
-   * @return The color of the piece as a PieceColor enum.
-   * This method returns the color of the piece, which can be either white or black.
-   */
-  inline PieceColor color() const {
-    return _color;
-  }
-
-  /**
-   * Get the name of the piece.
-   * @return The name of the piece as a string.
-   * This method returns the name of the piece, such as "king", "queen", etc.
-   */
-  virtual const std::string& name(void) const = 0;
-
-  /**
-   * Get the symbol of the piece.
-   * @return The symbol of the piece as a character.
-   * This method returns a single character that represents the piece, such as 'K' for king, 'Q' for queen, etc.
-   */
-  virtual const char& symbol(void) const = 0;
-
-  /**
-   * Get the board this piece is on.
-   * @return A shared pointer to the Board object this piece is on.
-   * This method returns the board that this piece is currently placed on.
-   * If the piece is not on any board, it returns a null pointer.
-   * @note The piece only holds a weak reference to its board (the board owns the piece).
-   */
-  inline std::shared_ptr<Board> getBoard(void) const { return _board.lock(); }
-
-  /**
-   * Get the position of this piece on the board.
-   * @return The Position2D object representing the piece's position.
-   * This method returns the current position of the piece on the board.
-   * The position is represented as a Position2D object, which contains x and y coordinates
-   * indicating the piece's location on the board.
-   * If the piece is not placed on a board, the position may be invalid (e.g., (-1, -1)).
-   * @note The position is typically zero-indexed, meaning (0, 0)
-   * represents the top-left corner of the board.
-   */
-  inline Position2D getPosition() const { return _position; }
-
-  inline void setPosition(Position2D position) {
-    _position = position;
-  }
-
-  inline void setBoard(std::shared_ptr<Board> board) {
-    _board = board;
-  }
-protected:
-  PieceColor _color;
-  std::weak_ptr<Board> _board; // Non-owning: the board owns the piece, so a shared_ptr would be a cycle
-  Position2D _position;
-  bool _unmoved = true;
+/**
+ * A piece as a plain value (no identity, no board pointer): what it is, whose it is, and whether it has never moved
+ * (needed for castling by king and rook and for the pawn's double step; cleared when the piece moves, kept by a fork).
+ */
+struct Piece {
+  PieceType type = PieceType::Pawn;
+  PieceColor color = PieceColor::PIECEWHITE;
+  bool unmoved = true;
+  constexpr bool operator==(const Piece&) const = default;
 };
 
-/** Create a fresh (unmoved) piece of the given kind. */
-std::shared_ptr<Piece> makePiece(PieceType type, PieceColor color);
+/** "king", "queen", ... (the keys of the piece textures: "white_" / "black_" + name). */
+const std::string& pieceName(PieceType type);
+/** 'K', 'Q', 'R', 'B', 'N', 'P'. */
+char pieceSymbol(PieceType type);
 
-class King : public Piece {
-public:
-  King(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1))
-    : Piece(color, board, position) {};
-
-  virtual std::shared_ptr<Piece> clone() const override {
-    return std::make_shared<King>(*this);
+/**
+ * One square of a board in one byte: 0 is empty; otherwise bits 0-2 hold PieceType + 1, bit 3 the colour, bit 4 "unmoved".
+ * This is the storage form of Board and of the turn search; use Board::at() for a Piece.
+ */
+struct Cell {
+  uint8_t v = 0;
+  constexpr bool empty() const { return v == 0; }
+  constexpr PieceType type() const { return PieceType((v & 7) - 1); }
+  constexpr PieceColor color() const { return PieceColor((v >> 3) & 1); }
+  constexpr bool unmoved() const { return (v & 16) != 0; }
+  static constexpr Cell make(PieceType type, PieceColor color, bool unmoved) {
+    return Cell{uint8_t((int(type) + 1) | (int(color) << 3) | (unmoved ? 16 : 0))};
   }
-
-  PieceType type(void) const override { return PieceType::King; }
-
-  inline const std::string& name(void) const override {
-    static const std::string name = "king";
-    return name;
-  }
-
-  inline const char& symbol(void) const override {
-    static const char symbol = 'K';
-    return symbol;
-  }
-};
-
-class Queen : public Piece {
-public:
-  Queen(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1))
-    : Piece(color, board, position) {};
-
-  virtual std::shared_ptr<Piece> clone() const override {
-    return std::make_shared<Queen>(*this);
-  }
-
-  PieceType type(void) const override { return PieceType::Queen; }
-
-  inline const std::string& name(void) const override {
-    static const std::string name = "queen";
-    return name;
-  }
-
-  inline const char& symbol(void) const override {
-    static const char symbol = 'Q';
-    return symbol;
-  }
-};
-
-class Rook : public Piece {
-public:
-  Rook(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1))
-    : Piece(color, board, position) {};
-
-  virtual std::shared_ptr<Piece> clone() const override {
-    return std::make_shared<Rook>(*this);
-  }
-
-  PieceType type(void) const override { return PieceType::Rook; }
-
-  inline const std::string& name(void) const override {
-    static const std::string name = "rook";
-    return name;
-  }
-
-  inline const char& symbol(void) const override {
-    static const char symbol = 'R';
-    return symbol;
-  }
-};
-
-class Bishop : public Piece {
-public:
-  Bishop(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1))
-    : Piece(color, board, position) {};
-
-  virtual std::shared_ptr<Piece> clone() const override {
-    return std::make_shared<Bishop>(*this);
-  }
-
-  PieceType type(void) const override { return PieceType::Bishop; }
-
-  inline const std::string& name(void) const override {
-    static const std::string name = "bishop";
-    return name;
-  }
-
-  inline const char& symbol(void) const override {
-    static const char symbol = 'B';
-    return symbol;
-  }
-};
-
-class Knight : public Piece {
-public:
-  Knight(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1))
-    : Piece(color, board, position) {};
-
-  virtual std::shared_ptr<Piece> clone() const override {
-    return std::make_shared<Knight>(*this);
-  }
-
-  PieceType type(void) const override { return PieceType::Knight; }
-
-  inline const std::string& name(void) const override {
-    static const std::string name = "knight";
-    return name;
-  }
-
-  inline const char& symbol(void) const override {
-    static const char symbol = 'N';
-    return symbol;
-  }
-};
-
-class Pawn : public Piece {
-public:
-  Pawn(PieceColor color, std::shared_ptr<Board> board = nullptr, Position2D position = Position2D(-1, -1))
-    : Piece(color, board, position) {};
-
-  virtual std::shared_ptr<Piece> clone() const override {
-    return std::make_shared<Pawn>(*this);
-  }
-
-  PieceType type(void) const override { return PieceType::Pawn; }
-
-  inline const std::string& name(void) const override {
-    static const std::string name = "pawn";
-    return name;
-  }
-
-  inline const char& symbol(void) const override {
-    static const char symbol = 'P';
-    return symbol;
-  }
+  static constexpr Cell of(const Piece& p) { return make(p.type, p.color, p.unmoved); }
+  constexpr Piece piece() const { return Piece{type(), color(), unmoved()}; }
 };
 
 /**
- * A snapshot of one N x N position.
- * @note Boards are IMMUTABLE once they have been pushed onto a TimeLine: every mutation (placePiece) must happen
- * while the board is still being built. This is what makes it safe to share Board objects between
- * IGame::clone()d games (structural sharing).
+ * COMPATIBILITY SHIM for the UI (Board::getPiece): a nullable view of a piece with the old pointer-style accessors.
+ * New code uses Board::at() and the fields of Piece. To be removed with the UI's last use of getPiece().
  */
-class Board : public std::enable_shared_from_this<Board> {
+class PieceRef {
 public:
+  PieceRef(std::nullptr_t = nullptr) {}
+  PieceRef(const Piece& piece) : _piece(piece) {}
+  const PieceRef* operator->() const { return this; }
+  explicit operator bool() const { return _piece.has_value(); }
+  friend bool operator==(const PieceRef& r, std::nullptr_t) { return !r._piece; }
+  PieceColor color() const { return _piece->color; }
+  PieceType type() const { return _piece->type; }
+  bool unmoved() const { return _piece->unmoved; }
+  const std::string& name() const { return pieceName(_piece->type); }
+  char symbol() const { return pieceSymbol(_piece->type); }
+private:
+  std::optional<Piece> _piece;
+};
+
+/**
+ * A snapshot of one N x N position, N <= MAX_DIM, stored as a fixed array of one-byte cells (index y * N + x), so forking
+ * a board is a plain copy.
+ * @note Boards are IMMUTABLE once they have been pushed onto a TimeLine: place() / clear() are only for building a board.
+ * This is what makes it safe to share Board objects between IGame::clone()d games (structural sharing).
+ */
+class Board {
+public:
+  static constexpr int MAX_DIM = 8;
+
   Board(int N, int timeLineId, int halfTurnNumber = 0);
 
-  /**
-   * Get the dimension of the board.
-   * @return The dimension of the board as an integer.
-   * This method returns the size of the board (N).
-   */
-  inline int dim(void) const {
-    return _N;
+  /** The dimension N of the board. */
+  inline int dim(void) const { return _N; }
+
+  /** The piece on a square, if any. */
+  inline std::optional<Piece> at(Position2D position) const {
+    const Cell c = cell(position.x(), position.y());
+    return c.empty() ? std::nullopt : std::optional<Piece>(c.piece());
+  }
+  inline Cell cell(int x, int y) const {
+    assert(x >= 0 && x < _N && y >= 0 && y < _N);
+    return _cells[size_t(y * _N + x)];
+  }
+  /** Row-major cells (y * N + x), the first N * N entries are valid. */
+  inline const std::array<Cell, MAX_DIM * MAX_DIM>& cells(void) const { return _cells; }
+
+  /** Put a piece on a square (replacing what is there) / empty a square. Only while the board is being built. */
+  void place(Position2D position, const Piece& piece);
+  void clear(Position2D position);
+
+  /** COMPATIBILITY SHIM for the UI, see PieceRef. */
+  inline PieceRef getPiece(Position2D position) const {
+    const auto piece = at(position);
+    return piece ? PieceRef(*piece) : PieceRef();
   }
 
-  /**
-   * Place a piece on the board.
-   * @param position The position on the board where the piece will be placed.
-   * @param piece The piece to be placed on the board.
-   * This method asserts that the position is within the bounds of the board
-   * Please note that this method transfers ownership of the piece to the board.
-   */
-  void placePiece(Position2D position, std::shared_ptr<Piece> piece);
-
-  /**
-   * Get a piece from the board.
-   * @param position The position on the board from which to retrieve the piece.
-   * @return A shared pointer to the Piece object at the specified position, or nullptr if no piece is present.
-   */
-  std::shared_ptr<Piece> getPiece(Position2D position) const;
-
-  /**
-   * Get the ID of the timeline this board belongs to (immutable; may be negative).
-   * Use IGame::timeLine(id) to get the TimeLine object.
-   */
+  /** The ID of the timeline this board belongs to (immutable; may be negative). */
   inline int timeLineId(void) const { return _timeLineId; }
-
-  /**
-   * Get the full turn number of the board.
-   * @return The full turn number as an integer.
-   */
   inline int fullTurnNumber(void) const { return _halfTurnNumber / 2; }
-
-  /**
-   * Get the half turn number of the board.
-   * @return The half turn number as an integer.
-   */
   inline int halfTurnNumber(void) const { return _halfTurnNumber; }
 
-  std::shared_ptr<Board> createFork(int timeLineId);
+  /** A copy of this board one half-turn later, belonging to timeline `timeLineId` (still to be edited, then pushed). */
+  std::shared_ptr<Board> createFork(int timeLineId) const;
 private:
   int _N;
   int _halfTurnNumber;
-  std::shared_ptr<Board> _previousBoard;
-  std::vector<std::vector<std::shared_ptr<Piece>>> _pieces;
-  int _timeLineId; // ID of the timeline this board belongs to
+  int _timeLineId;
+  std::array<Cell, MAX_DIM * MAX_DIM> _cells{};
 };
 
 class TimeLine {
@@ -817,6 +663,10 @@ protected:
   int _presentHalfTurn;
   std::map<int, std::shared_ptr<TimeLine>> _timeLines; // keyed (and ordered) by timeline ID; IDs may be negative
   std::vector<Move> _currentTurnMoves;
+  std::vector<Core::PlayedMove> _pendingMoves;           // _currentTurnMoves as values (with promotions)
+  std::vector<Core::PlayedTurn> _history;                // submitted turns
+  std::string _startPosition;                            // set by Core::Position::makeGame
+  std::string _modeId;                                   // set by GameCatalog::create
   PieceColor _currentTurnColor;
   std::vector<std::vector<int>> _undoBuffer;
   RuleEngine _rule;
@@ -899,113 +749,22 @@ public:
 
   void undo(void);
 
+  // --- Move history (for records, see include/engine/Notation.h) ------------------------------------------------------
+
+  /** The submitted turns so far, oldest first, each with the moves played in it (undone moves are not included). */
+  inline const std::vector<Core::PlayedTurn>& history(void) const { return _history; }
+  /** The moves of the pending (unsubmitted) turn. */
+  inline const std::vector<Core::PlayedMove>& pendingMoves(void) const { return _pendingMoves; }
+  /** The position this game started from as .5dp text (empty for games not built from a Position), and the catalog id of the mode if any. */
+  inline const std::string& startPosition(void) const { return _startPosition; }
+  inline const std::string& modeId(void) const { return _modeId; }
+  inline void setModeId(std::string id) { _modeId = std::move(id); }
+
   inline PieceColor getCurrentTurnColor(void) const {
     return _currentTurnColor;
   }
 
   inline const RuleEngine& rule(void) const { return _rule; }
-};
-
-class Constant {
-public:
-  static const int BOARD_SIZE;
-  static const int BOARD_SIZE_EMIT_BISHOP;
-  static const int BOARD_SIZE_EMIT_KNIGHT;
-  static const int BOARD_SIZE_EMIT_QUEEN;
-  static const int BOARD_SIZE_EMIT_ROOK;
-  static const int BOARD_SIZE_K_VS_B;
-  static const int BOARD_SIZE_TIME_LINE_INVASION;
-  static const int BOARD_SIZE_TIME_LINE_BATTLE;
-  static const int BOARD_SIZE_TIME_LINE_FRAGMENT;
-};
-
-class StandardGame : public IGame {
-public:
-  StandardGame(void);
-};
-
-class CustomGameEmitBishop : public IGame {
-public:
-  CustomGameEmitBishop(void);
-};
-
-class CustomGameEmitKnight : public IGame {
-public:
-  CustomGameEmitKnight(void);
-};
-
-class CustomGameEmitQueen : public IGame {
-public:
-  CustomGameEmitQueen(void);
-};
-
-class CustomGameEmitRook : public IGame {
-public:
-  CustomGameEmitRook(void);
-};
-
-class CustomGameKVB : public IGame {
-public:
-  CustomGameKVB(void);
-};
-
-class MiscGameTimeLineInvasion : public IGame {
-public:
-  MiscGameTimeLineInvasion(void);
-};
-
-class MiscGameTimeLineBattle : public IGame {
-public:
-  MiscGameTimeLineBattle(void);
-};
-
-class MiscGameTimeLineFragment : public IGame {
-public:
-  MiscGameTimeLineFragment(void);
-};
-
-template<class T>
-inline std::shared_ptr<IGame> createGame(void) {
-  static_assert(std::is_base_of<IGame, T>::value, "T must derive from IGame");
-  return std::make_shared<T>();
-}
-
-template<class T> struct NameOfGame;
-
-template<> struct NameOfGame<StandardGame> {
-  static const std::string value;
-};
-
-template<> struct NameOfGame<CustomGameEmitBishop> {
-  static const std::string value;
-};
-
-template<> struct NameOfGame<CustomGameEmitKnight> {
-  static const std::string value;
-};
-
-template<> struct NameOfGame<CustomGameEmitQueen> {
-  static const std::string value;
-};
-
-template<> struct NameOfGame<CustomGameEmitRook> {
-  static const std::string value;
-};
-
-template <> struct NameOfGame<CustomGameKVB> {
-  static const std::string value;
-};
-
-template <> struct NameOfGame<MiscGameTimeLineInvasion> {
-  static const std::string value;
-};
-
-template<> struct NameOfGame<MiscGameTimeLineBattle> {
-  static const std::string value;
-};
-
-template<> struct NameOfGame<MiscGameTimeLineFragment> {
-  static const std::string value;
 };
 
 } // namespace Chess

@@ -21,14 +21,14 @@ public:
     _currentTurnColor = PieceColor::PIECEBLACK;
     for (int id = 0; id < boards; ++id) {
       auto b = timeLine(id)->back();
-      b->placePiece({7, 7}, std::make_shared<King>(PieceColor::PIECEBLACK));
-      b->placePiece({6, 6}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
-      if (!escape) b->placePiece({7, 6}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
+      b->place({7, 7}, Piece{PieceType::King, PieceColor::PIECEBLACK});
+      b->place({6, 6}, Piece{PieceType::Pawn, PieceColor::PIECEBLACK});
+      if (!escape) b->place({7, 6}, Piece{PieceType::Pawn, PieceColor::PIECEBLACK});
       if (bystanders) {
-        for (int x = 1; x <= 5; ++x) b->placePiece({x, 2}, std::make_shared<Pawn>(PieceColor::PIECEBLACK));
+        for (int x = 1; x <= 5; ++x) b->place({x, 2}, Piece{PieceType::Pawn, PieceColor::PIECEBLACK});
       }
-      b->placePiece({0, 7}, std::make_shared<Rook>(PieceColor::PIECEWHITE));
-      b->placePiece({0, 0}, std::make_shared<King>(PieceColor::PIECEWHITE));
+      b->place({0, 7}, Piece{PieceType::Rook, PieceColor::PIECEWHITE});
+      b->place({0, 0}, Piece{PieceType::King, PieceColor::PIECEWHITE});
     }
   }
 };
@@ -79,11 +79,11 @@ TEST_CASE("a 3-board mate is decided in a few small steps, and a pending game re
 
   // Through the game: White gives the mate on a single board, submitTurn() arms the search, stepping decides.
   Sandbox game(4);
-  game.place(0, 0, 0, make<King>(PieceColor::PIECEWHITE));
-  game.place(0, 3, 0, make<Rook>(PieceColor::PIECEWHITE));
-  game.place(0, 0, 3, make<King>(PieceColor::PIECEBLACK));
-  game.place(0, 0, 2, make<Pawn>(PieceColor::PIECEBLACK));
-  game.place(0, 1, 2, make<Pawn>(PieceColor::PIECEBLACK));
+  game.place(0, 0, 0, make(PieceType::King, PieceColor::PIECEWHITE));
+  game.place(0, 3, 0, make(PieceType::Rook, PieceColor::PIECEWHITE));
+  game.place(0, 0, 3, make(PieceType::King, PieceColor::PIECEBLACK));
+  game.place(0, 0, 2, make(PieceType::Pawn, PieceColor::PIECEBLACK));
+  game.place(0, 1, 2, make(PieceType::Pawn, PieceColor::PIECEBLACK));
   game.makeMove(Move{SelectedPosition(game.tip(0), Position2D(3, 0)), SelectedPosition(game.tip(0), Position2D(3, 3))});
   game.submitTurn();
   CHECK(game.result() == GameResult::Ongoing);
@@ -98,10 +98,10 @@ TEST_CASE("a jump into the past from another board clears the obligation to move
   // first board of its own timeline. That creates a timeline whose latest board ends at half-turn 1, so the present moves
   // back to Black's turn: nothing has to be played on timeline 0 any more (it is only "optional" from then on).
   Sandbox game(4, std::vector<int>{3, 3}, 2);
-  game.place(0, 0, 0, make<King>(PieceColor::PIECEWHITE));
-  game.place(0, 3, 3, make<King>(PieceColor::PIECEBLACK));
-  game.place(1, 0, 0, make<Knight>(PieceColor::PIECEWHITE));
-  game.place(1, 3, 3, make<King>(PieceColor::PIECEBLACK));
+  game.place(0, 0, 0, make(PieceType::King, PieceColor::PIECEWHITE));
+  game.place(0, 3, 3, make(PieceType::King, PieceColor::PIECEBLACK));
+  game.place(1, 0, 0, make(PieceType::Knight, PieceColor::PIECEWHITE));
+  game.place(1, 3, 3, make(PieceType::King, PieceColor::PIECEBLACK));
   REQUIRE(game.mandatoryBoards().size() == 2);
 
   // Moving on timeline 1 only (an ordinary move) is not enough.
@@ -123,10 +123,10 @@ TEST_CASE("a jump into the past from another board clears the obligation to move
 
   // The search finds exactly that kind of turn when asked from the start position.
   Sandbox start(4, std::vector<int>{3, 3}, 2);
-  start.place(0, 0, 0, make<King>(PieceColor::PIECEWHITE));
-  start.place(0, 3, 3, make<King>(PieceColor::PIECEBLACK));
-  start.place(1, 0, 0, make<Knight>(PieceColor::PIECEWHITE));
-  start.place(1, 3, 3, make<King>(PieceColor::PIECEBLACK));
+  start.place(0, 0, 0, make(PieceType::King, PieceColor::PIECEWHITE));
+  start.place(0, 3, 3, make(PieceType::King, PieceColor::PIECEBLACK));
+  start.place(1, 0, 0, make(PieceType::Knight, PieceColor::PIECEWHITE));
+  start.place(1, 3, 3, make(PieceType::King, PieceColor::PIECEBLACK));
   TurnSearch search(start);
   REQUIRE(runToEnd(search) == TurnSearch::Status::Found);
   checkTurn(start, search);
@@ -136,16 +136,16 @@ TEST_CASE("a pawn captures one timeline forward and a full turn ahead in time, t
   // Timeline 0 is ahead (boards h0..h4); the pawn stands on the latest board of timeline 1 (h2) and captures the black
   // piece on the same square of timeline 0's latest board. Forward on the timeline axis for White is towards lower IDs.
   Sandbox game(5, std::vector<int>{5, 3}, 4);
-  game.place(1, 2, 1, make<Pawn>(PieceColor::PIECEWHITE));
-  game.place(0, 2, 1, make<Rook>(PieceColor::PIECEBLACK));
+  game.place(1, 2, 1, make(PieceType::Pawn, PieceColor::PIECEWHITE));
+  game.place(0, 2, 1, make(PieceType::Rook, PieceColor::PIECEBLACK));
   auto moves = movesAt(game, game.tip(1), 2, 1);
   REQUIRE(contains(moves, game.tip(0), 2, 1));
   Move m{SelectedPosition(game.tip(1), Position2D(2, 1)), SelectedPosition(game.tip(0), Position2D(2, 1))};
   auto oldTip0 = game.tip(0);
   game.makeMove(m);
   CHECK(game.timeLine(0)->back() != oldTip0);
-  CHECK(game.timeLine(0)->back()->getPiece({2, 1})->type() == PieceType::Pawn);
-  CHECK(game.timeLine(1)->back()->getPiece({2, 1}) == nullptr);
+  CHECK(game.timeLine(0)->back()->at({2, 1})->type == PieceType::Pawn);
+  CHECK(game.timeLine(1)->back()->at({2, 1}) == std::nullopt);
 }
 
 TEST_CASE("a move on an inactive timeline changes nothing about the present, also through a full submit") {
@@ -156,7 +156,7 @@ TEST_CASE("a move on an inactive timeline changes nothing about the present, als
   game.addCreatedTimeLine(2, 1); // one board only: it ends at half-turn 0
   REQUIRE(game.isTimeLineActive(1));
   REQUIRE_FALSE(game.isTimeLineActive(2));
-  for (int id : {0, 1, 2}) game.place(id, 0, 0, make<Knight>(PieceColor::PIECEWHITE));
+  for (int id : {0, 1, 2}) game.place(id, 0, 0, make(PieceType::Knight, PieceColor::PIECEWHITE));
   CHECK(game.bufferHalfTurn() == 2);
   CHECK(game.mandatoryBoards().size() == 2);
   game.makeMove(Move{SelectedPosition(game.tip(0), Position2D(0, 0)), SelectedPosition(game.tip(0), Position2D(1, 2))});

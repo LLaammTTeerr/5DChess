@@ -11,12 +11,12 @@ namespace Chess::Core {
 
 namespace {
 
-constexpr int kMaxSize = 16;
+constexpr int kMaxSize = Board::MAX_DIM;
 // Bounds (see docs/POSITIONS.md): timeline ids must fit Core::Coord (int16) with room to spare, and the turn search sizes
 // its arena by the id span and the number of boards, so both are capped far above anything a real game reaches.
 constexpr int kMaxTimelineId = 1000;   // |id|; at most 2001 timelines
 constexpr int kMaxHalfTurn = 20000;    // fits Coord::t (int16)
-constexpr int kMaxBoards = 20000;      // across all timelines; at most 20000 * 256 bytes of search arena
+constexpr int kMaxBoards = 20000;      // across all timelines; at most 20000 * 64 bytes of search arena
 
 [[noreturn]] void fail(int line, const std::string& what) {
   throw ParseError("line " + std::to_string(line) + ": " + what);
@@ -36,6 +36,18 @@ int parseInt(std::string_view s, int line, const char* what, int lo = INT_MIN, i
   if (ec != std::errc() or value < lo or value > hi)
     fail(line, std::string(what) + " out of range " + std::to_string(lo) + ".." + std::to_string(hi));
   return value;
+}
+
+std::string turnLabel(int halfTurn) {
+  return "T" + std::to_string(halfTurn / 2 + 1) + (halfTurn % 2 == 0 ? "w" : "b");
+}
+
+// "T<turn><w|b>" -> half-turn (turns count from 1; w = even half-turn, b = odd)
+int parseTurnLabel(std::string_view s, int line) {
+  s = trim(s);
+  if (s.size() < 3 or s[0] != 'T' or (s.back() != 'w' and s.back() != 'b')) fail(line, "expected a turn label like T3w");
+  const int turn = parseInt(s.substr(1, s.size() - 2), line, "turn", 1, kMaxHalfTurn / 2);
+  return 2 * (turn - 1) + (s.back() == 'b' ? 1 : 0);
 }
 
 // ---- pieces ---------------------------------------------------------------------------------------------------------
@@ -125,6 +137,7 @@ public:
     _rule.castling = p.castling;
     _presentHalfTurn = p.present;
     _currentTurnColor = p.toMove;
+    _startPosition = writePosition(p);
     // The timelines the game started with come first: they define the original ID range (see IGame::_addTimeLine).
     for (int pass = 0; pass < 2; ++pass) {
       for (const TimelineData& data : p.timelines) {
@@ -144,9 +157,7 @@ private:
       for (int x = 0; x < size; ++x) {
         const auto& cell = data.cells[y * size + x];
         if (!cell) continue;
-        auto piece = makePiece(cell->type, cell->color);
-        piece->setUnmoved(!cell->moved);
-        board->placePiece(Position2D(x, y), std::move(piece));
+        board->place(Position2D(x, y), Piece{cell->type, cell->color, !cell->moved});
       }
     }
     return board;
@@ -173,8 +184,8 @@ Position Position::fromGame(const IGame& game, std::string title) {
       b.cells.resize(size_t(p.size) * p.size);
       for (int y = 0; y < p.size; ++y) {
         for (int x = 0; x < p.size; ++x) {
-          if (auto piece = board->getPiece(Position2D(x, y)))
-            b.cells[y * p.size + x] = PieceCell{piece->type(), piece->color(), !piece->unmoved()};
+          if (const auto piece = board->at(Position2D(x, y)))
+            b.cells[y * p.size + x] = PieceCell{piece->type, piece->color, !piece->unmoved};
         }
       }
       data.boards.push_back(std::move(b));
@@ -218,9 +229,6 @@ int defaultPresent(const Position& p) {
   return present;
 }
 
-std::string turnLabel(int halfTurn) {
-  return "T" + std::to_string(halfTurn / 2) + (halfTurn % 2 == 0 ? "w" : "b");
-}
 
 } // namespace
 
@@ -234,7 +242,7 @@ std::string writePosition(const Position& p) {
   if (p.castling) out += " castling";
   out += "\n";
   out += std::string("to-move: ") + (p.toMove == PieceColor::PIECEWHITE ? "white" : "black") + "\n";
-  if (!p.timelines.empty() and p.present != defaultPresent(p)) out += "present: " + std::to_string(p.present) + "\n";
+  if (!p.timelines.empty() and p.present != defaultPresent(p)) out += "present: " + turnLabel(p.present) + "\n";
   for (const auto& t : p.timelines) {
     if (t.parent) out += "L" + std::to_string(t.id) + " parent: L" + std::to_string(*t.parent) + "\n";
     for (const auto& b : t.boards)
@@ -281,8 +289,8 @@ Position parsePosition(std::string_view text) {
         if (value.size() < 2 or value[0] != 'L') fail(lineNo, "expected 'parent: L<id>'");
         tl.parent = parseInt(value.substr(1), lineNo, "parent id", -kMaxTimelineId, kMaxTimelineId);
       } else if (what.size() >= 3 and what[0] == 'T' and (what.back() == 'w' or what.back() == 'b')) {
-        const int turn = parseInt(what.substr(1, what.size() - 2), lineNo, "turn", 0, kMaxHalfTurn / 2);
-        const int half = 2 * turn + (what.back() == 'b' ? 1 : 0);
+        const int turn = parseInt(what.substr(1, what.size() - 2), lineNo, "turn", 1, kMaxHalfTurn / 2);
+        const int half = 2 * (turn - 1) + (what.back() == 'b' ? 1 : 0);
         if (++totalBoards > kMaxBoards) fail(lineNo, "more than " + std::to_string(kMaxBoards) + " boards");
         if (!tl.boards.empty() and half != tl.boards.back().halfTurn + 1)
           fail(lineNo, "timeline L" + std::to_string(id) + ": boards must have consecutive half-turns");
@@ -314,7 +322,7 @@ Position parsePosition(std::string_view text) {
       else fail(lineNo, "to-move must be white or black");
       sawToMove = true;
     } else if (key == "present") {
-      p.present = parseInt(value, lineNo, "present", 0, kMaxHalfTurn);
+      p.present = parseTurnLabel(value, lineNo);
     } else {
       fail(lineNo, "unknown key '" + std::string(key) + "'");
     }
@@ -356,7 +364,7 @@ Position parsePosition(std::string_view text) {
   const int computed = defaultPresent(p);
   if (p.present == INT_MIN) p.present = computed;
   else if (p.present != computed)
-    fail(lineNo, "present " + std::to_string(p.present) + " is not the lowest latest half-turn of the active timelines (" +
+    fail(lineNo, "present " + turnLabel(p.present) + " is not the lowest latest half-turn of the active timelines (" +
                      std::to_string(computed) + ")");
   if ((p.present % 2 != 0) != (p.toMove == PieceColor::PIECEBLACK) or p.present < 0)
     fail(lineNo, "present half-turn does not match to-move");

@@ -7,13 +7,13 @@
 //   size: 8
 //   rules: double-step castling
 //   to-move: white
-//   L0 T0w: rnbkqbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBKQBNR
+//   L0 T1w: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
 //
 // Orientation. A board is N x N with N = `size`. The engine addresses a square as (x, y): x is the file (0 = left, the
 // "a" file) and y the rank (0 = White's back rank, White's pawns advance towards y = N-1). A board line lists the rows
 // from the TOP (y = N-1) down to the bottom (y = 0), separated by '/', each row from x = 0 to x = N-1, so the text is
 // the picture a player sees with White at the bottom. In "rnbkqbnr/.../RNBKQBNR" the king is on x = 3 and the queen on
-// x = 4, as in StandardGame.
+// x = 4.
 //
 // Rows are FEN-like: an upper-case letter is a White piece, lower-case a Black one (K king, Q queen, R rook, B bishop,
 // N knight, P pawn), a number is that many empty squares. A piece is "unmoved" (it may still castle or double-step)
@@ -21,15 +21,15 @@
 //
 // Header lines (before the first board line; '#' starts a comment line, blank lines are ignored):
 //   title:    free text shown in menus (optional)
-//   size:     N, 1..16
+//   size:     N, 1..8 (Board::MAX_DIM)
 //   rules:    any of  double-step  castling  (or "none")
 //   to-move:  white | black
-//   present:  half-turn of the present; optional; must equal the lowest half-turn among the latest boards of the
+//   present:  the present as a turn label (T3w = half-turn 4); optional; must equal the lowest half-turn among the latest boards of the
 //             ACTIVE timelines (the default; its parity must agree with to-move)
 // Board lines:  L<timeline> T<turn><w|b>: <rows>
 //   half-turn = 2 * turn + (b ? 1 : 0). A timeline's boards must have consecutive half-turns; the first one may start
-//   later than T0w (the "Fragment" mode starts L0 at T0b). Several lines of the same timeline give its history.
-//   "L-1 T2w" is timeline -1, turn 2, White to move.
+//   later than T1w (the "Fragment" mode starts L0 at T1b). Several lines of the same timeline give its history.
+//   "L-1 T3w" is timeline -1, turn 3, White to move (turns count from 1).
 // Timeline lines:  L<timeline> parent: L<id>
 //   marks a timeline a player branched off (as opposed to the timelines the game started with).
 //

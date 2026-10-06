@@ -86,8 +86,8 @@ h1 = Black to move, ...). A timeline's *tip* is its latest board. "Mover" is the
   modes disable castling.
 - **Promotion (S3, S4):** reaching the last rank (by a push or a capture) promotes to Queen, Rook, Bishop or Knight, chosen
   with `makeMove(move, promotion)` (default Queen). No promotion by timeline moves, since the rank does not change.
-- **"Unmoved" tracking:** every piece carries an `unmoved()` flag (true when placed, cleared when it moves, copied on
-  fork/clone). The pawn double step and castling depend on it.
+- **"Unmoved" tracking:** every piece carries an `unmoved` flag (a field of the `Piece` value; true when placed, cleared when it moves,
+  kept when a board is forked). The pawn double step and castling depend on it.
 
 ### Check and legality
 - **Check (S1, S3 `mate.checks`):** the mover is in check if, after passing on every mandatory board (copying it forward
@@ -128,21 +128,19 @@ Deliberate or known differences:
 
 1. **En passant right after a fork** (above): engine `h - 1`, S3 `t - 2`. The engine offers en passant in one position S3 does
    not (second board of a forked timeline); it also checks that the landing square is empty.
-2. **Mirrored files.** The engine's starting position has the king on the d-file and the queen on the e-file (S3: queen d,
-   king e). Rules are symmetric, so the comparison mirrors files; nothing else is affected.
-3. **Promotion pieces.** The engine always offers Queen, Rook, Bishop and Knight. S3 offers the non-royal types that exist in
+2. **Promotion pieces.** The engine always offers Queen, Rook, Bishop and Knight. S3 offers the non-royal types that exist in
    the starting position (`availablePromotionPieces`), which differs only in variants that lack a piece type; the comparison
    gives S3 the engine's four.
-4. **Castling attack test.** S3's `positionIsAttacked` (`board.js`) lets an adjacent non-attacking enemy piece fail to block the
+3. **Castling attack test.** S3's `positionIsAttacked` (`board.js`) lets an adjacent non-attacking enemy piece fail to block the
    ray behind it, and treats a diagonally adjacent enemy pawn as attacking whatever its direction. The engine's 2D test is
    the correct one. Neither case occurred in the compared games (castling is on the back rank, where the pawn case cannot
    arise); if they do arise the difference is intended.
-5. **Variants with several original timelines** (Time Line Invasion / Battle / Fragment) cannot be compared: S3 indexes
+4. **Variants with several original timelines** (Time Line Invasion / Battle / Fragment) cannot be compared: S3 indexes
    timelines even/odd for White/Black, so an original timeline +1 would count as a created one. They are covered only by the
    engine's own tests.
-6. **Checkmate / stalemate.** S3's search is heuristic with a time limit; the engine's is exhaustive. They are compared where
+5. **Checkmate / stalemate.** S3's search is heuristic with a time limit; the engine's is exhaustive. They are compared where
    S3 answers within its limit (and the position is small).
-7. The engine disables double steps and castling in some variants through rule flags; in S3 these are the "unmoved" marks,
+6. The engine disables double steps and castling in some variants through rule flags; in S3 these are the "unmoved" marks,
    so the comparison maps such pieces as already moved.
 
 ## What is not verified
