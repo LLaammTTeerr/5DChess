@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <typeindex>
 #include <vector>
 #include <raylib.h>
 #include "Render/Motion.h"
@@ -15,6 +16,9 @@ public:
   virtual ~Screen() = default;
   virtual void update(App& app, float dt) = 0;
   virtual void draw(App& app) const = 0;
+  /// Esc was pressed: cancel whatever is open (a promotion choice, a picked-up piece). Returns whether there was something to
+  /// cancel. Esc never hides the navigation controls any more (that is the H key).
+  virtual bool escape(App&) { return false; }
 };
 
 // The top-left Back button (Settings and the game; a navigation control: ESC hides it, see below).
@@ -22,7 +26,7 @@ ui::Button backButton();
 
 // Owns the screens. push / pop / replace are applied at the end of the frame's update (a screen can safely
 // navigate from inside its own update) and cross-fade from a snapshot of the outgoing screen. It also owns
-// the "navigation controls" visibility that ESC toggles: screens draw their navigation buttons with
+// the "navigation controls" visibility that H toggles: screens draw their navigation buttons with
 // navAlpha() and only update them while navShown().
 class ScreenStack {
 public:
@@ -49,6 +53,11 @@ private:
   bool _navShown = true;
   float _navAlpha = 1.0f;
   UI::Motion::Tween _navFade;
+
+  // Where the screens came from, as the types visited (a browser-like trail): the new screen slides in from the right when it is
+  // a step forward and from the left when it is the screen before the one that is leaving.
+  std::vector<std::type_index> _trail;
+  int _slideDir = 0;             // +1 forward, -1 back, 0 none (the same screen type again)
 
   UI::Motion::Tween _fade;       // 0 -> 1 progress of the cross-fade
   RenderTexture2D _snapshot{};   // outgoing screen, drawn over the new one with alpha 1 - progress
