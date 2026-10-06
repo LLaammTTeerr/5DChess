@@ -1,0 +1,19 @@
+# A mate in 2 ("Small step", third row of the third column at (1124, 346)): the first turn Qc1-c2, then the engine's reply is played on the
+# board and the puzzle waits for the second turn. Then Show solution replays the stored line from the start.
+wait 20
+click 150 370        # Puzzles
+wait 40
+click 1124 346       # Small step
+wait 40
+clicksq 0 2 c1
+wait 20
+clicksq 0 2 c2
+wait 60
+click 842 90         # Submit
+move 880 740
+wait 240
+capture puzzles-mate2-replied
+click 1176 704       # Show solution
+move 880 740
+wait 500
+capture puzzles-solution-shown

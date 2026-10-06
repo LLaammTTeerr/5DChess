@@ -53,7 +53,8 @@ void PlayScreen::update(App& app, float dt) {
   // The buttons come first: whatever has the pointer is not a click on the board
   if (!_embedded && _back.update(dt, app.screens.navShown())) leave(app);
   if (!_embedded) _saveMenu.update(dt, app.screens.navShown(), style, *_game, _vs ? &*_vs : nullptr, _aiPlaying);
-  switch (_actions.update(dt)) {
+  const play::ActionRow::Action action = _actions.update(dt);
+  switch (_locked ? play::ActionRow::Action::None : action) {
     case play::ActionRow::Action::Undo: undo(); break;
     case play::ActionRow::Action::Deselect: deselect(); break;
     case play::ActionRow::Action::Submit: submitTurn(); break;
@@ -105,6 +106,7 @@ void PlayScreen::updatePicker(float dt, const play::BoardStyle& style) {
 
 void PlayScreen::boardInput() {
   _hover.reset();
+  if (_locked) return; // a puzzle screen is driving the game
   if (!ui::pointerConsumed() && !aiToMove()) { // the computer's turn: the boards only look and pan
     const Vector2 world = _camera.screenToWorld(Input::mousePosition());
     const auto square = _layout.hitTest(world.x, world.y);
@@ -171,6 +173,12 @@ void PlayScreen::makeMove(const Chess::Core::Move& move) {
   if (sameBoard) flight.from = flight.to;
   if (!flight.piece.empty()) _animator.startFlight(flight);
   _camera.focusNewest(BoardLayout::boardRect(flight.to.first, flight.to.second));
+}
+
+void PlayScreen::playMove(const Chess::Core::Move& move) {
+  _animator.finish();
+  _arrows.finish();
+  makeMove(move);
 }
 
 Vector2 PlayScreen::squareToScreen(Coord c) const {
@@ -486,6 +494,8 @@ void PlayScreen::draw(App& app) const {
     const play::BoardInfo* info = _view.board(from->l, from->t);
     if (piece) play::drawLiftedPiece(squareOf(*from), play::pieceKey(*piece), _animator.lift(), gray || (info && info->inactive));
   }
+  if (_highlight && _layout.contains(_highlight->l, _highlight->t))
+    play::drawSelectedSquare(squareOf(*_highlight), zoom, style);
   _scene.drawJumpBadges(frame);
   _scene.drawChecks(frame);
   play::drawFlights(_animator.flights(), gray);
@@ -504,7 +514,7 @@ void PlayScreen::draw(App& app) const {
   _actions.draw();
   if (!_embedded) _saveMenu.draw(style, app.screens.navAlpha());
   _picker.draw(style);
-  if (!ongoing) {
+  if (!ongoing && _showEndCard) {
     const Chess::GameResult result = _game->result();
     play::EndCard card = _hudMotion.endCard();
     card.title = result == Chess::GameResult::WhiteWins ? "White wins!" : result == Chess::GameResult::BlackWins ? "Black wins!" : "Draw";

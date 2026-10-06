@@ -1,0 +1,18 @@
+5dchess-position 1
+title: Two turns back
+size: 5
+rules: none
+to-move: white
+goal: mate-in-1
+difficulty: 2
+hint: Your bishop can reach a square two turns ago, and capture there. Look for a black pawn on an earlier board.
+solution: (L0T4)b2>(L0T2)b4
+L-1 parent: L0
+L-1 T3w: 1k*3/1p3/2r1r*/1B*N*2/3K1
+L0 T1w: k4/1p3/2r2/5/2BKN
+L0 T1b: k4/1p3/2r2/1B*3/3KN
+L0 T2w: 1k*3/1p3/2r2/1B*3/3KN
+L0 T2b: 1k*3/1p3/2r2/1B*N*2/3K1
+L0 T3w: 1k*3/1p3/4r*/1B*N*2/3K1
+L0 T3b: 1k*3/1p3/4r*/1B*N*2/2K*2
+L0 T4w: 1k*3/1p3/5/1B*N*2/2K*2

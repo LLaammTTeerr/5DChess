@@ -1,0 +1,12 @@
+5dchess-position 1
+title: Centre stage
+size: 5
+rules: none
+to-move: white
+goal: mate-in-2
+difficulty: 3
+hint: Put the queen in the centre of the board. Black has five replies and none of them holds.
+solution: (L0T2)c2>(L0T2)d4 / (L0T2)b5>(L0T1)a5 / (L-1T2)a1>(L-1T2)a2 (L0T3)d4>(L0T1)d5
+L0 T1w: 1k3/ppr2/5/2N2/R1QK1
+L0 T1b: 1k3/ppr2/5/2N1K*/R1Q2
+L0 T2w: 1k3/pp3/2r*2/2N1K*/R1Q2

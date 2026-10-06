@@ -47,6 +47,7 @@
 #include "Screens/GuideScreen.h"
 #include "Screens/PlayScreen.h"
 #include "play/VsAi.h"
+#include "Screens/PuzzleScreen.h"
 #include "services/SaveStore.h"
 #include "PieceTheme.h"
 #include "Render/UITheme.h"
@@ -273,6 +274,7 @@ int main(int argc, char** argv) {
       if (f.clickSquare) {
         auto* play = dynamic_cast<PlayScreen*>(app.screens.top());
         if (auto* guide = dynamic_cast<GuideScreen*>(app.screens.top())) play = guide->board(); // the Guide's page
+        if (auto* puzzle = dynamic_cast<PuzzleScreen*>(app.screens.top())) play = puzzle->board(); // a puzzle's board
         if (!play) { std::cerr << scriptPath.string() << ":" << f.line << ": clicksq needs the game screen or the Guide\n"; rc = 2; break; }
         const Chess::Core::Coord c{static_cast<int8_t>(f.sqX), static_cast<int8_t>(f.sqY), static_cast<int16_t>(f.sqT), static_cast<int16_t>(f.sqL)};
         if (!play->game().boardExists(c)) { std::cerr << scriptPath.string() << ":" << f.line << ": no board at timeline " << f.sqL << ", half-turn " << f.sqT << "\n"; rc = 2; break; }

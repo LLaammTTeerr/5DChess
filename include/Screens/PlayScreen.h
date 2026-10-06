@@ -40,6 +40,13 @@ public:
   /// Against the computer and it is not yet quiet: it is the computer's turn (thinking or playing its moves) or a legal-turn search
   /// is still running. The UI test harness waits for this to turn false (`waitai`).
   bool aiBusy() const;
+  /// Puzzles (Screens/PuzzleScreen): the embedding screen drives the game. playMove() makes one move as a click would (with its flight
+  /// animation, promotion included); highlight() rings a square (the hint); setInputLocked() ignores the board and the action row
+  /// (while the opponent's reply plays); showEndCard(false) leaves the "wins" card to the embedding screen.
+  void playMove(const Chess::Core::Move& move);
+  void highlight(std::optional<Chess::Core::Coord> square) { _highlight = square; }
+  void setInputLocked(bool locked) { _locked = locked; }
+  void showEndCard(bool shown) { _showEndCard = shown; }
   /// Developer tools: where a square is on screen right now (its centre), so scripted clicks name squares, not pixels.
   Vector2 squareToScreen(Chess::Core::Coord square) const;
 
@@ -63,6 +70,8 @@ private:
   bool _ended = false;
   bool _embedded = false;
   float _rightInset = UI::Layout::sideInset;
+  std::optional<Chess::Core::Coord> _highlight;
+  bool _locked = false, _showEndCard = true;
   bool _autosaveWarned = false; // "Could not autosave" was shown
   bool _autosaving = false; // this game writes the autosave after each submitted turn (set by the first one, or by Continue)
 

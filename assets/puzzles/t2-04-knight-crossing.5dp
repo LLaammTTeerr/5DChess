@@ -1,0 +1,21 @@
+5dchess-position 1
+title: Knight crossing
+size: 5
+rules: none
+to-move: white
+goal: mate-in-1
+difficulty: 2
+hint: Three timelines. A knight can jump two ranks and one timeline at once.
+solution: (L-2T3)d2>(L-1T3)d4
+L-2 parent: L0
+L-2 T3w: 3k1/2p2/3r*r*/2K*N*1/R4
+L-1 parent: L0
+L-1 T2w: 3k1/2p2/3rr*/2K*2/RN3
+L-1 T2b: 3k1/2p2/3rr*/R*1K*2/1N3
+L-1 T3w: 3k1/2p2/4r*/R*1K*2/1N3
+L0 T1w: 3k1/2p2/3r1/5/RN1K1
+L0 T1b: 3k1/2p2/3r1/2K*2/RN3
+L0 T2w: 3k1/2p2/4r*/2K*2/RN3
+L0 T2b: 3k1/2p2/4r*/2K*N*1/R4
+L0 T3w: 3k1/2p2/5/2K*N*1/R4
+L0 T3b: R*2k1/2p2/5/2K*N*1/5

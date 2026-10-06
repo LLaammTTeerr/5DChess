@@ -1,0 +1,10 @@
+5dchess-position 1
+title: Smothered
+size: 8
+rules: double-step
+to-move: white
+goal: mate-in-1
+difficulty: 1
+hint: Black's king has no free square at all. Only a knight can give check without being taken.
+solution: (L0T1)g5>(L0T1)f7
+L0 T1w: 6rk/6pp/8/6N1/8/8/8/4K3

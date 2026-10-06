@@ -1,0 +1,17 @@
+# Opening the first puzzle ("Back rank") from the list (first row of the first column at (276, 222)), then the two hint steps:
+# the hint text, then the piece to move ringed. Panel buttons: Hint (1085, 652), Reset (1267, 652), Show solution (1176, 704).
+wait 20
+click 150 370        # Puzzles
+wait 40
+click 276 222        # Back rank
+move 880 740
+wait 60
+capture puzzles-open
+click 1085 652       # Hint: the text
+move 880 740
+wait 30
+capture puzzles-hint-text
+click 1085 652       # Show piece: the rook on e1 is ringed
+move 880 740
+wait 30
+capture puzzles-hint-piece

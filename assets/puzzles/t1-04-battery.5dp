@@ -1,0 +1,10 @@
+5dchess-position 1
+title: Battery
+size: 8
+rules: double-step
+to-move: white
+goal: mate-in-1
+difficulty: 1
+hint: The bishop and the queen stand on one diagonal. Move the queen to the end of it.
+solution: (L0T1)d4>(L0T1)g7
+L0 T1w: 7k/8/8/8/3Q4/8/1B6/4K3

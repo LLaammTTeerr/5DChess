@@ -1,0 +1,22 @@
+5dchess-position 1
+title: Two fronts
+size: 5
+rules: none
+to-move: white
+goal: mate-in-1
+difficulty: 3
+hint: Four timelines, two boards to move on. One queen travels back in time and branches; the other slides up the b-file.
+solution: (L-1T2)b2>(L0T1)b2 (L2T2)b2>(L2T2)b4
+L-1 parent: L0
+L-1 T2w: rk1n1/pppn*1/5/1Q*N2/R2K1
+L0 T1w: rk1n1/ppp2/5/2N2/R1QK1
+L0 T1b: rk1n1/ppp2/5/1Q*N2/R2K1
+L0 T2w: rk1n1/p1p2/1p*3/1Q*N2/R2K1
+L0 T2b: rk1n1/p1p2/1p*3/2N2/R2K1
+L1 parent: L0
+L1 T1b: rk1n1/ppp2/5/2N2/RQ*QK1
+L1 T2w: rk1n1/p1p2/1p*3/2N2/RQ*QK1
+L1 T2b: rk1n1/p1p2/1p*3/2N2/R1QK1
+L2 parent: L0
+L2 T1b: rk1n1/ppp2/5/1Q*N2/R1QK1
+L2 T2w: rk3/ppp2/5/1Q*N2/R1QK1
