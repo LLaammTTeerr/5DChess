@@ -33,7 +33,7 @@ struct Progress {
   int bestScore = 0;            ///< centipawns for the side to move after that iteration; ~MateScore when a mate is proven
   bool mateFound = false;       ///< a turn that leaves the opponent without a legal turn was found (proven by the engine: a mate in one)
   bool usedFallback = false;    ///< the turn comes from the engine's exhaustive search (TurnSearch), not from the AI's generator
-  double fraction = 0;          ///< 0..1 estimate of the budget used (for a progress bar)
+  double fraction = 0;          ///< 0..1 progress bar: max(nodes / cap, share of the planned iterations done, weighted 6^i); monotonic, 1.0 when Done
 };
 
 constexpr int MateScore = 100000;
@@ -47,7 +47,7 @@ public:
   Search(const Search&) = delete;
   Search& operator=(const Search&) = delete;
 
-  /** Continue for at most about `nodeBudget` nodes (a step may overshoot by the slice it is in: one generator move or proof slice, see docs/AI.md). Once Done, stays Done. */
+  /** Continue for at most about `nodeBudget` nodes (a step may overshoot by the slice it is in: one generator move, or a proof slice, which is charged ~32 nodes on small positions and ~400 on big multiverses; see docs/AI.md). Once Done, stays Done. */
   Status step(int nodeBudget);
   Status status() const;
 

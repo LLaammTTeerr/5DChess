@@ -6,7 +6,8 @@ namespace Chess::ai {
 
 namespace {
 
-constexpr int CostDivisor = 16; // pieces on all tips per extra node of cost (calibrated with ai_bench big)
+constexpr int BaselinePieces = 32;
+constexpr int CostDivisor = 12; // pieces on all tips per extra node of cost (calibrated with ai_bench big)
 
 bool isTravel(const Core::Move& m) { return m.from.t != m.to.t or m.from.l != m.to.l; }
 
@@ -51,7 +52,9 @@ bool attacksKing(const Board& board, int x, int y, PieceColor victim) {
 
 void TurnGen::generateMoves(Frame& f) {
   f.generated = true;
-  _cost = 1 + positionLoad(*_game) / CostDivisor + _game->timeLineCount() / 3 + int(_game->mandatoryBoards().size());
+  // Only the excess over a single full board (1 timeline, 1 mandatory board, 32 pieces) is charged: that one costs 1 per move.
+  _cost = 1 + std::max(0, positionLoad(*_game) - BaselinePieces) / CostDivisor + (_game->timeLineCount() - 1) / 3 +
+          std::max(0, int(_game->mandatoryBoards().size()) - 1);
   auto boards = _game->mandatoryBoards(); // (a copy: sorted below)
   if (boards.empty()) return;
   std::sort(boards.begin(), boards.end(), [](const auto& a, const auto& b) { return a->timeLineId() < b->timeLineId(); });

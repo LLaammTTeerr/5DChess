@@ -145,6 +145,7 @@ struct Search::Impl {
   long long liveBase = 0;
 
   GenParams rescue;
+  double shown = 0; // progress bar high-water mark (monotonic)
   std::unique_ptr<TurnSearch> fallback;
   long long nodes = 0;
   std::vector<Core::Move> result;
@@ -201,10 +202,10 @@ struct Search::Impl {
 
   /** Budget charged for one 32-node slice of the opponent's legal-turn proof: its nodes cost more on big multiverses. */
   static long long probeSliceCost(const IGame& child) {
-    return ProbeChunk * (1 + (positionLoad(child) / 64 + int(child.mandatoryBoards().size())) / PROBE_DIV);
+    return ProbeChunk * (1 + (std::max(0, positionLoad(child) - 32) / 64 + std::max(0, int(child.mandatoryBoards().size()) - 1)) / PROBE_DIV);
   }
 
-  static long long leafCost(const IGame& game) { return 4 + game.timeLineCount() + positionLoad(game) / 12; }
+  static long long leafCost(const IGame& game) { return 4 + (game.timeLineCount() - 1) + std::max(0, positionLoad(game) - 32) / 12; }
 
   /** Cap reached: abandon the running iteration. */
   bool abortIteration() {
@@ -390,7 +391,29 @@ struct Search::Impl {
     phase = Phase::Finished;
   }
 
+  /** How far the planned work is: the iterations 1, 2, 4, 6 turns cost roughly 6x more each (measured: 4-17x), so each is
+   *  weighted 6^i; the running one counts by the root turns done. Uses logical state only: no clock. */
+  double planFraction() const {
+    int planned = 0;
+    while (planned < int(std::size(Depths)) and Depths[planned] <= params.maxPlies) ++planned;
+    double total = 0, done = 0, w = 1;
+    for (int i = 0; i < planned; ++i, w *= 6) {
+      total += w;
+      if (i < iteration) done += w;
+      else if (i == iteration) {
+        const double roots = iteration == 0 ? std::max<double>(params.leafCap[0], rootDone) : std::max<double>(1, rootList.size());
+        done += w * std::min(1.0, rootDone / roots);
+      }
+    }
+    return total > 0 ? done / total : 0;
+  }
+
+  void updateShown() {
+    shown = std::max(shown, std::min(0.99, std::max(double(nodes) / double(params.maxNodes), planFraction())));
+  }
+
   Status step(long long budget) {
+    struct Update { Impl& i; ~Update() { i.updateShown(); } } guard{*this};
     while (phase != Phase::Finished and budget > 0) {
       if (phase == Phase::Fallback) {
         stepFallback(budget);
@@ -522,7 +545,7 @@ Progress Search::progress() const {
   p.bestScore = cs.empty() ? 0 : std::max_element(cs.begin(), cs.end(), [](const Candidate& a, const Candidate& b) { return a.value < b.value; })->value;
   p.mateFound = _impl->mate;
   p.usedFallback = _impl->usedFallback;
-  p.fraction = status() == Status::Done ? 1.0 : std::min(0.99, double(_impl->nodes) / double(_impl->params.maxNodes));
+  p.fraction = status() == Status::Done ? 1.0 : _impl->shown;
   return p;
 }
 

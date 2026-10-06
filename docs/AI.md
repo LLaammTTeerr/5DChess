@@ -17,6 +17,10 @@ if (search.hasTurn()) {
 
 `ai::playTurn(game, options)` (`include/ai/Play.h`) does exactly this synchronously (tests, tools, self-play).
 
+`progress().fraction` (for a thinking bar) is `max(nodes / cap, share of the planned iterations done)`, the iterations weighted
+6^i (measured cost ratio 4-17x per deeper iteration) and the running one by its root turns done; it never decreases and is 1.0 only
+once Done.
+
 ## 1. What is hard about a 5D chess AI
 
 A *turn* is a set of moves on several boards (one on every mandatory board, plus jumps into the past that move the present
@@ -63,10 +67,10 @@ the start of a side's turn; its children are the generator's turns; after a turn
 submitted (`submitTurn()`).
 
 * **Node cap and cost model.** `maxNodes` is a hard cap on everything: generator moves, proof slices and turn clones all
-  count, in proportion to the real work, so that a "node" takes about the same time in every position. A generator move
-  costs `1 + pieces on all tips / 16 + timelines / 3 + mandatory boards` (computed once per frame), cloning and submitting a
-  turn `4 + timelines + pieces / 12`, one 32-node slice of the opponent's legal-turn proof `32 x (1 + (pieces / 64 +
-  mandatory boards) / 2)`. The cap is tested at every logical point (a turn was generated, a proof ended) and inside the
+  count, in proportion to the real work, so that a "node" takes about the same time in every position. Only the excess over a single full board (1 timeline, 1 mandatory board, 32 pieces, which costs 1 per move) is charged:
+  a generator move costs `1 + (pieces on all tips - 32) / 12 + (timelines - 1) / 3 + (mandatory boards - 1)` (computed once
+  per frame), cloning and submitting a turn `4 + (timelines - 1) + (pieces - 32) / 12`, one 32-node slice of the opponent's
+  legal-turn proof `32 x (1 + ((pieces - 32) / 64 + (mandatory boards - 1)) / 2)`. The cap is tested at every logical point (a turn was generated, a proof ended) and inside the
   generator (it is handed only what is left of the cap, so it stops at the same move however the caller slices its
   budget). The only work allowed past it is the first pass up to its first evaluated root turn, because a legal turn is
   always returned; that work is bounded too: after a quarter of the cap spent in the first pass's generator it *squeezes*

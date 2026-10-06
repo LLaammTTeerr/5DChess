@@ -232,7 +232,8 @@ TEST_CASE("step() respects its node budget and never blocks: many small steps re
     int steps = 0;
     while (search.step(40) == ai::Search::Status::Running) {
       const long long now = search.progress().nodes;
-      CHECK(now - last <= 40 + 200); // a step may finish the slice it is in (one move's cost, or a proof slice: 32 nodes charged x the position's weight)
+      CHECK(now - last <= 40 + 200); // a step may finish the slice it is in: one move's cost or a proof slice; the tolerance only holds for these
+      // small fixtures (a proof slice charges 32 x the position's weight: ~400 nodes on a big multiverse)
       CHECK(search.progress().fraction < 1.0);
       CHECK_FALSE(search.hasTurn()); // nothing is offered before Done
       CHECK(search.bestTurn().empty());
@@ -310,12 +311,12 @@ TEST_CASE("self-play against random turns: every AI turn is legal, the AI is nev
       INFO(std::string(mode) << ", AI plays " << (aiWhite ? "white" : "black") << ", level " << int(level));
       CHECK(g->result() != (aiWhite ? GameResult::BlackWins : GameResult::WhiteWins));
       const int e = ai::evaluate(*g, ai);
-      CHECK(e > -300); // not behind by more than a minor piece in any single game (about 2000 cp = a queen of lead is typical)
+      CHECK(e > -200);
       total += e;
       ++game;
     }
   }
-  CHECK(total > 1000); // over six games (measured: about 6000): an average lead of well over a pawn per game
+  CHECK(total > 2000); // over six games (measured: about 6000)
 }
 
 TEST_CASE("a quiet jump from an optional board is found without the fallback, at every level") {
@@ -471,6 +472,35 @@ TEST_CASE("when even the rescue generator finds nothing, the fallback turn is le
       CHECK(other.bestTurn() == ref.bestTurn());
       CHECK(other.progress().nodes == ref.progress().nodes);
       CHECK(other.progress().usedFallback);
+    }
+  }
+}
+
+TEST_CASE("Progress::fraction is monotonic, reaches 1 only at Done, and is the same whatever the step size") {
+  for (ai::Level level : {ai::Level::Easy, ai::Level::Normal}) {
+    for (const std::string& mode : {std::string("standard"), std::string("timeline-battle")}) {
+      auto game = newGame(mode);
+      std::vector<std::vector<std::pair<long long, double>>> traces; // (nodes, fraction) after each step, per step size
+      for (int step : {40, 500}) {
+        ai::Search search(*game, {level, 3, 40000});
+        double last = 0;
+        std::vector<std::pair<long long, double>> trace;
+        while (search.step(step) == ai::Search::Status::Running) {
+          const double f = search.progress().fraction;
+          CHECK(f >= last);
+          CHECK(f < 1.0);
+          last = f;
+          trace.push_back({search.progress().nodes, f});
+        }
+        CHECK(search.progress().fraction == 1.0);
+        traces.push_back(trace);
+      }
+      // Same state => same fraction: wherever both traces stand at the same node count, the values agree.
+      for (const auto& a : traces[0])
+        for (const auto& b : traces[1])
+          if (a.first == b.first) CHECK(a.second == b.second);
+      // The bar is not stuck near 0: it passes 50% well before the end when iterations finish early (Easy/Normal).
+      if (!traces[1].empty()) CHECK(traces[1].back().second > 0.3);
     }
   }
 }
