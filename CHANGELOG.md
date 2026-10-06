@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-06
+
+The first complete release: a computer opponent, puzzles, an interactive guide, save and load, and six original piece themes on top of the official-rules engine and the three board views of 0.5.0.
+
+- **Play vs Computer** at three levels (Easy, Normal, Hard), as White, Black or Random, on every mode. The AI searches whole turns across timelines in small per-frame slices, so the game stays responsive on desktop and in the browser.
+- **Puzzles**: fourteen original mates in one and two, from single-board warm-ups to time-travel and branching mates, every one proved by the engine.
+- **Interactive Guide**: ten short rule lessons on live boards.
+- **Save and load**: autosave with Continue, three slots, and copy/paste of game records.
+- **Original art only**: six code-generated piece themes (Pixel, Medieval, Bauhaus, Neon, Origami, Ink) replace the three themes of unknown provenance; the default look is Pixel pieces on the Atlas board view.
+
 ### Added
 - **Puzzles** (main menu -> Puzzles): 14 original puzzles in three tiers (5 Warm-up mates in 1, 4 Time travel mates in 1 on 2-3 timelines that need a move to another board, 3 mates in 2 and 2 "branching" mates in 1 in Deep; the mate-in-2 proof runs a few milliseconds per frame, with a progress status), each proven exhaustively with the official-rules engine, never the AI. The list shows title, goal and a check mark for solved ones; a puzzle opens on the normal multiverse board with a goal banner, **Hint** (text, then the piece to move ringed), **Reset** and **Show solution** (plays the stored line). Any mating turn is accepted; "Not quite - try again" resets the position; in a mate in 2 the engine first proves that every defence loses, then `ai::Search` (Hard, capped) chooses Black's reply, which is played on the board. Solving shows a success card (Next puzzle / Back to list) with a flourish that Reduce motion turns off. Puzzle games never touch the autosave; solved puzzles are saved in `puzzles.txt` next to `settings.txt` (localStorage `5dchess.puzzles` on the web). Files `assets/puzzles/*.5dp` (position format plus `goal`, `hint`, `difficulty`, `solution` lines; embedded in the web build through the asset manifest); format and authoring guide in [docs/PUZZLES.md](docs/PUZZLES.md).
 - Tools / tests: `tools/puzzle_check` (built with the tests or tools) validates the set (`puzzle_check assets/puzzles`; `--mates` / `--mate2` examine a position) and runs as the `puzzle_check` ctest; `puzzles::forEachTurn` enumerates every legal turn (cross-checked against the unpruned enumeration and the full legal-turn proof). Unit tests for the puzzle metadata, the progress text and the shipped set (`tests/puzzle_test.cpp`); five UI scripts (`puzzles-*.ui`) with 11 new baselines (list, open, hint text and piece, wrong move and feedback and reset, success card, list with a check mark, a mate in 2 with the engine's reply, Show solution). `ui_script`'s `clicksq` also works on a puzzle's board.
@@ -167,7 +177,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dead and unused files and code.
 - Tracked `.DS_Store` and `.vscode` files.
 
-[Unreleased]: https://github.com/LLaammTTeerr/5DChess/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/LLaammTTeerr/5DChess/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/LLaammTTeerr/5DChess/compare/v0.5.0...v1.0.0
 [0.5.0]: https://github.com/LLaammTTeerr/5DChess/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/LLaammTTeerr/5DChess/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/LLaammTTeerr/5DChess/compare/v0.2.0...v0.3.0
