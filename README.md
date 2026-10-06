@@ -168,10 +168,12 @@ The game changes its working directory to the executable's folder, so it can be 
 ├── include/                   # Header files
 │   ├── engine/                # Value API, .5dp positions, GameCatalog (no raylib)
 │   ├── services/              # Assets, settings and other app services
-│   ├── Render/                # Rendering and view components
+│   ├── play/                  # The game screen's parts: Selection, BoardLayout, BoardRenderer, MoveAnimator, BoardCamera, Hud, TimelineArrows
+│   ├── Render/                # Motion tokens, UI theme, piece themes
 │   ├── Screens/               # One Screen per page of the game
 │   └── ui/                    # Widget layer and the Screen / ScreenStack model
 ├── src/                       # Source files
+│   ├── play/
 │   ├── Render/
 │   ├── engine/                # Rules engine implementation
 │   ├── services/

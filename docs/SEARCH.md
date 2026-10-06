@@ -117,7 +117,7 @@ per candidate when the dead flags are computed at the start).
 `stepResultSearch(budget)` (or `resolveResult()` in tests and tools). Until it proves otherwise `result()` is `Ongoing`;
 on `None` it becomes a win for the other side if the side to move is in check, else a draw.
 
-**How the UI uses it** (`src/Render/Controller.cpp`): after the Submit button, `ChessController::update` runs
+**How the UI uses it** (`src/Screens/PlayScreen.cpp`): after the Submit button, `PlayScreen::update` runs
 `stepResultSearch(100)` repeatedly until about 4 ms of the frame are used, and the HUD hint reads "Checking
 position..." while `resultPending()`. When the search resolves to a win or draw, the existing end-game overlay appears.
 The common case resolves in the first frame. There are **no threads**: the web (Emscripten) build runs single-threaded,
