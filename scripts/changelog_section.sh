@@ -10,6 +10,7 @@ version="${1:?usage: $0 <version> [CHANGELOG.md]}"
 file="${2:-CHANGELOG.md}"
 
 body=$(awk -v ver="$version" '
+  { sub(/\r$/, "") }   # tolerate a CRLF checkout
   index($0, "## [" ver "]") == 1 { found = 1; next }
   found && (/^## \[/ || /^\[[^]]+\]: /) { exit }
   found { print }
