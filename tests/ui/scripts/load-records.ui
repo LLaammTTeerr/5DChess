@@ -1,0 +1,22 @@
+# The Load screen with records put into the slots: a game with a time-travel branch, and a corrupted one.
+# Layout (1400x800): main menu without an autosave: Load game (150,310). Load screen: slot rows 520x52 at x=377,
+# y=140+64*i (centres y=166, 230, 294); Delete buttons 110 wide at x=913 (centre x=968).
+wait 20
+slot 1 ../records/branch.5dr
+slot 2 ../records/corrupt.5dr
+wait 5
+click 150 310        # Load game
+wait 40
+capture load-screen-records          # Slot 1 Standard / 4 turns, Slot 2 looks fine from outside, Slot 3 empty
+click 600 230        # Slot 2: the record is corrupted
+wait 20
+capture load-corrupt-message         # "This save can't be loaded"; the slot is still there
+click 968 230        # Delete (asks again)
+wait 20
+capture load-delete-confirm
+click 968 230        # Sure?
+wait 40
+capture load-slot-deleted            # Slot 2 is empty now, no message
+click 600 166        # Slot 1: the branch game
+wait 120
+capture load-branch-record           # two timelines, Black to move

@@ -1,0 +1,37 @@
+# Autosave and Continue. The harness keeps saves in memory (never in the config directory), so every script starts with none.
+# Layout (1400x800): main menu without a save: Versus (150,250), Load game (150,310); with an autosave Continue is the top item:
+#   Continue (150,220), Versus (150,280), Load game (150,340). Standard row (690,154); Play (808,712); Back on the mode list
+#   (700,712); in game Back (125,25); Submit (841,90).
+wait 20
+capture continue-none      # no save yet: the menu has no Continue
+click 150 250        # Versus
+wait 30
+click 690 154        # Standard
+wait 20
+click 808 712        # Play
+wait 120
+clicksq 0 0 e2
+wait 40
+clicksq 0 0 e4
+wait 40
+click 841 90         # Submit: the autosave is written
+wait 90
+click 125 25         # Back to the mode list
+wait 30
+click 700 712        # Back to the main menu
+wait 40
+capture continue-menu
+click 150 220        # Continue
+wait 120
+capture continue-resumed   # same game: Black to move, Turn 1, e4 played
+clicksq 0 1 e7       # a move that is never submitted
+wait 60
+clicksq 0 1 e5
+wait 60
+click 125 25         # Back (the unsubmitted move is not saved)
+wait 30
+click 700 712
+wait 40
+click 150 220        # Continue again
+wait 120
+capture continue-pending-dropped   # Black to move with the e7 pawn back on e7

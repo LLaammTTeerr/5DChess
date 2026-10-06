@@ -1,0 +1,8 @@
+# A Standard game with a time-travel branch: the white knight jumps from T2 back to T1 (timeline L+1), Black answers there.
+5dchess-record 1
+mode: standard
+# saved: 2026-01-01 12:00
+T1w: (L0T1)e2>(L0T1)e4
+T1b: (L0T1)e7>(L0T1)e5
+T2w: (L0T2)g1>(L0T1)g3
+T1b: (L1T1)b8>(L1T1)c6

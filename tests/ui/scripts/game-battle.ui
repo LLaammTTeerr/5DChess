@@ -2,7 +2,7 @@
 # (150,280); row 7 of the mode list (690,574); Play (808,712); Submit (841,90). Squares are clicked by name
 # (`clicksq <timeline> <half-turn> <square>`), see game-standard.ui.
 wait 20
-click 150 280        # Versus
+click 150 250        # Versus
 wait 30
 click 690 574        # Misc - Time Line Battle (row 7)
 wait 20
