@@ -45,6 +45,7 @@ Assets::Assets(const std::string& root) : _root(root) {
 
 Assets::~Assets() {
     for (auto& [id, t] : _textures) UnloadTexture(t);
+    for (auto& [id, t] : _grayTextures) UnloadTexture(t);
     const unsigned defaultTex = GetFontDefault().texture.id;
     for (auto& [key, f] : _fonts)
         if (f.texture.id != defaultTex) UnloadFont(f);
@@ -66,6 +67,20 @@ const Assets::Entry* Assets::entry(const std::map<std::string, Entry>& kind, con
 Texture2D& Assets::texture(const std::string& id) {
     entry(_textureFiles, id, "texture"); // throws for an unknown id; every known texture was loaded in the constructor
     return _textures.at(id);
+}
+
+Texture2D& Assets::grayTexture(const std::string& id) {
+    auto it = _grayTextures.find(id);
+    if (it != _grayTextures.end()) return it->second;
+    const Entry* e = entry(_textureFiles, id, "texture");
+    Image image = LoadImage(e->path.c_str());
+    ImageColorGrayscale(&image);
+    ImageColorContrast(&image, 10.0f);
+    Texture2D t = LoadTextureFromImage(image);
+    UnloadImage(image);
+    if (t.id == 0) return texture(id); // cannot happen for a texture that loaded in the constructor; stay in colour
+    if (e->pointFilter) SetTextureFilter(t, TEXTURE_FILTER_POINT);
+    return _grayTextures.emplace(id, t).first->second;
 }
 
 Font Assets::font(const std::string& id, int size) {

@@ -11,8 +11,29 @@ namespace play {
 
 namespace {
 
+// A HUD panel in the style of the board view: rounded with a soft shadow (Atlas), a glow (Deep space) or a sharp ink
+// rectangle (Blueprint).
+void drawPanel(Rectangle r, const BoardStyle& st, float alpha = 1.0f) {
+  auto fadeBy = [alpha](::Color c) { c.a = static_cast<unsigned char>(c.a * alpha); return c; };
+  if (st.hudSquare) {
+    DrawRectangleRec(r, fadeBy(st.hudFill));
+    DrawRectangleLinesEx(r, 1.0f, fadeBy(st.hudBorder));
+    return;
+  }
+  if (st.card == BoardStyle::Card::Glow) {
+    for (int k = 3; k >= 1; --k) {
+      const Rectangle g = {r.x - k * 4.0f, r.y - k * 4.0f, r.width + k * 8.0f, r.height + k * 8.0f};
+      DrawRectangleRounded(g, 1.0f, 12, fadeBy(UI::withAlpha(st.hudShadow, static_cast<unsigned char>(st.hudShadow.a * 0.22f / k))));
+    }
+  } else {
+    DrawRectangleRounded({r.x + 2, r.y + 3, r.width, r.height}, 1.0f, 12, fadeBy(st.hudShadow));
+  }
+  DrawRectangleRounded(r, 1.0f, 12, fadeBy(st.hudFill));
+  DrawRectangleRoundedLinesEx(r, 1.0f, 12, 1.0f, fadeBy(st.hudBorder));
+}
+
 // Slim "<Colour> to move" banner: drops in below the action row (fast), leaves faster, auto-dismisses at ~1.2 s.
-void drawTurnBanner(const HudData& hud) {
+void drawTurnBanner(const HudData& hud, const BoardStyle& st) {
   if (!hud.bannerActive) return;
   using namespace UI::Motion;
   const float outDur = exitDuration(fast);
@@ -30,19 +51,17 @@ void drawTurnBanner(const HudData& hud) {
   const float screenW = static_cast<float>(GetScreenWidth());
   const Rectangle r = {std::floor((screenW - w) / 2), UI::Layout::actionRowBottom + 8.0f + slide, w, h};
   auto fade = [a](::Color c) { c.a = static_cast<unsigned char>(c.a * a); return c; };
-  DrawRectangleRounded({r.x + 2, r.y + 3, r.width, r.height}, 1.0f, 12, fade(UI::Color::shadow));
-  DrawRectangleRounded(r, 1.0f, 12, fade(UI::Color::surface));
-  DrawRectangleRoundedLinesEx(r, 1.0f, 12, 1.0f, fade(UI::Color::border));
+  drawPanel(r, st, a);
   const Vector2 c = {r.x + pad + chipD / 2, r.y + h / 2};
   DrawCircleV(c, chipD / 2, fade(hud.bannerWhite ? UI::Color::whiteChip : UI::Color::blackChip));
-  DrawCircleLinesV(c, chipD / 2, fade(UI::Color::text));
+  DrawCircleLinesV(c, chipD / 2, fade(st.hudText));
   DrawTextEx(font, text.c_str(), {std::floor(c.x + chipD / 2 + UI::Space::sm), std::floor(r.y + (h - UI::Font::body) / 2 - 1)},
-             UI::Font::body, 0, fade(UI::Color::text));
+             UI::Font::body, 0, fade(st.hudText));
 }
 
 } // namespace
 
-void drawHud(const HudData& hud) {
+void drawHud(const HudData& hud, const BoardStyle& st) {
   const float screenW = static_cast<float>(GetScreenWidth());
   const float screenH = static_cast<float>(GetScreenHeight());
 
@@ -65,9 +84,7 @@ void drawHud(const HudData& hud) {
   if (hintW > 0) w += gap + 1 + gap + hintW;
 
   Rectangle pill = {std::floor((screenW - w) / 2), UI::Layout::hudPillY, w, h};
-  DrawRectangleRounded({pill.x + 2, pill.y + 3, pill.width, pill.height}, 1.0f, 12, UI::Color::shadow);
-  DrawRectangleRounded(pill, 1.0f, 12, UI::Color::surface);
-  DrawRectangleRoundedLinesEx(pill, 1.0f, 12, 1.0f, UI::Color::border);
+  drawPanel(pill, st);
 
   float x = pill.x + pad;
   const float cy = pill.y + h / 2;
@@ -80,22 +97,22 @@ void drawHud(const HudData& hud) {
         static_cast<unsigned char>(UI::Motion::lerp(UI::Color::blackChip.b, UI::Color::whiteChip.b, m)), 255};
     DrawCircleV({x + chipD / 2, cy}, chipD / 2, chip);
   }
-  DrawCircleLinesV({x + chipD / 2, cy}, chipD / 2, UI::Color::text);
+  DrawCircleLinesV({x + chipD / 2, cy}, chipD / 2, st.hudText);
   x += chipD + UI::Space::sm;
   DrawTextEx(statusFont, status.c_str(), {std::floor(x), std::floor(cy - UI::Font::button / 2.0f - 1)}, UI::Font::button, 0,
-             UI::Color::text);
+             st.hudText);
   x += statusW + gap;
-  DrawRectangle(static_cast<int>(x), static_cast<int>(pill.y + 10), 1, static_cast<int>(h - 20), UI::Color::border);
+  DrawRectangle(static_cast<int>(x), static_cast<int>(pill.y + 10), 1, static_cast<int>(h - 20), st.hudBorder);
   x += 1 + gap;
   DrawTextEx(monoFont, turnInfo.c_str(), {std::floor(x), std::floor(cy - UI::Font::mono / 2.0f - 1)}, UI::Font::mono, 0,
-             UI::Color::textMuted);
+             st.hudMuted);
   x += infoW;
   if (hintW > 0) {
     x += gap;
-    DrawRectangle(static_cast<int>(x), static_cast<int>(pill.y + 10), 1, static_cast<int>(h - 20), UI::Color::border);
+    DrawRectangle(static_cast<int>(x), static_cast<int>(pill.y + 10), 1, static_cast<int>(h - 20), st.hudBorder);
     x += 1 + gap;
     DrawTextEx(bodyFont, hud.hint.c_str(), {std::floor(x), std::floor(cy - UI::Font::body / 2.0f - 1)}, UI::Font::body, 0,
-               UI::Color::primary);
+               st.hudHint);
   }
 
   // ---- Bottom controls bar (only real controls: see BoardCamera) ----
@@ -103,12 +120,11 @@ void drawHud(const HudData& hud) {
   const float cw = MeasureTextEx(monoFont, controls, UI::Font::mono, 0).x;
   Rectangle bar = {std::floor((screenW - (cw + 2 * pad)) / 2),
                    screenH - UI::Layout::controlsBarMargin - UI::Layout::controlsBarH, cw + 2 * pad, UI::Layout::controlsBarH};
-  DrawRectangleRounded(bar, 1.0f, 12, UI::withAlpha(UI::Color::surface, 235));
-  DrawRectangleRoundedLinesEx(bar, 1.0f, 12, 1.0f, UI::Color::border);
+  drawPanel(bar, st, 0.92f);
   DrawTextEx(monoFont, controls, {bar.x + pad, std::floor(bar.y + (bar.height - UI::Font::mono) / 2 - 1)}, UI::Font::mono, 0,
-             UI::Color::textMuted);
+             st.hudMuted);
 
-  drawTurnBanner(hud);
+  drawTurnBanner(hud, st);
 }
 
 void drawEndCard(const EndCard& end) {

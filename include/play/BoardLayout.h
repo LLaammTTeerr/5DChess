@@ -24,6 +24,12 @@ public:
   static constexpr float kPitch = kBoardSize + kSpacing;
 
   static Rect boardRect(int timeline, int halfTurn);
+  /// The card a board is drawn on: the board plus a frame all round and a label strip below it. It fits in the gap
+  /// between neighbouring boards; branch connectors and threads attach to its left and right edges.
+  static constexpr float kCardPad = 8.0f, kCardFooter = 26.0f;
+  static Rect cardRect(const Rect& board) {
+    return {board.x - kCardPad, board.y - kCardPad, board.w + 2 * kCardPad, board.h + 2 * kCardPad + kCardFooter};
+  }
   /// Square (file x, rank y) of a board of size `dim`: White (y = 0) at the bottom, file a on the left.
   static Rect squareRect(const Rect& board, int dim, int x, int y);
 

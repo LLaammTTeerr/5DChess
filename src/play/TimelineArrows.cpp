@@ -1,7 +1,8 @@
 #include "play/TimelineArrows.h"
 #include <algorithm>
 #include <cmath>
-#include "Render/UITheme.h"
+#include "play/BoardRenderer.h"
+#include "play/Paths.h"
 
 namespace play {
 
@@ -9,14 +10,20 @@ std::vector<Arrow> timelineArrows(const Chess::IGame& game) {
   std::vector<Arrow> arrows;
   const auto timeLines = game.getTimeLines();
 
-  // Progression: between consecutive boards of a timeline
+  // Threads: between consecutive boards of a timeline
   for (const auto& timeLine : timeLines) {
     const auto boards = timeLine->getBoards();
+    const bool inactive = !game.isTimeLineActive(timeLine->ID());
     for (size_t i = 0; i + 1 < boards.size(); ++i) {
       const Chess::Board& a = *boards[i];
       const Chess::Board& b = *boards[i + 1];
-      arrows.push_back({BoardLayout::boardRect(a.timeLineId(), a.halfTurnNumber()),
-                        BoardLayout::boardRect(b.timeLineId(), b.halfTurnNumber()), b.timeLineId(), b.halfTurnNumber(), false});
+      Arrow arrow;
+      arrow.from = BoardLayout::boardRect(a.timeLineId(), a.halfTurnNumber());
+      arrow.to = BoardLayout::boardRect(b.timeLineId(), b.halfTurnNumber());
+      arrow.timeline = b.timeLineId();
+      arrow.halfTurn = b.halfTurnNumber();
+      arrow.inactive = inactive;
+      arrows.push_back(arrow);
     }
   }
 
@@ -26,16 +33,20 @@ std::vector<Arrow> timelineArrows(const Chess::IGame& game) {
     if (!game.boardExists(timeLine->parentId(), timeLine->forkAt())) continue;
     const Chess::Board& parent = game.board(timeLine->parentId(), timeLine->forkAt());
     const Chess::Board& first = *timeLine->getBoards().front();
-    arrows.push_back({BoardLayout::boardRect(parent.timeLineId(), parent.halfTurnNumber()),
-                      BoardLayout::boardRect(first.timeLineId(), first.halfTurnNumber()), first.timeLineId(),
-                      first.halfTurnNumber(), true});
+    Arrow arrow;
+    arrow.from = BoardLayout::boardRect(parent.timeLineId(), parent.halfTurnNumber());
+    arrow.to = BoardLayout::boardRect(first.timeLineId(), first.halfTurnNumber());
+    arrow.timeline = first.timeLineId();
+    arrow.halfTurn = first.halfTurnNumber();
+    arrow.branch = true;
+    arrow.byWhite = timeLine->ID() > 0;
+    arrow.inactive = !game.isTimeLineActive(timeLine->ID());
+    arrows.push_back(arrow);
   }
   return arrows;
 }
 
 void TimelineArrows::update(float dt) {
-  _dashOffset += dt * 50.0f;
-  _pulsePhase += dt * 2.0f;
   for (auto& a : _active) a.t.update(dt);
   _active.erase(std::remove_if(_active.begin(), _active.end(), [](const Anim& a) { return a.t.done(); }), _active.end());
 }
@@ -49,18 +60,17 @@ float TimelineArrows::progressOf(const Key& key) const {
 void TimelineArrows::set(const std::vector<Arrow>& arrows) {
   _lines.clear();
   for (const Arrow& arrow : arrows) {
-    // From the right edge of the earlier board to the left edge of the later one
-    const float fromSize = std::fmin(arrow.from.w, arrow.from.h), toSize = std::fmin(arrow.to.w, arrow.to.h);
+    // From the right edge of the earlier card to the left edge of the later one, at the height of the boards' middle
     Line line;
-    line.start = {arrow.from.centerX() + fromSize * 0.6f, arrow.from.centerY()};
-    line.end = {arrow.to.centerX() - toSize * 0.6f, arrow.to.centerY()};
-    line.color = arrow.branch ? UI::Color::branchArrow : UI::Color::timelineArrow;
-    line.thickness = arrow.branch ? 5.0f : 4.0f;
+    line.start = {arrow.from.x + arrow.from.w + BoardLayout::kCardPad, arrow.from.centerY()};
+    line.end = {arrow.to.x - BoardLayout::kCardPad, arrow.to.centerY()};
+    line.byWhite = arrow.byWhite;
+    line.inactive = arrow.inactive;
     line.key = {arrow.branch, arrow.timeline, arrow.halfTurn};
     _lines.push_back(line);
   }
 
-  // Arrows that are new since the last call start drawing in (never on the first call)
+  // Links that are new since the last call start drawing in (never on the first call)
   _scratch.clear();
   for (const auto& line : _lines) _scratch.push_back(line.key);
   std::sort(_scratch.begin(), _scratch.end());
@@ -68,7 +78,7 @@ void TimelineArrows::set(const std::vector<Arrow>& arrows) {
     for (const auto& k : _scratch) {
       if (std::binary_search(_known.begin(), _known.end(), k)) continue;
       Anim anim{k, {}};
-      // Branch arrows draw slowly after the new board has started to grow; progression arrows quickly
+      // Branches draw slowly after the new board has started to grow; threads quickly
       anim.t.start(0.0f, 1.0f, k.branch ? UI::Motion::slow : UI::Motion::base, UI::Motion::easeOutCubic,
                    k.branch ? 0.10f : 0.05f);
       if (!anim.t.done()) _active.push_back(anim);
@@ -78,87 +88,87 @@ void TimelineArrows::set(const std::vector<Arrow>& arrows) {
   _seeded = true;
 }
 
-void TimelineArrows::draw() const {
+namespace {
+
+void drawNode(Vector2 at, Color color, bool filled, const BoardStyle& style, float px, float alpha) {
+  switch (style.connector) {
+    case BoardStyle::Connector::Curve:
+      DrawCircleV(at, 6.0f * px, fade(style.cardWhite, alpha));
+      DrawRing(at, 4.5f * px, 7.5f * px, 0, 360, 24, fade(color, alpha));
+      break;
+    case BoardStyle::Connector::Luminous:
+      DrawCircleV(at, 10.0f * px, fade(color, 0.28f * alpha));
+      DrawCircleV(at, 5.5f * px, fade(WHITE, alpha));
+      DrawRing(at, 4.0f * px, 7.0f * px, 0, 360, 24, fade(color, alpha));
+      break;
+    case BoardStyle::Connector::Elbow:
+      DrawCircleV(at, 6.0f * px, fade(filled ? style.ink : WHITE, alpha));
+      DrawRing(at, 4.0f * px, 7.0f * px, 0, 360, 24, fade(style.ink, alpha));
+      break;
+  }
+}
+
+} // namespace
+
+void TimelineArrows::draw(const BoardStyle& style, float zoom) const {
+  const float px = 1.0f / std::max(zoom, 0.05f); // one screen pixel in world units
+  const BoardStyle::Connector kind = style.connector;
+  path::Poly poly;
   for (const auto& line : _lines) {
     const float progress = progressOf(line.key);
     if (progress <= 0.0f) continue;
-    if (line.key.branch) drawCurved(line, progress);
-    else drawDashed(line, progress);
-  }
-}
+    const float alpha = line.inactive ? 0.45f : 1.0f;
+    const Vector2 a = line.start, b = line.end;
 
-void TimelineArrows::drawCurved(const Line& line, float progress) const {
-  const Vector2 start = line.start, end = line.end;
-  const Vector2 midPoint = {(start.x + end.x) * 0.5f, (start.y + end.y) * 0.5f};
-  const Vector2 direction = {end.x - start.x, end.y - start.y};
-  Vector2 perpendicular = {-direction.y, direction.x};
-  const float length = sqrtf(perpendicular.x * perpendicular.x + perpendicular.y * perpendicular.y);
-  if (length > 0) {
-    perpendicular.x /= length;
-    perpendicular.y /= length;
-  }
-  const float curvature = 50.0f;
-  const Vector2 control = {midPoint.x + perpendicular.x * curvature, midPoint.y + perpendicular.y * curvature};
-
-  // A quadratic Bezier drawn as 20 segments, with a pulsing brightness
-  const int segments = 20;
-  for (int i = 0; i < segments; ++i) {
-    const float t1 = (float)i / segments;
-    float t2 = (float)(i + 1) / segments;
-    if (t1 >= progress) break; // progressive draw: stop where the arrow has not reached yet
-    if (t2 > progress) t2 = progress;
-
-    const Vector2 p1 = {(1 - t1) * (1 - t1) * start.x + 2 * (1 - t1) * t1 * control.x + t1 * t1 * end.x,
-                        (1 - t1) * (1 - t1) * start.y + 2 * (1 - t1) * t1 * control.y + t1 * t1 * end.y};
-    const Vector2 p2 = {(1 - t2) * (1 - t2) * start.x + 2 * (1 - t2) * t2 * control.x + t2 * t2 * end.x,
-                        (1 - t2) * (1 - t2) * start.y + 2 * (1 - t2) * t2 * control.y + t2 * t2 * end.y};
-    const float pulse = 1.0f + 0.3f * sinf(_pulsePhase + t1 * 3.14159f);
-    const Color animated = {(unsigned char)fminf(255.0f, line.color.r * pulse), (unsigned char)fminf(255.0f, line.color.g * pulse),
-                            (unsigned char)fminf(255.0f, line.color.b * pulse), line.color.a};
-    DrawLineEx(p1, p2, line.thickness, animated);
-  }
-
-  // Arrowhead at the end (grows in over the last 12 % of the draw)
-  const float headScale = std::fmin(1.0f, std::fmax(0.0f, (progress - 0.88f) / 0.12f));
-  Vector2 dir = {end.x - control.x, end.y - control.y};
-  const float dirLength = sqrtf(dir.x * dir.x + dir.y * dir.y);
-  if (dirLength > 0 && headScale > 0.0f) {
-    dir.x /= dirLength;
-    dir.y /= dirLength;
-    const Vector2 side = {-dir.y, dir.x};
-    const float size = line.thickness * 2 * headScale;
-    const Vector2 p1 = {end.x - dir.x * size + side.x * size * 0.5f, end.y - dir.y * size + side.y * size * 0.5f};
-    const Vector2 p2 = {end.x - dir.x * size - side.x * size * 0.5f, end.y - dir.y * size - side.y * size * 0.5f};
-    DrawTriangle(end, p2, p1, line.color); // raylib needs counter-clockwise order (y down) or the triangle is culled
-  }
-}
-
-void TimelineArrows::drawDashed(const Line& line, float progress) const {
-  const Vector2 start = line.start, end = line.end;
-  Vector2 direction = {end.x - start.x, end.y - start.y};
-  float totalLength = sqrtf(direction.x * direction.x + direction.y * direction.y);
-  if (totalLength == 0) return;
-  direction.x /= totalLength; // unit vector from the FULL length
-  direction.y /= totalLength;
-  totalLength *= progress; // progressive draw: only the length shrinks, dashes keep theirs
-
-  const float dashLength = 10.0f, gapLength = 5.0f, segmentLength = dashLength + gapLength;
-  const float offset = fmodf(_dashOffset, segmentLength); // marching dashes
-  for (float distance = -offset; distance < totalLength; distance += segmentLength) {
-    const float segmentStart = fmaxf(0, distance);
-    const float segmentEnd = fminf(totalLength, distance + dashLength);
-    if (segmentStart < segmentEnd) {
-      DrawLineEx({start.x + direction.x * segmentStart, start.y + direction.y * segmentStart},
-                 {start.x + direction.x * segmentEnd, start.y + direction.y * segmentEnd}, line.thickness, line.color);
+    if (!line.key.branch) {
+      // The thread of a timeline through its boards
+      poly.n = 0;
+      poly.add(a);
+      poly.add(b);
+      switch (kind) {
+        case BoardStyle::Connector::Curve:
+          path::stroke(poly, progress, fade(style.thread, alpha), 2.5f * px);
+          break;
+        case BoardStyle::Connector::Luminous:
+          if (line.inactive) {
+            path::stroke(poly, progress, fade(style.thread, 0.9f), 2.4f * px, 3.0f * px, 5.0f * px);
+          } else {
+            path::stroke(poly, progress, fade(style.thread, 0.22f), 7.0f * px);
+            path::stroke(poly, progress, style.thread, 2.0f * px);
+          }
+          break;
+        case BoardStyle::Connector::Elbow:
+          path::stroke(poly, progress, fade(style.thread, alpha), 1.5f * px);
+          break;
+      }
+      continue;
     }
-  }
 
-  // Arrowhead at the end once the line has arrived
-  if (progress < 0.98f) return;
-  const float t = line.thickness;
-  const Vector2 p1 = {end.x - direction.x * t * 2 + direction.y * t, end.y - direction.y * t * 2 - direction.x * t};
-  const Vector2 p2 = {end.x - direction.x * t * 2 - direction.y * t, end.y - direction.y * t * 2 + direction.x * t};
-  DrawTriangle(end, p1, p2, line.color);
+    // A branch: a curve (or an elbow) from the parent board to the first board of the new timeline
+    const Color color = line.byWhite ? style.whiteBranch : style.blackBranch;
+    switch (kind) {
+      case BoardStyle::Connector::Curve: {
+        const float k = (b.x - a.x) * 0.5f;
+        path::bezier(poly, a, {a.x + k, a.y}, {b.x - k, b.y}, b);
+        path::stroke(poly, progress, fade(color, alpha), 4.0f * px);
+        break;
+      }
+      case BoardStyle::Connector::Luminous: {
+        const float k = (b.x - a.x) * 0.55f;
+        path::bezier(poly, a, {a.x + k, a.y}, {b.x - k, b.y}, b);
+        path::stroke(poly, progress, fade(color, 0.30f * alpha), 11.0f * px);
+        path::stroke(poly, progress, fade(color, alpha), 3.2f * px);
+        path::stroke(poly, progress, fade(WHITE, 0.75f * alpha), 1.0f * px);
+        break;
+      }
+      case BoardStyle::Connector::Elbow:
+        path::elbow(poly, a, b, (a.x + b.x) / 2.0f, 12.0f);
+        path::stroke(poly, progress, fade(style.ink, alpha), 2.0f * px);
+        break;
+    }
+    drawNode(a, color, !line.byWhite, style, px, alpha);
+    if (progress > 0.95f) drawNode(b, color, !line.byWhite, style, px, alpha);
+  }
 }
 
 } // namespace play

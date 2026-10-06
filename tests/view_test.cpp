@@ -1,6 +1,7 @@
 #include <doctest/doctest.h>
 
 #include "play/MultiverseView.h"
+#include "engine/Position.h"
 #include "services/SettingsFile.h"
 #include "test_support.h"
 
@@ -105,6 +106,39 @@ TEST_CASE("MultiverseView: every built-in mode builds a consistent view") {
     int mandatory = 0;
     for (const auto& b : view.boards) mandatory += b.role == BoardRole::Mandatory;
     CHECK(mandatory == int(game->mandatoryBoards().size()));
+  }
+}
+
+namespace {
+std::shared_ptr<IGame> uiPosition(const char* name) {
+  return Chess::Core::loadPositionFile(std::string(FDCHESS_UI_POSITIONS_DIR) + "/" + name).makeGame();
+}
+} // namespace
+
+TEST_CASE("UI test positions: check, promotion and an inactive timeline are what the screenshot scripts expect") {
+  {
+    auto game = uiPosition("check.5dp");
+    const MultiverseView view = MultiverseView::build(*game);
+    REQUIRE(view.checks.size() == 1);
+    CHECK(view.checks[0].attacker == Coord{4, 7, 4, 0}); // the rook on e8
+    CHECK(view.checks[0].king == Coord{4, 0, 4, 0});     // the king on e1
+  }
+  {
+    auto game = uiPosition("promotion.5dp");
+    CHECK(game->legalMovesFrom(Coord{4, 6, 4, 0}).size() == 4); // e7: four promotion choices onto e8
+  }
+  {
+    auto game = uiPosition("inactive.5dp");
+    const MultiverseView view = MultiverseView::build(*game);
+    REQUIRE(view.timelines.size() == 3);
+    CHECK(view.timeline(0)->active);
+    CHECK(view.timeline(1)->active);
+    CHECK_FALSE(view.timeline(2)->active);
+    CHECK(view.timeline(2)->created);
+    CHECK(view.board(2, 4)->inactive);
+    CHECK(view.board(2, 4)->role == BoardRole::Optional); // White may still move there, but need not
+    CHECK(view.board(0, 4)->role == BoardRole::Mandatory);
+    CHECK(view.board(1, 4)->role == BoardRole::Mandatory);
   }
 }
 

@@ -1,4 +1,5 @@
 #pragma once
+#include <optional>
 #include <raylib.h>
 #include "play/BoardLayout.h"
 
@@ -7,13 +8,14 @@ namespace play {
 /// The 2D camera over the boards. By default it follows the boards: it centres on all of them and zooms to fit them
 /// in the safe area (the screen minus the HUD). Dragging or the wheel hands control to the player; focusing a board
 /// or the newest board flies to it; Z toggles the auto zoom and X refits. All motion is a critically damped follow,
-/// so it is frame-rate independent and never overshoots.
+/// so it is frame-rate independent and never overshoots. The first update snaps to the initial framing.
 class BoardCamera {
 public:
   BoardCamera();
 
   const Camera2D& view() const { return _camera; }
   Vector2 screenToWorld(Vector2 screen) const { return GetScreenToWorld2D(screen, _camera); }
+  Vector2 worldToScreen(Vector2 world) const { return GetWorldToScreen2D(world, _camera); }
 
   /// Reserved screen margins (px) so that content is placed in the free area between the HUD bars.
   void setInsets(float top, float right, float bottom, float left);
@@ -21,6 +23,9 @@ public:
   void handleInput();
   /// Advance the camera one frame towards what `layout` currently holds.
   void update(float dt, const BoardLayout& layout);
+
+  /// Extra space the view wants on screen besides the boards (jump arcs hang below them); nullopt: none.
+  void setExtraBounds(const std::optional<Rect>& extra) { _extra = extra; }
 
   /// Fly to `board` if the camera is zoomed far out (so a selected piece is comfortable to see).
   /// Focusing only moves the camera; the zoom stays fit-all.
@@ -44,6 +49,8 @@ private:
   Vector2 _target{2500, 2500}, _center{2500, 2500};
   float _targetZoom = 1.0f;
   bool _autoZoom = true;
+  std::optional<Rect> _extra;
+  bool _seeded = false; // the first update snaps to the initial framing instead of gliding in from the world centre
   float _panVelX = 0, _panVelY = 0, _zoomVel = 0;
   float _timeSinceInput = 0;
 

@@ -6,6 +6,9 @@
 #include "chess.h"
 #include "play/BoardCamera.h"
 #include "play/BoardLayout.h"
+#include "play/BoardScene.h"
+#include "play/MultiverseView.h"
+#include "play/PromotionPicker.h"
 #include "play/Hud.h"
 #include "play/MoveAnimator.h"
 #include "play/Selection.h"
@@ -25,10 +28,15 @@ public:
   void click(Chess::Core::Coord square);
   void submit();
   const Chess::IGame& game() const { return *_game; }
+  /// Developer tools: where a square is on screen right now (its centre), so scripted clicks name squares, not pixels.
+  Vector2 squareToScreen(Chess::Core::Coord square) const;
 
 private:
   std::shared_ptr<Chess::IGame> _game;
   play::BoardLayout _layout;
+  play::MultiverseView _view;            // board roles, timelines, checks, jumps: rebuilt with the layout
+  mutable play::BoardScene _scene;       // background, lanes, ruler, check lines...; bakes its textures lazily
+  play::PromotionPicker _picker;
   play::Selection _selection;
   play::BoardCamera _camera;
   play::MoveAnimator _animator;
@@ -43,10 +51,9 @@ private:
 
   // Answers that are not free (a threat search over the multiverse), cached until the game's state changes
   bool _canSubmit = false, _noMandatoryBoard = true;
-  std::vector<play::BoardKey> _moveable; // boards the side to move may still move from (sorted)
-  float _presentHalfTurn = 0.0f;
 
   void boardInput();
+  void updatePicker(float dt, const play::BoardStyle& style);
   void perform(const play::Intent& intent);
   void makeMove(const Chess::Core::Move& move);
   void undo();

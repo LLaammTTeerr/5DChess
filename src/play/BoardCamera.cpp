@@ -11,7 +11,7 @@ namespace {
 constexpr float kPanSmoothTime = 0.30f;  // seconds to (mostly) arrive
 constexpr float kZoomSmoothTime = 0.32f;
 constexpr float kReducedSmoothTime = 0.06f; // Reduce motion: a quick settle instead of snapping
-constexpr float kPadding = 24.0f;           // inside the safe area
+constexpr float kPadding = 44.0f;           // inside the safe area: room for a card's label strip and its halo
 constexpr float kReleaseAfter = 10.0f;      // seconds of free camera before it may fly back to the boards
 constexpr float kReleaseDistance = 500.0f;  // ... if it is farther than this from them
 constexpr float kFarZoom = 0.8f;            // below this zoom the camera moves in on a picked-up piece
@@ -108,12 +108,23 @@ void BoardCamera::clampToBounds() {
 
 void BoardCamera::update(float dt, const BoardLayout& layout) {
   applySafeArea();
-  const Rect& b = layout.bounds();
+  Rect b = BoardLayout::cardRect(layout.bounds()); // the cards (frame and label strip), not just the squares
+  if (_extra) { // ... and whatever else the view hangs outside them
+    const float x0 = std::min(b.x, _extra->x), y0 = std::min(b.y, _extra->y);
+    const float x1 = std::max(b.x + b.w, _extra->x + _extra->w), y1 = std::max(b.y + b.h, _extra->y + _extra->h);
+    b = {x0, y0, x1 - x0, y1 - y0};
+  }
   const float margin = BoardLayout::kBoardSize; // the player may pan one board beyond the outermost boards
   _boundsMin = {b.x - margin, b.y - margin};
   _boundsMax = {b.x + b.w + margin, b.y + b.h + margin};
   _center = {b.x + b.w / 2.0f, b.y + b.h / 2.0f};
   if (_autoZoom) fitZoom(b);
+  if (!_seeded && !layout.boards().empty()) { // start framed on the boards: no glide in from the world centre
+    _seeded = true;
+    _camera.target = _center;
+    if (_autoZoom) _camera.zoom = _targetZoom;
+    _panVelX = _panVelY = _zoomVel = 0.0f;
+  }
 
   switch (_mode) {
     case Mode::Follow:

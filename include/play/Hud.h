@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include "Render/Motion.h"
+#include "play/BoardStyle.h"
 #include "ui/Widgets.h"
 
 namespace play {
@@ -10,7 +11,7 @@ struct HudData {
   bool whiteToMove = true;
   int fullTurn = 1;          // 1-based full-turn number shown to the player
   int timelineCount = 1;
-  std::string hint;          // e.g. "Select a board"
+  std::string hint;          // e.g. "Select a piece"
   float chipWhite = 1.0f;    // 0 = black chip, 1 = white chip (cross-fades on a turn change)
   bool bannerActive = false; // the "<Colour> to move" banner below the action row
   bool bannerWhite = true;
@@ -27,7 +28,7 @@ struct EndCard {
 };
 
 /// Screen space, unaffected by the camera: the top-centre status pill, the bottom controls bar and the turn banner.
-void drawHud(const HudData& hud);
+void drawHud(const HudData& hud, const BoardStyle& style);
 void drawEndCard(const EndCard& card);
 
 /// Time-dependent parts of the HUD: the chip cross-fade, the turn banner and the end card's pop-in.
@@ -67,6 +68,10 @@ public:
   /// Updates all three buttons (they take the pointer first) and returns the one clicked this frame.
   Action update(float dt);
   void draw() const;
+  /// The skin of the board view (nullptr: the default cream skin).
+  void setSkin(const ui::Skin* skin) {
+    _undo.skin = _deselect.skin = _submit.skin = skin;
+  }
   void setEnabled(bool undo, bool deselect, bool submit) {
     _undo.enabled = undo;
     _deselect.enabled = deselect;
