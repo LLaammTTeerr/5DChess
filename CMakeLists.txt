@@ -39,6 +39,15 @@ else()
   target_compile_options(chess_core PRIVATE -Wall -Wextra)
 endif()
 
+# --- Game-screen logic that needs no graphics (selection state machine, board layout) -----------------
+add_library(play_core STATIC src/play/Selection.cpp src/play/BoardLayout.cpp)
+target_link_libraries(play_core PUBLIC chess_core)
+if(MSVC)
+  target_compile_options(play_core PRIVATE /W4)
+else()
+  target_compile_options(play_core PRIVATE -Wall -Wextra)
+endif()
+
 # --- Game ---------------------------------------------------------------------
 if(FDCHESS_BUILD_GAME)
   if(EMSCRIPTEN)
@@ -65,6 +74,7 @@ if(FDCHESS_BUILD_GAME)
   file(GLOB_RECURSE GAME_SOURCES CONFIGURE_DEPENDS src/*.cpp)
   list(REMOVE_ITEM GAME_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/chess.cpp)
   list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/engine/") # engine sources are part of chess_core
+  list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/play/(Selection|BoardLayout)\\.cpp") # part of play_core
 
   add_executable(5dchess ${GAME_SOURCES})
   target_include_directories(5dchess PRIVATE
@@ -72,7 +82,7 @@ if(FDCHESS_BUILD_GAME)
     include/Audio
     include/Render)
   target_compile_definitions(5dchess PRIVATE FDCHESS_VERSION="${PROJECT_VERSION}")
-  target_link_libraries(5dchess PRIVATE chess_core raylib)
+  target_link_libraries(5dchess PRIVATE play_core chess_core raylib)
   if(APPLE)
     target_link_libraries(5dchess PRIVATE
       "-framework OpenGL" "-framework Cocoa" "-framework IOKit" "-framework CoreAudio" "-framework CoreVideo")
