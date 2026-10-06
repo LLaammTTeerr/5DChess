@@ -3,6 +3,7 @@
 #include "play/MultiverseView.h"
 #include "engine/Position.h"
 #include "services/SettingsFile.h"
+#include "Render/PieceThemes.h"
 #include <filesystem>
 #include <fstream>
 #include <set>
@@ -184,10 +185,6 @@ TEST_CASE("settingsfile: the file lives in the platform's config directory") {
 }
 
 TEST_CASE("piece themes: every theme's textures are in the manifest and on disk") {
-  // Mirrors Themes:: in include/Render/PieceTheme.h (that header needs raylib, which the unit tests do not link).
-  struct ThemeIds { const char* prefix; bool blink; };
-  const ThemeIds themes[] = {{"piece.classic.", false}, {"piece.modern.", false}, {"piece.fantasy.", false},
-                             {"piece.pixel.", true}, {"piece.medieval.", false}};
   const std::filesystem::path assets = std::filesystem::path(FDCHESS_GUIDE_DIR).parent_path();
   std::set<std::string> ids;
   std::ifstream manifest(assets / "manifest.txt");
@@ -200,11 +197,24 @@ TEST_CASE("piece themes: every theme's textures are in the manifest and on disk"
       CHECK_MESSAGE(std::filesystem::exists(assets / path), id << " -> " << path);
     }
   }
-  for (const auto& theme : themes)
+  for (const char* name : Themes::names) {
+    const PieceTheme& theme = *Themes::byName(name);
     for (const char* side : {"white", "black"})
       for (const char* piece : {"king", "queen", "rook", "bishop", "knight", "pawn"}) {
         const std::string id = std::string(theme.prefix) + side + "_" + piece;
         CHECK_MESSAGE(ids.count(id) == 1, id);
-        if (theme.blink) CHECK_MESSAGE(ids.count(id + "_blink") == 1, id << "_blink");
+        if (theme.hasBlink) CHECK_MESSAGE(ids.count(id + "_blink") == 1, id << "_blink");
       }
+  }
+}
+
+TEST_CASE("piece themes: names round-trip; a removed theme's saved name is unknown, so the default Pixel stays") {
+  for (const char* name : Themes::names) {
+    REQUIRE(Themes::byName(name) != nullptr);
+    CHECK(std::string(Themes::nameOf(*Themes::byName(name))) == name);
+  }
+  CHECK(std::string(Themes::names[0]) == "Pixel"); // the default and the first Settings entry
+  // SettingsStore keeps the default unless byName finds the stored name.
+  for (const char* gone : {"Classic", "Modern", "Fantasy", "classic", ""}) CHECK(Themes::byName(gone) == nullptr);
+  CHECK(std::string(Themes::nameOf(PieceTheme{"piece.classic.", false})) == "Pixel");
 }

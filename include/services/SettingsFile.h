@@ -6,7 +6,7 @@
 // The text form of the settings file and where it lives. No graphics or engine dependency, so it is unit tested.
 //
 //   # 5DChess settings
-//   theme=Modern
+//   theme=Pixel
 //   board_view=Deep space
 //   music=Off
 //   sfx=on

@@ -7,7 +7,6 @@
 #include "play/BoardView.h"
 
 namespace {
-const char* const kThemes[] = {"Classic", "Modern", "Fantasy", "Pixel", "Medieval"};
 constexpr float kOptionW = 200.0f, kOptionGap = 20.0f;
 }
 
@@ -27,7 +26,7 @@ void SettingsScreen::openTab(App& app, int tab) {
                                           : Rectangle{(W - kOptionW) / 2, 100.0f, kOptionW, H};
   const auto& tracks = AudioManager::tracks();
   // Music: Off, tracks, SFX toggle; Display: board view, motion toggle
-  const int count = tab == Theme ? static_cast<int>(std::size(kThemes)) : tab == Music ? static_cast<int>(tracks.size()) + 2 : 2;
+  const int count = tab == Theme ? static_cast<int>(std::size(Themes::names)) : tab == Music ? static_cast<int>(tracks.size()) + 2 : 2;
   const auto slots = ui::column(area, count, UI::Space::buttonHeight, kOptionGap);
 
   std::vector<std::string> labels;
@@ -35,7 +34,7 @@ void SettingsScreen::openTab(App& app, int tab) {
   _boardView.reset();
   _options = {};
   if (tab == Theme) {
-    labels.assign(std::begin(kThemes), std::end(kThemes));
+    labels.assign(std::begin(Themes::names), std::end(Themes::names));
   } else if (tab == Music) {
     labels.push_back(AudioManager::offName());
     for (const auto& track : tracks) labels.push_back(track.name);
@@ -62,7 +61,7 @@ void SettingsScreen::update(App& app, float dt) {
   const int picked = _options.update(dt);
   if (picked >= 0 && _tab == Theme) {
     _themeIndex = picked;
-    if (const PieceTheme* theme = Themes::byName(kThemes[picked])) app.themes.setTheme(*theme);
+    if (const PieceTheme* theme = Themes::byName(Themes::names[picked])) app.themes.setTheme(*theme);
   } else if (picked >= 0 && _tab == Music) {
     app.audio.playMusic(picked == 0 ? AudioManager::offName() : AudioManager::tracks()[picked - 1].name);
   }
