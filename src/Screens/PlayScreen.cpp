@@ -646,7 +646,11 @@ void PlayScreen::draw(App& app) const {
     play::drawBoard(_game->board(slots[i].timeline, slots[i].halfTurn), slots[i].rect, lookOf(i), style, zoom);
   }
 
-  if (from) play::drawBoardOutline(BoardLayout::boardRect(from->l, from->t), style, zoom);
+  const auto shiftOf = [&](const Coord& c) { return _animator.boardOffset(play::keyOf(c), zoom); }; // a shaking / lifted card takes its marks along
+  if (from) {
+    play::overlay::BoardShift shift(shiftOf(*from));
+    play::drawBoardOutline(BoardLayout::boardRect(from->l, from->t), style, zoom);
+  }
 
   auto squareOf = [dim](const Coord& c) {
     return BoardLayout::squareRect(BoardLayout::boardRect(c.l, c.t), dim, c.x, c.y);
@@ -660,8 +664,10 @@ void PlayScreen::draw(App& app) const {
 
   {
     const auto flash = _animator.rejectFlash(); // a refused click
-    if (flash.alpha > 0.0f && _layout.contains(flash.key.first, flash.key.second))
+    if (flash.alpha > 0.0f && _layout.contains(flash.key.first, flash.key.second)) {
+      play::overlay::BoardShift shift(_animator.boardOffset(flash.key, zoom));
       play::overlay::drawRejectFlash(BoardLayout::squareRect(BoardLayout::boardRect(flash.key.first, flash.key.second), dim, flash.x, flash.y), flash.alpha);
+    }
     if (!from) { // what the piece under the pointer could do
       play::overlay::drawMovePreview(_animator.previewFading(), *_game, style, zoom, !UI::Motion::reduced());
       play::overlay::drawMovePreview(_animator.previewNow(), *_game, style, zoom, !UI::Motion::reduced());
@@ -673,9 +679,11 @@ void PlayScreen::draw(App& app) const {
     const auto& targets = _selection.targets();
     for (size_t i = 0; i < targets.size(); ++i) {
       const bool occupied = _game->board(targets[i].l, targets[i].t).at(Chess::Position2D(targets[i].x, targets[i].y)).has_value();
+      play::overlay::BoardShift shift(shiftOf(targets[i]));
       play::drawLegalTarget(squareOf(targets[i]), occupied, _animator.dotScale(i), style);
     }
     const auto piece = _game->board(from->l, from->t).at(Chess::Position2D(from->x, from->y));
+    play::overlay::BoardShift shift(shiftOf(*from));
     play::drawSelectedSquare(squareOf(*from), zoom, style);
     const play::BoardInfo* info = _view.board(from->l, from->t);
     if (piece) play::drawLiftedPiece(squareOf(*from), play::pieceKey(*piece), _animator.lift(), gray || (info && info->inactive));

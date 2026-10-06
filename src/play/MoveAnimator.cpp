@@ -2,6 +2,7 @@
 #include "play/Feedback.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <raymath.h>
 
 namespace play {
@@ -81,9 +82,9 @@ void MoveAnimator::startFlight(const FlightSpec& spec) {
   f.to = {dst.centerX(), dst.centerY()};
   f.size = dst.w;
   if (spec.from != spec.to) {
-    // Gentle arc across boards / through time
-    const float dist = Vector2Distance(f.from, f.to);
-    f.arcHeight = std::fmin(140.0f, 24.0f + dist * 0.12f);
+    // Arc through time: higher the more half-turns the piece travels (24 px + 12 px per half-turn)
+    const int halfTurns = std::abs(spec.to.second - spec.from.second);
+    f.arcHeight = std::fmin(170.0f, 24.0f + 12.0f * static_cast<float>(halfTurns));
     f.move.start(0.0f, 1.0f, slow, easeInOutCubic);
   } else {
     f.move.start(0.0f, 1.0f, base, easeOutCubic);
