@@ -74,6 +74,11 @@ mode, Play) or by a record with the `# vs-computer:` line (`record`, `slot`).
 | save-continue | no Continue on a fresh menu; after a submitted turn Continue appears, resumes the game, and an unsubmitted move is not restored |
 | save-slots | the game's Save panel with the unsubmitted-moves warning, the saved slot, the Load screen, and the loaded game |
 | load-records | the Load screen with a branch record and a corrupted one ("This save can't be loaded"), Delete with confirmation, loading the branch game |
+| puzzles-list | main menu -> Puzzles: the list, three tiers, no check marks |
+| puzzles-open | the first puzzle opened from the list; Hint (text), then Show piece (the rook ringed) |
+| puzzles-wrong | a wrong move (Re1-e2, submitted): "Not quite - try again" with Try again, then the automatic reset |
+| puzzles-solve | the solution Re1-e8: the success card, then the list with a check mark |
+| puzzles-mate2 | a mate in 2: the engine's reply played on the board and the second turn awaited; Show solution replayed from the start |
 | rules-visuals | tests/ui/positions: check (attack line from the rook to the king), an inactive timeline (dimmed, tagged), the promotion picker and a chosen promotion |
 
 ## Tolerance

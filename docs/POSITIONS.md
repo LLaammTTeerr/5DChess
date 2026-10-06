@@ -87,6 +87,13 @@ The moves of a pending (unsubmitted) turn and the game result. Snapshot between 
 `operator==`, and `parsePosition(writePosition(p)) == p` holds for every position of a played game (tested on fuzz
 games in `tests/position_test.cpp`).
 
+## Puzzle files
+
+A puzzle (`assets/puzzles/*.5dp`) is a position file with four more header lines, `goal:`, `difficulty:`, `hint:` and
+`solution:`. They are read by `puzzles::parse` (`include/puzzles/Puzzle.h`), which blanks them out (so line numbers of errors stay
+true) and hands the rest to `parsePosition`; `parsePosition` itself still rejects them as unknown keys. Everything about them is in
+[PUZZLES.md](PUZZLES.md).
+
 ## Adding a game mode
 
 Put `assets/positions/<id>.5dp` in place and add `<id>` to the menu-order list in `src/engine/GameCatalog.cpp`. The

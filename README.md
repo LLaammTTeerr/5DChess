@@ -15,6 +15,7 @@ Chess with multiverse time travel: a 5D Chess game with timelines, built in C++2
 ## Table of Contents
 - [Overview](#overview)
 - [Screenshots](#screenshots)
+- [Puzzles](#puzzles)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Building](#building)
@@ -67,6 +68,17 @@ Play against the computer: Versus -> Opponent: **Computer**, then your side and 
   <tr>
     <td width="50%"><img src="docs/screenshots/vs-computer-setup.png" alt="The mode screen with Opponent: Computer, You play: White, Level: Normal and its one-line description"><br><sub>Versus -> Computer: your side (White, Black or Random), the level (Easy, Normal, Hard) and then the mode.</sub></td>
     <td width="50%"><img src="docs/screenshots/vs-computer-thinking.png" alt="A game against the computer: the HUD reads Computer is thinking with three dots and a thin progress bar; Submit and Undo are greyed"><br><sub>"Computer is thinking" with a progress bar; the boards only pan and zoom until it has moved.</sub></td>
+  </tr>
+</table>
+
+## Puzzles
+
+Main menu -> **Puzzles**: fourteen original puzzles in three tiers, White to move, each **proved by the engine** (`tools/puzzle_check` tries every legal turn; a ctest guards the set). **Warm-up** (mates in 1 on one board), **Time travel** (mates in 1 that need a time jump or a move across timelines) and **Deep** (mates in 2, where the engine picks Black's reply, and "branching" mates that create a timeline). Any turn that mates is accepted, not only the stored one; Hint shows the idea and then rings the piece to move, Show solution plays it through, and solved puzzles keep a check mark (saved like the settings). See [docs/PUZZLES.md](docs/PUZZLES.md) for the file format and how to add one.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/puzzles-list.png" alt="The puzzle list: one column per tier with titles, goals and check marks"><br><sub>The list: three tiers, goals and check marks.</sub></td>
+    <td width="50%"><img src="docs/screenshots/puzzles.png" alt="A mate in 2 on two timelines: Black's reply has been played, the panel says White to move, mate in 1"><br><sub>A mate in 2: the engine has replied, now deliver the mate.</sub></td>
   </tr>
 </table>
 
@@ -202,6 +214,7 @@ The game changes its working directory to the executable's folder, so it can be 
 │   └── soundeffect/           # Sound effects
 ├── include/                   # Header files
 │   ├── engine/                # Value API, .5dp positions, GameCatalog (no raylib)
+│   ├── puzzles/               # Puzzle files and catalog, the exhaustive proofs (Solver), solved-state text (no raylib)
 │   ├── services/              # Assets, settings, saved games (SaveStore) and other app services
 │   ├── play/                  # The game screen's parts: Selection, BoardLayout, MultiverseView, BoardStyle, BoardScene, BoardRenderer, MoveAnimator, BoardCamera, Hud, TimelineArrows, PromotionPicker
 │   ├── Render/                # Motion tokens, UI theme, piece themes
@@ -219,8 +232,8 @@ The game changes its working directory to the executable's folder, so it can be 
 │   └── chess.cpp              # Core rules engine (no raylib dependency)
 ├── tests/                     # doctest unit and property tests for the engine
 │   └── ui/                    # UI screenshot tests (scripts, baselines)
-├── tools/                     # theme_preview, ui_script, refcheck (differential tests against 5d-chess-js)
-├── docs/                      # RULES.md, SEARCH.md, POSITIONS.md, NOTATION.md, screenshots
+├── tools/                     # theme_preview, ui_script, puzzle_check (the puzzle prover), refcheck (differential tests against 5d-chess-js)
+├── docs/                      # RULES.md, SEARCH.md, POSITIONS.md, NOTATION.md, PUZZLES.md, screenshots
 └── README.md                  # This file
 ```
 
@@ -250,6 +263,7 @@ The game changes its working directory to the executable's folder, so it can be 
 - **Rules at a glance**: boards you must move on, may move on, or cannot (history) are framed differently; boards of inactive timelines are dimmed and desaturated and tagged "inactive"; check draws a line from every attacker to the king; promotion asks which piece (no auto-queening)
 - **Legal Move Highlighting**: Visual guides for valid moves; Submit is enabled only when the whole turn is legal (otherwise the HUD says why, e.g. "Your king would be capturable")
 - **Guide**: main menu -> Guide teaches the rules in ten short pages (boards and time, time travel, timeline numbers, the present, the four axes, pawns, check, mate, special moves). Each page has a small live board you can play, with legal-move dots, and most have a "Try it" goal that shows a check mark when you get it (Left / Right keys turn the pages; Reset position starts the page over). It uses your chosen board view
+- **Puzzles**: main menu -> Puzzles has 14 engine-proven mates in one or two (`assets/puzzles/*.5dp`, [docs/PUZZLES.md](docs/PUZZLES.md)), grouped in three tiers with a check mark for each solved one (stored next to the settings, `puzzles.txt`; localStorage on the web). Hint, Reset and Show solution; any mating turn is accepted; puzzle games never touch the autosave
 - **Save and load**: a game is stored as a text record (`5dchess-record 1`, moves like `(L0T1)e2>(L0T1)e4`, see [docs/NOTATION.md](docs/NOTATION.md)). Every submitted turn is **autosaved**, and the main menu then offers **Continue**, which resumes the game exactly (mode, history, side to move, present, time-travel branches). The game screen's **Save** button writes one of three slots (what each holds is listed: mode, turns, date); **Load game** in the main menu opens them (**Delete** removes one). Moves of a turn you have not submitted yet are *not* saved, by design (the panel warns you). **Copy** puts the game's record on the clipboard and **Paste record** (on the Load screen) starts from one, to share games as text (desktop only: a browser tab cannot read the clipboard). Loading a slot and then submitting a turn replaces the Continue game (the autosave follows the game you play). Overwriting a slot and deleting one ask twice. A save that cannot be loaded says so and is kept (an unreadable autosave is offered as "Discard autosave"). Files: `autosave.5dr`, `slot1.5dr` ... `slot3.5dr` next to `settings.txt` (browser: localStorage keys `5dchess.autosave`, `5dchess.slot1` ...); a finished game's autosave is removed
 - **Play vs Computer**: in *Versus* choose **Opponent: Computer**, **You play** White, Black or Random, and a **Level** (a line says what each means: *Easy* plays quickly and often misses tactics, *Normal* looks a few turns ahead, *Hard* is the slowest, searches deepest and can take a while on big multiverses), then a game mode and Play. The computer plays whole turns (several moves, time jumps included) with the usual move animations and sounds; while it thinks the HUD shows "Computer is thinking" and a progress bar, the boards ignore clicks (you can still pan, zoom, open the menu or leave), and Submit is not offered. **Undo** takes back your last turn together with the computer's reply (or just your turn while it is still thinking). Your last choices are remembered. A game against the computer is autosaved and saved to slots like any other, with its side, level and seed (one comment line in the record, [docs/NOTATION.md](docs/NOTATION.md)), so Continue and Load resume it, and a saved game replays the same computer moves; older saves load as two-player games. The AI is the engine of [docs/AI.md](docs/AI.md), advanced about 6 ms per frame (4 ms in the browser), so it never freezes the window
 - **Undo**: Take back moves within the current turn before submitting (no redo)
