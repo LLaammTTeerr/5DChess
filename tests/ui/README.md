@@ -37,7 +37,11 @@ means screenshots show the end state of animations (the Display tab reads "Motio
 
 One command per line, `#` starts a comment: `wait <frames>`, `move <x> <y>`, `click <x> <y>`, `wheel <dy>`,
 `key <NAME>`, `capture <name>` (writes `<name>.png`; names must be unique across scripts). Coordinates are real
-screen pixels; each script documents the layout it derives them from. A `click` is hover frame, press frame,
+screen pixels; each script documents the layout it derives them from. The game screen is driven by name instead:
+`clicksq <timeline> <half-turn> <square>` clicks a square (e.g. `clicksq 0 2 g1`) wherever the camera has put it, so
+scripts do not depend on the zoom. `mode <catalog id>` and `position <file.5dp>` (relative to the script's directory,
+e.g. `../positions/check.5dp`) open a game directly; follow them with `wait`. The harness runs with defaults, so every
+game screenshot is in the Deep space board view unless the script changes it in Settings. A `click` is hover frame, press frame,
 release frame. After a click that changes the camera (new boards appear) wait ~40-90 frames before the next one.
 Use `capture` after enough `wait` frames for scene cross-fades (about 10 frames under Reduce motion).
 
@@ -46,11 +50,13 @@ Use `capture` after enough `wait` frames for scene cross-fades (about 10 frames 
 | main-menu | menu at rest |
 | settings | tabs; Piece Theme with Pixel selected; Music; Display |
 | versus | mode list; Standard selected, Play visible |
-| game-standard | e2 selected, e2-e4, submit, black e7-e5, submit, knight time-travel jump creating a timeline |
+| game-standard | e2 selected, e2-e4, submit, black e7-e5, submit, knight time-travel jump creating a timeline (a branch connector and a jump arc) |
 | game-battle | Time Line Battle: start, pawn selected, three moves, submitted, black move |
 | endgame | Time Line Fragment: a two-turn checkmate; "Black wins!" / "Checkmate" card |
 | nav-toggle | ESC hides and restores the nav buttons; none left hovered |
 | stalemate | Time Line Fragment: a six-turn stalemate through time travel; "Draw" / "Stalemate" card |
+| board-styles | Settings -> Display -> Board view cycled through Atlas, Blueprint and Deep space; the same Standard mid-game (knight picked up) in each |
+| rules-visuals | tests/ui/positions: check (attack line from the rook to the king), an inactive timeline (dimmed, tagged), the promotion picker and a chosen promotion |
 
 ## Tolerance
 

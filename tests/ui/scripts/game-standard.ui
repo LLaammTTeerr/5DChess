@@ -1,8 +1,7 @@
-# Standard game, driven through the real menus. Layout (1400x800):
-#   main menu Versus (150,280); Standard row (690,154); Play (808,712).
-#   One board: 570 px, x 415..985, y 149..719 (71.25 px squares, files a..h left to right, rank 1 at the bottom).
-#   After white's move the camera shows two boards (570 px at x 61 and x 770); after black's, three boards of
-#   373 px (46.6 px squares) at x 48, 513, 979 (y 247..621). HUD action row: Undo/Deselect/Submit, Submit (841,90).
+# Standard game (Deep space, the default board view), driven through the real menus. Layout (1400x800):
+#   main menu Versus (150,280); Standard row (690,154); Play (808,712); HUD action row: Submit (841,90).
+# Squares are clicked by name wherever the camera has put them: `clicksq <timeline> <half-turn> <square>` (half-turn 0 is
+# White's first board, 1 Black's reply, 2 White's second turn ...), so the script does not depend on the zoom.
 wait 20
 click 150 280        # Versus
 wait 30
@@ -11,25 +10,25 @@ wait 20
 click 808 712        # Play
 wait 120
 capture game-standard-start
-click 735 612        # e2 pawn
+clicksq 0 0 e2       # the e2 pawn
 wait 40
 capture game-standard-pawn-selected
-click 735 470        # e4
+clicksq 0 0 e4
 wait 40
 capture game-standard-pawn-moved
 click 841 90         # Submit
 wait 90
 capture game-standard-white-submitted
-click 1090 256       # black e7 (right-hand board: x 770 + 4.5*71.25)
+clicksq 0 1 e7       # Black's pawn on Black's board
 wait 60
-click 1090 398       # black e5
+clicksq 0 1 e5
 wait 60
 click 841 90         # Submit
 wait 90
 capture game-standard-black-submitted
-click 1282 596       # white knight g1 on the present board
+clicksq 0 2 g1       # the white knight on the present board
 wait 60
 capture game-standard-knight-selected
-click 351 503        # its time-travel target on the first board (two half-turns back)
+clicksq 0 0 g3       # its time-travel target on the first board (two half-turns back)
 wait 120
 capture game-standard-timeline-jump

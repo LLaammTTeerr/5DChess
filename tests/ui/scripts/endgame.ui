@@ -1,9 +1,8 @@
 # Checkmate in Time Line Fragment (4x4, two timelines), found with a search over the engine: White steps the king
-# (a1 -> a2) on the white-moveable board, then Black plays pawn b4-b3 on the first board and bishop b4-a3 on the
-# second; White then has no legal turn and its king is attacked: "Black wins!" (Checkmate).
-# Layout (1400x800): Versus (150,280); mode row 8 (690,634); Play (808,712). Boards are 252 px (63.3 px squares, files
-# a..h from the left): the white-moveable one at x 415..667, y 466..718; after white submits, black's boards sit at
-# x 732..985 (y 149..402 and y 466..718).
+# (d1 -> d2) on the white-moveable board (timeline 1), then Black plays pawn c4-c3 on timeline 0 and the bishop c4-d3 on
+# timeline 1; White then has no legal turn and its king is attacked: "Black wins!" (Checkmate).
+# Layout (1400x800): Versus (150,280); mode row 8 (690,634); Play (808,712); Submit (841,90). Squares are clicked by name
+# (`clicksq <timeline> <half-turn> <square>`), see game-standard.ui.
 wait 20
 click 150 280        # Versus
 wait 30
@@ -12,21 +11,21 @@ wait 20
 click 808 712        # Play
 wait 120
 capture endgame-start
-click 636 687        # white king (bottom-left board)
+clicksq 1 0 d1       # the white king
 wait 40
-click 636 623        # one step up
+clicksq 1 0 d2       # one step up
 wait 40
 click 841 90         # Submit
 wait 90
 capture endgame-black-to-move
-click 890 181        # black pawn on the top board
+clicksq 0 1 c4       # the black pawn on timeline 0
 wait 40
-click 890 244        # one step down
+clicksq 0 1 c3       # one step down
 wait 60
 capture endgame-black-first-move
-click 731 498        # black bishop (bottom board: the view re-centred after the first move)
+clicksq 1 1 c4       # the black bishop on timeline 1
 wait 40
-click 795 561        # diagonal step
+clicksq 1 1 d3       # diagonal step
 wait 90
 capture endgame-black-second-move
 click 841 90         # Submit: White has no legal turn

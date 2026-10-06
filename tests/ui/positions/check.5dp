@@ -1,0 +1,7 @@
+# White is in check from the rook on e8 (the attack line is drawn from the rook to the king).
+5dchess-position 1
+title: UI check
+size: 8
+rules: double-step castling
+to-move: white
+L0 T3w: 4r2k/8/8/8/8/8/PPP2PPP/R3K2R
