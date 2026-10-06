@@ -152,6 +152,8 @@ The engine tests do not need raylib or a display. Drop `-DFDCHESS_SANITIZE=ON` f
 - [docs/NOTATION.md](docs/NOTATION.md): move notation (`(L0T1)e2>(L0T1)e4`) and the `5dchess-record` game record format.
 - [docs/SEARCH.md](docs/SEARCH.md): how checkmate / stalemate are decided without blocking the game (the resumable
   `TurnSearch`), why its pruning is safe, and the benchmark (`turnbench`).
+- [docs/AI.md](docs/AI.md): the AI opponent engine (`ai::Search`, engine side only, no UI yet): turn generation, search,
+  evaluation, difficulty levels, benchmark (`tools/ai_bench`).
 - `tools/refcheck/` (`-DFDCHESS_BUILD_REFCHECK=ON`, default OFF): plays random legal games, dumps every position with its full
   move list and replays them in 5d-chess-js (`node tools/refcheck/compare.js --ref <5d-chess-js checkout> --bin <refcheck>`).
 
