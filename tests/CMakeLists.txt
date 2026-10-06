@@ -21,6 +21,7 @@ add_executable(chess_tests
   feedback_test.cpp
   layout_test.cpp
   textfit_test.cpp
+  camera_test.cpp
   view_test.cpp
   guide_test.cpp
   ai_test.cpp

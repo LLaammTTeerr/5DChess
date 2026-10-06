@@ -52,6 +52,20 @@ public:
 
   /// The square under a world point, if it lies on an existing board.
   std::optional<Chess::Core::Coord> hitTest(float worldX, float worldY) const;
+  /// The board whose card (frame and label strip included) is under a world point: a click on the chrome focuses it.
+  std::optional<Slot> boardAt(float worldX, float worldY) const;
+  /// The slot of a board, if it exists.
+  std::optional<Slot> find(int timeline, int halfTurn) const;
+
+  enum class Dir { Left, Right, Up, Down };
+  /// The board an arrow key moves a cursor to. Left / Right: the next existing board of the same timeline, earlier / later. Up / Down:
+  /// the nearest timeline above (higher id) / below that has boards, and on it the board whose half-turn is closest (the earlier
+  /// one on a tie). nullopt: nothing in that direction.
+  std::optional<Slot> neighbour(const Slot& from, Dir dir) const;
+  /// Union of the cards of the boards in half-turn columns first..last (nullopt: none there).
+  std::optional<Rect> columnBounds(int firstHalfTurn, int lastHalfTurn) const;
+  /// Union of every card (nullopt: no boards).
+  std::optional<Rect> cardBounds() const;
 
 private:
   std::vector<Slot> _boards; // sorted by (timeline, halfTurn)

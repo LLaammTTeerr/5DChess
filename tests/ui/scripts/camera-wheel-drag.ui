@@ -1,0 +1,74 @@
+# The wheel zooms around the pointer, multiplicatively (12 percent a notch, within 0.4 .. 2.5) with no dead zone; a drag pans at once
+# and never selects. A Standard game of four half-turns. `camexpect squareat` checks that the square under the pointer stays under it.
+# Layout (1400x800): Versus (150,250); Standard row (690,184); Play (808,712); Submit (841,90).
+wait 20
+click 150 250        # Versus
+wait 30
+click 690 184        # Standard
+wait 20
+click 808 712        # Play
+wait 120
+clicksq 0 0 e2
+wait 30
+clicksq 0 0 e4
+wait 30
+click 841 90         # Submit
+wait 60
+clicksq 0 1 e7
+wait 30
+clicksq 0 1 e5
+wait 30
+click 841 90
+wait 60
+clicksq 0 2 g1
+wait 30
+clicksq 0 2 f3
+wait 30
+click 841 90
+wait 60
+clicksq 0 3 b8
+wait 30
+clicksq 0 3 c6
+wait 30
+click 841 90
+wait 60
+key HOME
+wait 40
+movesq 0 3 h8        # the pointer on a corner square of a board ...
+wait 2
+zoom?
+capture camera-wheel-before
+wheel 3              # ... three notches in: 1.12^3 = 1.40x, the square stays under the pointer
+wait 2
+zoom?
+camexpect state Free
+camexpect zoom 1.0 1.2
+camexpect squareat 0 3 h8 pointer
+capture camera-wheel-in-at-pointer
+wheel -1
+wait 2
+zoom?
+camexpect squareat 0 3 h8 pointer
+wheel 0.3            # a trackpad's fractional tick counts at once
+wait 2
+zoom?
+wheel -30            # far out: stops at 0.4
+wait 2
+zoom?
+camexpect zoom 0.39 0.41
+capture camera-wheel-out-limit
+wheel 40             # far in: stops at 2.5
+wait 2
+zoom?
+camexpect zoom 2.49 2.51
+key HOME
+wait 40
+camexpect state Overview
+drag 800 400 500 450 # a drag pans immediately (no 100 ms dead time) and the piece under the pointer is not picked up
+wait 10
+zoom?
+camexpect state Free
+capture camera-drag-pan
+key HOME
+wait 40
+camexpect state Overview

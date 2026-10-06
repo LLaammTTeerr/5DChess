@@ -21,6 +21,10 @@ bool mouseDown(int b) {
   return inRange(b) && scripted().down[b];
 }
 float mouseWheel() { return TestMode::get().active ? scripted().wheel : GetMouseWheelMove(); }
+bool shiftDown() {
+  if (TestMode::get().active) return scripted().shift;
+  return IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
+}
 bool keyPressed(int k) {
   if (!TestMode::get().active) return IsKeyPressed(k);
   const auto& v = scripted().keysPressed;

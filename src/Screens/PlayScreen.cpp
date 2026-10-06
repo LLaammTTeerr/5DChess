@@ -28,6 +28,17 @@ constexpr auto kAiFrameBudget = std::chrono::milliseconds(6);
 constexpr int kAiSliceNodes = 150;
 constexpr float kAiMinThink = 0.5f; // seconds: an instant answer is still shown as a moment of thought, not a flicker
 constexpr float kAiMoveGap = 0.3f;  // seconds between the moves of the computer's turn
+constexpr float kAiCameraDelay = 0.15f; // seconds after a computer / scripted move before the camera follows: the flight reads first
+constexpr double kDoubleClickTime = 0.3;  // two clicks closer than this (and kDoubleClickPixels) are a double-click
+constexpr float kDoubleClickPixels = 6.0f;
+constexpr float kDragPixels = 5.0f;       // a press that moves farther than this pans instead of clicking
+constexpr float kGhostSeconds = 2.0f;     // ghost cards at full strength this long after a piece is picked up, then dimmed
+constexpr float kFocusZoom = 1.0f;        // click-to-focus zoom
+constexpr int kPresentColumns = 2;        // Overview of a field too big to read: the present column +- this many
+
+Vector2 toVector(play::Vec2 v) { return {v.x, v.y}; }
+play::Vec2 toVec(Vector2 v) { return {v.x, v.y}; }
+Rect cardOf(int timeline, int halfTurn) { return BoardLayout::cardRect(BoardLayout::boardRect(timeline, halfTurn)); }
 } // namespace
 
 PlayScreen::PlayScreen(const std::string& modeId, std::optional<play::VsAi> vs)
@@ -35,6 +46,7 @@ PlayScreen::PlayScreen(const std::string& modeId, std::optional<play::VsAi> vs)
 
 PlayScreen::PlayScreen(std::shared_ptr<Chess::IGame> game, bool isAutosave, std::optional<play::VsAi> vs)
     : _game(std::move(game)), _autosaving(isAutosave), _vs(vs) {
+  _camera.setViewport(static_cast<float>(GetScreenWidth()), static_cast<float>(GetScreenHeight()));
   _camera.setInsets(UI::Layout::safeTop, UI::Layout::sideInset, UI::Layout::safeBottom, UI::Layout::laneLabelW);
   // A game that is already decided (a loaded record) is not a transition: no win sound, and no autosave left to continue
   _ended = _game->result() != Chess::GameResult::Ongoing;
@@ -52,6 +64,8 @@ void PlayScreen::embed(float rightInset) {
 
 void PlayScreen::update(App& app, float dt) {
   const play::BoardStyle& style = play::boardStyle(app.settings.boardView);
+  _camera.setViewport(static_cast<float>(GetScreenWidth()), static_cast<float>(GetScreenHeight()));
+  _camera.setReduceMotion(UI::Motion::reduced());
   _actions.setSkin(&style.skin);
   _back.skin = &style.skin;
   // The buttons come first: whatever has the pointer is not a click on the board
@@ -73,16 +87,25 @@ void PlayScreen::update(App& app, float dt) {
     case play::ActionRow::Action::Undo: undo(); break;
     case play::ActionRow::Action::Deselect: if (_reviewing) _reviewing = false; else deselect(); break; // (reviewing: "Result" brings the card back)
     case play::ActionRow::Action::Submit: submitTurn(); break;
-    case play::ActionRow::Action::Overview: break;  // the camera's Home and Next board are handled once the HUD is given
-    case play::ActionRow::Action::NextBoard: break; // HudData::cameraLabel / nextBoardLabel (they show the buttons)
+    case play::ActionRow::Action::Overview: cancelDeferredCamera(); goHome(); break;
+    case play::ActionRow::Action::NextBoard: cancelDeferredCamera(); nextBoard(1); break;
     case play::ActionRow::Action::None: break;
   }
   updatePicker(dt, style);
   boardInput();
+  if (!_saveMenu.open()) handleKeys();
 
   // Motion advances with last frame's layout; the layout catches up below
   const float step = UI::Motion::safeDt(dt);
-  _camera.update(step, _layout);
+  _camera.update(step);
+  _cursorX.update(step);
+  _cursorY.update(step);
+  _selectedFor = _selection.active() ? _selectedFor + step : 0.0f;
+  if (_deferredCamera && (_deferredDelay -= step) <= 0.0f) {
+    const auto action = std::move(_deferredCamera);
+    _deferredCamera = nullptr;
+    action();
+  }
   _arrows.update(step);
   _animator.update(step, _hover);
   _hudMotion.update(step);
@@ -109,7 +132,8 @@ void PlayScreen::updatePicker(float dt, const play::BoardStyle& style) {
     return;
   }
   const Rect square = BoardLayout::squareRect(BoardLayout::boardRect(target->l, target->t), _game->dim(), target->x, target->y);
-  const Vector2 a = _camera.worldToScreen({square.x, square.y}), b = _camera.worldToScreen({square.x + square.w, square.y + square.h});
+  const Vector2 a = toVector(_camera.worldToScreen({square.x, square.y})),
+                b = toVector(_camera.worldToScreen({square.x + square.w, square.y + square.h}));
   _picker.show(_game->getCurrentTurnColor());
   const play::Rect card = BoardLayout::cardRect(BoardLayout::boardRect(target->l, target->t));
   const Vector2 c0 = _camera.worldToScreen({card.x, card.y}), c1 = _camera.worldToScreen({card.x + card.w, card.y + card.h});
@@ -126,37 +150,114 @@ void PlayScreen::updatePicker(float dt, const play::BoardStyle& style) {
 
 void PlayScreen::boardInput() {
   _hover.reset();
-  if (!ui::pointerConsumed() && !inputBlocked()) { // the computer's turn, or a puzzle screen driving the game: the boards only look and pan
-    const Vector2 world = _camera.screenToWorld(Input::mousePosition());
-    const auto square = _layout.hitTest(world.x, world.y);
-    _hover = square;
-    if (square && Input::mousePressed(MOUSE_BUTTON_LEFT)) click(*square);
+  if (ui::pointerConsumed()) { // over a button or the Guide's panel
+    _pressValid = _dragging = false;
+    feedbackInput();
+    return;
   }
-  if (!ui::pointerConsumed()) _camera.handleInput(); // not over a button or the Guide's panel
+  const Vector2 mouse = Input::mousePosition();
+  if (!inputBlocked()) { // the computer's turn, or a puzzle screen driving the game: the boards only look and pan
+    const Vector2 world = toVector(_camera.screenToWorld(toVec(mouse)));
+    _hover = _layout.hitTest(world.x, world.y);
+  }
+
+  // The wheel zooms around the pointer, multiplicatively (no accumulator: the first trackpad tick counts)
+  if (const float wheel = Input::mouseWheel(); wheel != 0.0f) {
+    cancelDeferredCamera();
+    _camera.wheel(toVec(mouse), wheel);
+  }
+
+  if (Input::mousePressed(MOUSE_BUTTON_LEFT)) {
+    _pressValid = true;
+    _dragging = false;
+    _pressPos = mouse;
+    _flingVelocity = {0, 0};
+  }
+  if (_pressValid && Input::mouseDown(MOUSE_BUTTON_LEFT)) {
+    // Past 5 px the press is a drag: it pans at once (no dead time) and never selects
+    const Vector2 delta = Input::mouseDelta();
+    if (!_dragging && std::hypot(mouse.x - _pressPos.x, mouse.y - _pressPos.y) > kDragPixels) {
+      _dragging = true;
+      cancelDeferredCamera();
+      _camera.pan({mouse.x - _pressPos.x, mouse.y - _pressPos.y}); // what the pointer has already travelled
+    } else if (_dragging) {
+      _camera.pan({delta.x, delta.y});
+    }
+    const float dt = std::max(Input::frameTime(), 0.001f);
+    _flingVelocity = {_flingVelocity.x * 0.5f + delta.x / dt * 0.5f, _flingVelocity.y * 0.5f + delta.y / dt * 0.5f};
+  } else if (_pressValid) { // released
+    _pressValid = false;
+    if (_dragging) {
+      _dragging = false;
+      if (std::hypot(_flingVelocity.x, _flingVelocity.y) > 300.0f) _camera.fling(toVec(_flingVelocity));
+    } else {
+      onClick(mouse);
+    }
+  }
+  feedbackInput();
+}
+
+void PlayScreen::feedbackInput() {
   _feedback.input({*_game, _layout, _camera, _selection, _hover, !ui::pointerConsumed(), inputBlocked(), aiToMove(), _locked, _ended});
 }
 
-bool PlayScreen::escape(App&) {
-  if (_game->result() != Chess::GameResult::Ongoing && _showEndCard && !_reviewing) { // the end card: Esc is "Review board"
-    _reviewing = true;
-    return true;
+// A click (press and release without a drag). Single: select / move on a square (zooming onto the board when it is small), focus a
+// card's chrome or a board that cannot be moved on. Double: toggle Focus <-> Overview.
+void PlayScreen::onClick(Vector2 mouse) {
+  const double now = Input::time();
+  const bool doubleClick = now - _lastClickTime < kDoubleClickTime &&
+                           std::hypot(mouse.x - _lastClickPos.x, mouse.y - _lastClickPos.y) < kDoubleClickPixels;
+  _lastClickTime = doubleClick ? -1e9 : now; // a third click starts afresh
+  _lastClickPos = mouse;
+  _cursorShown = false;
+  cancelDeferredCamera();
+
+  const Vector2 world = toVector(_camera.screenToWorld(toVec(mouse)));
+  const auto slot = _layout.boardAt(world.x, world.y);
+  const auto framed = [&](const play::BoardLayout::Slot& s) { // this board is what the camera is focused on
+    const Rect card = BoardLayout::cardRect(s.rect);
+    return _camera.state() == play::BoardCamera::State::Focus && _camera.frameRect().x == card.x && _camera.frameRect().y == card.y;
+  };
+
+  if (doubleClick) { // the first click already did its own thing (a selection stays; a board may have been focused): this one only frames
+    if (slot && !_focusedBeforeClick) _camera.focusBoard(BoardLayout::cardRect(slot->rect), kFocusZoom);
+    else goHome();
+    return;
   }
-  if (_selection.promotionTarget()) {
-    _selection.cancelPromotion();
-    return true;
+  _focusedBeforeClick = slot && framed(*slot); // what a double-click toggles
+
+  // A ghost card (a target board off-screen): pan so that the piece's board and the target's are both in view
+  if (_selection.from())
+    for (const Ghost& g : ghostCards())
+      if (CheckCollisionPointRec(mouse, g.rect)) {
+        _camera.showBoth(cardOf(_selection.from()->l, _selection.from()->t), cardOf(g.timeline, g.halfTurn), 0.6f);
+        return;
+      }
+
+  if (!slot) return;
+  const Rect card = BoardLayout::cardRect(slot->rect);
+  const auto square = _layout.hitTest(world.x, world.y);
+  if (!square || _ended || inputBlocked()) { // the card's frame or label strip; or nothing can be done on the square: show the board
+    _camera.focusBoard(card, kFocusZoom);
+    return;
   }
-  if (_selection.active()) {
-    clearSelection();
-    return true;
-  }
-  return false;
+  const play::Intent::Kind kind = clickSquare(*square);
+  const play::BoardInfo* info = _view.board(slot->timeline, slot->halfTurn);
+  if (kind == play::Intent::Kind::None && info && info->role == play::BoardRole::Past) _camera.focusBoard(card, kFocusZoom); // history
+}
+
+play::Intent::Kind PlayScreen::clickSquare(Coord square) {
+  _animator.finish(); // new input: running move animations jump to their end
+  _arrows.finish();
+  const play::Intent intent = _selection.click(square, *_game);
+  perform(intent);
+  return intent.kind;
 }
 
 void PlayScreen::click(Coord square) {
   if (_ended || inputBlocked()) return;
-  _animator.finish(); // new input: running move animations jump to their end
-  _arrows.finish();
-  perform(_selection.click(square, *_game));
+  _cursorShown = false;
+  clickSquare(square);
 }
 
 void PlayScreen::perform(const play::Intent& intent) {
@@ -167,16 +268,31 @@ void PlayScreen::perform(const play::Intent& intent) {
     case Kind::Promote: break; // updatePicker() opens the chooser; the move follows its choice
     case Kind::Select:
       _animator.select(intent.from, _selection.targets(), _game->dim());
-      _camera.focusSelected(BoardLayout::boardRect(intent.from.l, intent.from.t));
+      // A piece picked up on a board too small to read: one combined motion brings the board up. Nothing moves when it is readable.
+      if (_camera.zoom() < play::BoardCamera::kReadableZoom) _camera.focusBoard(cardOf(intent.from.l, intent.from.t), kFocusZoom);
       break;
     case Kind::Move: makeMove(intent.move); break;
     case Kind::Rejected: // nothing happens to the game, but the click is answered
       _feedback.refused(intent.from, intent.reason);
       break;
   }
+  syncLock();
 }
 
-void PlayScreen::makeMove(const Chess::Core::Move& move) {
+// While a piece is picked up, a promotion is pending or the game is over the camera makes no motion of its own
+void PlayScreen::syncLock() { _camera.lock(_selection.active() || _selection.promotionTarget().has_value() || _ended); }
+
+void PlayScreen::scheduleCamera(float delay, std::function<void()> action) {
+  if (delay <= 0.0f) {
+    _deferredCamera = nullptr;
+    action();
+    return;
+  }
+  _deferredCamera = std::move(action);
+  _deferredDelay = delay;
+}
+
+void PlayScreen::makeMove(const Chess::Core::Move& move, bool delayedCamera) {
   // Everything the flight animation needs must be read before the move: afterwards the target square holds the mover.
   const Chess::Board& source = _game->board(move.from.l, move.from.t);
   const Chess::Board& target = _game->board(move.to.l, move.to.t);
@@ -203,30 +319,44 @@ void PlayScreen::makeMove(const Chess::Core::Move& move) {
   _game->makeMove(move);
   clearSelection();
 
-  // The piece travels to its square on the newly created board (same-board moves slide on that new board), and the
-  // camera flies there; the new board is not in the layout until refresh()
+  // The piece travels to its square on the newly created board (same-board moves slide on that new board); the camera follows by
+  // the rules of afterMove(). The new board is not in the layout until refresh()
   const Chess::Board& created = *_game->getNewBoard();
   flight.to = {created.timeLineId(), created.halfTurnNumber()};
   _feedback.moved(_view.timeline(created.timeLineId()) == nullptr, isCapture, sameBoard, flight.from); // sound, source-board mark
   if (sameBoard) flight.from = flight.to;
   if (!flight.piece.empty()) _animator.startFlight(flight);
-  _camera.focusNewest(BoardLayout::boardRect(flight.to.first, flight.to.second));
+  afterMove(move, flight.to, delayedCamera);
 }
 
 void PlayScreen::playMove(const Chess::Core::Move& move) {
   _animator.finish();
   _arrows.finish();
-  makeMove(move);
+  makeMove(move, true); // scripted: the camera waits for the flight to read first
 }
 
 Vector2 PlayScreen::squareToScreen(Coord c) const {
   const Rect sq = BoardLayout::squareRect(BoardLayout::boardRect(c.l, c.t), _game->dim(), c.x, c.y);
-  return _camera.worldToScreen({sq.centerX(), sq.centerY()});
+  return toVector(_camera.worldToScreen({sq.centerX(), sq.centerY()}));
+}
+
+Vector2 PlayScreen::cardStripToScreen(int timeline, int halfTurn) const {
+  const Rect card = cardOf(timeline, halfTurn);
+  return toVector(_camera.worldToScreen({card.centerX(), card.y + card.h - BoardLayout::kCardFooter / 2.0f}));
+}
+
+bool PlayScreen::boardVisible(int timeline, int halfTurn, float fraction) const {
+  return _camera.isBoardVisible(cardOf(timeline, halfTurn), fraction);
+}
+
+PlayScreen::CameraInfo PlayScreen::cameraInfo() const {
+  const play::Vec2 t = _camera.target();
+  return {_camera.zoom(), t.x, t.y, _camera.stateLabel(), _camera.moving()};
 }
 
 // Developer tools and the embedding puzzle screen (which locks the player out and plays the opponent itself): not blocked by the lock.
 void PlayScreen::submit() {
-  if (_canSubmit && !aiToMove()) doSubmit();
+  if (_canSubmit && !aiToMove()) doSubmit(true);
 }
 
 void PlayScreen::submitTurn() {
@@ -234,13 +364,14 @@ void PlayScreen::submitTurn() {
   doSubmit();
 }
 
-void PlayScreen::doSubmit() {
+void PlayScreen::doSubmit(bool delayedCamera) {
   if (!_canSubmit || aiToMove()) return;
   _animator.finish();
   _arrows.finish();
   _game->submitTurn();
   _feedback.turnSubmitted();
   clearSelection();
+  markSubmitted(delayedCamera);
   autosaveNow();
 }
 
@@ -314,6 +445,7 @@ std::string PlayScreen::submitTip(bool ongoing) const {
 void PlayScreen::undo() {
   _animator.finish();
   _arrows.finish();
+  cancelDeferredCamera(); // undo removes boards; the camera stays where it is
   if (_game->undoable()) {
     _game->undo(); // the moves of the unsubmitted turn go one at a time
     clearSelection();
@@ -355,6 +487,10 @@ void PlayScreen::takeBack(int turns) {
 void PlayScreen::setGame(std::shared_ptr<Chess::IGame> game) {
   _animator.finish();
   _arrows.finish();
+  cancelDeferredCamera();
+  _submitRule = false;
+  _cursor.reset();
+  _cursorShown = false;
   _game = std::move(game);
   _layout = play::BoardLayout(); // another game object: rebuilt from scratch by the next refresh()
   _selection.clear();
@@ -387,10 +523,11 @@ void PlayScreen::updateAi(float dt) {
     if (!_animator.flights().empty() || _aiClock < kAiMoveGap) return; // the previous move is still travelling
     _aiClock = 0.0f;
     if (_aiNext < _aiMoves.size()) {
-      makeMove(_aiMoves[_aiNext++]);
+      makeMove(_aiMoves[_aiNext++], true);
     } else if (_game->canSubmit()) {
       _game->submitTurn();
       _feedback.turnSubmitted();
+      markSubmitted(true);
       cancelAi();
       autosaveNow();
     } else { // cannot happen (the search verifies its turn): hand the side over rather than stall
@@ -444,7 +581,226 @@ void PlayScreen::deselect() { clearSelection(); }
 void PlayScreen::clearSelection() {
   _selection.clear();
   _animator.select(std::nullopt, {}, _game->dim());
+  syncLock();
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Camera rules (docs/CAMERA.md): the camera moves on its own only when the player's next action needs a board that is not readable
+
+// Overview: everything, or the present column +- 2 when everything would be too small to read
+void PlayScreen::goHome(bool snap) {
+  const auto all = _layout.cardBounds();
+  if (!all) return;
+  const int present = _view.presentHalfTurn;
+  const Rect around = _layout.columnBounds(present - kPresentColumns, present + kPresentColumns).value_or(*all);
+  _camera.overview(*all, around, false, snap);
+}
+
+// A move was made. Same board, readable zoom: nothing (at most a peek at the board that appeared, when it is off-screen). Another
+// board (time travel): keep both boards in view. Overview zoom: the new board is brought into view without a zoom change.
+void PlayScreen::afterMove(const Chess::Core::Move& move, const play::BoardKey& created, bool delayed) {
+  const Rect newCard = cardOf(created.first, created.second);
+  const Rect sourceCard = cardOf(move.from.l, move.from.t);
+  const bool crossBoard = play::keyOf(move.from) != play::keyOf(move.to);
+  scheduleCamera(delayed ? kAiCameraDelay : 0.0f, [this, newCard, sourceCard, crossBoard] {
+    const bool readable = _camera.zoom() >= play::BoardCamera::kReadableZoom;
+    if (crossBoard) {
+      if (readable) _camera.showBoth(sourceCard, newCard, play::BoardCamera::kReadableZoom, true);
+      else _camera.reveal(newCard, true);
+    } else if (readable) {
+      _camera.peek(newCard, 0.4f, true);
+    }
+  });
+}
+
+void PlayScreen::markSubmitted(bool delayed) {
+  _submitRule = true;
+  _submitRuleDelayed = delayed;
+}
+
+// After a submit: exactly one Mandatory board: focus it (at >= 0.8). Several: the present column. A view the player put there
+// stays when the board that needs a move is mostly in it.
+void PlayScreen::applySubmitRule() {
+  if (_game->result() != Chess::GameResult::Ongoing || aiToMove()) return; // (the computer moves on its own: nothing for the player to see yet)
+  std::vector<Rect> mandatory;
+  for (const play::BoardInfo& b : _view.boards)
+    if (b.role == play::BoardRole::Mandatory) mandatory.push_back(cardOf(b.timeline, b.halfTurn));
+  if (mandatory.empty()) return;
+  const bool free = _camera.state() == play::BoardCamera::State::Free;
+  const bool allVisible = std::all_of(mandatory.begin(), mandatory.end(), [&](const Rect& r) { return _camera.isBoardVisible(r, 0.5f); });
+  if (free && allVisible) return;
+  if (mandatory.size() == 1) {
+    _camera.focusBoard(mandatory[0], play::BoardCamera::kReadableZoom, true);
+  } else if (const auto column = _layout.columnBounds(_view.presentHalfTurn, _view.presentHalfTurn)) {
+    _camera.fitRegion(*column, 0.6f, true);
+  }
+}
+
+// The first Mandatory board that is (mostly) off-screen, as "L+1 · T3b"
+std::string PlayScreen::nextMandatoryLabel() const {
+  if (_game->result() != Chess::GameResult::Ongoing || aiToMove()) return "";
+  for (const play::BoardInfo& b : _view.boards)
+    if (b.role == play::BoardRole::Mandatory && !_camera.isBoardVisible(cardOf(b.timeline, b.halfTurn), 0.5f))
+      return play::timelineLabel(b.timeline) + " \xC2\xB7 " + play::boardLabel(b.halfTurn);
+  return "";
+}
+
+bool PlayScreen::nextMandatoryOffscreen() const { return !nextMandatoryLabel().empty(); }
+
+// The boards the side to move may move on, the ones it must move on first
+std::vector<std::pair<int, int>> PlayScreen::boardsToMoveOn() const {
+  std::vector<std::pair<int, int>> out;
+  if (_game->result() != Chess::GameResult::Ongoing || aiToMove()) return out;
+  for (const play::BoardInfo& b : _view.boards)
+    if (b.role == play::BoardRole::Mandatory) out.push_back({b.timeline, b.halfTurn});
+  for (const play::BoardInfo& b : _view.boards)
+    if (b.role == play::BoardRole::Optional) out.push_back({b.timeline, b.halfTurn});
+  return out;
+}
+
+// Space / Tab (Shift+Tab: backwards): the next board that needs a move, Mandatory ones first, each focused at >= 0.8
+void PlayScreen::nextBoard(int direction) {
+  const auto list = boardsToMoveOn();
+  if (list.empty()) return;
+  const int n = static_cast<int>(list.size());
+  _cycle = direction >= 0 ? (_cycle + 1) % n : (_cycle <= 0 ? n - 1 : _cycle - 1);
+  const auto [timeline, halfTurn] = list[static_cast<size_t>(_cycle)];
+  _camera.focusBoard(cardOf(timeline, halfTurn), play::BoardCamera::kReadableZoom, false, play::BoardCamera::kHopTime);
+  setCursor(timeline, halfTurn);
+}
+
+void PlayScreen::setCursor(int timeline, int halfTurn) {
+  const Rect card = cardOf(timeline, halfTurn);
+  _cursor = {timeline, halfTurn};
+  if (!_cursorShown || UI::Motion::reduced()) {
+    _cursorX.snap(card.x);
+    _cursorY.snap(card.y);
+  } else {
+    _cursorX.setTarget(card.x);
+    _cursorY.setTarget(card.y);
+  }
+  _cursorShown = true;
+}
+
+// Arrow keys: the board cursor. It starts on the first board that needs a move; the camera pans only when the card is mostly hidden.
+void PlayScreen::moveCursor(play::BoardLayout::Dir dir) {
+  cancelDeferredCamera();
+  std::optional<play::BoardLayout::Slot> target;
+  const auto current = _cursor && _cursorShown ? _layout.find(_cursor->first, _cursor->second) : std::nullopt;
+  if (current) {
+    target = _layout.neighbour(*current, dir);
+  } else {
+    const auto list = boardsToMoveOn();
+    if (!list.empty()) target = _layout.find(list[0].first, list[0].second);
+    else if (!_layout.boards().empty()) target = _layout.boards().back();
+  }
+  if (!target) return;
+  setCursor(target->timeline, target->halfTurn);
+  const Rect card = BoardLayout::cardRect(target->rect);
+  if (!_camera.isBoardVisible(card, 0.5f)) _camera.reveal(card);
+}
+
+void PlayScreen::focusCursor() {
+  if (!_cursor) return;
+  _camera.focusBoard(cardOf(_cursor->first, _cursor->second), kFocusZoom);
+}
+
+// + / -: one step around the cursor's board (the middle of the view when there is no cursor)
+void PlayScreen::zoomStep(int direction) {
+  cancelDeferredCamera();
+  play::Vec2 anchor = _camera.offset();
+  if (_cursorShown && _cursor) {
+    const Rect card = cardOf(_cursor->first, _cursor->second);
+    anchor = _camera.worldToScreen({card.centerX(), card.centerY()});
+  }
+  _camera.zoomAt(anchor, direction > 0 ? play::BoardCamera::kKeyStep : 1.0f / play::BoardCamera::kKeyStep);
+}
+
+// Esc (ScreenStack asks the top screen first): the end card is dismissed, then it steps back one level: a pending promotion, the
+// picked-up piece, the framing (back to the Overview). Only when there is nothing left does it return false.
+bool PlayScreen::escape(App&) {
+  if (_game->result() != Chess::GameResult::Ongoing && _showEndCard && !_reviewing) { // the end card: Esc is "Review board"
+    _reviewing = true;
+    return true;
+  }
+  if (_selection.promotionTarget()) {
+    _selection.cancelPromotion(); // the piece stays selected; updatePicker() closes the chooser
+    return true;
+  }
+  if (_selection.active()) {
+    clearSelection();
+    return true;
+  }
+  if (_camera.state() != play::BoardCamera::State::Overview) {
+    cancelDeferredCamera();
+    goHome();
+    return true;
+  }
+  return false;
+}
+
+// Keys: Home (Overview), Space / Tab / Shift+Tab (next board), + / - (zoom), and unless the Guide's page owns the arrows:
+// the arrows (board cursor), Enter (focus the cursor's board; with the board already framed or no cursor: Submit), U (undo).
+void PlayScreen::handleKeys() {
+  if (Input::keyPressed(KEY_HOME)) {
+    cancelDeferredCamera();
+    goHome();
+  }
+  if (Input::keyPressed(KEY_SPACE) || Input::keyPressed(KEY_TAB)) {
+    cancelDeferredCamera();
+    nextBoard(Input::keyPressed(KEY_TAB) && Input::shiftDown() ? -1 : 1);
+  }
+  if (Input::keyPressed(KEY_EQUAL) || Input::keyPressed(KEY_KP_ADD)) zoomStep(1);
+  if (Input::keyPressed(KEY_MINUS) || Input::keyPressed(KEY_KP_SUBTRACT)) zoomStep(-1);
+  if (_embedded) return;
+
+  using Dir = play::BoardLayout::Dir;
+  if (Input::keyPressed(KEY_LEFT)) moveCursor(Dir::Left);
+  if (Input::keyPressed(KEY_RIGHT)) moveCursor(Dir::Right);
+  if (Input::keyPressed(KEY_UP)) moveCursor(Dir::Up);
+  if (Input::keyPressed(KEY_DOWN)) moveCursor(Dir::Down);
+  if (Input::keyPressed(KEY_ENTER) || Input::keyPressed(KEY_KP_ENTER)) {
+    const bool framed = _cursor && _camera.state() == play::BoardCamera::State::Focus &&
+                        _camera.frameRect().x == cardOf(_cursor->first, _cursor->second).x &&
+                        _camera.frameRect().y == cardOf(_cursor->first, _cursor->second).y;
+    if (_cursorShown && _cursor && !framed) focusCursor();
+    else if (!_selection.active() && _submitEnabled) submitTurn();
+  }
+  if (Input::keyPressed(KEY_U) && _undoEnabled && !_locked) undo();
+}
+
+// Boards the picked-up piece can reach that are (mostly) off-screen, as tags at the edge of the free area in their direction
+std::vector<PlayScreen::Ghost> PlayScreen::ghostCards() const {
+  std::vector<Ghost> out;
+  const auto from = _selection.from();
+  if (!from) return out;
+  const float screenW = static_cast<float>(GetScreenWidth()), screenH = static_cast<float>(GetScreenHeight());
+  const Rectangle area = {UI::Layout::laneLabelW, UI::Layout::safeTop, screenW - UI::Layout::laneLabelW - (_embedded ? _rightInset : UI::Layout::sideInset),
+                          screenH - UI::Layout::safeTop - UI::Layout::safeBottom};
+  const Vector2 centre = {area.x + area.width / 2.0f, area.y + area.height / 2.0f};
+  constexpr float w = 150.0f, h = 34.0f, margin = 10.0f;
+  std::vector<play::BoardKey> seen;
+  for (const Coord& t : _selection.targets()) {
+    const play::BoardKey key = play::keyOf(t);
+    if (key == play::keyOf(*from) || std::find(seen.begin(), seen.end(), key) != seen.end()) continue;
+    seen.push_back(key);
+    const Rect card = cardOf(key.first, key.second);
+    if (_camera.isBoardVisible(card, 0.5f)) continue;
+    const Vector2 target = toVector(_camera.worldToScreen({card.centerX(), card.centerY()}));
+    Vector2 d = {target.x - centre.x, target.y - centre.y};
+    const float len = std::hypot(d.x, d.y);
+    if (len < 1.0f) continue;
+    d = {d.x / len, d.y / len};
+    const float hx = area.width / 2.0f - w / 2.0f - margin, hy = area.height / 2.0f - h / 2.0f - margin;
+    const float reach = std::min(std::fabs(d.x) > 1e-4f ? hx / std::fabs(d.x) : 1e9f, std::fabs(d.y) > 1e-4f ? hy / std::fabs(d.y) : 1e9f);
+    Vector2 at = {centre.x + d.x * reach, centre.y + d.y * reach};
+    for (const Ghost& other : out) // two ghosts on top of each other: the later one moves along the edge
+      if (std::fabs(other.rect.x + w / 2 - at.x) < w && std::fabs(other.rect.y + h / 2 - at.y) < h + 4.0f) at.y += (d.y >= 0 ? 1.0f : -1.0f) * (h + 6.0f);
+    out.push_back({{at.x - w / 2.0f, at.y - h / 2.0f, w, h}, d, play::timelineLabel(key.first) + " \xC2\xB7 " + play::boardLabel(key.second), key.first, key.second});
+  }
+  return out;
+}
+
 
 // ---------------------------------------------------------------------------------------------------------------------
 // State that follows the game
@@ -455,7 +811,13 @@ void PlayScreen::rebuild() {
   _canSubmit = _game->canSubmit();
   const int presentBefore = _view.presentHalfTurn;
   _view = play::MultiverseView::build(*_game);
-  _camera.setExtraBounds(play::BoardScene::jumpBounds(play::boardStyle(App::current().settings.boardView), _view));
+  if (const auto all = _layout.cardBounds()) _camera.setWorldBounds(*all); // (the jump arcs are decoration: they may hang outside the view)
+  if (!_camera.seeded()) goHome(true); // the first framing: no glide in from nowhere
+  _cycle = -1;
+  if (_cursor && !_layout.contains(_cursor->first, _cursor->second)) {
+    _cursor.reset();
+    _cursorShown = false;
+  }
   _noMandatoryBoard = std::none_of(_view.boards.begin(), _view.boards.end(),
                                    [](const play::BoardInfo& b) { return b.role == play::BoardRole::Mandatory; });
   _feedback.rebuilt(*_game, _view, presentBefore);
@@ -469,7 +831,9 @@ std::string PlayScreen::hint() const {
   if (_canSubmit) return "Submit your turn";
   if (_noMandatoryBoard && _game->undoable()) return "Your king would be capturable";
   if (_selection.promotionTarget()) return "Choose a promotion";
-  return _selection.active() ? "Select a target" : "Select a piece";
+  if (_selection.active()) return "Select a target";
+  const std::string next = nextMandatoryLabel();
+  return next.empty() ? "Select a piece" : "Move on " + next + " (Space)";
 }
 
 void PlayScreen::refresh() {
@@ -488,6 +852,12 @@ void PlayScreen::refresh() {
   _hud.timelineCount = _game->timeLineCount();
   _hud.hint = hint();
   _hud.title = _hudTitle;
+  _hud.cameraLabel = _camera.stateLabel();
+  const std::string next = ongoing && !blocked && !_selection.active() ? nextMandatoryLabel() : std::string();
+  _hud.nextBoardLabel = next.empty() ? "" : "Move on " + next;
+  _hud.rightInset = _embedded ? _rightInset : 0.0f;
+  _undoEnabled = ongoing && ((_game->undoable() && !blocked) || takeBackCount() > 0);
+  _submitEnabled = ongoing && _canSubmit && !blocked;
   // The indicator shows for the whole of the computer's thinking; the bar once the search itself runs (its own progress, as is)
   _hudMotion.setThinking(aiTurn && !_aiPlaying, _search ? static_cast<float>(_search->progress().fraction) : -1.0f);
   _hudMotion.apply(_hud);
@@ -509,6 +879,12 @@ void PlayScreen::refresh() {
     }
     _ended = true;
   }
+
+  if (_submitRule) { // the turn was submitted and the layout has the new boards: frame the ones that need a move
+    _submitRule = false;
+    scheduleCamera(_submitRuleDelayed ? kAiCameraDelay : 0.0f, [this] { applySubmitRule(); });
+  }
+  syncLock();
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -516,7 +892,10 @@ void PlayScreen::refresh() {
 
 void PlayScreen::draw(App& app) const {
   const play::BoardStyle& style = play::boardStyle(app.settings.boardView);
-  const Camera2D& camera = _camera.view();
+  Camera2D camera{};
+  camera.offset = toVector(_camera.offset());
+  camera.target = toVector(_camera.target());
+  camera.zoom = _camera.zoom();
   const float zoom = camera.zoom;
   const bool ongoing = _game->result() == Chess::GameResult::Ongoing;
   const int dim = _game->dim();
@@ -576,6 +955,10 @@ void PlayScreen::draw(App& app) const {
   }
 
   if (from) play::drawBoardOutline(BoardLayout::boardRect(from->l, from->t), style, zoom);
+  if (_cursorShown && _cursor && _layout.contains(_cursor->first, _cursor->second)) {
+    const Rect card = cardOf(_cursor->first, _cursor->second);
+    play::drawFocusRing({_cursorX.value, _cursorY.value, card.w, card.h}, style, zoom, 1.0f);
+  }
 
   auto squareOf = [dim](const Coord& c) {
     return BoardLayout::squareRect(BoardLayout::boardRect(c.l, c.t), dim, c.x, c.y);
@@ -608,6 +991,11 @@ void PlayScreen::draw(App& app) const {
 
   _scene.drawCardLabels(frame, _layout);
   _scene.drawJumpLabels(frame);
+  if (from) { // boards the picked-up piece can reach that are off-screen: tags at the edge, in the direction they lie
+    const float alpha = _selectedFor < kGhostSeconds ? 1.0f : 0.55f;
+    for (const Ghost& g : ghostCards())
+      play::drawGhostCard(g.rect, g.direction, g.label, style, alpha, CheckCollisionPointRec(Input::mousePosition(), g.rect));
+  }
   EndScissorMode();
 
   if (!_layout.boards().empty()) {
