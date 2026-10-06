@@ -1,0 +1,18 @@
+# The solution: Re1-e8 mates. The success card (Next puzzle at (376, 498), Back to list at (584, 498)), then the list with its check mark.
+wait 20
+click 150 370        # Puzzles
+wait 40
+click 276 222        # Back rank
+wait 40
+clicksq 0 0 e1
+wait 20
+clicksq 0 0 e8
+wait 60
+click 842 90         # Submit
+move 880 740
+wait 60
+capture puzzles-solved-card
+click 584 498        # Back to list
+move 880 740
+wait 60
+capture puzzles-list-solved

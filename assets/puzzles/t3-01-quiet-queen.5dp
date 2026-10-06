@@ -1,0 +1,14 @@
+5dchess-position 1
+title: Quiet knight
+size: 5
+rules: none
+to-move: white
+goal: mate-in-2
+difficulty: 3
+hint: No check yet. A quiet knight move next to Black's king leaves it no good reply.
+solution: (L0T3)c2>(L0T3)a3 / (L0T3)b4>(L0T3)a3 / (L0T4)c1>(L0T4)c4
+L0 T1w: 1k3/ppr2/5/2N2/R1QK1
+L0 T1b: 1k3/R*pr2/5/2N2/2QK1
+L0 T2w: 1k3/R*p1r*1/5/2N2/2QK1
+L0 T2b: 1k3/R*p1r*1/5/2N2/2Q1K*
+L0 T3w: 1k3/R*pr*2/5/2N2/2Q1K*

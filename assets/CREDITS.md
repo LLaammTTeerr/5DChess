@@ -42,3 +42,10 @@ Intel One Mono: https://github.com/intel/intel-one-mono, (C) 2023 Intel Corporat
 ## Images
 
 - All piece art is original work, drawn by code (no source artwork, tracing or font glyphs) by the scripts in `scripts/` (`gen_<id>_theme.py`, Pillow) into `assets/images/pieces/<id>/`: pixel, medieval, bauhaus, neon, origami and ink. It is under the same licence as the code (MIT).
+
+## Puzzles (`assets/puzzles/`)
+
+All fourteen puzzles are original: the positions were composed or found for this project (hand-composed Warm-up positions, and
+positions grown from short games played by the engine's own move generator from small invented set-ups, then checked and trimmed with
+`tools/puzzle_check`), and every solution is proved by the engine. No position, study or text was copied from a book, a collection or
+another game. They are under the same licence as the code (MIT).

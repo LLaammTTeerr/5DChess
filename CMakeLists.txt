@@ -52,7 +52,8 @@ endif()
 
 # --- Game-screen logic that needs no graphics (selection state machine, board layout, multiverse snapshot, settings file text) -----------------
 add_library(play_core STATIC src/play/Selection.cpp src/play/BoardLayout.cpp src/play/MultiverseView.cpp src/play/VsAi.cpp
-  src/services/SettingsFile.cpp src/services/SaveStore.cpp src/guide/Guide.cpp src/Render/PieceThemes.cpp src/services/SettingsApply.cpp)
+  src/services/SettingsFile.cpp src/services/SaveStore.cpp src/guide/Guide.cpp src/Render/PieceThemes.cpp src/services/SettingsApply.cpp
+  src/puzzles/Puzzle.cpp src/puzzles/Solver.cpp src/puzzles/Progress.cpp)
 target_link_libraries(play_core PUBLIC chess_core)
 if(MSVC)
   target_compile_options(play_core PRIVATE /W4)
@@ -87,6 +88,7 @@ if(FDCHESS_BUILD_GAME)
   list(REMOVE_ITEM GAME_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/chess.cpp)
   list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/engine/|/src/ai/") # engine and AI sources are part of chess_core / ai_core
   list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/guide/")  # guide content (no graphics) is part of play_core
+  list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/puzzles/(Puzzle|Solver|Progress)\\.cpp") # puzzle data, proofs and progress text: part of play_core
   list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/play/(Selection|BoardLayout|MultiverseView|VsAi)\\.cpp|/src/services/(SettingsFile|SaveStore)\\.cpp|/src/Render/PieceThemes\\.cpp|/src/services/SettingsApply\\.cpp") # part of play_core
 
   add_executable(5dchess ${GAME_SOURCES})
@@ -137,8 +139,9 @@ if(FDCHESS_BUILD_GAME)
     # A "dir" preload has no dependency on the files inside it: relink when a position file changes.
     file(GLOB POSITION_FILES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/assets/positions/*.5dp)
     file(GLOB GUIDE_FILES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/assets/guide/*.5dp)
+    file(GLOB PUZZLE_FILES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/assets/puzzles/*.5dp)
     set_property(TARGET 5dchess APPEND PROPERTY LINK_DEPENDS
-      ${CMAKE_CURRENT_SOURCE_DIR}/web/shell.html ${MANIFEST} ${POSITION_FILES} ${GUIDE_FILES})
+      ${CMAKE_CURRENT_SOURCE_DIR}/web/shell.html ${MANIFEST} ${POSITION_FILES} ${GUIDE_FILES} ${PUZZLE_FILES})
   else()
     # Copy assets next to the binary so it runs from the build directory.
     add_custom_command(TARGET 5dchess POST_BUILD
@@ -161,6 +164,11 @@ endif()
 # --- Developer tools (optional, never installed/packaged) ----------------------
 if(FDCHESS_BUILD_TOOLS AND FDCHESS_BUILD_GAME AND NOT EMSCRIPTEN)
   add_subdirectory(tools)
+endif()
+
+# The puzzle prover has no graphics dependency: it is built with the tests (their ctest runs it) and with the tools.
+if((FDCHESS_BUILD_TOOLS OR FDCHESS_BUILD_TESTS) AND NOT EMSCRIPTEN)
+  add_subdirectory(tools/puzzle_check)
 endif()
 
 if(FDCHESS_BUILD_REFCHECK AND NOT EMSCRIPTEN)

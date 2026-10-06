@@ -122,3 +122,6 @@ dir guide/ guide/
 
 # The fonts' licence text, shipped next to them (a `dir` entry naming one file: it only matters for the web build).
 dir fonts/OFL.txt fonts/OFL.txt
+
+# The puzzles (one .5dp per puzzle, with goal/hint/solution header lines).
+dir puzzles/ puzzles/

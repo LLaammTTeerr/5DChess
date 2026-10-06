@@ -1,0 +1,18 @@
+5dchess-position 1
+title: Bishop in time
+size: 5
+rules: none
+to-move: white
+goal: mate-in-1
+difficulty: 2
+hint: A bishop slides diagonally through time too: up the board while going back in turns.
+solution: (L0T4)a3>(L0T2)a5
+L-1 parent: L0
+L-1 T3w: 1k*3/2prr*/B*4/5/3QK
+L0 T1w: 2k2/2pr1/5/1B3/3QK
+L0 T1b: 2k2/2pr1/5/5/2B*QK
+L0 T2w: 1k*3/2pr1/5/5/2B*QK
+L0 T2b: 1k*3/2pr1/B*4/5/3QK
+L0 T3w: 1k*3/2p1r*/B*4/5/3QK
+L0 T3b: 1k*3/2p1r*/B*4/4Q*/4K
+L0 T4w: 1k*3/2p2/B*4/4Q*/4K

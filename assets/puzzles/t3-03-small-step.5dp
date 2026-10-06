@@ -1,0 +1,12 @@
+5dchess-position 1
+title: Small step
+size: 5
+rules: none
+to-move: white
+goal: mate-in-2
+difficulty: 3
+hint: One small step of the queen threatens a mate that reaches back through time.
+solution: (L0T2)c1>(L0T2)c2 / (L0T2)b4>(L0T2)b3 / (L0T3)c2>(L0T1)a4
+L0 T1w: 1k3/ppr2/5/2N2/R1QK1
+L0 T1b: 1k3/ppr2/R*4/2N2/2QK1
+L0 T2w: 1k3/pp3/R*4/2r*2/2QK1

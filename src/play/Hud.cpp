@@ -70,7 +70,7 @@ void drawHud(const HudData& hud, const BoardStyle& st) {
   const ::Font statusFont = UI::Fonts::button();
   const ::Font monoFont = UI::Fonts::mono();
   const ::Font bodyFont = UI::Fonts::body();
-  const std::string status = hud.whiteToMove ? "White to move" : "Black to move";
+  const std::string status = !hud.title.empty() ? hud.title : hud.whiteToMove ? "White to move" : "Black to move";
   const std::string turnInfo = "Turn " + std::to_string(hud.fullTurn) + " \xC2\xB7 " + std::to_string(hud.timelineCount) +
                                (hud.timelineCount == 1 ? " timeline" : " timelines");
 

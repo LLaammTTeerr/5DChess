@@ -1,0 +1,7 @@
+# The Puzzles list: main menu -> Puzzles (the third item, at (150, 370)), one column per tier with title, goal and no check marks yet.
+# The pointer is parked away from the rows so no row is hovered in the capture.
+wait 20
+click 150 370        # Puzzles
+move 700 620
+wait 60
+capture puzzles-list

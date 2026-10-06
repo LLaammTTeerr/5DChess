@@ -1,0 +1,10 @@
+5dchess-position 1
+title: Promotion
+size: 8
+rules: double-step
+to-move: white
+goal: mate-in-1
+difficulty: 1
+hint: The pawn is one step from the last rank. What should it become?
+solution: (L0T1)c7>(L0T1)c8=Q
+L0 T1w: k7/2P5/1K6/8/8/8/8/8

@@ -1,0 +1,16 @@
+5dchess-position 1
+title: Across the timelines
+size: 5
+rules: none
+to-move: white
+goal: mate-in-1
+difficulty: 2
+hint: A queen may capture on another timeline. Black's king hides behind a pawn there: take it.
+solution: (L0T3)a3>(L-1T2)a4
+L-1 parent: L0
+L-1 T2w: 1k3/ppr2/5/2r*2/R1QKN*
+L0 T1w: 1k3/ppr2/5/2N2/R1QK1
+L0 T1b: 1k3/ppr2/5/5/R1QKN*
+L0 T2w: 1k3/pp3/5/2r*2/R1QKN*
+L0 T2b: 1k3/pp3/Q*4/2r*2/R2KN*
+L0 T3w: 1k3/pp3/Q*4/5/R2KN*

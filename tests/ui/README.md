@@ -50,7 +50,7 @@ Use `capture` after enough `wait` frames for scene cross-fades (about 10 frames 
 
 `ainodes <n>` sets how many nodes of the computer opponent's search run each frame (400 until changed; 0 freezes it where it is,
 to capture the "thinking" HUD; `clock` is the shipped wall-clock budget, not reproducible, for `FDCHESS_PERF=1` measurements) and
-`waitai` runs frames until the computer has nothing left to do (it has replied and the game's own legal-turn search finished; the
+`waitai` runs frames until the computer has nothing left to do (it has replied and the game's own legal-turn search finished; the On a puzzle it waits for the judging of a submitted turn, the proof of a mate in 2, the engine's reply and a scripted solution.
 script fails after 5000 frames). A game with the computer is started through the real menus (Versus, Opponent: Computer, side, level,
 mode, Play) or by a record with the `# vs-computer:` line (`record`, `slot`).
 
@@ -74,6 +74,12 @@ mode, Play) or by a record with the `# vs-computer:` line (`record`, `slot`).
 | save-continue | no Continue on a fresh menu; after a submitted turn Continue appears, resumes the game, and an unsubmitted move is not restored |
 | save-slots | the game's Save panel with the unsubmitted-moves warning, the saved slot, the Load screen, and the loaded game |
 | load-records | the Load screen with a branch record and a corrupted one ("This save can't be loaded"), Delete with confirmation, loading the branch game |
+| puzzles-list | main menu -> Puzzles: the list, three tiers, no check marks |
+| puzzles-open | the first puzzle opened from the list; Hint (text), then Show piece (the rook ringed) |
+| puzzles-wrong | a wrong move (Re1-e2, submitted): "Not quite - try again" with Try again, then the automatic reset |
+| puzzles-solve | the solution Re1-e8: the success card, then the list with a check mark |
+| puzzles-refuted | a first turn of a mate in 2 that does not win by force: Black's refuting defence is played, then "Not quite - Black has a defence" |
+| puzzles-mate2 | a mate in 2: the engine's reply played on the board and the second turn awaited; Show solution replayed from the start |
 | rules-visuals | tests/ui/positions: check (attack line from the rook to the king), an inactive timeline (dimmed, tagged), the promotion picker and a chosen promotion |
 
 ## Tolerance

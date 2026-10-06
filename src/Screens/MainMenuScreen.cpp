@@ -4,6 +4,7 @@
 #include "Screens/LoadScreen.h"
 #include "Screens/ModeSelectScreen.h"
 #include "Screens/PlayScreen.h"
+#include "Screens/PuzzleListScreen.h"
 #include "Screens/SettingsScreen.h"
 #include "Render/PieceTheme.h"
 #include "Render/UITheme.h"
@@ -130,10 +131,10 @@ void MainMenuScreen::update(App& app, float deltaTime) {
       break;
     case Item::Versus: app.screens.replace(std::make_unique<ModeSelectScreen>()); break;
     case Item::Load: app.screens.replace(std::make_unique<LoadScreen>()); break;
+    case Item::Puzzles: app.screens.replace(std::make_unique<PuzzleListScreen>()); break;
     case Item::Guide: app.screens.replace(std::make_unique<GuideScreen>()); break;
     case Item::Settings: app.screens.replace(std::make_unique<SettingsScreen>()); break;
     case Item::Exit: app.quit = true; break;  // absent in the web build
-    default: break;                           // Puzzles is not written yet
   }
 }
 
