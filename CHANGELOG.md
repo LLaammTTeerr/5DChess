@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tools: `ui_script` commands `record <file.5dr>` (open a game from a record) and `slot <n> <file>` (fill a save slot); under the test harness saves live in memory only and the date is fixed, so screenshots stay deterministic. New scripts `save-continue`, `save-slots`, `load-records` and records in `tests/ui/records/`.
 
 ### Changed
+- **New default look: Pixel pieces and the Atlas board view** (previously Modern pieces and Deep space). A saved settings file still wins, so players who chose a theme or view keep it; the Settings screen and the web build use the same defaults. UI baselines re-recorded; `board-styles.ui` now reaches Deep space by cycling.
 - The main menu has a new **Load game** item between Versus and Puzzles (and **Continue** on top when there is an autosave), so the navigation column is taller; the UI scripts' click coordinates moved accordingly. Every game screenshot shows the new Save / Copy buttons under Back.
 
 ## [0.5.0] - 2026-10-06

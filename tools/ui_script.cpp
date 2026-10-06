@@ -199,7 +199,7 @@ int main(int argc, char** argv) {
 
   int rc = 0;
   {
-    App app;  // same context as src/main.cpp (default Modern theme, audio stays silent in test mode)
+    App app;  // same context as src/main.cpp (default Pixel theme, audio stays silent in test mode)
 
     Input::Scripted& in = Input::scripted();
     Vector2 prev = in.position;

@@ -14,7 +14,7 @@
 //   --perf [N]          after the scripted turns render N (default 600) frames with the animation running and
 //                       print average / p99 / max frame time (CPU render cost, no vsync)
 //   --reduce            enable Reduce motion
-//   --view NAME         board view: "Deep space" (default), "Atlas" or "Blueprint"
+//   --view NAME         board view: "Deep space", "Atlas" (default) or "Blueprint"
 #include <raylib.h>
 #include <algorithm>
 #include <chrono>

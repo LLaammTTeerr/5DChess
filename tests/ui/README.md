@@ -42,7 +42,7 @@ screen pixels; each script documents the layout it derives them from. The game s
 scripts do not depend on the zoom. `clicksq` also targets the Guide's page. `mode <catalog id>`, `position <file.5dp>` and `record <file.5dr>` (relative to the script's directory,
 e.g. `../positions/check.5dp`, `../records/branch.5dr`) open a game directly; follow them with `wait`. `slot <1-3> <file>` puts a file's text into a
 save slot (saves live in memory under the harness, never in the config directory, and the date is fixed), so the Load screen can be shown with chosen contents. The harness runs with defaults, so every
-game screenshot is in the Deep space board view unless the script changes it in Settings. A `click` is hover frame, press frame,
+game screenshot shows the Pixel pieces in the Atlas board view unless the script changes it in Settings. A `click` is hover frame, press frame,
 release frame. After a click that changes the camera (new boards appear) wait ~40-90 frames before the next one.
 Use `capture` after enough `wait` frames for scene cross-fades (about 10 frames under Reduce motion).
 
@@ -56,7 +56,7 @@ Use `capture` after enough `wait` frames for scene cross-fades (about 10 frames 
 | endgame | Time Line Fragment: a two-turn checkmate; "Black wins!" / "Checkmate" card |
 | nav-toggle | ESC hides and restores the nav buttons; none left hovered |
 | stalemate | Time Line Fragment: a six-turn stalemate through time travel; "Draw" / "Stalemate" card |
-| board-styles | Settings -> Display -> Board view cycled through Atlas, Blueprint and Deep space; the same Standard mid-game (knight picked up) in each |
+| board-styles | Settings -> Display -> Board view cycled through Atlas (default), Blueprint and Deep space; the same Standard mid-game (knight picked up) in each |
 | guide | main menu -> Guide, every page (Right arrow) and the "Try it" goal played on most of them: selected piece with its dots, the check mark, the mate card, the promotion picker; Left arrow goes back; the last page's Standard-game button |
 | save-continue | no Continue on a fresh menu; after a submitted turn Continue appears, resumes the game, and an unsubmitted move is not restored |
 | save-slots | the game's Save panel with the unsubmitted-moves warning, the saved slot, the Load screen, and the loaded game |

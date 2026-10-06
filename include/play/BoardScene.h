@@ -62,7 +62,7 @@ private:
   SoftBox _soft;
   Texture2D _background{}, _aurora{};
   int _backgroundW = 0, _backgroundH = 0;
-  BoardView _backgroundView = BoardView::DeepSpace;
+  BoardView _backgroundView = BoardView::Atlas;
 
   struct Star { float x, y, size, alpha, phase, speed; };
   std::array<Star, 280> _stars;

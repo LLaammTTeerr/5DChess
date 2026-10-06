@@ -10,7 +10,7 @@ Chess with multiverse time travel: a 5D Chess game with timelines, built in C++2
 
 **⬇ Download for Linux/macOS/Windows: <https://github.com/LLaammTTeerr/5DChess/releases/latest>**
 
-![A Standard game in the Deep space board view: boards as lit windows on glowing threads, the present as an aurora, timelines labelled L0, L+1, L-1](docs/screenshots/board-deep-space.png)
+![A Standard game in the default look, Pixel pieces on the Atlas board view: a paper map with card boards, timelines labelled L0, L+1, L-1](docs/screenshots/hero-default.png)
 
 ## Table of Contents
 - [Overview](#overview)
@@ -32,7 +32,7 @@ Chess with multiverse time travel: a 5D Chess game with timelines, built in C++2
 This project implements a 5D Chess game with an advanced UI system featuring:
 - Multi-timeline chess mechanics
 - An interactive Guide: ten short lessons on live boards, with things to try
-- Three board views (Deep space, Atlas, Blueprint) that show every timeline at once: lanes, a turn ruler, the present, branches and time-travel jumps
+- Three board views (Atlas by default, Deep space, Blueprint) that show every timeline at once: lanes, a turn ruler, the present, branches and time-travel jumps
 - Interactive board visualization with highlighting and an auto-focusing camera
 - Small widget layer (buttons, lists, toggles) and a screen stack with cross-fades
 - In-turn undo, deselect and submit controls
@@ -41,12 +41,12 @@ This project implements a 5D Chess game with an advanced UI system featuring:
 
 ## Screenshots
 
-Three board views, selectable in Settings -> Display -> *Board view* (the same Standard game in each):
+The default look is Pixel pieces on the Atlas board view; both are changed in Settings (a saved choice wins). Three board views, selectable in Settings -> Display -> *Board view* (the same Standard game in each):
 
 <table>
   <tr>
-    <td width="33%"><img src="docs/screenshots/board-deep-space.png" alt="Deep space board view: indigo night sky, glowing boards, aurora present"><br><sub><b>Deep space</b> (default): glow encodes state; luminous branches in gold or violet by who branched.</sub></td>
-    <td width="33%"><img src="docs/screenshots/board-atlas.png" alt="Atlas board view: warm paper map with tinted timeline lanes and card boards"><br><sub><b>Atlas</b>: a paper map with tinted lanes, card boards and a terracotta present.</sub></td>
+    <td width="33%"><img src="docs/screenshots/board-deep-space.png" alt="Deep space board view: indigo night sky, glowing boards, aurora present"><br><sub><b>Deep space</b>: glow encodes state; luminous branches in gold or violet by who branched.</sub></td>
+    <td width="33%"><img src="docs/screenshots/board-atlas.png" alt="Atlas board view: warm paper map with tinted timeline lanes and card boards"><br><sub><b>Atlas</b> (default): a paper map with tinted lanes, card boards and a terracotta present.</sub></td>
     <td width="33%"><img src="docs/screenshots/board-blueprint.png" alt="Blueprint board view: monochrome ink on off-white with subway-style connectors"><br><sub><b>Blueprint</b>: ink on off-white, elbow connectors, colour only for what needs attention.</sub></td>
   </tr>
 </table>
@@ -234,7 +234,7 @@ The game changes its working directory to the executable's folder, so it can be 
 ### Core Gameplay
 - **Official 5D Chess rules**: moves across time and parallel universes, active/inactive timelines and the present, mandatory moves on the present boards, check through time, castling, en passant and promotion (see [docs/RULES.md](docs/RULES.md); checked against the reference engine 5d-chess-js)
 - **Winning**: you win by checkmate (the opponent has no legal turn and is in check); no legal turn without check is a stalemate and a draw. Kings are never captured. The position is checked in the background after every turn ("Checking position..."), so the game never freezes
-- **Board views**: Deep space (default), Atlas and Blueprint, chosen in Settings -> Display. Timelines are lanes labelled L0, L+1, L-1 (White's above L0, Black's below); a ruler on top counts turns (T1 T2 ... with w/b ticks); the present is marked; branches are drawn as connectors coloured by the player who created the timeline; a time-travel move shows a dashed arc with the moving piece. One renderer draws all three from `BoardStyle` data (`include/play/BoardStyle.h`)
+- **Board views**: Atlas (default), Deep space and Blueprint, chosen in Settings -> Display. Timelines are lanes labelled L0, L+1, L-1 (White's above L0, Black's below); a ruler on top counts turns (T1 T2 ... with w/b ticks); the present is marked; branches are drawn as connectors coloured by the player who created the timeline; a time-travel move shows a dashed arc with the moving piece. One renderer draws all three from `BoardStyle` data (`include/play/BoardStyle.h`)
 - **Rules at a glance**: boards you must move on, may move on, or cannot (history) are framed differently; boards of inactive timelines are dimmed and desaturated and tagged "inactive"; check draws a line from every attacker to the king; promotion asks which piece (no auto-queening)
 - **Legal Move Highlighting**: Visual guides for valid moves; Submit is enabled only when the whole turn is legal (otherwise the HUD says why, e.g. "Your king would be capturable")
 - **Guide**: main menu -> Guide teaches the rules in ten short pages (boards and time, time travel, timeline numbers, the present, the four axes, pawns, check, mate, special moves). Each page has a small live board you can play, with legal-move dots, and most have a "Try it" goal that shows a check mark when you get it (Left / Right keys turn the pages; Reset position starts the page over). It uses your chosen board view
@@ -258,7 +258,7 @@ The game changes its working directory to the executable's folder, so it can be 
 - Without an audio device the game runs silently.
 
 ### Piece Themes
-Four piece themes are available: Classic, Modern, Fantasy and Pixel. Choose one in Settings → Piece Theme. Pixel is an original pixel-art theme generated by `python3 scripts/gen_pixel_theme.py` (requires Pillow); `--out DIR` sets the output directory (default `assets/images/Theme_3`) and `--sheet PATH` writes a preview contact sheet.
+Four piece themes are available: Classic, Modern, Fantasy and Pixel (the default). Choose one in Settings → Piece Theme. Pixel is an original pixel-art theme generated by `python3 scripts/gen_pixel_theme.py` (requires Pillow); `--out DIR` sets the output directory (default `assets/images/Theme_3`) and `--sheet PATH` writes a preview contact sheet.
 
 ![Contact sheet of the twelve Pixel theme pieces](docs/screenshots/pixel-pieces.png)
 
@@ -279,7 +279,7 @@ theme_preview <Classic|Modern|Fantasy|Pixel> <Standard|Battle|Invasion|Fragment>
 
 - ~~Official 5D Chess rules~~ (check, checkmate, stalemate, active timelines, castling, en passant, promotion choice): done.
 - ~~v0.4.0~~: official rules, non-blocking result search, differential testing, `.5dp` position files, engine value API, UI screenshot tests, manifest-driven assets: done.
-- ~~v0.5.0~~: widget/screen UI rewrite, three board views (Deep space by default, Atlas, Blueprint), official-rules visuals, promotion picker, saved settings, move notation and game records in the engine: done.
+- ~~v0.5.0~~: widget/screen UI rewrite, three board views (Deep space, Atlas, Blueprint), official-rules visuals, promotion picker, saved settings, move notation and game records in the engine: done.
 - **v0.6.0** (next): AI opponent, ~~save/load in the UI~~ (done, unreleased), puzzles and an interactive guide.
 
 ## Known limitations
