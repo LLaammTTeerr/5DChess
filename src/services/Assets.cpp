@@ -5,6 +5,22 @@
 #include <stdexcept>
 #include <vector>
 
+namespace {
+// Pixel art (filter=point) stays nearest-neighbour. Everything else is smoothed: bilinear, and trilinear with mipmaps
+// when the size is a power of two, so smooth artwork stays clean when drawn much smaller than its file. Non
+// power-of-two textures get no mipmaps (WebGL 1 does not support them).
+void applyFilter(Texture2D& t, bool point) {
+    if (point) { SetTextureFilter(t, TEXTURE_FILTER_POINT); return; }
+    const auto pow2 = [](int v) { return v > 0 && (v & (v - 1)) == 0; };
+    if (pow2(t.width) && pow2(t.height)) {
+        GenTextureMipmaps(&t);
+        SetTextureFilter(t, TEXTURE_FILTER_TRILINEAR);
+    } else {
+        SetTextureFilter(t, TEXTURE_FILTER_BILINEAR);
+    }
+}
+} // namespace
+
 Assets::Assets(const std::string& root) : _root(root) {
     const std::string manifest = _root + "manifest.txt";
     std::ifstream in(manifest);
@@ -39,7 +55,7 @@ Assets::Assets(const std::string& root) : _root(root) {
     for (const auto& [id, e] : _textureFiles) {
         Texture2D t = LoadTexture(e.path.c_str());
         if (t.id == 0) throw std::runtime_error("Failed to load texture: " + e.path);
-        if (e.pointFilter) SetTextureFilter(t, TEXTURE_FILTER_POINT);
+        applyFilter(t, e.pointFilter);
         _textures[id] = t;
     }
 }
@@ -86,7 +102,7 @@ Texture2D& Assets::grayTexture(const std::string& id) {
     Texture2D t = LoadTextureFromImage(image);
     UnloadImage(image);
     if (t.id == 0) return texture(id); // cannot happen for a texture that loaded in the constructor; stay in colour
-    if (e->pointFilter) SetTextureFilter(t, TEXTURE_FILTER_POINT);
+    applyFilter(t, e->pointFilter);
     return _grayTextures.emplace(id, t).first->second;
 }
 

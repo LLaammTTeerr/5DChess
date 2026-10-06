@@ -1,7 +1,7 @@
 # Asset manifest: the single list of files the game loads (and the web build embeds).
 # One asset per line:  <kind> <id> <path relative to assets/> [tag=value ...]
 #   kind  texture | font | sound | music | dir (a directory embedded as a whole, ids unused)
-#   tags  filter=point   point sampling (crisp pixel art)
+#   tags  filter=point   point sampling (crisp pixel art); other textures are smoothed (bilinear, trilinear with mipmaps when power-of-two)
 #         web=no         native only: not embedded in the WebAssembly build
 # Textures are loaded at startup; fonts (per size), sounds and music on first use.
 # The Emscripten --preload-file list is generated from this file (CMakeLists.txt).
@@ -69,6 +69,19 @@ texture piece.pixel.white_knight_blink images/Theme_3/white_knight_blink.png fil
 texture piece.pixel.white_pawn_blink images/Theme_3/white_pawn_blink.png filter=point
 texture piece.pixel.white_queen_blink images/Theme_3/white_queen_blink.png filter=point
 texture piece.pixel.white_rook_blink images/Theme_3/white_rook_blink.png filter=point
+
+texture piece.medieval.black_bishop images/Theme_4/black_bishop.png
+texture piece.medieval.black_king images/Theme_4/black_king.png
+texture piece.medieval.black_knight images/Theme_4/black_knight.png
+texture piece.medieval.black_pawn images/Theme_4/black_pawn.png
+texture piece.medieval.black_queen images/Theme_4/black_queen.png
+texture piece.medieval.black_rook images/Theme_4/black_rook.png
+texture piece.medieval.white_bishop images/Theme_4/white_bishop.png
+texture piece.medieval.white_king images/Theme_4/white_king.png
+texture piece.medieval.white_knight images/Theme_4/white_knight.png
+texture piece.medieval.white_pawn images/Theme_4/white_pawn.png
+texture piece.medieval.white_queen images/Theme_4/white_queen.png
+texture piece.medieval.white_rook images/Theme_4/white_rook.png
 
 font ui.montserrat_bold fonts/Montserrat-Bold.ttf
 font ui.public_sans_bold fonts/PublicSans-Bold.ttf

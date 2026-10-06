@@ -7,7 +7,7 @@
 #include "play/BoardView.h"
 
 namespace {
-const char* const kThemes[] = {"Classic", "Modern", "Fantasy", "Pixel"};
+const char* const kThemes[] = {"Classic", "Modern", "Fantasy", "Pixel", "Medieval"};
 constexpr float kOptionW = 200.0f, kOptionGap = 20.0f;
 }
 
