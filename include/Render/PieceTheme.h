@@ -17,7 +17,8 @@ inline constexpr PieceTheme classic{"piece.classic.", false};
 inline constexpr PieceTheme modern{"piece.modern.", false};
 inline constexpr PieceTheme fantasy{"piece.fantasy.", false};
 inline constexpr PieceTheme pixel{"piece.pixel.", true}; // original pixel-art creatures
-// By Settings / theme_preview name ("Classic", "Modern", "Fantasy", "Pixel"); nullptr when unknown.
+inline constexpr PieceTheme medieval{"piece.medieval.", false}; // original heraldic ivory and walnut pieces
+// By Settings / theme_preview name ("Classic", "Modern", "Fantasy", "Pixel", "Medieval"); nullptr when unknown.
 const PieceTheme* byName(const std::string& name);
 // The name byName() finds the theme by ("Modern" for an unknown theme).
 const char* nameOf(const PieceTheme& theme);

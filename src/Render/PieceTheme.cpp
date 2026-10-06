@@ -7,11 +7,12 @@ const PieceTheme* Themes::byName(const std::string& name) {
     if (name == "Modern") return &modern;
     if (name == "Fantasy") return &fantasy;
     if (name == "Pixel") return &pixel;
+    if (name == "Medieval") return &medieval;
     return nullptr;
 }
 
 const char* Themes::nameOf(const PieceTheme& theme) {
-    for (const char* name : {"Classic", "Modern", "Fantasy", "Pixel"})
+    for (const char* name : {"Classic", "Modern", "Fantasy", "Pixel", "Medieval"})
         if (std::string(byName(name)->prefix) == theme.prefix) return name;
     return "Modern";
 }

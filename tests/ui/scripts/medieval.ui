@@ -1,0 +1,85 @@
+# Medieval pieces: Settings -> Piece Theme -> Medieval (the 5th option, 200x44 at x=50, centre y=272+64*4 = 528), then the same Standard mid-game as board-styles.ui
+# (two turns played, the white knight picked up) in the Atlas, Blueprint (greyscale pieces) and Deep space board views, cycled as there.
+# Layout (1400x800): main menu Settings (150,490; (150,520) once a game left an autosave); Piece Theme tab (520,172); Display tab (880,172);
+# Board view button (700,468); in the game Back (125,25) leads to the mode list, whose Back is (700,712). Squares are clicked by name.
+wait 20
+click 150 490        # Settings
+wait 30
+click 520 172        # Piece Theme tab
+wait 20
+click 150 528        # Medieval
+wait 20
+capture medieval-settings
+click 880 172        # Display tab
+wait 20
+mode standard
+wait 40
+clicksq 0 0 e2
+wait 20
+clicksq 0 0 e4
+wait 20
+click 841 90         # Submit
+wait 60
+clicksq 0 1 e7
+wait 20
+clicksq 0 1 e5
+wait 20
+click 841 90
+wait 60
+clicksq 0 2 g1       # pick up the knight: its targets show on the present board
+wait 60
+capture medieval-atlas
+click 125 25         # Back to the mode list ...
+wait 30
+click 700 712        # ... and to the main menu
+wait 30
+click 150 520        # Settings
+wait 30
+click 880 172        # Display tab
+wait 20
+click 700 468        # Board view: Blueprint
+wait 10
+mode standard
+wait 40
+clicksq 0 0 e2
+wait 20
+clicksq 0 0 e4
+wait 20
+click 841 90
+wait 60
+clicksq 0 1 e7
+wait 20
+clicksq 0 1 e5
+wait 20
+click 841 90
+wait 60
+clicksq 0 2 g1
+wait 60
+capture medieval-blueprint
+click 125 25
+wait 30
+click 700 712
+wait 30
+click 150 520
+wait 30
+click 880 172
+wait 20
+click 700 468        # Board view: Deep space (Blueprint -> Deep space)
+wait 10
+mode standard
+wait 40
+clicksq 0 0 e2
+wait 20
+clicksq 0 0 e4
+wait 20
+click 841 90
+wait 60
+clicksq 0 1 e7
+wait 20
+clicksq 0 1 e5
+wait 20
+click 841 90
+wait 60
+clicksq 0 2 g1
+wait 60
+capture medieval-deep-space

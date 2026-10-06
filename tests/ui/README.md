@@ -39,7 +39,7 @@ One command per line, `#` starts a comment: `wait <frames>`, `move <x> <y>`, `cl
 `key <NAME>`, `capture <name>` (writes `<name>.png`; names must be unique across scripts). Coordinates are real
 screen pixels; each script documents the layout it derives them from. The game screen is driven by name instead:
 `clicksq <timeline> <half-turn> <square>` clicks a square (e.g. `clicksq 0 2 g1`) wherever the camera has put it, so
-scripts do not depend on the zoom. `clicksq` also targets the Guide's page. `mode <catalog id>`, `position <file.5dp>` and `record <file.5dr>` (relative to the script's directory,
+scripts do not depend on the zoom. `clicksq` also targets the Guide's page. `theme <name>` switches the piece theme (Classic, Modern, Fantasy, Pixel, Medieval) from the next frame on, `mode <catalog id>`, `position <file.5dp>` and `record <file.5dr>` (relative to the script's directory,
 e.g. `../positions/check.5dp`, `../records/branch.5dr`) open a game directly; follow them with `wait`. `slot <1-3> <file>` puts a file's text into a
 save slot (saves live in memory under the harness, never in the config directory, and the date is fixed), so the Load screen can be shown with chosen contents. The harness runs with defaults, so every
 game screenshot shows the Pixel pieces in the Atlas board view unless the script changes it in Settings. A `click` is hover frame, press frame,
@@ -49,7 +49,7 @@ Use `capture` after enough `wait` frames for scene cross-fades (about 10 frames 
 | script | captures |
 | --- | --- |
 | main-menu | menu at rest |
-| settings | tabs; Piece Theme with Pixel selected; Music; Display |
+| settings | tabs; Piece Theme with Pixel, then Medieval selected; Music; Display |
 | versus | mode list; Standard selected, Play visible |
 | game-standard | e2 selected, e2-e4, submit, black e7-e5, submit, knight time-travel jump creating a timeline (a branch connector and a jump arc) |
 | game-battle | Time Line Battle: start, pawn selected, three moves, submitted, black move |
@@ -57,6 +57,7 @@ Use `capture` after enough `wait` frames for scene cross-fades (about 10 frames 
 | nav-toggle | ESC hides and restores the nav buttons; none left hovered |
 | stalemate | Time Line Fragment: a six-turn stalemate through time travel; "Draw" / "Stalemate" card |
 | board-styles | Settings -> Display -> Board view cycled through Atlas (default), Blueprint and Deep space; the same Standard mid-game (knight picked up) in each |
+| medieval | Settings -> Piece Theme -> Medieval; the same Standard mid-game as board-styles with Medieval pieces in Atlas, Blueprint (greyscale) and Deep space |
 | guide | main menu -> Guide, every page (Right arrow) and the "Try it" goal played on most of them: selected piece with its dots, the check mark, the mate card, the promotion picker; Left arrow goes back; the last page's Standard-game button |
 | save-continue | no Continue on a fresh menu; after a submitted turn Continue appears, resumes the game, and an unsubmitted move is not restored |
 | save-slots | the game's Save panel with the unsubmitted-moves warning, the saved slot, the Load screen, and the loaded game |

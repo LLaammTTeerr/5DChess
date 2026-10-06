@@ -3,6 +3,10 @@
 #include "play/MultiverseView.h"
 #include "engine/Position.h"
 #include "services/SettingsFile.h"
+#include <filesystem>
+#include <fstream>
+#include <set>
+#include <sstream>
 #include "test_support.h"
 
 using namespace Chess;
@@ -177,4 +181,30 @@ TEST_CASE("settingsfile: the file lives in the platform's config directory") {
   CHECK(settingsfile::pathFor(Platform::Windows, env({{"APPDATA", "C:\\Users\\a\\AppData\\Roaming"}})) ==
         "C:\\Users\\a\\AppData\\Roaming\\5DChess\\settings.txt");
   CHECK(settingsfile::pathFor(Platform::Windows, env({})).empty());
+}
+
+TEST_CASE("piece themes: every theme's textures are in the manifest and on disk") {
+  // Mirrors Themes:: in include/Render/PieceTheme.h (that header needs raylib, which the unit tests do not link).
+  struct ThemeIds { const char* prefix; bool blink; };
+  const ThemeIds themes[] = {{"piece.classic.", false}, {"piece.modern.", false}, {"piece.fantasy.", false},
+                             {"piece.pixel.", true}, {"piece.medieval.", false}};
+  const std::filesystem::path assets = std::filesystem::path(FDCHESS_GUIDE_DIR).parent_path();
+  std::set<std::string> ids;
+  std::ifstream manifest(assets / "manifest.txt");
+  REQUIRE(manifest);
+  for (std::string line; std::getline(manifest, line);) {
+    std::istringstream fields(line);
+    std::string kind, id, path;
+    if (fields >> kind >> id >> path && kind == "texture") {
+      ids.insert(id);
+      CHECK_MESSAGE(std::filesystem::exists(assets / path), id << " -> " << path);
+    }
+  }
+  for (const auto& theme : themes)
+    for (const char* side : {"white", "black"})
+      for (const char* piece : {"king", "queen", "rook", "bishop", "knight", "pawn"}) {
+        const std::string id = std::string(theme.prefix) + side + "_" + piece;
+        CHECK_MESSAGE(ids.count(id) == 1, id);
+        if (theme.blink) CHECK_MESSAGE(ids.count(id + "_blink") == 1, id << "_blink");
+      }
 }
