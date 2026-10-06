@@ -42,7 +42,7 @@ public:
   const Rect& bounds() const { return _bounds; }
   int minTimeline() const { return _minTimeline; }
   int maxTimeline() const { return _maxTimeline; }
-  int dim() const { return _dim; }
+  int dim() const { return _dim; } // board size of the game; mainly for tests
 
   /// The square under a world point, if it lies on an existing board.
   std::optional<Chess::Core::Coord> hitTest(float worldX, float worldY) const;

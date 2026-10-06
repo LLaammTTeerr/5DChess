@@ -43,7 +43,7 @@ private:
   std::vector<Anim> _active; // only unfinished ones; absent == fully drawn
   std::vector<Key> _known, _scratch; // sorted keys seen at the last set()
   bool _seeded = false;
-  float _time = 0.0f, _dashOffset = 0.0f, _pulsePhase = 0.0f;
+  float _dashOffset = 0.0f, _pulsePhase = 0.0f;
 
   float progressOf(const Key& key) const;
   void drawCurved(const Line& line, float progress) const;

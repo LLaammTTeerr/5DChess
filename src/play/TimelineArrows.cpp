@@ -34,7 +34,6 @@ std::vector<Arrow> timelineArrows(const Chess::IGame& game) {
 }
 
 void TimelineArrows::update(float dt) {
-  _time += dt;
   _dashOffset += dt * 50.0f;
   _pulsePhase += dt * 2.0f;
   for (auto& a : _active) a.t.update(dt);

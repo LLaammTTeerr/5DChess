@@ -23,9 +23,10 @@ public:
   void update(float dt, const BoardLayout& layout);
 
   /// Fly to `board` if the camera is zoomed far out (so a selected piece is comfortable to see).
+  /// Focusing only moves the camera; the zoom stays fit-all.
   void focusSelected(const Rect& board);
-  /// Fly to a board that a move just created; `layout` still holds the boards before the move.
-  void focusNewest(const BoardLayout& layout, const Rect& board);
+  /// Fly to a board that a move just created.
+  void focusNewest(const Rect& board);
 
 private:
   enum class Mode {

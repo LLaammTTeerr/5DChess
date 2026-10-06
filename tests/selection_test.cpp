@@ -113,3 +113,30 @@ TEST_CASE("Selection: clear() drops the selection") {
   s.clear();
   CHECK_FALSE(s.active());
 }
+
+TEST_CASE("Selection: a move to another timeline is a Move intent onto that board") {
+  Sandbox game(5, 2);
+  game.place(0, 0, 0, make(PieceType::Rook, PieceColor::PIECEWHITE));
+  const Coord rook{0, 0, 0, 0}, across{0, 0, 0, 1};
+  Selection s;
+  REQUIRE(s.click(rook, game).kind == Intent::Kind::Select);
+  CHECK(std::find(s.targets().begin(), s.targets().end(), across) != s.targets().end());
+  const Intent intent = s.click(across, game);
+  REQUIRE(intent.kind == Intent::Kind::Move);
+  CHECK(intent.move.from == rook);
+  CHECK(intent.move.to == across);
+}
+
+namespace {
+struct FinishedGame : Sandbox {
+  FinishedGame() : Sandbox(5) { _result = GameResult::WhiteWins; }
+};
+} // namespace
+
+TEST_CASE("Selection: a finished game gives no intent") {
+  FinishedGame game;
+  game.place(0, 0, 0, make(PieceType::Rook, PieceColor::PIECEWHITE));
+  Selection s;
+  CHECK(s.click(Coord{0, 0, 0, 0}, game).kind == Intent::Kind::None);
+  CHECK_FALSE(s.active());
+}

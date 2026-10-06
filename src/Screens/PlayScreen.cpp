@@ -113,7 +113,7 @@ void PlayScreen::makeMove(const Chess::Core::Move& move) {
   flight.to = {created.timeLineId(), created.halfTurnNumber()};
   if (sameBoard) flight.from = flight.to;
   if (!flight.piece.empty()) _animator.startFlight(flight);
-  _camera.focusNewest(_layout, BoardLayout::boardRect(flight.to.first, flight.to.second));
+  _camera.focusNewest(BoardLayout::boardRect(flight.to.first, flight.to.second));
 }
 
 void PlayScreen::submit() {

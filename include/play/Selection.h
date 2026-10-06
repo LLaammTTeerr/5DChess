@@ -27,7 +27,7 @@ public:
   void clear();
   bool active() const { return _from.has_value(); }
   const std::optional<Chess::Core::Coord>& from() const { return _from; }
-  /// Legal moves of the selected piece (a promotion appears once per piece choice).
+  /// Legal moves of the selected piece (a promotion appears once per piece choice); mainly for tests.
   const std::vector<Chess::Core::Move>& moves() const { return _moves; }
   /// The squares those moves lead to, each once, in move order.
   const std::vector<Chess::Core::Coord>& targets() const { return _targets; }

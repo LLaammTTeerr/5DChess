@@ -32,25 +32,34 @@ TEST_CASE("BoardLayout: squares have White at the bottom and the a-file on the l
   CHECK(h8.y == board.y);
 }
 
-TEST_CASE("BoardLayout: hitTest inverts squareRect on every square of every board") {
-  Sandbox game(8, std::vector<int>{3, 2}, 4);
-  game.addCreatedTimeLine(-2, 2);
-  game.addCreatedTimeLine(2, 1);
-  BoardLayout layout;
-  REQUIRE(layout.sync(game));
-  CHECK(layout.minTimeline() == -2);
-  CHECK(layout.maxTimeline() == 2);
-  CHECK(layout.boards().size() == 3 + 2 + 2 + 1);
+TEST_CASE("BoardLayout: hitTest inverts squareRect on every square of every board, for several board sizes") {
+  for (int dim : {5, 6, 8}) {
+    CAPTURE(dim);
+    Sandbox game(dim, std::vector<int>{3, 2}, 4);
+    game.addCreatedTimeLine(-2, 2);
+    game.addCreatedTimeLine(2, 1);
+    BoardLayout layout;
+    REQUIRE(layout.sync(game));
+    CHECK(layout.dim() == dim);
+    CHECK(layout.minTimeline() == -2);
+    CHECK(layout.maxTimeline() == 2);
+    CHECK(layout.boards().size() == 3 + 2 + 2 + 1);
 
-  for (const auto& slot : layout.boards()) {
-    for (int x = 0; x < 8; ++x) {
-      for (int y = 0; y < 8; ++y) {
-        const Rect sq = BoardLayout::squareRect(slot.rect, 8, x, y);
-        const auto hit = layout.hitTest(sq.centerX(), sq.centerY());
-        REQUIRE(hit.has_value());
-        CHECK(*hit == Coord{int8_t(x), int8_t(y), int16_t(slot.halfTurn), int16_t(slot.timeline)});
-        // the top-left corner belongs to the square, the point just left of it does not
-        CHECK(layout.hitTest(sq.x, sq.y).has_value());
+    for (const auto& slot : layout.boards()) {
+      for (int x = 0; x < dim; ++x) {
+        for (int y = 0; y < dim; ++y) {
+          const Coord expected{int8_t(x), int8_t(y), int16_t(slot.halfTurn), int16_t(slot.timeline)};
+          const Rect sq = BoardLayout::squareRect(slot.rect, dim, x, y);
+          const auto hit = layout.hitTest(sq.centerX(), sq.centerY());
+          REQUIRE(hit.has_value());
+          CHECK(*hit == expected);
+          // a point just inside the top-left corner belongs to the square, the point just left of it does not
+          const auto corner = layout.hitTest(sq.x + 0.01f, sq.y + 0.01f);
+          REQUIRE(corner.has_value());
+          CHECK(*corner == expected);
+          const auto left = layout.hitTest(sq.x - 0.01f, sq.centerY());
+          CHECK((!left.has_value() || *left != expected));
+        }
       }
     }
   }

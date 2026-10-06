@@ -14,9 +14,10 @@ constexpr float kReducedSmoothTime = 0.06f; // Reduce motion: a quick settle ins
 constexpr float kPadding = 24.0f;           // inside the safe area
 constexpr float kReleaseAfter = 10.0f;      // seconds of free camera before it may fly back to the boards
 constexpr float kReleaseDistance = 500.0f;  // ... if it is farther than this from them
-constexpr float kNearby = 400.0f;           // boards this close to a new board are framed together with it
-constexpr float kComfortableZoom = 1.8f;    // zoom when a piece is picked up on a board seen from far away
 constexpr float kFarZoom = 0.8f;            // below this zoom the camera moves in on a picked-up piece
+constexpr float kMinZoom = 0.1f, kMaxZoom = 5.0f;      // the player's wheel range
+constexpr float kMaxFollowZoom = 3.0f;                 // upper clamp of the automatic zoom
+constexpr float kMinAutoZoom = 0.12f, kMaxAutoZoom = 2.5f; // range of the fit-all zoom
 constexpr float kMinFitZoom = 0.5f, kMaxFitZoom = 1.5f;
 }
 
@@ -93,7 +94,7 @@ void BoardCamera::handleInput() {
   }
 }
 
-void BoardCamera::setZoom(float zoom) { _camera.zoom = std::max(0.1f, std::min(zoom, 5.0f)); }
+void BoardCamera::setZoom(float zoom) { _camera.zoom = std::max(kMinZoom, std::min(zoom, kMaxZoom)); }
 
 void BoardCamera::pan(Vector2 delta) {
   _camera.target = Vector2Add(_camera.target, delta);
@@ -148,7 +149,7 @@ void BoardCamera::update(float dt, const BoardLayout& layout) {
 void BoardCamera::fitZoom(const Rect& bounds) {
   const Vector2 safe = safeSize();
   const float zoom = std::min((safe.x - kPadding * 2) / bounds.w, (safe.y - kPadding * 2) / bounds.h);
-  _targetZoom = std::max(0.12f, std::min(zoom, 2.5f));
+  _targetZoom = std::max(kMinAutoZoom, std::min(zoom, kMaxAutoZoom));
 }
 
 void BoardCamera::followTarget(float dt) {
@@ -163,45 +164,21 @@ void BoardCamera::followZoom(float dt) {
   if (std::abs(_camera.zoom - _targetZoom) > 0.002f) {
     _camera.zoom = UI::Motion::smoothDamp(_camera.zoom, _targetZoom, _zoomVel,
                                           UI::Motion::reduced() ? kReducedSmoothTime : kZoomSmoothTime, dt);
-    _camera.zoom = std::max(0.1f, std::min(_camera.zoom, 3.0f));
+    _camera.zoom = std::max(kMinZoom, std::min(_camera.zoom, kMaxFollowZoom));
   }
   clampToBounds();
 }
 
+// Focusing only moves the camera; the zoom is always fit-all (auto zoom).
 void BoardCamera::focusSelected(const Rect& board) {
   if (_camera.zoom >= kFarZoom) return;
   _target = {board.centerX(), board.centerY()};
-  // Never zoom so far that the board spills out of the safe area
-  const Vector2 safe = safeSize();
-  _targetZoom = std::min({kComfortableZoom, (safe.x - 48.0f) / board.w, (safe.y - 48.0f) / board.h});
-  _targetZoom = std::max(0.5f, std::min(_targetZoom, 3.0f));
   _mode = Mode::Focus;
   _timeSinceInput = 0.0f;
 }
 
-void BoardCamera::focusNewest(const BoardLayout& layout, const Rect& board) {
-  if (layout.boards().empty()) return;
-  const Vector2 center = {board.centerX(), board.centerY()};
-  _target = center;
-
-  if (_autoZoom) {
-    // Frame the boards near the new one (it is not in `layout` yet)
-    float minX = board.x, minY = board.y, maxX = board.x, maxY = board.y;
-    bool any = false;
-    for (const auto& slot : layout.boards()) {
-      const Rect& r = slot.rect;
-      if (Vector2Distance(center, {r.centerX(), r.centerY()}) > kNearby) continue;
-      if (!any) { minX = r.x; minY = r.y; maxX = r.x + r.w; maxY = r.y + r.h; any = true; }
-      minX = std::min(minX, r.x);
-      minY = std::min(minY, r.y);
-      maxX = std::max(maxX, r.x + r.w);
-      maxY = std::max(maxY, r.y + r.h);
-    }
-    if (!any) { minX = board.x; minY = board.y; maxX = board.x + board.w; maxY = board.y + board.h; }
-    const Vector2 safe = safeSize();
-    const float zoom = std::min((safe.x - kPadding * 2) / (maxX - minX), (safe.y - kPadding * 2) / (maxY - minY));
-    _targetZoom = std::max(0.12f, std::min(zoom, 2.0f));
-  }
+void BoardCamera::focusNewest(const Rect& board) {
+  _target = {board.centerX(), board.centerY()};
   _mode = Mode::Focus;
   _timeSinceInput = 0.0f;
 }
