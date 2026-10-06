@@ -134,7 +134,12 @@ void Button::draw(float alpha) const {
   if (alpha <= 0.003f) return;
   if (hot_) UI::Cursor::requestHand();
   auto fade = [alpha](Color c) { c.a = static_cast<unsigned char>(c.a * alpha); return c; };
-  const Rectangle r = {rect.x, rect.y + rise, rect.width, rect.height};
+  Rectangle r = {rect.x, rect.y + rise, rect.width, rect.height};
+  if (pressed_ && enabled && !UI::Motion::reduced()) { // pressed: 0.98x about the centre (tactile; none under Reduce motion)
+    constexpr float kPressScale = 0.98f;
+    r = {r.x + r.width * (1.0f - kPressScale) / 2.0f, r.y + r.height * (1.0f - kPressScale) / 2.0f, r.width * kPressScale,
+         r.height * kPressScale};
+  }
 
   const Skin& k = skin ? *skin : defaultSkin();
   Color bg, border, text;
