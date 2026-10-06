@@ -16,6 +16,9 @@ const char* sfxId(Sfx s) {
         case Sfx::Win:     return "sfx.win";
         case Sfx::Check:   return "sfx.check";
         case Sfx::Promote: return "sfx.promote";
+        case Sfx::Submit:  return "sfx.submit";
+        case Sfx::Branch:  return "sfx.branch";
+        case Sfx::Illegal: return "sfx.illegal";
         default:           return "";
     }
 }

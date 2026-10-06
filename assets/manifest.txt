@@ -109,6 +109,9 @@ sound sfx.draw soundeffect/game-drawn.ogg
 sound sfx.win soundeffect/game-won.ogg
 sound sfx.check soundeffect/check.ogg
 sound sfx.promote soundeffect/promote.ogg
+sound sfx.submit soundeffect/submit.ogg
+sound sfx.branch soundeffect/branch.ogg
+sound sfx.illegal soundeffect/illegal.ogg
 
 music music.calm backgroundmusic/calm-piano-vaporware.ogg
 music music.slow backgroundmusic/slow-piano-intermission.ogg
