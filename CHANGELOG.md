@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- UI architecture: one `Screen` per page (`MainMenuScreen`, `ModeSelectScreen` (was Versus), `SettingsScreen`, `PlayScreen` (was TestingScene)) on a `ScreenStack` that applies navigation at frame end and cross-fades. A small widget layer (`include/ui/Widgets.h`: `Button`, `ButtonList`, `Toggle`, `ui::column` / `ui::row`, a per-frame "pointer consumed" flag) replaces the four menu controllers, the Composite menu model, the ten `ICommand` classes, the GameState/Scene pairs and the SceneManager (about 2,800 lines net removed). Screenshots are unchanged.
+- **Space no longer toggles the navigation buttons; ESC does** (Space only duplicated ESC).
+
 ## [0.4.0] - 2026-10-06
 
 ### Added

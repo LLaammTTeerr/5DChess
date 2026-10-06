@@ -14,7 +14,7 @@ void UpdateDrawFrame() { g_app->frame(); }
 int main() {
     SetConfigFlags(FLAG_MSAA_4X_HINT);
     InitWindow(1400, 800, "5D Chess Game");
-    SetExitKey(KEY_NULL); // ESC toggles the in-game menu; don't let raylib close the window
+    SetExitKey(KEY_NULL); // ESC shows/hides the navigation buttons; don't let raylib close the window
 #ifndef __EMSCRIPTEN__
     // Resolve relative "assets/..." paths next to the binary regardless of launch directory
     ChangeDirectory(GetApplicationDirectory());

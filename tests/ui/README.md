@@ -1,6 +1,6 @@
 # UI screenshot tests
 
-A safety net for UI refactors: the real app (same `SceneManager`, scenes and menus as `src/main.cpp`, through
+A safety net for UI refactors: the real app (same `ScreenStack` and screens as `src/main.cpp`, through
 `App::frame`) is driven by scripts with injected input, screenshots are taken at 1400x800 and compared with the
 committed baselines in `baseline/`.
 

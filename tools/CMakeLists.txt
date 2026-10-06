@@ -9,13 +9,7 @@ foreach(tool theme_preview ui_script)
   target_include_directories(${tool} PRIVATE
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/include/Audio
-    ${PROJECT_SOURCE_DIR}/include/Commands
-    ${PROJECT_SOURCE_DIR}/include/GameStates
-    ${PROJECT_SOURCE_DIR}/include/GameStates/ConcreteGameStates
-    ${PROJECT_SOURCE_DIR}/include/Menu
-    ${PROJECT_SOURCE_DIR}/include/Render
-    ${PROJECT_SOURCE_DIR}/include/Scene
-    ${PROJECT_SOURCE_DIR}/include/Scene/ConcreteScene)
+    ${PROJECT_SOURCE_DIR}/include/Render)
   target_compile_definitions(${tool} PRIVATE FDCHESS_VERSION="${PROJECT_VERSION}")
   target_link_libraries(${tool} PRIVATE chess_core raylib)
   if(APPLE)

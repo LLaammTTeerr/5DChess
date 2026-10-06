@@ -32,9 +32,9 @@ Chess with multiverse time travel: a 5D Chess game with timelines, built in C++2
 This project implements a 5D Chess game with an advanced UI system featuring:
 - Multi-timeline chess mechanics
 - Interactive board visualization with highlighting and an auto-focusing camera
-- Dynamic menu system with hierarchical navigation
-- In-turn undo, deselect and submit controls (command pattern for menu actions)
-- State-driven scene management
+- Small widget layer (buttons, lists, toggles) and a screen stack with cross-fades
+- In-turn undo, deselect and submit controls
+- One `Screen` per page (main menu, mode select, settings, game), navigated with direct calls
 - Modular rendering pipeline
 
 ## Screenshots
@@ -167,20 +167,16 @@ The game changes its working directory to the executable's folder, so it can be 
 ├── include/                   # Header files
 │   ├── engine/                # Value API, .5dp positions, GameCatalog (no raylib)
 │   ├── services/              # Assets, settings and other app services
-│   ├── Commands/              # Menu and in-game commands (Command pattern)
-│   ├── GameStates/            # State pattern for game flow
-│   ├── Menu/                  # Menu system (Composite pattern)
 │   ├── Render/                # Rendering and view components
-│   └── Scene/                 # Scene management
+│   ├── Screens/               # One Screen per page of the game
+│   └── ui/                    # Widget layer and the Screen / ScreenStack model
 ├── src/                       # Source files
-│   ├── Commands/
-│   ├── GameStates/
-│   ├── Menu/
 │   ├── Render/
-│   ├── Scene/
 │   ├── engine/                # Rules engine implementation
 │   ├── services/
-│   ├── App.cpp                # App context (assets, audio, settings, scenes)
+│   ├── App.cpp                # App context (assets, audio, settings, screens)
+│   ├── Screens/               # MainMenuScreen, ModeSelectScreen, SettingsScreen, PlayScreen
+│   ├── ui/                    # Widgets (Button, ButtonList, Toggle, layout) and ScreenStack
 │   ├── main.cpp               # Entry point
 │   └── chess.cpp              # Core rules engine (no raylib dependency)
 ├── tests/                     # doctest unit and property tests for the engine
@@ -199,10 +195,10 @@ The game changes its working directory to the executable's folder, so it can be 
 ### Game Controls
 - **Mouse Click**: Select a piece, then click a highlighted square to move (hovering a square only tints it; legal targets appear after selecting a piece)
 - **Drag / Mouse Wheel**: Pan and zoom the camera
-- **In-game Menu**: Undo, Deselect and Submit buttons (greyed out when unavailable)
+- **In-game buttons**: Undo, Deselect and Submit (greyed out when unavailable)
 
 ### Keyboard Shortcuts
-- **ESC / Space**: Toggle the navigation menu (shown by default, with Back to return to game selection)
+- **ESC**: Show or hide the navigation buttons (shown by default; Back returns to game selection)
 - **Z**: Toggle camera auto-zoom
 - **X**: Fit the boards in view (manual auto-zoom)
 
@@ -219,14 +215,14 @@ The game changes its working directory to the executable's folder, so it can be 
 ### User Interface
 - **Runs everywhere**: native on Linux, macOS and Windows, and in the browser (WebAssembly build)
 - **Animated main menu**: a code-drawn hero with a drifting field of timeline boards and idling Pixel creatures
-- **Motion**: shared tokens and easing (`include/Render/Motion.h`); pieces slide or arc across boards, new boards grow in, selected pieces lift, menus stagger in, scenes cross-fade, and a turn banner announces the side to move. Animations never delay game state or input. Settings -> Display -> **Motion: Reduced** makes changes instant or short cross-fades
+- **Motion**: shared tokens and easing (`include/Render/Motion.h`); pieces slide or arc across boards, new boards grow in, selected pieces lift, menus stagger in, screens cross-fade, and a turn banner announces the side to move. Animations never delay game state or input. Settings -> Display -> **Motion: Reduced** makes changes instant or short cross-fades
 - **Pixel theme with blinking creatures**: Pixel-theme pieces blink at random intervals when zoomed in
 - **HUD and controls bar**: side to move, turn, next-step hint, and an end-of-game card
 - **Camera**: smooth auto-centering and auto-zoom (spring-damped), plus manual pan and zoom
 - **Menus**: button and list layouts, rounded buttons with smooth hover, warm cream + terracotta theme (`include/Render/UITheme.h`)
 
 ### Audio
-- **Background music**: three CC0 piano tracks, off by default; pick one in Settings → Music. The choice is global and persists across scenes; the track is streamed and starts after your first click (browser autoplay policy).
+- **Background music**: three CC0 piano tracks, off by default; pick one in Settings → Music. The choice is global and persists across screens; the track is streamed and starts after your first click (browser autoplay policy).
 - **Sound effects**: move, capture, game won and menu-button clicks, with an on/off toggle ("Sound effects" in Settings → Music). Check, castle, promotion and draw sounds are bundled but wait for those rules to exist.
 - Without an audio device the game runs silently.
 
