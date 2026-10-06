@@ -17,8 +17,8 @@ public:
   bool isOpen() const { return _open; }
   void show(Chess::PieceColor color);
   void hide() { _open = false; }
-  /// Put the panel next to `square` (screen rectangle of the promotion square), inside `bounds`: above it, or below
-  /// when there is no room above. Call every frame while open: the camera may still be moving.
+  /// Put the panel next to `square` (screen rectangle of the promotion square), inside `bounds`: above it, or beside
+  /// it when there is no room above. Call every frame while open: the camera may still be moving.
   void place(Rectangle square, Rectangle bounds);
   /// Updates the buttons (they take the pointer, as does the panel) and returns the piece chosen this frame.
   std::optional<Chess::PieceType> update(float dt, bool gray, const ui::Skin* skin);

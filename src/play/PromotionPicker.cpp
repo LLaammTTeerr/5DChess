@@ -27,7 +27,11 @@ void PromotionPicker::place(Rectangle square, Rectangle bounds) {
   const float w = 4 * kButton + 3 * kGap + 2 * kPad, h = kButton + 2 * kPad;
   float x = square.x + square.width / 2 - w / 2;
   float y = square.y - h - kOffset;                                  // above the square
-  if (y < bounds.y) y = square.y + square.height + kOffset;          // no room: below it
+  if (y < bounds.y) { // no room above: beside the square, so that neither the square nor the pawn below it is covered
+    x = square.x + square.width + kOffset;
+    y = square.y + square.height / 2 - h / 2;
+    if (x + w > bounds.x + bounds.width - 6.0f) x = square.x - kOffset - w; // no room on the right either
+  }
   x = std::clamp(x, bounds.x + 6.0f, std::max(bounds.x + 6.0f, bounds.x + bounds.width - w - 6.0f));
   y = std::clamp(y, bounds.y, std::max(bounds.y, bounds.y + bounds.height - h));
   _panel = {std::floor(x), std::floor(y), w, h};
