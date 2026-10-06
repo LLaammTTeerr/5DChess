@@ -5,9 +5,46 @@
 #include "Render/UITheme.h"
 #include "Screens/MainMenuScreen.h"
 #include "play/BoardView.h"
+#include "ui/Audit.h"
+#include <cmath>
+#include <string>
+#include <vector>
 
 namespace {
-constexpr float kOptionW = 200.0f, kOptionGap = 20.0f;
+// Every tab has the same two columns: the options at the left (a column from kColumnTop down), what they do at the right
+constexpr float kColumnX = 50.0f, kOptionW = 300.0f, kOptionGap = 20.0f, kColumnTop = 222.0f;
+constexpr float kPaneX = kColumnX + kOptionW + 60.0f;
+
+// Greedy word wrap to `width` pixels
+std::vector<std::string> wrapText(::Font font, float size, const std::string& text, float width) {
+  std::vector<std::string> lines;
+  std::string line;
+  size_t i = 0;
+  while (i < text.size()) {
+    size_t j = text.find(' ', i);
+    if (j == std::string::npos) j = text.size();
+    const std::string word = text.substr(i, j - i);
+    const std::string trial = line.empty() ? word : line + " " + word;
+    if (!line.empty() && MeasureTextEx(font, trial.c_str(), size, 0.0f).x > width) {
+      lines.push_back(line);
+      line = word;
+    } else {
+      line = trial;
+    }
+    i = j + 1;
+  }
+  if (!line.empty()) lines.push_back(line);
+  return lines;
+}
+
+const char* describeView(BoardView view) {
+  switch (view) {
+    case BoardView::DeepSpace: return "Deep space: a dark starfield with glowing boards, easy on the eyes at night.";
+    case BoardView::Atlas: return "Atlas: warm paper, a coloured band for every timeline.";
+    case BoardView::Blueprint: return "Blueprint: sharp ink lines on white, like a technical drawing.";
+  }
+  return "";
+}
 }
 
 SettingsScreen::SettingsScreen() {
@@ -21,16 +58,12 @@ void SettingsScreen::openTab(App& app, int tab) {
   if (_themeIndex < 0)  // highlight the theme in use (the saved one, or the default)
     for (int i = 0; i < Themes::count; ++i)
       if (Themes::all[i].theme->prefix == std::string(app.settings.theme.prefix)) _themeIndex = i;
-  const float W = static_cast<float>(GetScreenWidth()), H = static_cast<float>(GetScreenHeight());
-  // Themes sit in a column at the left (next to the preview); the other tabs centre theirs
-  const float displayW = 300.0f; // "Board view: Deep space" needs more room than the other options
-  const Rectangle area = tab == Theme ? Rectangle{50.0f, 0.0f, kOptionW, H}
-                         : tab == Display ? Rectangle{(W - displayW) / 2, 100.0f, displayW, H}
-                                          : Rectangle{(W - kOptionW) / 2, 100.0f, kOptionW, H};
+  const float H = static_cast<float>(GetScreenHeight());
+  const Rectangle area = {kColumnX, kColumnTop, kOptionW, H - kColumnTop};
   const auto& tracks = AudioManager::tracks();
   // Music: Off, tracks, SFX toggle; Display: board view, motion toggle
   const int count = tab == Theme ? Themes::count : tab == Music ? static_cast<int>(tracks.size()) + 2 : 2;
-  const auto slots = ui::column(area, count, UI::Space::buttonHeight, kOptionGap);
+  const auto slots = ui::column(area, count, UI::Space::buttonHeight, kOptionGap, ui::Align::Top);
 
   std::vector<std::string> labels;
   _toggle.reset();
@@ -82,10 +115,25 @@ void SettingsScreen::draw(App& app) const {
   if (_boardView) _boardView->draw();
 
   if (_tab == Theme && _themeIndex >= 0) {  // preview of the chosen piece theme
-    for (const auto& [name, x] : {std::pair{"white_pawn", 300.0f}, {"black_king", 450.0f}, {"white_queen", 600.0f}}) {
+    for (const auto& [name, x] : {std::pair{"white_pawn", kPaneX}, {"black_king", kPaneX + 150.0f}, {"white_queen", kPaneX + 300.0f}}) {
       Texture2D& piece = app.themes.getPieceTexture(name);
       DrawTexturePro(piece, {0, 0, static_cast<float>(piece.width), static_cast<float>(piece.height)},
-                     {x, 300, 100.0f, 100.0f}, {0, 0}, 0.0f, WHITE);
+                     {x, kColumnTop + 40.0f, 100.0f, 100.0f}, {0, 0}, 0.0f, WHITE);
+    }
+  }
+  // What the options of the open tab do, at the right
+  std::string note;
+  if (_tab == Music) note = "Music plays on every screen. Choose Off to silence it; sound effects are separate.";
+  else if (_tab == Display && _boardView)
+    note = std::string(describeView(boardview::all[_boardView->value()])) + " Reduced motion swaps slides and bounces for quick fades.";
+  if (!note.empty()) {
+    const ::Font font = UI::Fonts::body();
+    const float room = static_cast<float>(GetScreenWidth()) - kPaneX - 50.0f;
+    float y = kColumnTop + 6.0f;
+    for (const std::string& line : wrapText(font, UI::Font::body, note, room)) {
+      DrawTextEx(font, line.c_str(), {kPaneX, std::floor(y)}, UI::Font::body, 0.0f, UI::Color::textMuted);
+      ui::audit::fit("settings note", line, MeasureTextEx(font, line.c_str(), UI::Font::body, 0.0f).x, UI::Font::body, {0, 0, room, 30.0f});
+      y += 26.0f;
     }
   }
   _back.draw(app.screens.navAlpha());

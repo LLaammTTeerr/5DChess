@@ -1,6 +1,8 @@
 #pragma once
 #include <array>
 #include <optional>
+#include <string>
+#include <utility>
 #include <raylib.h>
 #include "play/BoardLayout.h"
 #include "play/BoardRenderer.h"
@@ -33,6 +35,26 @@ public:
 
   const SoftBox& soft() const { return _soft; }
 
+  /// World x of the centre of the column of (fractional) half-turn `halfTurn`; the present marker slides between columns by
+  /// moving through the values in between (Submit animation).
+  static float presentColumnX(float halfTurn);
+  /// Draw the present marker (column glow, ruler badge) at this (fractional) half-turn instead of the view's present; clear to
+  /// follow the view again. The caller owns the tween.
+  void setPresentColumn(float halfTurn) { _presentOverride = halfTurn; }
+  void clearPresentColumn() { _presentOverride.reset(); }
+
+  /// The overview strip drawn at the right end of the ruler while some boards are off screen (or tiny): one cell per board, the
+  /// present column tinted, the visible part outlined. Geometry for the camera code: nullopt when the strip is not shown.
+  struct Minimap {
+    Rectangle rect{};        // screen rectangle of the strip
+    float cell = 6.0f;       // pixels per board (cells touch with a 1 px gap)
+    int firstHalfTurn = 0;   // column of the leftmost cell
+    int topTimeline = 0;     // timeline of the top row
+  };
+  static std::optional<Minimap> minimap(const SceneFrame& f, float rulerY, float rulerH);
+  /// The board (timeline, half-turn) under the screen point on the strip, if any.
+  static std::optional<std::pair<int, int>> minimapBoardAt(const SceneFrame& f, float rulerY, float rulerH, Vector2 point);
+
   /// World rectangle covering the jump arcs, their badges and labels (nullopt: no jumps); the camera keeps it on screen.
   static std::optional<Rect> jumpBounds(const BoardStyle& style, const MultiverseView& view);
 
@@ -56,9 +78,15 @@ public:
   /// The turn ruler (T1 T2 ... with w/b ticks) in the row [y, y + height) and the present marker.
   void drawRuler(const SceneFrame& f, float y, float height) const;
   /// Left labels L0, L+1, L-1 ... with "inactive" tags; `area` is the screen rectangle the labels may use.
+  /// It also paints the tooltip queued by the labels drawn before it (jump labels, card labels, the ruler): call it last.
   void drawLaneLabels(const SceneFrame& f, Rectangle area) const;
 
 private:
+  std::optional<float> _presentOverride;
+  struct PendingTip { Rectangle anchor{}; std::string text; };
+  mutable std::optional<PendingTip> _tip;  // a tooltip asked for this frame, drawn at the end of drawLaneLabels (outside every clip)
+  void queueTip(Rectangle anchor, std::string text) const; // remembered only while the pointer is over `anchor`
+  float presentColumn(const SceneFrame& f) const { return _presentOverride ? *_presentOverride : static_cast<float>(f.view.presentHalfTurn); }
   SoftBox _soft;
   Texture2D _background{}, _aurora{};
   int _backgroundW = 0, _backgroundH = 0;

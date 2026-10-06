@@ -24,6 +24,16 @@ std::vector<Rectangle> column(Rectangle area, int n, float itemH, float gap, Ali
 // n items of width itemW side by side with `gap`, centred horizontally in area, each as tall as area.
 std::vector<Rectangle> row(Rectangle area, int n, float itemW, float gap);
 
+// ---- Tooltip ----------------------------------------------------------------------------------------------
+// Immediate mode: call every frame while the pointer is over `anchor` (Button does it for its `tip`, other callers check the
+// pointer themselves with hovered()). The bubble appears under the anchor (above it near the bottom) after the pointer has rested
+// on the same anchor for kTooltipDwell seconds, fading in (at once under Reduce motion); `text` may hold '\n'. Draw late in the
+// frame: it is painted at once, over what was drawn before it.
+inline constexpr double kTooltipDwell = 0.4;
+void tooltip(Rectangle anchor, const std::string& text);
+/// True when the pointer is inside `r` (screen space).
+bool hovered(Rectangle r);
+
 // ---- Skin -----------------------------------------------------------------------------------------------
 // The colours of a Button. The default is the cream + terracotta look of the menus; the game screen passes the
 // skin of the current board view (Deep space: dark, Atlas: paper, Blueprint: sharp ink on white).
@@ -46,7 +56,10 @@ struct Button {
   Rectangle rect{};
   bool primary = false;
   bool enabled = true;
-  bool ellipsize = false;               // a label that still does not fit at the smallest size is cut and ends in "..."
+  bool ellipsize = false;               // a label that does not fit is cut and ends in "..." (at its nominal size: no shrinking first)
+  bool leftAligned = false;             // label at the left edge (rows of a list) instead of centred
+  std::string detail;                   // second segment, muted and right-aligned ("12 turns . 2026-01-01"); implies a left-aligned label
+  std::string tip;                      // tooltip shown after the pointer rests on the button (also while it is disabled)
   const Skin* skin = nullptr;           // nullptr: defaultSkin()
   const Texture2D* icon = nullptr;      // drawn centred instead of the label (e.g. a piece sprite)
 
@@ -61,7 +74,7 @@ struct Button {
   void draw(float alpha = 1.0f) const;
 
 private:
-  bool hot_ = false, pressStartedHere_ = false, pressed_ = false, entering_ = false;
+  bool hot_ = false, over_ = false, pressStartedHere_ = false, pressed_ = false, entering_ = false;
   float hover_ = 0.0f; // 0..1, eased toward hot_ over ~150 ms
   UI::Motion::Tween enter_;
 };
@@ -109,9 +122,11 @@ public:
   void draw(float alpha = 1.0f) const;
   /// A disabled item looks dimmed and ignores clicks (it still takes the pointer).
   void setEnabled(size_t index, bool enabled) { if (index < items_.size()) items_[index].enabled = enabled; }
-  /// Long labels end in "..." instead of overflowing the button (save slot rows).
-  void setEllipsize(bool on) { for (Button& b : items_) b.ellipsize = on; }
-  void setLabel(size_t index, std::string label) { if (index < items_.size()) items_[index].label = std::move(label); }
+  /// Rows of a list (save slots): labels left-aligned, long ones end in "..." instead of overflowing the button.
+  void setEllipsize(bool on) { for (Button& b : items_) b.ellipsize = b.leftAligned = on; }
+  void setLabel(size_t index, std::string label, std::string detail = {}) {
+    if (index < items_.size()) { items_[index].label = std::move(label); items_[index].detail = std::move(detail); }
+  }
 
 private:
   std::vector<Button> items_;
@@ -126,6 +141,7 @@ private:
   Rectangle itemsArea() const { return {view_.x, view_.y, view_.width - scrollbarW_, view_.height}; }
   Rectangle scrollbar() const { return {view_.x + view_.width - scrollbarW_, view_.y, scrollbarW_, view_.height}; }
   Rectangle handle() const;
+  bool moreBelow() const { return clipped() && maxScroll_ > 0.0f && scroll_ < maxScroll_ - 0.5f; }
   void scrollInput();
 };
 

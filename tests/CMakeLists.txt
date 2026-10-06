@@ -19,6 +19,7 @@ add_executable(chess_tests
   confirm_test.cpp
   selection_test.cpp
   layout_test.cpp
+  textfit_test.cpp
   view_test.cpp
   guide_test.cpp
   ai_test.cpp

@@ -1,0 +1,29 @@
+# Tooltips (400 ms dwell, then a short fade): Submit lists the moves it hands in, Undo says what it takes back, the lane pill says how
+# its timeline began, a ruler tick names its turn. A tooltip is not shown before the dwell has passed.
+# Layout (1400x800): Versus (150,250), Standard (690,184), Play (808,712); in the game Undo (548,90), Submit (841,90), the L0 pill (47,437)
+# and the ruler's T1 tick (on e2-e4 the first board's column) at about (490,141).
+wait 20
+click 150 250        # Versus
+wait 30
+click 690 184        # Standard
+wait 20
+click 808 712        # Play
+wait 120
+clicksq 0 0 e2
+wait 30
+clicksq 0 0 e4
+wait 40
+move 841 90          # Submit: the pointer arrives ...
+wait 12
+capture layout-tooltip-too-early   # ... and 200 ms later no tooltip yet
+wait 40
+capture layout-tooltip-submit
+move 548 90          # Undo
+wait 60
+capture layout-tooltip-undo
+move 47 437          # the L0 lane pill
+wait 60
+capture layout-tooltip-lane
+move 490 141         # the ruler
+wait 60
+capture layout-tooltip-ruler

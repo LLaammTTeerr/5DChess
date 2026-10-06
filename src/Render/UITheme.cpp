@@ -1,5 +1,6 @@
 #include "Render/UITheme.h"
 #include "App.h"
+#include "ui/Audit.h"
 #include <cmath>
 #include <rlgl.h>
 #include <vector>
@@ -19,6 +20,8 @@ namespace Fonts {
 
 Vector2 drawTextCentered(::Font font, const char* text, float cx, float y, float size, ::Color color) {
     Vector2 s = MeasureTextEx(font, text, size, 0.0f);
+    if (ui::audit::enabled())
+        ui::audit::within("centred text", text, {cx - s.x / 2.0f, y, s.x, s.y}, {0.0f, 0.0f, static_cast<float>(GetScreenWidth()), static_cast<float>(GetScreenHeight())});
     DrawTextEx(font, text, {std::floor(cx - s.x / 2.0f), std::floor(y)}, size, 0.0f, color);
     return s;
 }
@@ -52,12 +55,19 @@ void restoreOpaqueAlpha(int width, int height) {
 }
 
 namespace Cursor {
-static bool g_requested = false;
+static Kind g_requested = Kind::Default;
 void beginFrame() {
-    SetMouseCursor(g_requested ? MOUSE_CURSOR_POINTING_HAND : MOUSE_CURSOR_DEFAULT);
-    g_requested = false;
+    switch (g_requested) {
+        case Kind::Hand: SetMouseCursor(MOUSE_CURSOR_POINTING_HAND); break;
+        case Kind::Grab: SetMouseCursor(MOUSE_CURSOR_RESIZE_ALL); break;
+        case Kind::NotAllowed: SetMouseCursor(MOUSE_CURSOR_NOT_ALLOWED); break;
+        case Kind::Default: SetMouseCursor(MOUSE_CURSOR_DEFAULT); break;
+    }
+    g_requested = Kind::Default;
 }
-void requestHand() { g_requested = true; }
+void request(Kind kind) {
+    if (static_cast<int>(kind) > static_cast<int>(g_requested)) g_requested = kind;
+}
 }
 
 }

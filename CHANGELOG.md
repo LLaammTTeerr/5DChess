@@ -6,7 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Layout audit.** Under the UI test harness every text drawn through a button, the HUD, a panel, the lane / card / ruler labels or a centred title reports its measured size and the box it must fit in (`include/ui/Audit.h`); anything that overflows prints a `UI-OVERFLOW` line and `tests/ui/run.sh` fails (a label drawn smaller than nominal prints a `UI-SHRUNK` note). `ui::ellipsized` (`include/ui/TextFit.h`) is the one cut-with-dots routine, unit tested.
+- **Tooltips**: `ui::tooltip` (400 ms dwell, then a short fade; none under Reduce motion) on Submit (the moves it hands in, or why it is disabled), Undo, Deselect, the lane pills ("L+1: created by White at T3, branching from L0", plus why a timeline is inactive), the ruler ticks ("Turn 3, White"), jump badges (the text that no longer fits beside them) and the minimap. `ui::Button::tip` makes any button show one.
+- **Cursor kinds** for the board code: `UI::Cursor::request(Hand | Grab | NotAllowed)`.
+- **Minimap** at the right end of the ruler while part of the multiverse is off screen or tiny (one cell per board, the present column tinted, the visible part outlined); `BoardScene::minimap` / `minimapBoardAt` give the camera code its geometry.
+- **End card buttons**: Rematch (same mode, side and level; fresh seed against the computer), Review board (dismisses the card, the pill keeps the result) and Back to menu; the scrim is lighter so the final position stays readable.
+- **Undo label and badge**: "Undo move" (a move of this turn) or "Undo turn" (against the computer), with a count badge when the turn has several moves.
+- HUD data for the camera: `HudData::cameraLabel`, `nextBoardLabel`, `rightInset`; `ActionRow` returns `Overview` / `NextBoard` (the buttons and the new controls line show as soon as the screen reports a camera label); `BoardScene::presentColumnX` / `setPresentColumn` for the present-marker slide.
+
 ### Changed
+- The "White / Black to move" banner no longer covers the turn ruler: after a turn change the pill's hint segment cross-fades to it for 1.2 s (and it is skipped while the computer is to move).
+- The status pill, the action row and the controls bar centre on the board view, not the window, beside the Puzzle and Guide panels; the pill cuts its hint with "..." rather than run under the panel. The controls bar fades out after three idle seconds and returns when the pointer moves or nears the bottom.
+- The "Present" marker on the ruler now names its turn ("Present . T3w") and no longer hides the turn label; the lane bands stop at the boards' area instead of running under the ruler.
+- Jump arcs run through the gaps between boards (down into the lane gap, along it, up or down the column gap) instead of across the boards below; the jump badge slides along the arc to a spot no board lies under and its text label shows only where it covers nothing (otherwise it is the badge's tooltip). Lane sub-lines, tags and card labels are at least 12-14 px; card labels never leave their card and, too small to fit, appear on the hovered board only.
+- The mode list holds a whole number of rows (no row cut through its text) and fades where it continues; the load and save slot rows put the title at the left and "7 turns . date" muted at the right and cut only the title (labels no longer shrink before they are cut).
+- The promotion picker opens above or below the board's card, on the side the promotion square is nearest, with a thin line to the square, instead of covering the neighbouring ranks.
+- Settings: every tab has the same two columns (options at the left, what they do at the right).
+- A wrong puzzle answer stays on the board until **Try again** is pressed (it used to reset itself after 2.4 s).
 - Release notes on GitHub now start with the version's CHANGELOG section (`scripts/changelog_section.sh`), followed by the list of merged PRs; the release workflow fails early if the section is missing.
 
 ## [1.0.0] - 2026-10-06

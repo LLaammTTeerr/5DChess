@@ -76,11 +76,23 @@ mode, Play) or by a record with the `# vs-computer:` line (`record`, `slot`).
 | load-records | the Load screen with a branch record and a corrupted one ("This save can't be loaded"), Delete with confirmation, loading the branch game |
 | puzzles-list | main menu -> Puzzles: the list, three tiers, no check marks |
 | puzzles-open | the first puzzle opened from the list; Hint (text), then Show piece (the rook ringed) |
-| puzzles-wrong | a wrong move (Re1-e2, submitted): "Not quite - try again" with Try again, then the automatic reset |
+| puzzles-wrong | a wrong move (Re1-e2, submitted): "Not quite - try again" with Try again; the position is still there 3 s later (no automatic reset), Try again resets it |
 | puzzles-solve | the solution Re1-e8: the success card, then the list with a check mark |
 | puzzles-refuted | a first turn of a mate in 2 that does not win by force: Black's refuting defence is played, then "Not quite - Black has a defence" |
 | puzzles-mate2 | a mate in 2: the engine's reply played on the board and the second turn awaited; Show solution replayed from the start |
+| layout-embedded | the Guide and a puzzle: the pill, action row and controls bar centred on the board view beside the side panel; the Submit tooltip listing the pending move |
+| layout-banner | Motion: Full: the turn change after Submit 3, 9, 24, 48 and 90 frames in (the pill's hint segment cross-fades to "Black to move"; nothing covers the ruler) |
+| layout-tooltips | tooltips: none before the 400 ms dwell, then Submit (the moves), Undo, the L0 lane pill, a ruler tick |
+| layout-long-labels | the longest slot row ("Simplify - Knight vs Bishop vs Computer" with its turns and date) in the Load screen and the Save panel |
 | rules-visuals | tests/ui/positions: check (attack line from the rook to the king), an inactive timeline (dimmed, tagged), the promotion picker and a chosen promotion |
+
+## Layout audit
+
+Every text drawn through a button, the HUD (pill, controls bar), a side panel, the lane / card / ruler labels or a centred title reports
+its measured size (`MeasureTextEx` with the real fonts) and the box it must fit in (`include/ui/Audit.h`). A text that does not fit prints
+`UI-OVERFLOW ...` to the script's log and `run.sh` then exits non-zero (even when every screenshot matches); a label that had to be drawn
+smaller than its nominal size prints a `UI-SHRUNK` note. The log's last line, `UI-AUDIT <n> texts checked`, shows the audit ran. The
+game's canvas is 1400x800 on every platform (the web page scales it with CSS), so this is also the web build's layout.
 
 ## Tolerance
 

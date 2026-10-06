@@ -62,6 +62,9 @@ struct SlotSummary {
   bool vsComputer = false; ///< the record carries the vs-Computer metadata (docs/NOTATION.md)
   /// "Standard - 7 turns - 2026-10-06 14:32" / "Standard vs Computer - 7 turns - ..." / "Empty" / "Unreadable save"
   std::string describe() const;
+  /// The two halves of that line for a row of the slot list: "Standard vs Computer" / "7 turns . 2026-10-06 14:32" (empty for a slot with no game).
+  std::string headline() const;
+  std::string detail() const;
 };
 
 struct LoadResult {

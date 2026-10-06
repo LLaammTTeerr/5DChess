@@ -1,0 +1,6 @@
+5dchess-record 1
+# saved: 2026-01-01 12:00
+# vs-computer: you=white level=normal seed=3
+mode: knight-vs-bishop
+T1w: (L0T1)a2>(L0T1)a3
+T1b: (L0T1)a5>(L0T1)a4

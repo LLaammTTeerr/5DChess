@@ -4,6 +4,7 @@
 #include <string>
 #include "App.h"
 #include "Render/UITheme.h"
+#include "ui/Audit.h"
 #include "Screens/MainMenuScreen.h"
 #include "Screens/PuzzleScreen.h"
 #include "puzzles/Progress.h"
@@ -105,6 +106,11 @@ void PuzzleListScreen::draw(App& app) const {
     const Vector2 size = MeasureTextEx(UI::Fonts::mono(), goal.c_str(), UI::Font::mono, 0.0f);
     DrawTextEx(UI::Fonts::mono(), goal.c_str(), {std::floor(right - size.x), std::floor(midY - UI::Font::mono / 2.0f)}, UI::Font::mono, 0.0f,
                UI::Color::textMuted);
+    if (ui::audit::enabled()) {
+      // the title and the goal text share the row: they must not run into each other or leave it
+      const float titleW = MeasureTextEx(UI::Fonts::button(), p.title.c_str(), UI::Font::button, 0.0f).x;
+      ui::audit::fit("puzzle row", p.title + " | " + goal, titleW + size.x + 2 * kPad + 16.0f + (done ? 34.0f : 0.0f), UI::Font::button, {0, 0, r.width, r.height});
+    }
   }
   UI::drawTextCentered(UI::Fonts::body(), "Pick a puzzle. White always moves first.", cx, static_cast<float>(GetScreenHeight()) - 44.0f,
                        UI::Font::body, UI::Color::textMuted);

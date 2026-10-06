@@ -1,6 +1,6 @@
 # The interactive Guide: main menu -> Guide, then every page (Right arrow turns the page), with the "Try it" goal played on
 # most of them. Squares are clicked by name (`clicksq <timeline> <half-turn> <square>`), see game-standard.ui.
-# Layout: the main menu's Guide item (the fourth of Versus, Load game, Puzzles, Guide, Settings, Exit) is at (150, 430); Submit is the third button of the action row at (842, 90).
+# Layout: the main menu's Guide item (the fourth of Versus, Load game, Puzzles, Guide, Settings, Exit) is at (150, 430); Submit is the third button of the action row at (632, 90).
 wait 20
 click 150 430        # Guide
 wait 40
@@ -10,7 +10,7 @@ wait 40
 capture guide-01-pawn-selected
 clicksq 0 2 d4
 wait 60
-click 842 90         # Submit
+click 632 90         # Submit
 wait 60
 capture guide-01-turn-submitted
 
@@ -46,7 +46,7 @@ wait 40
 clicksq 1 4 a3
 wait 60
 capture guide-04-both-moved
-click 842 90         # Submit
+click 632 90         # Submit
 wait 60
 capture guide-04-turn-submitted
 
@@ -82,7 +82,7 @@ wait 40
 clicksq 0 4 d1
 wait 60
 capture guide-07-out-of-check
-click 842 90         # Submit
+click 632 90         # Submit
 wait 60
 capture guide-07-turn-submitted
 
@@ -93,7 +93,7 @@ clicksq 0 0 a1
 wait 40
 clicksq 0 0 a8
 wait 60
-click 842 90         # Submit
+click 632 90         # Submit
 wait 120
 capture guide-08-mate
 

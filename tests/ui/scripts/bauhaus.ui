@@ -1,7 +1,7 @@
 # Bauhaus pieces: Settings -> Piece Theme -> Bauhaus (3rd option; with six themes the options are 200x44 at x=50, centre y=240+64*i), then the same Standard mid-game as board-styles.ui
 # (two turns played, the white knight picked up) in the Atlas, Blueprint (greyscale pieces) and Deep space board views, cycled as there.
 # Layout (1400x800): main menu Settings (150,490; (150,520) once a game left an autosave); Piece Theme tab (520,172); Display tab (880,172);
-# Board view button (700,468); in the game Back (125,25) leads to the mode list, whose Back is (700,712). Squares are clicked by name.
+# Board view button (200,244); in the game Back (125,25) leads to the mode list, whose Back is (700,712). Squares are clicked by name.
 wait 20
 click 150 490        # Settings
 wait 30
@@ -36,7 +36,7 @@ click 150 520        # Settings
 wait 30
 click 880 172        # Display tab
 wait 20
-click 700 468        # Board view: Blueprint
+click 200 244        # Board view: Blueprint
 wait 10
 mode standard
 wait 40
@@ -63,7 +63,7 @@ click 150 520
 wait 30
 click 880 172
 wait 20
-click 700 468        # Board view: Deep space (Blueprint -> Deep space)
+click 200 244        # Board view: Deep space (Blueprint -> Deep space)
 wait 10
 mode standard
 wait 40

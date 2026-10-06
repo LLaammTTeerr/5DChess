@@ -56,7 +56,7 @@ inline constexpr float lg = 24.0f;
 inline constexpr float xl = 32.0f;
 inline constexpr float buttonHeight = 44.0f; // minimum touch/click target
 inline constexpr float buttonSpacing = 12.0f;
-inline constexpr float actionButtonWidth = 130.0f; // in-game Undo / Deselect / Submit
+inline constexpr float actionButtonWidth = 140.0f; // in-game Undo / Deselect / Submit
 inline constexpr float radius = 0.25f;       // DrawRectangleRounded roundness
 inline constexpr float outline = 3.0f;       // selection outline
 }
@@ -83,7 +83,7 @@ inline constexpr float safeGap        = 12.0f;    // breathing room between UI a
 inline constexpr float sideInset      = 24.0f;
 inline constexpr float rulerY         = actionRowBottom + 8.0f;  // the turn ruler (T1 T2 ...) under the action row
 inline constexpr float rulerH         = 30.0f;
-inline constexpr float laneLabelW     = 112.0f;  // left column of the lane labels (L0, L+1, ...)
+inline constexpr float laneLabelW     = 128.0f;  // left column of the lane labels (L0, L+1, ...)
 inline constexpr float safeTop    = rulerY + rulerH + 10.0f;
 inline constexpr float safeBottom = controlsBarH + controlsBarMargin + safeGap;
 }
@@ -106,9 +106,13 @@ inline ::Color withAlpha(::Color c, unsigned char a) { return {c.r, c.g, c.b, a}
 // Pointing-hand cursor over interactive items. Call Cursor::beginFrame() once per frame before
 // drawing items; items call Cursor::requestHand() while drawn hovered. The result applies one
 // frame later, and falls back to the default cursor when nothing requested it.
+// Other cursors for the board: Grab (dragging the camera), NotAllowed (the opponent's piece, the computer's turn). The strongest
+// request of a frame wins (NotAllowed > Grab > Hand).
 namespace Cursor {
+enum class Kind { Default, Hand, Grab, NotAllowed };
 void beginFrame();
-void requestHand();
+void request(Kind kind);
+inline void requestHand() { request(Kind::Hand); }
 }
 
 }
