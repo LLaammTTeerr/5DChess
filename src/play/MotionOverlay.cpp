@@ -108,7 +108,7 @@ void drawMovePreview(const MoveAnimator::PreviewLayer& layer, const Chess::IGame
     if (occupied) DrawRing(c, sq.w * 0.40f, sq.w * 0.40f + 1.8f * px, 0, 360, 32, fade(style.check, feedback::kPreviewAlpha * a));
     else DrawRing(c, sq.w * 0.13f, sq.w * 0.13f + 2.0f * px, 0, 360, 24, fade(style.targetDot, std::min(1.0f, 2.0f * feedback::kPreviewAlpha) * a));
     const bool other = t.l != layer.from.l || t.t != layer.from.t;
-    if (arcs && other && arcBoards.size() < 4 && std::find(arcBoards.begin(), arcBoards.end(), std::make_pair(t.l, t.t)) == arcBoards.end()) {
+    if (arcs && other && arcBoards.size() < 4 && std::find(arcBoards.begin(), arcBoards.end(), std::pair<int, int>{t.l, t.t}) == arcBoards.end()) {
       arcBoards.emplace_back(t.l, t.t);
       path::Poly poly;
       arcPath(poly, from, c);
