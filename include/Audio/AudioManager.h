@@ -41,7 +41,6 @@ public:
     // The track is streamed lazily and only starts after the first user click.
     void playMusic(const std::string& name);
     void stopMusic();
-    const std::string& selectedMusic() const;
 
     void playSfx(Sfx sfx);
 
@@ -51,8 +50,6 @@ public:
     float sfxVolume() const { return _sfxVolume; }
     void setMuted(bool muted);
     bool isMuted() const { return _muted; }
-    void setSfxEnabled(bool on);
-    bool sfxEnabled() const;
 
 private:
     void startSelectedMusic();

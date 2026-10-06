@@ -115,7 +115,7 @@ if(FDCHESS_BUILD_GAME)
     endforeach()
     target_link_options(5dchess PRIVATE ${WEB_LINK_OPTIONS})
     set_target_properties(5dchess PROPERTIES SUFFIX ".html")
-    set_property(TARGET 5dchess APPEND PROPERTY LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/web/shell.html)
+    set_property(TARGET 5dchess APPEND PROPERTY LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/web/shell.html ${MANIFEST})
   else()
     # Copy assets next to the binary so it runs from the build directory.
     add_custom_command(TARGET 5dchess POST_BUILD

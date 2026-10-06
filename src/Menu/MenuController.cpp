@@ -397,7 +397,7 @@ void SettingMenuController::handleInput() {
                 if (dynamic_cast<SfxToggleCommand*>(command.get())) {
                     // A toggle is not a selection: keep the highlighted music, refresh its own label
                     command->execute();
-                    workerMenuItems[i]->setTitle(SfxToggleCommand::titleFor(App::current().audio.sfxEnabled()));
+                    workerMenuItems[i]->setTitle(SfxToggleCommand::titleFor(App::current().settings.sfx));
                 } else if (dynamic_cast<MotionToggleCommand*>(command.get())) {
                     command->execute();
                     workerMenuItems[i]->setTitle(MotionToggleCommand::titleFor(UI::Motion::reduced()));
@@ -453,7 +453,7 @@ void SettingMenuController::update() {
             if (_selectedSettingIndex == 1) {
                 const auto& items = _workerMenu->getChildren();
                 for (size_t i = 0; i < items.size(); ++i) {
-                    if (items[i]->getTitle() == App::current().audio.selectedMusic())
+                    if (items[i]->getTitle() == App::current().settings.music)
                         _selectedMusicIndex = static_cast<int>(i);
                 }
             }

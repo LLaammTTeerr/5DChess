@@ -189,8 +189,8 @@ std::unique_ptr<MusicSelectCommand> createMusicSelectCommand(const std::string& 
 }
 
 void SfxToggleCommand::execute() {
-    auto& audio = App::current().audio;
-    audio.setSfxEnabled(!audio.sfxEnabled());
+    bool& sfx = App::current().settings.sfx;
+    sfx = !sfx;
 }
 
 std::unique_ptr<ICommand> SfxToggleCommand::clone() const {

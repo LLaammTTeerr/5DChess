@@ -580,7 +580,7 @@ void ChessView::renderEndGameScreen(std::string winnerText, std::string reason) 
     UI::drawTextCentered(UI::Fonts::body(), "Use Back to return to game selection", cx, card.y + 164, UI::Font::body, fa(UI::Color::primary));
 
     // Pixel theme: the winner's king hops a few times on top of the card
-    if (App::current().themes.isPixelTheme() && !_endDraw) {
+    if (App::current().themes.currentThemeHasBlink() && !_endDraw) {
         const char* name = _endWhiteWon ? "white_king" : "black_king";
         const PieceTextures& tex = App::current().themes.getPieceTextures(name);
         const float size = 64.0f;

@@ -34,10 +34,6 @@ AudioManager::~AudioManager() {
     if (_ready) CloseAudioDevice();
 }
 
-const std::string& AudioManager::selectedMusic() const { return _settings.music; }
-void AudioManager::setSfxEnabled(bool on) { _settings.sfx = on; }
-bool AudioManager::sfxEnabled() const { return _settings.sfx; }
-
 void AudioManager::init(Assets& assets) {
     if (_ready) return;
     if (TestMode::get().audioDisabled) return; // UI test harness: stay silent, never open a device

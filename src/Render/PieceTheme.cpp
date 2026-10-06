@@ -16,7 +16,6 @@ void ThemeManager::setTheme(const PieceTheme& theme) {
 }
 
 bool ThemeManager::currentThemeHasBlink() const { return _settings.theme.hasBlink; }
-bool ThemeManager::isPixelTheme() const { return currentThemeHasBlink(); }
 
 Texture2D& ThemeManager::getPieceTexture(const std::string& pieceName) {
     return _assets.texture(_settings.theme.prefix + pieceName);

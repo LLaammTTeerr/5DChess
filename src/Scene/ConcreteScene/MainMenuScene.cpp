@@ -1,5 +1,6 @@
 #include "App.h"
 #include "MainMenuScene.h"
+#include "Render/PieceTheme.h"
 #include "Render/UITheme.h"
 #include "Render/Motion.h"
 #include <cmath>
@@ -133,7 +134,7 @@ void MainMenuScene::render() {
     const bool white = (i % 2) == 0;
     const std::string name = std::string(white ? "white_" : "black_") + kPieces[pieceIdx];
     const bool closed = UI::Motion::blinkClosed(static_cast<unsigned>(i + 1) * 7919u, _time);
-    Texture2D& tex = assets.texture("piece.pixel." + name + (closed ? "_blink" : ""));
+    Texture2D& tex = assets.texture(std::string(Themes::pixel.prefix) + name + (closed ? "_blink" : ""));
 
     // Staggered pop-in (30-50 ms per item), then a gentle two-pixel bob
     const float dur = reduced ? UI::Motion::fast : UI::Motion::base;

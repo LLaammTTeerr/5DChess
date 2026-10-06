@@ -35,7 +35,6 @@ public:
   Texture2D& getPieceTexture(const std::string& pieceName);
   /// Cached lookup for the per-frame hot path (no string building after the first call per piece)
   const PieceTextures& getPieceTextures(const std::string& pieceName);
-  bool isPixelTheme() const;
   bool currentThemeHasBlink() const;
 
 private:
