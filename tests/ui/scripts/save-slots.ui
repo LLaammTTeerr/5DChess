@@ -4,7 +4,7 @@
 wait 20
 click 150 250        # Versus
 wait 30
-click 690 154        # Standard
+click 690 184        # Standard
 wait 20
 click 808 712        # Play
 wait 120

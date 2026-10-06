@@ -1,0 +1,4 @@
+5dchess-record 1
+# vs-computer: you=black level=easy seed=11
+mode: standard
+T1w: (L0T1)e2>(L0T1)e4

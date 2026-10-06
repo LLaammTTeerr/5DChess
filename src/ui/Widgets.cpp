@@ -124,7 +124,16 @@ void Button::draw(float alpha) const {
     size = std::fmax(static_cast<float>(UI::Font::minimum), size * maxW / ts.x);
     ts = MeasureTextEx(font, label.c_str(), size, 0.0f);
   }
-  DrawTextEx(font, label.c_str(), {std::floor(r.x + (r.width - ts.x) / 2), std::floor(r.y + (r.height - ts.y) / 2)},
+  std::string shown = label;
+  if (ellipsize && ts.x > maxW) {
+    // cut whole UTF-8 characters off the end until "<text>..." fits
+    while (!shown.empty() && ts.x > maxW) {
+      do shown.pop_back(); while (!shown.empty() && (static_cast<unsigned char>(shown.back()) & 0xC0) == 0x80);
+      ts = MeasureTextEx(font, (shown + "...").c_str(), size, 0.0f);
+    }
+    shown += "...";
+  }
+  DrawTextEx(font, shown.c_str(), {std::floor(r.x + (r.width - ts.x) / 2), std::floor(r.y + (r.height - ts.y) / 2)},
              size, 0.0f, fade(text));
 }
 

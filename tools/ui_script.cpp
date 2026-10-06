@@ -16,6 +16,11 @@
 //   slot <n> <file>      put the text of a file (a record, or a corrupted one) into save slot n (1-3; 0 is the autosave) of the in-memory store the
 //                        harness uses instead of the config directory; the Load screen then lists it
 //   (the first three take effect on the next frame: follow them with `wait`)
+//   ainodes <n>          the computer opponent's search runs exactly n nodes a frame (so the frame at which it finishes is reproducible;
+//                        400 until changed); 0 freezes a running search where it is, to capture the "thinking" HUD; `ainodes clock` runs it
+//                        against the wall-clock budget as shipped (not reproducible frame by frame; for FDCHESS_PERF measurements); see TestMode::aiNodesPerFrame
+//   waitai               run frames until the computer has nothing to do (it has moved, or the game ended; at most 5000 frames, then the
+//                        script fails). Does nothing when the game is not against the computer
 //   clicksq <l> <t> <sq>  click a square of the game screen (or the Guide's page) by name wherever the camera has put it: timeline id l,
 //                        half-turn t of the board (0 = White's first), square like e2 (file a..h, rank 1..8)
 //
@@ -29,6 +34,7 @@
 #include <map>
 #include <sstream>
 #include <string>
+#include <optional>
 #include <set>
 #include <vector>
 #include <filesystem>
@@ -40,6 +46,7 @@
 #include "engine/Position.h"
 #include "Screens/GuideScreen.h"
 #include "Screens/PlayScreen.h"
+#include "play/VsAi.h"
 #include "services/SaveStore.h"
 #include "PieceTheme.h"
 #include "Render/UITheme.h"
@@ -60,6 +67,8 @@ struct FrameSpec {
   int sqL = 0, sqT = 0, sqX = 0, sqY = 0;
   std::string mode, position; // non-empty: open the game screen of that catalog mode / .5dp file before this frame
   std::string record;         // non-empty: same for a game record file
+  bool waitAi = false;        // run frames until the computer opponent is quiet
+  int aiNodes = -2;           // >= -1: set TestMode::aiNodesPerFrame before this frame (-1: the wall-clock budget)
   std::string slotFile;       // non-empty: fill save slot `slotNo` with this file's text before this frame
   int slotNo = 0;
   int line = 0;
@@ -149,6 +158,16 @@ bool parseScript(const std::string& path, std::vector<FrameSpec>& out) {
     } else if (cmd == "slot") {
       if (!(ss >> f.slotNo >> f.slotFile) || f.slotNo < 0 || f.slotNo > savegame::kSlots) return fail("slot needs <0-3> <file>");
       out.push_back(f);
+    } else if (cmd == "ainodes") {
+      std::string arg;
+      if (!(ss >> arg)) return fail("ainodes needs a node count (0 freezes, clock = wall-clock budget as shipped)");
+      if (arg == "clock") f.aiNodes = -1;
+      else if (arg.find_first_not_of("0123456789") == std::string::npos && arg.size() < 8) f.aiNodes = std::stoi(arg);
+      else return fail("ainodes needs a node count (0 freezes, clock = wall-clock budget as shipped)");
+      out.push_back(f);
+    } else if (cmd == "waitai") {
+      f.waitAi = true;
+      out.push_back(f);
     } else if (cmd == "capture") {
       if (!(ss >> f.capture)) return fail("capture needs a name");
       out.push_back(f);
@@ -189,6 +208,7 @@ int main(int argc, char** argv) {
   tm.reduceMotion = true;
   tm.audioDisabled = true;
   tm.seed = 5;
+  tm.aiNodesPerFrame = 400;
 
   SetTraceLogLevel(LOG_WARNING);
   SetConfigFlags(FLAG_MSAA_4X_HINT);
@@ -215,6 +235,7 @@ int main(int argc, char** argv) {
       }
       if (!f.mode.empty() || !f.position.empty() || !f.record.empty()) {
         std::shared_ptr<Chess::IGame> game;
+        std::optional<play::VsAi> vs;
         try {
           if (!f.mode.empty()) game = Chess::GameCatalog::create(f.mode);
           else if (!f.record.empty()) {
@@ -222,6 +243,7 @@ int main(int argc, char** argv) {
             std::ostringstream text;
             text << file.rdbuf();
             game = Chess::loadRecord(text.str());
+            vs = play::findMeta(text.str()); // a vs-Computer record restores its mode, like Load and Continue
           }
           else game = Chess::Core::loadPositionFile((scriptPath.parent_path() / f.position).string()).makeGame();
         } catch (const std::exception& e) {
@@ -229,7 +251,23 @@ int main(int argc, char** argv) {
           rc = 2;
         }
         if (!game) { if (rc == 0) std::cerr << scriptPath.string() << ":" << f.line << ": unknown mode " << f.mode << "\n"; rc = 2; break; }
-        app.screens.replace(std::make_unique<PlayScreen>(game));
+        app.screens.replace(std::make_unique<PlayScreen>(game, false, vs));
+      }
+      if (f.aiNodes >= -1) tm.aiNodesPerFrame = f.aiNodes;
+      if (f.waitAi) {
+        in.pressed[0] = false;
+        in.wheel = 0.0f;
+        in.keysPressed.clear();
+        in.delta = {0, 0};
+        int frames = 0;
+        for (;;) {
+          auto* play = dynamic_cast<PlayScreen*>(app.screens.top());
+          if (!play || !play->aiBusy()) break;
+          if (++frames > 5000) { std::cerr << scriptPath.string() << ":" << f.line << ": waitai: the computer is still busy after 5000 frames\n"; rc = 2; break; }
+          app.frame();
+        }
+        if (rc != 0) break;
+        continue;
       }
       Vector2 target = f.pos;
       if (f.clickSquare) {

@@ -40,6 +40,7 @@ void LoadScreen::build(App& app) {
   }
   _slots = ui::ButtonList(labels, slots);
   _slots.selectable = false;
+  _slots.setEllipsize(true);
   for (int i = 0; i < savegame::kSlots; ++i) _slots.setEnabled(i, _used[i]);
   _confirm.clear();
 }
@@ -62,7 +63,7 @@ void LoadScreen::update(App& app, float dt) {
   if (clicked >= 0) {
     const savegame::LoadResult result = app.saves.loadSlot(clicked);
     if (result) {
-      app.screens.replace(std::make_unique<PlayScreen>(result.game));
+      app.screens.replace(std::make_unique<PlayScreen>(result.game, false, result.vsAi));
       return;
     }
     _message = "This save can't be loaded"; // the file stays: it can be deleted here, or looked at in the config folder
@@ -99,7 +100,7 @@ void LoadScreen::update(App& app, float dt) {
     } else if (std::string_view(text).size() > savegame::kMaxBytes) {
       _message = "This record can't be loaded";
     } else if (const savegame::LoadResult result = savegame::loadText(text)) {
-      app.screens.replace(std::make_unique<PlayScreen>(result.game));
+      app.screens.replace(std::make_unique<PlayScreen>(result.game, false, result.vsAi));
       return;
     } else {
       _message = "This record can't be loaded";

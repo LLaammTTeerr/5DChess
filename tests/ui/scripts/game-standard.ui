@@ -1,11 +1,11 @@
 # Standard game (Deep space, the default board view), driven through the real menus. Layout (1400x800):
-#   main menu Versus (150,250); Standard row (690,154); Play (808,712); HUD action row: Submit (841,90).
+#   main menu Versus (150,250); Standard row (690,184); Play (808,712); HUD action row: Submit (841,90).
 # Squares are clicked by name wherever the camera has put them: `clicksq <timeline> <half-turn> <square>` (half-turn 0 is
 # White's first board, 1 Black's reply, 2 White's second turn ...), so the script does not depend on the zoom.
 wait 20
 click 150 250        # Versus
 wait 30
-click 690 154        # Standard
+click 690 184        # Standard
 wait 20
 click 808 712        # Play
 wait 120

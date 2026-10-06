@@ -31,6 +31,7 @@ Chess with multiverse time travel: a 5D Chess game with timelines, built in C++2
 
 This project implements a 5D Chess game with an advanced UI system featuring:
 - Multi-timeline chess mechanics
+- **Play vs Computer**: an AI opponent (Easy, Normal, Hard) that plays whole turns across timelines, as White or Black, on every game mode
 - An interactive Guide: ten short lessons on live boards, with things to try
 - Three board views (Atlas by default, Deep space, Blueprint) that show every timeline at once: lanes, a turn ruler, the present, branches and time-travel jumps
 - Interactive board visualization with highlighting and an auto-focusing camera
@@ -57,6 +58,15 @@ Official-rules visuals: a board's frame says whether you must move on it (mandat
   <tr>
     <td width="50%"><img src="docs/screenshots/rules-check.png" alt="A check: a red line from the attacking rook to the white king"><br><sub>Check: the attack line (it stays still under Reduce motion).</sub></td>
     <td width="50%"><img src="docs/screenshots/rules-promotion.png" alt="The promotion picker above the square e8"><br><sub>Promotion: choose Queen, Rook, Bishop or Knight (Q / R / B / N).</sub></td>
+  </tr>
+</table>
+
+Play against the computer: Versus -> Opponent: **Computer**, then your side and the level, then the mode. While it thinks the HUD says so and shows a progress bar (it moves every few seconds at most on Hard; the window stays responsive).
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/vs-computer-setup.png" alt="The mode screen with Opponent: Computer, You play: White, Level: Normal and its one-line description"><br><sub>Versus -> Computer: your side (White, Black or Random), the level (Easy, Normal, Hard) and then the mode.</sub></td>
+    <td width="50%"><img src="docs/screenshots/vs-computer-thinking.png" alt="A game against the computer: the HUD reads Computer is thinking with three dots and a thin progress bar; Submit and Undo are greyed"><br><sub>"Computer is thinking" with a progress bar; the boards only pan and zoom until it has moved.</sub></td>
   </tr>
 </table>
 
@@ -152,8 +162,8 @@ The engine tests do not need raylib or a display. Drop `-DFDCHESS_SANITIZE=ON` f
 - [docs/NOTATION.md](docs/NOTATION.md): move notation (`(L0T1)e2>(L0T1)e4`) and the `5dchess-record` game record format.
 - [docs/SEARCH.md](docs/SEARCH.md): how checkmate / stalemate are decided without blocking the game (the resumable
   `TurnSearch`), why its pruning is safe, and the benchmark (`turnbench`).
-- [docs/AI.md](docs/AI.md): the AI opponent engine (`ai::Search`, engine side only, no UI yet): turn generation, search,
-  evaluation, difficulty levels, benchmark (`tools/ai_bench`).
+- [docs/AI.md](docs/AI.md): the AI opponent engine (`ai::Search`): turn generation, search,
+  evaluation, difficulty levels, benchmark (`tools/ai_bench`), and how the game screen runs it a few milliseconds a frame.
 - `tools/refcheck/` (`-DFDCHESS_BUILD_REFCHECK=ON`, default OFF): plays random legal games, dumps every position with its full
   move list and replays them in 5d-chess-js (`node tools/refcheck/compare.js --ref <5d-chess-js checkout> --bin <refcheck>`).
 
@@ -219,7 +229,7 @@ The game changes its working directory to the executable's folder, so it can be 
 ### Menu Navigation
 - **Mouse**: Click to select menu items
 - **Hover**: Visual feedback on interactive elements
-- **Main menu**: *Continue* (only while an unfinished autosave exists), *Versus*, *Load game*; the Load screen lists the three slots (empty ones are disabled) with a Delete button each and, on desktop, *Paste record*
+- **Main menu**: *Continue* (only while an unfinished autosave exists), *Versus* (two players at one screen, or the computer), *Load game*; the Load screen lists the three slots (empty ones are disabled) with a Delete button each and, on desktop, *Paste record*
 
 ### Game Controls
 - **Mouse Click**: Select a piece, then click a highlighted square to move (hovering a square only tints it; legal targets appear after selecting a piece); a pawn reaching the last rank opens the promotion picker (or press Q / R / B / N)
@@ -241,6 +251,7 @@ The game changes its working directory to the executable's folder, so it can be 
 - **Legal Move Highlighting**: Visual guides for valid moves; Submit is enabled only when the whole turn is legal (otherwise the HUD says why, e.g. "Your king would be capturable")
 - **Guide**: main menu -> Guide teaches the rules in ten short pages (boards and time, time travel, timeline numbers, the present, the four axes, pawns, check, mate, special moves). Each page has a small live board you can play, with legal-move dots, and most have a "Try it" goal that shows a check mark when you get it (Left / Right keys turn the pages; Reset position starts the page over). It uses your chosen board view
 - **Save and load**: a game is stored as a text record (`5dchess-record 1`, moves like `(L0T1)e2>(L0T1)e4`, see [docs/NOTATION.md](docs/NOTATION.md)). Every submitted turn is **autosaved**, and the main menu then offers **Continue**, which resumes the game exactly (mode, history, side to move, present, time-travel branches). The game screen's **Save** button writes one of three slots (what each holds is listed: mode, turns, date); **Load game** in the main menu opens them (**Delete** removes one). Moves of a turn you have not submitted yet are *not* saved, by design (the panel warns you). **Copy** puts the game's record on the clipboard and **Paste record** (on the Load screen) starts from one, to share games as text (desktop only: a browser tab cannot read the clipboard). Loading a slot and then submitting a turn replaces the Continue game (the autosave follows the game you play). Overwriting a slot and deleting one ask twice. A save that cannot be loaded says so and is kept (an unreadable autosave is offered as "Discard autosave"). Files: `autosave.5dr`, `slot1.5dr` ... `slot3.5dr` next to `settings.txt` (browser: localStorage keys `5dchess.autosave`, `5dchess.slot1` ...); a finished game's autosave is removed
+- **Play vs Computer**: in *Versus* choose **Opponent: Computer**, **You play** White, Black or Random, and a **Level** (a line says what each means: *Easy* plays quickly and often misses tactics, *Normal* looks a few turns ahead, *Hard* is the slowest, searches deepest and can take a while on big multiverses), then a game mode and Play. The computer plays whole turns (several moves, time jumps included) with the usual move animations and sounds; while it thinks the HUD shows "Computer is thinking" and a progress bar, the boards ignore clicks (you can still pan, zoom, open the menu or leave), and Submit is not offered. **Undo** takes back your last turn together with the computer's reply (or just your turn while it is still thinking). Your last choices are remembered. A game against the computer is autosaved and saved to slots like any other, with its side, level and seed (one comment line in the record, [docs/NOTATION.md](docs/NOTATION.md)), so Continue and Load resume it, and a saved game replays the same computer moves; older saves load as two-player games. The AI is the engine of [docs/AI.md](docs/AI.md), advanced about 6 ms per frame (4 ms in the browser), so it never freezes the window
 - **Undo**: Take back moves within the current turn before submitting (no redo)
 - **Board orientation**: Boards are drawn from White's side
 
@@ -297,13 +308,14 @@ theme_preview <Pixel|Medieval|Bauhaus|Neon|Origami|Ink> <Standard|Battle|Invasio
 - ~~Official 5D Chess rules~~ (check, checkmate, stalemate, active timelines, castling, en passant, promotion choice): done.
 - ~~v0.4.0~~: official rules, non-blocking result search, differential testing, `.5dp` position files, engine value API, UI screenshot tests, manifest-driven assets: done.
 - ~~v0.5.0~~: widget/screen UI rewrite, three board views (Deep space, Atlas, Blueprint), official-rules visuals, promotion picker, saved settings, move notation and game records in the engine: done.
-- **v0.6.0** (next): AI opponent, ~~save/load in the UI~~ (done, unreleased), puzzles and an interactive guide.
+- **v0.6.0** (next): ~~AI opponent~~ (done, unreleased: Play vs Computer), ~~save/load in the UI~~ (done, unreleased), puzzles and ~~an interactive guide~~ (done, unreleased).
 
 ## Known limitations
 
 - In rare, huge positions the checkmate/stalemate search may not finish in reasonable time; the result then stays undecided ("Checking position...") and the game simply continues ([docs/SEARCH.md](docs/SEARCH.md)).
 - The rules engine is cross-checked against 5d-chess-js on Standard and the Simplify modes only; the Misc modes (Time Line Invasion, Battle, Fragment) are not cross-checked.
-- The Puzzles menu item is a placeholder; there is no AI opponent yet.
+- The Puzzles menu item is a placeholder.
+- The computer is a material engine with a shallow search (see the limits in [docs/AI.md](docs/AI.md)): Hard is a real opponent for a beginner, not for an expert. Hard can take several seconds a turn on big multiverses, and the browser is slower than the desktop build.
 - Saves hold the submitted turns only (unsubmitted moves of the current turn are not saved). There are three slots and one autosave, no naming; the web build keeps them in the browser's localStorage and has no Copy / Paste record (a page cannot read the clipboard).
 
 ## Troubleshooting

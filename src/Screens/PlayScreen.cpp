@@ -3,6 +3,7 @@
 #include <chrono>
 #include "App.h"
 #include "Input.h"
+#include "TestMode.h"
 #include "Render/UITheme.h"
 #include "Screens/ModeSelectScreen.h"
 #include "engine/GameCatalog.h"
@@ -13,9 +14,24 @@ using play::BoardKey;
 using play::BoardLayout;
 using play::Rect;
 
-PlayScreen::PlayScreen(const std::string& modeId) : PlayScreen(Chess::GameCatalog::create(modeId)) {}
+namespace {
+// The computer's search is advanced against a wall-clock budget each frame (the engine itself is clock-free), in slices of a few
+// hundred nodes. The web build runs on the browser's one thread next to rendering, so it gets less.
+#ifdef __EMSCRIPTEN__
+constexpr auto kAiFrameBudget = std::chrono::milliseconds(4);
+#else
+constexpr auto kAiFrameBudget = std::chrono::milliseconds(6);
+#endif
+constexpr int kAiSliceNodes = 150;
+constexpr float kAiMinThink = 0.5f; // seconds: an instant answer is still shown as a moment of thought, not a flicker
+constexpr float kAiMoveGap = 0.3f;  // seconds between the moves of the computer's turn
+} // namespace
 
-PlayScreen::PlayScreen(std::shared_ptr<Chess::IGame> game, bool isAutosave) : _game(std::move(game)), _autosaving(isAutosave) {
+PlayScreen::PlayScreen(const std::string& modeId, std::optional<play::VsAi> vs)
+    : PlayScreen(Chess::GameCatalog::create(modeId), false, vs) {}
+
+PlayScreen::PlayScreen(std::shared_ptr<Chess::IGame> game, bool isAutosave, std::optional<play::VsAi> vs)
+    : _game(std::move(game)), _autosaving(isAutosave), _vs(vs) {
   _camera.setInsets(UI::Layout::safeTop, UI::Layout::sideInset, UI::Layout::safeBottom, UI::Layout::laneLabelW);
   // A game that is already decided (a loaded record) is not a transition: no win sound, and no autosave left to continue
   _ended = _game->result() != Chess::GameResult::Ongoing;
@@ -36,7 +52,7 @@ void PlayScreen::update(App& app, float dt) {
   _back.skin = &style.skin;
   // The buttons come first: whatever has the pointer is not a click on the board
   if (!_embedded && _back.update(dt, app.screens.navShown())) leave(app);
-  if (!_embedded) _saveMenu.update(dt, app.screens.navShown(), style, *_game);
+  if (!_embedded) _saveMenu.update(dt, app.screens.navShown(), style, *_game, _vs ? &*_vs : nullptr, _aiPlaying);
   switch (_actions.update(dt)) {
     case play::ActionRow::Action::Undo: undo(); break;
     case play::ActionRow::Action::Deselect: deselect(); break;
@@ -60,6 +76,7 @@ void PlayScreen::update(App& app, float dt) {
       _game->stepResultSearch(100);
     } while (_game->resultPending() && std::chrono::steady_clock::now() - start < std::chrono::milliseconds(4));
   }
+  updateAi(step);
   refresh();
 }
 
@@ -88,7 +105,7 @@ void PlayScreen::updatePicker(float dt, const play::BoardStyle& style) {
 
 void PlayScreen::boardInput() {
   _hover.reset();
-  if (!ui::pointerConsumed()) {
+  if (!ui::pointerConsumed() && !aiToMove()) { // the computer's turn: the boards only look and pan
     const Vector2 world = _camera.screenToWorld(Input::mousePosition());
     const auto square = _layout.hitTest(world.x, world.y);
     _hover = square;
@@ -98,7 +115,7 @@ void PlayScreen::boardInput() {
 }
 
 void PlayScreen::click(Coord square) {
-  if (_ended) return;
+  if (_ended || aiToMove()) return;
   _animator.finish(); // new input: running move animations jump to their end
   _arrows.finish();
   perform(_selection.click(square, *_game));
@@ -162,19 +179,23 @@ Vector2 PlayScreen::squareToScreen(Coord c) const {
 }
 
 void PlayScreen::submit() {
-  if (_canSubmit) submitTurn();
+  if (_canSubmit && !aiToMove()) submitTurn();
 }
 
 void PlayScreen::submitTurn() {
-  if (!_canSubmit) return;
+  if (!_canSubmit || aiToMove()) return;
   _animator.finish();
   _arrows.finish();
   _game->submitTurn();
   clearSelection();
-  // Continue picks up from the last submitted turn: unsubmitted moves are not part of a record. The Guide's practice board
-  // (embedded) must never overwrite the player's autosave.
-  if (_embedded) return;
-  if (App::current().saves.autosave(*_game)) {
+  autosaveNow();
+}
+
+// Continue picks up from the last submitted turn: unsubmitted moves are not part of a record. The Guide's practice board
+// (embedded) must never overwrite the player's autosave.
+void PlayScreen::autosaveNow() {
+  if (_embedded || computerOpenedOnly()) return;
+  if (App::current().saves.autosave(*_game, _vs ? &*_vs : nullptr)) {
     _autosaving = true;
   } else if (!_autosaveWarned) { // say so once: the player may be playing on with nothing to continue
     _autosaveWarned = true;
@@ -182,12 +203,20 @@ void PlayScreen::submitTurn() {
   }
 }
 
+// Playing Black the computer opens; that alone is not worth a Continue (nothing of the player's is in it).
+bool PlayScreen::computerOpenedOnly() const {
+  return _vs && _vs->human == Chess::PieceColor::PIECEBLACK && _game->history().size() <= 1;
+}
+
 // Back to the mode list; the autosave is brought up to date (it is already, after every submitted turn) or removed once the game is over.
 void PlayScreen::leave(App& app) {
+  cancelAi();
   if (_autosaving && !_embedded) {
     // A game decided during "Checking position..." has not noticed yet: finish the (bounded) search before deciding
     if (_game->resultPending()) _game->resolveResult(2000000);
-    if (_game->result() == Chess::GameResult::Ongoing) app.saves.autosave(*_game);
+    if (_game->result() == Chess::GameResult::Ongoing) {
+      if (!computerOpenedOnly()) app.saves.autosave(*_game, _vs ? &*_vs : nullptr);
+    }
     else app.saves.clearAutosave();
   }
   app.screens.replace(std::make_unique<ModeSelectScreen>());
@@ -196,8 +225,128 @@ void PlayScreen::leave(App& app) {
 void PlayScreen::undo() {
   _animator.finish();
   _arrows.finish();
-  _game->undo(); // the button is disabled when there is nothing to undo
-  clearSelection();
+  if (_game->undoable()) {
+    _game->undo(); // the moves of the unsubmitted turn go one at a time
+    clearSelection();
+  } else if (const int turns = takeBackCount()) {
+    takeBack(turns); // against the computer: the submitted turns
+  }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// The computer opponent
+
+bool PlayScreen::aiToMove() const {
+  return _vs && !_embedded && !gaveUpNow() && _game->result() == Chess::GameResult::Ongoing &&
+         _game->getCurrentTurnColor() == _vs->aiColor();
+}
+
+bool PlayScreen::aiBusy() const { return _vs && (aiToMove() || _game->resultPending()); }
+
+// A hand-over lasts for the turn it happened in: once a turn is submitted the computer is asked again.
+bool PlayScreen::gaveUpNow() const { return _aiGaveUpAt && *_aiGaveUpAt == _game->history().size(); }
+
+int PlayScreen::takeBackCount() const {
+  if (!_vs || _embedded) return 0;
+  return play::takeBackCount(*_vs, _game->getCurrentTurnColor(), _game->history().size(), !_game->pendingMoves().empty(), _aiPlaying);
+}
+
+void PlayScreen::takeBack(int turns) {
+  cancelAi();
+  _aiGaveUpAt.reset();
+  const auto earlier = play::replayPrefix(*_game, _game->history().size() - static_cast<size_t>(turns));
+  if (!earlier) return;
+  setGame(earlier);
+  if (_autosaving && !_embedded) {
+    if (_game->history().empty()) App::current().saves.clearAutosave();
+    else autosaveNow();
+  }
+}
+
+void PlayScreen::setGame(std::shared_ptr<Chess::IGame> game) {
+  _animator.finish();
+  _arrows.finish();
+  _game = std::move(game);
+  _layout = play::BoardLayout(); // another game object: rebuilt from scratch by the next refresh()
+  _selection.clear();
+  _hover.reset();
+  _canSubmit = false;
+  _animator.select(std::nullopt, {}, _game->dim());
+  refresh(); // the buttons and the HUD follow at once
+}
+
+void PlayScreen::cancelAi() {
+  _search.reset();
+  _aiMoves.clear();
+  _aiNext = 0;
+  _aiPlaying = false;
+  _aiClock = 0.0f;
+}
+
+// Called every frame. A search is created when it becomes the computer's turn (once the game has decided whether it has any turn:
+// the legal-turn search armed by the last submit), advanced with a few milliseconds a frame, and its moves are then played one at
+// a time through the same path as a click (flight animation, sound, camera) before the turn is submitted.
+void PlayScreen::updateAi(float dt) {
+  if (!aiToMove()) {
+    if (_search || _aiPlaying) cancelAi();
+    return;
+  }
+  if (_game->resultPending()) return;
+  _aiClock += dt;
+
+  if (_aiPlaying) {
+    if (!_animator.flights().empty() || _aiClock < kAiMoveGap) return; // the previous move is still travelling
+    _aiClock = 0.0f;
+    if (_aiNext < _aiMoves.size()) {
+      makeMove(_aiMoves[_aiNext++]);
+    } else if (_game->canSubmit()) {
+      _game->submitTurn();
+      cancelAi();
+      autosaveNow();
+    } else { // cannot happen (the search verifies its turn): hand the side over rather than stall
+      while (_game->undoable()) _game->undo();
+      _aiGaveUpAt = _game->history().size();
+      cancelAi();
+    }
+    return;
+  }
+
+  if (!_search) { // the clone of the game and the first slice do not share a frame
+    _search = std::make_unique<Chess::ai::Search>(*_game, Chess::ai::Options{_vs->level, play::searchSeed(_vs->seed, _game->history().size())});
+    _aiClock = 0.0f;
+    return;
+  }
+  if (_search->status() == Chess::ai::Search::Status::Running) {
+    const TestMode& test = TestMode::get();
+    const int fixed = test.active ? test.aiNodesPerFrame : -1;
+    if (fixed > 0) {
+      _search->step(fixed);
+    } else if (fixed < 0) {
+      // Keep stepping while the next slice, taken to cost as much as the longest so far, still fits in the frame's budget
+      using Clock = std::chrono::steady_clock;
+      const auto start = Clock::now();
+      Clock::duration longest{};
+      for (;;) {
+        const auto t0 = Clock::now();
+        if (_search->step(kAiSliceNodes) != Chess::ai::Search::Status::Running) break;
+        const auto t1 = Clock::now();
+        longest = std::max(longest, t1 - t0);
+        if ((t1 - start) + longest > kAiFrameBudget) break;
+      }
+    } // fixed == 0: frozen by the test harness
+  }
+  if (_search->status() == Chess::ai::Search::Status::Done && _aiClock >= kAiMinThink) {
+    if (_search->hasTurn()) {
+      _aiMoves = _search->bestTurn();
+      _aiNext = 0;
+      _aiPlaying = true;
+      _search.reset();
+      _aiClock = kAiMoveGap; // the first move follows at once
+    } else {
+      _aiGaveUpAt = _game->history().size(); // the game says it goes on but the search found no turn: play this side by hand
+      cancelAi();
+    }
+  }
 }
 
 void PlayScreen::deselect() { clearSelection(); }
@@ -222,7 +371,9 @@ void PlayScreen::rebuild() {
 
 std::string PlayScreen::hint() const {
   if (_game->result() != Chess::GameResult::Ongoing) return "";
+  if (aiToMove()) return _aiPlaying ? "Computer is moving" : "Computer is thinking"; // also while its turn is still being proved to exist
   if (_game->resultPending()) return "Checking position...";
+  if (_vs && !_embedded && gaveUpNow() && _game->getCurrentTurnColor() == _vs->aiColor()) return "Computer found no move - play its side";
   if (_canSubmit) return "Submit your turn";
   if (_noMandatoryBoard && _game->undoable()) return "Your king would be capturable";
   if (_selection.promotionTarget()) return "Choose a promotion";
@@ -234,13 +385,17 @@ void PlayScreen::refresh() {
 
   const Chess::GameResult result = _game->result();
   const bool ongoing = result == Chess::GameResult::Ongoing;
-  _actions.setEnabled(_game->undoable() && ongoing, _selection.active() && ongoing, _canSubmit);
+  const bool aiTurn = aiToMove(); // the computer's turn: nothing to submit or deselect, and Undo only takes the player's turn back
+  _actions.setEnabled(ongoing && ((_game->undoable() && !aiTurn) || takeBackCount() > 0), _selection.active() && ongoing,
+                      _canSubmit && !aiTurn);
 
   _hudMotion.setTurn(_game->getCurrentTurnColor() == Chess::PieceColor::PIECEWHITE);
   _hud.whiteToMove = _game->getCurrentTurnColor() == Chess::PieceColor::PIECEWHITE;
   _hud.fullTurn = _game->presentFullTurn() + 1;
   _hud.timelineCount = _game->timeLineCount();
   _hud.hint = hint();
+  // The indicator shows for the whole of the computer's thinking; the bar once the search itself runs (its own progress, as is)
+  _hudMotion.setThinking(aiTurn && !_aiPlaying, _search ? static_cast<float>(_search->progress().fraction) : -1.0f);
   _hudMotion.apply(_hud);
   _hudMotion.setEnded(!ongoing, result == Chess::GameResult::WhiteWins, result == Chess::GameResult::Draw);
 

@@ -11,6 +11,9 @@
 //   music=Off
 //   sfx=on
 //   reduce_motion=off
+//   opponent=two_players     (or computer: the Versus screen's last choice)
+//   vs_side=white            (white | black | random)
+//   vs_level=normal          (easy | normal | hard)
 //
 // One `key=value` per line; blank lines and lines starting with '#' are ignored; unknown keys are kept out by the
 // caller, malformed lines are skipped, a later duplicate wins.

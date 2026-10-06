@@ -2,6 +2,7 @@
 #include <string>
 #include "chess.h"
 #include "play/BoardStyle.h"
+#include "play/VsAi.h"
 #include "ui/ConfirmArm.h"
 #include "ui/Widgets.h"
 
@@ -15,7 +16,10 @@ class SaveMenu {
 public:
   SaveMenu();
   /// Updates the buttons and the panel (they take the pointer first). `reachable`: false while the navigation controls are hidden.
-  void update(float dt, bool reachable, const BoardStyle& style, const Chess::IGame& game);
+  /// `computerMoving`: the pending moves are the computer's turn being played, which is not something the player loses by saving.
+  /// `vs`: the game is against the computer; its slot and copied record carry the side, level and seed.
+  void update(float dt, bool reachable, const BoardStyle& style, const Chess::IGame& game, const VsAi* vs = nullptr,
+              bool computerMoving = false);
   void draw(const BoardStyle& style, float navAlpha) const;
   bool open() const { return _open; }
   /// A short message in the HUD style (shown for a few seconds), e.g. that the autosave could not be written.
