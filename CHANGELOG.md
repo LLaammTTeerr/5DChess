@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Release notes on GitHub now start with the version's CHANGELOG section (`scripts/changelog_section.sh`), followed by the list of merged PRs; the release workflow fails early if the section is missing.
+
 ## [1.0.0] - 2026-10-06
 
 The first complete release: a computer opponent, puzzles, an interactive guide, save and load, and six original piece themes on top of the official-rules engine and the three board views of 0.5.0.
