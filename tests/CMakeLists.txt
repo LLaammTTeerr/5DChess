@@ -20,8 +20,9 @@ add_executable(chess_tests
   selection_test.cpp
   layout_test.cpp
   view_test.cpp
-  guide_test.cpp)
-target_link_libraries(chess_tests PRIVATE play_core chess_core doctest::doctest)
+  guide_test.cpp
+  ai_test.cpp)
+target_link_libraries(chess_tests PRIVATE play_core ai_core chess_core doctest::doctest)
 target_compile_definitions(chess_tests PRIVATE FDCHESS_POSITIONS_DIR="${PROJECT_SOURCE_DIR}/assets/positions"
   FDCHESS_UI_POSITIONS_DIR="${PROJECT_SOURCE_DIR}/tests/ui/positions"
   FDCHESS_GUIDE_DIR="${PROJECT_SOURCE_DIR}/assets/guide")

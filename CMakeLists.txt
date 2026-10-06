@@ -18,6 +18,7 @@ option(FDCHESS_BUILD_GAME "Build the raylib game executable" ON)
 option(FDCHESS_BUILD_TESTS "Build the unit/property test suite" ON)
 option(FDCHESS_BUILD_TOOLS "Build developer tools (theme_preview screenshot tool; not installed)" OFF)
 option(FDCHESS_BUILD_REFCHECK "Build tools/refcheck (random-game dumper for differential testing against 5d-chess-js)" OFF)
+option(FDCHESS_BUILD_AIBENCH "Build tools/ai_bench (AI speed and self-play benchmark)" OFF)
 option(FDCHESS_SANITIZE "Build with AddressSanitizer + UndefinedBehaviorSanitizer" OFF)
 
 if(FDCHESS_SANITIZE AND NOT MSVC AND NOT EMSCRIPTEN)
@@ -37,6 +38,16 @@ if(MSVC)
   target_compile_options(chess_core PRIVATE /W4)
 else()
   target_compile_options(chess_core PRIVATE -Wall -Wextra)
+endif()
+
+# --- AI opponent engine (no graphics dependency; docs/AI.md) ------------------
+add_library(ai_core STATIC src/ai/Eval.cpp src/ai/TurnGen.cpp src/ai/Search.cpp src/ai/Play.cpp)
+target_link_libraries(ai_core PUBLIC chess_core)
+target_include_directories(ai_core PRIVATE src)
+if(MSVC)
+  target_compile_options(ai_core PRIVATE /W4)
+else()
+  target_compile_options(ai_core PRIVATE -Wall -Wextra)
 endif()
 
 # --- Game-screen logic that needs no graphics (selection state machine, board layout, multiverse snapshot, settings file text) -----------------
@@ -74,7 +85,7 @@ if(FDCHESS_BUILD_GAME)
 
   file(GLOB_RECURSE GAME_SOURCES CONFIGURE_DEPENDS src/*.cpp)
   list(REMOVE_ITEM GAME_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/chess.cpp)
-  list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/engine/") # engine sources are part of chess_core
+  list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/engine/|/src/ai/") # engine and AI sources are part of chess_core / ai_core
   list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/guide/")  # guide content (no graphics) is part of play_core
   list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/play/(Selection|BoardLayout|MultiverseView)\\.cpp|/src/services/(SettingsFile|SaveStore)\\.cpp|/src/Render/PieceThemes\\.cpp|/src/services/SettingsApply\\.cpp") # part of play_core
 
@@ -84,7 +95,7 @@ if(FDCHESS_BUILD_GAME)
     include/Audio
     include/Render)
   target_compile_definitions(5dchess PRIVATE FDCHESS_VERSION="${PROJECT_VERSION}")
-  target_link_libraries(5dchess PRIVATE play_core chess_core raylib)
+  target_link_libraries(5dchess PRIVATE play_core ai_core chess_core raylib)
   if(APPLE)
     target_link_libraries(5dchess PRIVATE
       "-framework OpenGL" "-framework Cocoa" "-framework IOKit" "-framework CoreAudio" "-framework CoreVideo")
@@ -154,6 +165,10 @@ endif()
 
 if(FDCHESS_BUILD_REFCHECK AND NOT EMSCRIPTEN)
   add_subdirectory(tools/refcheck)
+endif()
+
+if(FDCHESS_BUILD_AIBENCH AND NOT EMSCRIPTEN)
+  add_subdirectory(tools/ai_bench)
 endif()
 
 # --- Tests --------------------------------------------------------------------
