@@ -268,7 +268,7 @@ void ChessController::handleSelectedToPosition(Chess::SelectedPosition selectedP
       auto victim = model._currentMoveState.targetBoard
           ? model._currentMoveState.targetBoard->getPiece(model._currentMoveState.targetPosition) : nullptr;
       isCapture = mover && victim && victim->color() != mover->color();
-      auto nameOf = [](const std::shared_ptr<Chess::Piece>& p) {
+      auto nameOf = [](const auto& p) {
         return std::string(p->color() == Chess::PieceColor::PIECEWHITE ? "white_" : "black_") + p->name();
       };
       if (mover) flight.piece = nameOf(mover);

@@ -1,11 +1,13 @@
 #pragma once
 
 #include "chess.h"
+#include "engine/GameCatalog.h"
 
 #include <memory>
 #include <cstdint>
 #include <cstdlib>
 #include <random>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -16,6 +18,31 @@ namespace test {
 inline int randInt(std::mt19937& rng, int lo, int hi) { return lo + int(rng() % std::uint32_t(hi - lo + 1)); }
 
 using namespace Chess;
+
+// The built-in game modes (assets/positions) by id, e.g. newGame("standard"); fails the test if the mode cannot be loaded.
+inline std::shared_ptr<IGame> newGame(const std::string& id) {
+  static const bool directorySet = (GameCatalog::setDirectory(FDCHESS_POSITIONS_DIR), true);
+  (void)directorySet;
+  auto game = GameCatalog::create(id);
+  if (!game) throw std::runtime_error("cannot load game mode " + id);
+  return game;
+}
+
+inline std::vector<std::string> allModeIds() {
+  newGame("standard");
+  std::vector<std::string> ids;
+  for (const ModeInfo& m : GameCatalog::modes()) ids.push_back(m.id);
+  return ids;
+}
+
+inline Piece make(PieceType type, PieceColor color) { return Piece{type, color, true}; }
+
+// Marks the piece on a square as having moved (for building positions; the board must still be under construction).
+inline void markMoved(const std::shared_ptr<Board>& board, int x, int y) {
+  Piece piece = *board->at({x, y});
+  piece.unmoved = false;
+  board->place({x, y}, piece);
+}
 
 // A game with an empty position: every timeline starts with one empty board at half-turn 0.
 // Lets tests place arbitrary pieces through IGame's protected state.
@@ -54,13 +81,8 @@ public:
 
   std::shared_ptr<Board> tip(int timeLineID) const { return timeLine(timeLineID)->back(); }
 
-  void place(int timeLineID, int x, int y, std::shared_ptr<Piece> piece) {
-    tip(timeLineID)->placePiece({x, y}, std::move(piece));
-  }
+  void place(int timeLineID, int x, int y, const Piece& piece) { tip(timeLineID)->place({x, y}, piece); }
 };
-
-template <class P>
-std::shared_ptr<Piece> make(PieceColor color) { return std::make_shared<P>(color); }
 
 inline std::vector<SelectedPosition> movesAt(const IGame& game, std::shared_ptr<Board> board, int x, int y) {
   return game.getMoveablePositions(SelectedPosition(board, Position2D(x, y)));
@@ -90,11 +112,11 @@ inline std::string snapshot(const IGame& game) {
       out += " h" + std::to_string(board->halfTurnNumber()) + " ";
       for (int y = 0; y < board->dim(); ++y) {
         for (int x = 0; x < board->dim(); ++x) {
-          auto piece = board->getPiece({x, y});
-          char c = piece ? piece->symbol() : '.';
-          if (piece && piece->color() == PieceColor::PIECEBLACK) c = char(c - 'A' + 'a');
+          const auto piece = board->at({x, y});
+          char c = piece ? pieceSymbol(piece->type) : '.';
+          if (piece && piece->color == PieceColor::PIECEBLACK) c = char(c - 'A' + 'a');
           out += c;
-          if (piece && piece->unmoved()) out += '\'';
+          if (piece && piece->unmoved) out += '\'';
         }
         out += '/';
       }
@@ -117,16 +139,16 @@ bool buildRandomTurn(IGame& game, std::mt19937& rng, F&& onMove) {
       std::vector<int> weight(moves.size(), 1);
       int total = 0;
       for (std::size_t i = 0; i < moves.size(); ++i) {
-        auto piece = moves[i].from.board->getPiece(moves[i].from.position);
-        if (piece->type() == PieceType::Pawn) {
+        const auto piece = moves[i].from.board->at(moves[i].from.position);
+        if (piece->type == PieceType::Pawn) {
           weight[i] = 4;
           const bool sameBoard = moves[i].to.board == moves[i].from.board;
           if (sameBoard and moves[i].to.position.x() != moves[i].from.position.x()
-              and moves[i].to.board->getPiece(moves[i].to.position) == nullptr)
+              and !moves[i].to.board->at(moves[i].to.position))
             weight[i] = 60; // en passant, when it is on offer
-          if (moves[i].to.position.y() == (piece->color() == PieceColor::PIECEWHITE ? game.dim() - 1 : 0)) weight[i] = 40; // promotion
+          if (moves[i].to.position.y() == (piece->color == PieceColor::PIECEWHITE ? game.dim() - 1 : 0)) weight[i] = 40; // promotion
         }
-        if (piece->type() == PieceType::King and moves[i].to.board == moves[i].from.board
+        if (piece->type == PieceType::King and moves[i].to.board == moves[i].from.board
             and std::abs(moves[i].to.position.x() - moves[i].from.position.x()) == 2) weight[i] = 12;
         total += weight[i];
       }

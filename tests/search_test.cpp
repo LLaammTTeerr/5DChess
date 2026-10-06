@@ -26,11 +26,11 @@ Truth bruteForce(IGame& game, Brute& b) {
   if (game.undoable() and game.canSubmit()) return Truth::Found;
   bool unknown = false;
   for (const Move& m : game.allPseudoLegalMoves()) {
-    auto target = m.to.board->getPiece(m.to.position);
-    if (target != nullptr and target->type() == PieceType::King) continue; // makeMove forbids it
-    auto piece = m.from.board->getPiece(m.from.position);
-    const int lastRank = piece->color() == PieceColor::PIECEWHITE ? game.dim() - 1 : 0;
-    const bool promotes = piece->type() == PieceType::Pawn and m.to.position.y() == lastRank;
+    auto target = m.to.board->at(m.to.position);
+    if (target and target->type == PieceType::King) continue; // makeMove forbids it
+    auto piece = m.from.board->at(m.from.position);
+    const int lastRank = piece->color == PieceColor::PIECEWHITE ? game.dim() - 1 : 0;
+    const bool promotes = piece->type == PieceType::Pawn and m.to.position.y() == lastRank;
     for (PieceType promo : {PieceType::Queen, PieceType::Rook, PieceType::Bishop, PieceType::Knight}) {
       if (!promotes and promo != PieceType::Queen) break;
       if (++b.nodes > b.cap) return Truth::Unknown;
@@ -47,8 +47,8 @@ Truth bruteForce(IGame& game, Brute& b) {
 bool hasKing(const Board& board, int n, PieceColor color) {
   for (int y = 0; y < n; ++y)
     for (int x = 0; x < n; ++x) {
-      auto p = board.getPiece({x, y});
-      if (p and p->type() == PieceType::King and p->color() == color) return true;
+      auto p = board.at({x, y});
+      if (p and p->type == PieceType::King and p->color == color) return true;
     }
   return false;
 }
@@ -83,9 +83,7 @@ std::unique_ptr<Sandbox> randomPosition(std::mt19937& rng, int n, int lines, boo
         free.erase(free.begin() + k);
         const int x = sq % n, y = sq / n;
         if (t == PieceType::Pawn and (y == 0 or y == n - 1)) return;
-        auto piece = makePiece(t, c);
-        if (uni(0, 3) == 0) piece->setUnmoved(false);
-        board->placePiece({x, y}, piece);
+        board->place({x, y}, Piece{t, c, uni(0, 3) != 0});
       };
       // Past boards often lack a king (every king of a past board threatens through time, and the positions would
       // otherwise nearly always be checkmate); the tips always have both.
@@ -98,8 +96,8 @@ std::unique_ptr<Sandbox> randomPosition(std::mt19937& rng, int n, int lines, boo
           bool adjacent = false;
           for (int y = 0; y < n; ++y)
             for (int x = 0; x < n; ++x)
-              if (board->getPiece({x, y}) and std::abs(x - sq % n) <= 1 and std::abs(y - sq / n) <= 1) adjacent = true;
-          if (!adjacent) { free.erase(std::find(free.begin(), free.end(), sq)); board->placePiece({sq % n, sq / n}, makePiece(PieceType::King, PieceColor::PIECEBLACK)); break; }
+              if (board->at({x, y}) and std::abs(x - sq % n) <= 1 and std::abs(y - sq / n) <= 1) adjacent = true;
+          if (!adjacent) { free.erase(std::find(free.begin(), free.end(), sq)); board->place({sq % n, sq / n}, make(PieceType::King, PieceColor::PIECEBLACK)); break; }
         }
       }
       if (tip and !hasKing(*board, n, PieceColor::PIECEBLACK)) put(PieceType::King, PieceColor::PIECEBLACK);
@@ -141,8 +139,8 @@ TEST_CASE("TurnSearch agrees with an exhaustive search on random small multivers
       auto moves = game->allPseudoLegalMoves();
       for (int tries = 0; tries < 8 and !moves.empty() and !pendingMove; ++tries) {
         const Move m = moves[rng() % moves.size()];
-        auto target = m.to.board->getPiece(m.to.position);
-        if (target != nullptr and target->type() == PieceType::King) continue;
+        auto target = m.to.board->at(m.to.position);
+        if (target and target->type == PieceType::King) continue;
         game->makeMove(m);
         pendingMove = true;
       }
@@ -214,7 +212,8 @@ TEST_CASE("kingCapturable agrees with threatsAgainst") {
 TEST_CASE("TurnSearch gives the same answer as findLegalTurn on played games, and a found turn is legal") {
   for (unsigned seed : {1u, 2u, 3u}) {
     std::mt19937 rng(seed);
-    StandardGame game;
+    auto gameHolder = newGame("standard");
+    IGame& game = *gameHolder;
     for (int t = 0; t < 14 and game.result() == GameResult::Ongoing; ++t) {
       TurnSearch search(game);
       TurnSearch::Status st = TurnSearch::Status::Running;

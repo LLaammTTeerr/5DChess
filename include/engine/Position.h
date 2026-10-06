@@ -13,7 +13,7 @@
 // "a" file) and y the rank (0 = White's back rank, White's pawns advance towards y = N-1). A board line lists the rows
 // from the TOP (y = N-1) down to the bottom (y = 0), separated by '/', each row from x = 0 to x = N-1, so the text is
 // the picture a player sees with White at the bottom. In "rnbkqbnr/.../RNBKQBNR" the king is on x = 3 and the queen on
-// x = 4, as in StandardGame.
+// x = 4.
 //
 // Rows are FEN-like: an upper-case letter is a White piece, lower-case a Black one (K king, Q queen, R rook, B bishop,
 // N knight, P pawn), a number is that many empty squares. A piece is "unmoved" (it may still castle or double-step)
@@ -21,7 +21,7 @@
 //
 // Header lines (before the first board line; '#' starts a comment line, blank lines are ignored):
 //   title:    free text shown in menus (optional)
-//   size:     N, 1..16
+//   size:     N, 1..8 (Board::MAX_DIM)
 //   rules:    any of  double-step  castling  (or "none")
 //   to-move:  white | black
 //   present:  half-turn of the present; optional; must equal the lowest half-turn among the latest boards of the

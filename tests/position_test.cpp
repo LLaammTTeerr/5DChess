@@ -20,32 +20,6 @@ struct CatalogDir {
 };
 const CatalogDir catalogDir;
 
-// The old hand-written subclass that each catalog mode must reproduce, by id.
-std::shared_ptr<IGame> oracle(const std::string& id) {
-  if (id == "standard") return createGame<StandardGame>();
-  if (id == "omit-bishop") return createGame<CustomGameEmitBishop>();
-  if (id == "omit-knight") return createGame<CustomGameEmitKnight>();
-  if (id == "omit-queen") return createGame<CustomGameEmitQueen>();
-  if (id == "omit-rook") return createGame<CustomGameEmitRook>();
-  if (id == "knight-vs-bishop") return createGame<CustomGameKVB>();
-  if (id == "timeline-invasion") return createGame<MiscGameTimeLineInvasion>();
-  if (id == "timeline-battle") return createGame<MiscGameTimeLineBattle>();
-  if (id == "timeline-fragment") return createGame<MiscGameTimeLineFragment>();
-  return nullptr;
-}
-
-std::string oracleTitle(const std::string& id) {
-  if (id == "standard") return NameOfGame<StandardGame>::value;
-  if (id == "omit-knight") return NameOfGame<CustomGameEmitKnight>::value;
-  if (id == "omit-queen") return NameOfGame<CustomGameEmitQueen>::value;
-  if (id == "omit-rook") return NameOfGame<CustomGameEmitRook>::value;
-  if (id == "knight-vs-bishop") return NameOfGame<CustomGameKVB>::value;
-  if (id == "timeline-invasion") return NameOfGame<MiscGameTimeLineInvasion>::value;
-  if (id == "timeline-battle") return NameOfGame<MiscGameTimeLineBattle>::value;
-  if (id == "timeline-fragment") return NameOfGame<MiscGameTimeLineFragment>::value;
-  return "";
-}
-
 void checkSameGame(const IGame& a, const IGame& b) {
   CHECK(snapshot(a) == snapshot(b));
   CHECK(a.dim() == b.dim());
@@ -71,7 +45,8 @@ TEST_CASE("Coord and Move are values: ordering, equality, hashing") {
 }
 
 TEST_CASE("value move API agrees with the shared_ptr API") {
-  StandardGame game;
+  auto gameHolder = newGame("standard");
+  IGame& game = *gameHolder;
   const Coord e2{4, 1, 0, 0};
   CHECK(game.boardExists(e2));
   CHECK_FALSE(game.boardExists(Coord{0, 0, 5, 0}));
@@ -103,9 +78,9 @@ TEST_CASE("value move API agrees with the shared_ptr API") {
 
 TEST_CASE("legalMovesFrom expands a promotion into four moves") {
   Sandbox game(5);
-  game.place(0, 0, 3, make<Pawn>(PieceColor::PIECEWHITE));
-  game.place(0, 4, 0, make<King>(PieceColor::PIECEWHITE));
-  game.place(0, 4, 4, make<King>(PieceColor::PIECEBLACK));
+  game.place(0, 0, 3, make(PieceType::Pawn, PieceColor::PIECEWHITE));
+  game.place(0, 4, 0, make(PieceType::King, PieceColor::PIECEWHITE));
+  game.place(0, 4, 4, make(PieceType::King, PieceColor::PIECEBLACK));
   std::set<PieceType> promos;
   for (const VMove& m : game.legalMovesFrom(Coord{0, 3, 0, 0})) {
     CHECK(m.to == Coord{0, 4, 0, 0});
@@ -270,25 +245,50 @@ TEST_CASE("catalog lists the nine modes in menu order") {
   CHECK(GameCatalog::create("nope") == nullptr);
 }
 
-TEST_CASE("catalog positions equal the old hand-written games board for board") {
-  for (const auto& mode : GameCatalog::modes()) {
-    CAPTURE(mode.id);
-    if (mode.id == "omit-bishop") continue; // deliberately fixed, see the next test
-    auto fresh = GameCatalog::create(mode.id);
-    auto old = oracle(mode.id);
-    REQUIRE(fresh != nullptr);
-    REQUIRE(old != nullptr);
-    checkSameGame(*fresh, *old);
-    CHECK(mode.title == oracleTitle(mode.id));
+// Golden snapshots: every catalog mode, loaded from its .5dp file, must equal this text (test::snapshot: one line per
+// board, rows from y = 0 upwards separated by '/', upper case White, lower case Black, ' = unmoved). A deliberate change
+// of a mode's setup (or of the engine's start-of-game state) has to change this table too.
+struct Golden { const char* id; const char* title; const char* snapshot; };
+const Golden kGolden[] = {
+    {"standard", "Standard",
+     "present=0 color=0 result=0 undoable=0\nT0 fork=-1 parent=-2147483648\n h0 R'N'B'K'Q'B'N'R'/P'P'P'P'P'P'P'P'/......../......../......../......../p'p'p'p'p'p'p'p'/r'n'b'k'q'b'n'r'/\n"},
+    {"omit-bishop", "Simplify - No Bishop",
+     "present=0 color=0 result=0 undoable=0\nT0 fork=-1 parent=-2147483648\n h0 R'N'Q'K'N'R'/P'P'P'P'P'P'/....../....../p'p'p'p'p'p'/r'n'q'k'n'r'/\n"},
+    {"omit-knight", "Simplify - No Knight",
+     "present=0 color=0 result=0 undoable=0\nT0 fork=-1 parent=-2147483648\n h0 R'B'Q'K'B'R'/P'P'P'P'P'P'/....../....../p'p'p'p'p'p'/r'b'q'k'b'r'/\n"},
+    {"omit-queen", "Simplify - No Queen",
+     "present=0 color=0 result=0 undoable=0\nT0 fork=-1 parent=-2147483648\n h0 R'N'B'K'B'N'R'/P'P'P'P'P'P'P'/......./......./......./p'p'p'p'p'p'p'/r'n'b'k'b'n'r'/\n"},
+    {"omit-rook", "Simplify - No Rook",
+     "present=0 color=0 result=0 undoable=0\nT0 fork=-1 parent=-2147483648\n h0 N'B'Q'K'B'N'/P'P'P'P'P'P'/....../....../p'p'p'p'p'p'/n'b'q'k'b'n'/\n"},
+    {"knight-vs-bishop", "Simplify - Knight vs Bishop",
+     "present=0 color=0 result=0 undoable=0\nT0 fork=-1 parent=-2147483648\n h0 R'B'Q'K'B'R'/P'P'P'P'P'P'/....../....../p'p'p'p'p'p'/r'n'q'k'n'r'/\n"},
+    {"timeline-invasion", "Misc - Time Line Invasion",
+     "present=0 color=0 result=0 undoable=0\nT0 fork=-1 parent=-2147483648\n h0 P'P'P'P'P'/...../...../p'p'p'p'p'/n'b'k'r'b'/\nT1 fork=-1 parent=-2147483648\n h0 N'B'K'R'B'/P'P'P'P'P'/...../...../p'p'p'p'p'/\n"},
+    {"timeline-battle", "Misc - Time Line Battle",
+     "present=0 color=0 result=0 undoable=0\nT0 fork=-1 parent=-2147483648\n h0 P'P'P'P'P'/...../p'p'p'p'p'/b'b'q'b'b'/r'r'k'r'r'/\nT1 fork=-1 parent=-2147483648\n h0 N'N'N'N'N'/P'P'P'P'P'/...../p'p'p'p'p'/n'n'n'n'n'/\nT2 fork=-1 parent=-2147483648\n h0 R'R'K'R'R'/B'B'Q'B'B'/P'P'P'P'P'/...../p'p'p'p'p'/\n"},
+    {"timeline-fragment", "Misc - Time Line Fragment",
+     "present=0 color=0 result=0 undoable=0\nT0 fork=0 parent=-2147483648\n h1 N'B'R'N'/..../..../k'p'p'p'/\nT1 fork=-1 parent=-2147483648\n h0 K'P'P'P'/..../..../n'b'r'n'/\n"},
+};
+
+TEST_CASE("golden: every catalog mode loads to its checked-in snapshot") {
+  REQUIRE(GameCatalog::modes().size() == std::size(kGolden));
+  for (const Golden& g : kGolden) {
+    CAPTURE(g.id);
+    const ModeInfo* mode = GameCatalog::findById(g.id);
+    REQUIRE(mode != nullptr);
+    CHECK(mode->title == g.title);
+    auto game = GameCatalog::create(g.id);
+    REQUIRE(game != nullptr);
+    CHECK(snapshot(*game) == g.snapshot);
+    // and the position round-trips through its text form
+    CHECK(Position::fromGame(*game, mode->title) == loadPositionFile(mode->positionFile));
   }
 }
 
-TEST_CASE("omit-bishop fix: Simplify - No Bishop has knights and no bishops (the old class was a copy of No Knight)") {
+TEST_CASE("omit-bishop: Simplify - No Bishop has knights and no bishops") {
   auto fresh = GameCatalog::create("omit-bishop");
   REQUIRE(fresh != nullptr);
-  // The old class built bishops and no knights, i.e. exactly No Knight.
-  CHECK(snapshot(*oracle("omit-bishop")) == snapshot(*oracle("omit-knight")));
-  CHECK(snapshot(*fresh) != snapshot(*oracle("omit-knight")));
+  CHECK(snapshot(*fresh) != snapshot(*GameCatalog::create("omit-knight")));
   const Position p = Position::fromGame(*fresh);
   int knights = 0, bishops = 0;
   for (const auto& cell : p.timelines[0].boards[0].cells) {

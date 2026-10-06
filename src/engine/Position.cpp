@@ -11,12 +11,12 @@ namespace Chess::Core {
 
 namespace {
 
-constexpr int kMaxSize = 16;
+constexpr int kMaxSize = Board::MAX_DIM;
 // Bounds (see docs/POSITIONS.md): timeline ids must fit Core::Coord (int16) with room to spare, and the turn search sizes
 // its arena by the id span and the number of boards, so both are capped far above anything a real game reaches.
 constexpr int kMaxTimelineId = 1000;   // |id|; at most 2001 timelines
 constexpr int kMaxHalfTurn = 20000;    // fits Coord::t (int16)
-constexpr int kMaxBoards = 20000;      // across all timelines; at most 20000 * 256 bytes of search arena
+constexpr int kMaxBoards = 20000;      // across all timelines; at most 20000 * 64 bytes of search arena
 
 [[noreturn]] void fail(int line, const std::string& what) {
   throw ParseError("line " + std::to_string(line) + ": " + what);
@@ -125,6 +125,7 @@ public:
     _rule.castling = p.castling;
     _presentHalfTurn = p.present;
     _currentTurnColor = p.toMove;
+    _startPosition = writePosition(p);
     // The timelines the game started with come first: they define the original ID range (see IGame::_addTimeLine).
     for (int pass = 0; pass < 2; ++pass) {
       for (const TimelineData& data : p.timelines) {
@@ -144,9 +145,7 @@ private:
       for (int x = 0; x < size; ++x) {
         const auto& cell = data.cells[y * size + x];
         if (!cell) continue;
-        auto piece = makePiece(cell->type, cell->color);
-        piece->setUnmoved(!cell->moved);
-        board->placePiece(Position2D(x, y), std::move(piece));
+        board->place(Position2D(x, y), Piece{cell->type, cell->color, !cell->moved});
       }
     }
     return board;
@@ -173,8 +172,8 @@ Position Position::fromGame(const IGame& game, std::string title) {
       b.cells.resize(size_t(p.size) * p.size);
       for (int y = 0; y < p.size; ++y) {
         for (int x = 0; x < p.size; ++x) {
-          if (auto piece = board->getPiece(Position2D(x, y)))
-            b.cells[y * p.size + x] = PieceCell{piece->type(), piece->color(), !piece->unmoved()};
+          if (const auto piece = board->at(Position2D(x, y)))
+            b.cells[y * p.size + x] = PieceCell{piece->type, piece->color, !piece->unmoved};
         }
       }
       data.boards.push_back(std::move(b));

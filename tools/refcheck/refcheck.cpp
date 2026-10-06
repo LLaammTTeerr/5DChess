@@ -31,10 +31,10 @@ struct Args {
   int searchBudget = 200000;
 };
 
-int refCode(const std::shared_ptr<Piece>& piece) {
+int refCode(const Piece& piece) {
   static const int base[] = {11, 9, 7, 3, 5, 1}; // King, Queen, Rook, Bishop, Knight, Pawn (black = odd, white = even)
-  const int code = base[int(piece->type())] + (piece->color() == PieceColor::PIECEWHITE ? 1 : 0);
-  return piece->unmoved() ? -code : code;
+  const int code = base[int(piece.type)] + (piece.color == PieceColor::PIECEWHITE ? 1 : 0);
+  return piece.unmoved ? -code : code;
 }
 
 std::string tipsJson(const IGame& game) {
@@ -48,8 +48,8 @@ std::string tipsJson(const IGame& game) {
     out += "[" + std::to_string(line->ID()) + "," + std::to_string(board->halfTurnNumber()) + ",[";
     for (int y = 0; y < n; ++y) {
       for (int x = 0; x < n; ++x) {
-        auto piece = board->getPiece({x, y});
-        out += std::to_string(piece ? refCode(piece) : 0);
+        const auto piece = board->at({x, y});
+        out += std::to_string(piece ? refCode(*piece) : 0);
         if (y != n - 1 || x != n - 1) out += ",";
       }
     }
@@ -64,16 +64,16 @@ struct Played {
 };
 
 int tagOf(const IGame& game, const Move& m) {
-  auto piece = m.from.board->getPiece(m.from.position);
+  const auto piece = m.from.board->at(m.from.position);
   const bool same = m.to.board == m.from.board;
   const int dx = m.to.position.x() - m.from.position.x();
   const int dy = m.to.position.y() - m.from.position.y();
   const int n = game.dim();
-  if (piece->type() == PieceType::King and same and dy == 0 and std::abs(dx) == 2) return 2;
-  if (piece->type() == PieceType::Pawn) {
-    const int lastRank = piece->color() == PieceColor::PIECEWHITE ? n - 1 : 0;
+  if (piece->type == PieceType::King and same and dy == 0 and std::abs(dx) == 2) return 2;
+  if (piece->type == PieceType::Pawn) {
+    const int lastRank = piece->color == PieceColor::PIECEWHITE ? n - 1 : 0;
     if (m.to.position.y() == lastRank) return 1;
-    if (same and dx != 0 and m.to.board->getPiece(m.to.position) == nullptr) return 3;
+    if (same and dx != 0 and !m.to.board->at(m.to.position)) return 3;
   }
   return 0;
 }
@@ -140,10 +140,10 @@ bool buildTurn(IGame& game, std::mt19937& rng, int turn, std::vector<Played>& tu
       std::vector<int> weight(moves.size());
       int total = 0;
       for (std::size_t i = 0; i < moves.size(); ++i) {
-        auto piece = moves[i].from.board->getPiece(moves[i].from.position);
+        const auto piece = moves[i].from.board->at(moves[i].from.position);
         int w = 1;
-        if (piece->type() == PieceType::Pawn and turn < 12) w = 4;
-        if (piece->type() == PieceType::King and moves[i].to.board == moves[i].from.board
+        if (piece->type == PieceType::Pawn and turn < 12) w = 4;
+        if (piece->type == PieceType::King and moves[i].to.board == moves[i].from.board
             and std::abs(moves[i].to.position.x() - moves[i].from.position.x()) == 2) w = 12; // castling
         weight[i] = w;
         total += w;
@@ -168,22 +168,17 @@ bool buildTurn(IGame& game, std::mt19937& rng, int turn, std::vector<Played>& tu
   return false;
 }
 
+// `mode` is a catalog id ("standard", "omit-bishop", ...) or one of the older names the scripts and docs use.
 std::shared_ptr<IGame> makeGame(const std::string& mode) {
-  if (mode == "standard") return createGame<StandardGame>();
-  // "emit_bishop" is the catalog's "Simplify - No Bishop" (RNQKNR, 6x6, castling only), loaded from its position file;
-  // the old hand-written class of that name (RBQKBR) is the same setup as emit_knight.
-  if (mode == "emit_bishop") {
-    GameCatalog::setDirectory(FDCHESS_POSITIONS_DIR);
-    return GameCatalog::create("omit-bishop");
-  }
-  if (mode == "emit_knight") return createGame<CustomGameEmitKnight>();
-  if (mode == "emit_queen") return createGame<CustomGameEmitQueen>();
-  if (mode == "emit_rook") return createGame<CustomGameEmitRook>();
-  if (mode == "kvb") return createGame<CustomGameKVB>();
-  if (mode == "invasion") return createGame<MiscGameTimeLineInvasion>();
-  if (mode == "battle") return createGame<MiscGameTimeLineBattle>();
-  if (mode == "fragment") return createGame<MiscGameTimeLineFragment>();
-  return nullptr;
+  static const std::pair<const char*, const char*> aliases[] = {
+      {"emit_bishop", "omit-bishop"}, {"emit_knight", "omit-knight"}, {"emit_queen", "omit-queen"},
+      {"emit_rook", "omit-rook"},     {"kvb", "knight-vs-bishop"},    {"invasion", "timeline-invasion"},
+      {"battle", "timeline-battle"},  {"fragment", "timeline-fragment"}};
+  std::string id = mode;
+  for (const auto& [alias, target] : aliases)
+    if (mode == alias) id = target;
+  GameCatalog::setDirectory(FDCHESS_POSITIONS_DIR);
+  return GameCatalog::create(id);
 }
 
 void printVectors() {

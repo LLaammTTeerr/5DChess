@@ -34,7 +34,7 @@ marks a piece that has already moved: `P*` is a pawn that has moved. Setup posit
 | --- | --- |
 | `5dchess-position 1` | magic/version, must be the first non-comment line |
 | `title: ...` | display name (optional) |
-| `size: N` | 1..16 |
+| `size: N` | 1..8 (`Board::MAX_DIM`; the search and the one-byte board cells need N <= 8) |
 | `rules: double-step castling` | enabled rules, any of `double-step` (pawns may advance two squares on their first move) and `castling`, or `none` |
 | `to-move: white\|black` | side to move |
 | `present: H` | half-turn of the present; optional. It must equal what the engine computes: the lowest half-turn among the latest boards of the **active** timelines (below). Its parity must agree with `to-move` |
@@ -67,7 +67,7 @@ A timeline's id is its sign convention: White's new timelines are above the orig
 
 ## Limits
 
-`size` 1..16, timeline ids within -1000..1000, half-turns up to 20000 (`T10000w`), at most 20000 boards in all. The turn
+`size` 1..8, timeline ids within -1000..1000, half-turns up to 20000 (`T10000w`), at most 20000 boards in all. The turn
 search sizes its arena by the id span and the board count (and `Core::Coord` stores the timeline and half-turn in
 int16), so a hostile file such as `L100000000` could otherwise allocate gigabytes; real games stay far below these caps.
 Numbers are range-checked while they are read, so overflowing input is a parse error, never undefined behaviour.
