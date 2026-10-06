@@ -1,0 +1,38 @@
+5dchess-position 1
+title: AI fixture: the generator (rescue mode included) finds no turn, TurnSearch does
+size: 4
+rules: none
+to-move: black
+L-3 parent: L-1
+L-3 T4w: pk*pk/1p*2/4/NR1N
+L-3 T4b: pk*pk/1p*2/4/NR2
+L-2 parent: L1
+L-2 T2w: nrbn/2k*1/2P*1/PP1K
+L-2 T2b: nrbn/2k*1/1P*P*1/P2K
+L-2 T3w: nrbn/4/1P*P*1/P2K
+L-2 T3b: nrbn/2P*1/1P*2/P2K
+L-1 parent: L0
+L-1 T2w: pppk/4/3n*/NRBN
+L-1 T2b: pppk/4/3B*/NR1N
+L-1 T3w: p1pk/1p*2/3B*/NR1N
+L-1 T3b: p1pk/1p*2/4/NR1N
+L-1 T4w: p1p1/1p*1k*/4/NR1N
+L-1 T4b: p1p1/1p*1k*/3N*/NR1N
+L0 T1b: pppk/4/4/NRBN
+L0 T2w: pp1k/2p*1/4/NRBN
+L0 T2b: pp1k/1N*p*1/4/1RBN
+L0 T3w: 1p1k/1p*p*1/4/1RBN
+L0 T3b: 1p1k/1p*p*1/2P*1/1RBN
+L1 T1w: nrbn/4/4/PPPK
+L1 T1b: nrbn/4/2P*1/PP1K
+L1 T2w: nrb1/4/2P*1/PP1K
+L1 T2b: nrb1/4/1P*P*1/P2K
+L1 T3w: nr2/4/b*P*P*1/P2K
+L1 T3b: nr2/4/b*P*2/P2K
+L1 T4w: n2r*/4/b*P*2/P2K
+L2 parent: L-1
+L2 T2b: pppk/4/2B*n*/NRBN
+L2 T3w: ppp1/4/2B*n*/NRBN
+L2 T3b: ppp1/4/2B*n*/N1BN
+L3 parent: L1
+L3 T3b: nr2/4/b*P*P*1/PR*1K

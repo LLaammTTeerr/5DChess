@@ -20,10 +20,13 @@ add_executable(chess_tests
   selection_test.cpp
   layout_test.cpp
   view_test.cpp
-  guide_test.cpp)
-target_link_libraries(chess_tests PRIVATE play_core chess_core doctest::doctest)
+  guide_test.cpp
+  ai_test.cpp)
+target_link_libraries(chess_tests PRIVATE play_core ai_core chess_core doctest::doctest)
+target_include_directories(chess_tests PRIVATE ${PROJECT_SOURCE_DIR}/src) # ai/TurnGen.h (internal) is tested directly
 target_compile_definitions(chess_tests PRIVATE FDCHESS_POSITIONS_DIR="${PROJECT_SOURCE_DIR}/assets/positions"
   FDCHESS_UI_POSITIONS_DIR="${PROJECT_SOURCE_DIR}/tests/ui/positions"
+  FDCHESS_AI_POSITIONS_DIR="${PROJECT_SOURCE_DIR}/tests/ai"
   FDCHESS_GUIDE_DIR="${PROJECT_SOURCE_DIR}/assets/guide")
 target_compile_options(chess_tests PRIVATE $<IF:$<CXX_COMPILER_ID:MSVC>,/UNDEBUG,-UNDEBUG>)
 
