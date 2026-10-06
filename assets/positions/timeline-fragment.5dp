@@ -1,0 +1,7 @@
+5dchess-position 1
+title: Misc - Time Line Fragment
+size: 4
+rules: none
+to-move: white
+L0 T0b: kppp/4/4/NBRN
+L1 T0w: nbrn/4/4/KPPP

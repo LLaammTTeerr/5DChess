@@ -28,7 +28,7 @@ endif()
 include(FetchContent)
 
 # --- Rules engine (no graphics dependency) -----------------------------------
-add_library(chess_core STATIC src/chess.cpp)
+add_library(chess_core STATIC src/chess.cpp src/engine/Position.cpp src/engine/GameCatalog.cpp)
 target_include_directories(chess_core PUBLIC include)
 # The engine uses assert() as its validation layer: keep it on in every config.
 target_compile_options(chess_core PRIVATE $<IF:$<CXX_COMPILER_ID:MSVC>,/UNDEBUG,-UNDEBUG>)
@@ -63,6 +63,7 @@ if(FDCHESS_BUILD_GAME)
 
   file(GLOB_RECURSE GAME_SOURCES CONFIGURE_DEPENDS src/*.cpp)
   list(REMOVE_ITEM GAME_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/chess.cpp)
+  list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/engine/") # engine sources are part of chess_core
 
   add_executable(5dchess ${GAME_SOURCES})
   target_include_directories(5dchess PRIVATE

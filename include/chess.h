@@ -13,6 +13,8 @@
 #include <iostream>
 #include <climits>
 #include <algorithm>
+#include <compare>
+#include <functional>
 
 namespace Chess {
 
@@ -54,6 +56,34 @@ inline constexpr PieceColor opposite(PieceColor c) {
 }
 
 enum class PieceType : int { King, Queen, Rook, Bishop, Knight, Pawn };
+
+/**
+ * Plain-value engine types (no pointers, so they can be hashed, compared, written to notation / puzzles / save files and
+ * sent to an AI). They live in Chess::Core next to the older shared_ptr based Move / SelectedPosition below, which they
+ * will replace; the conversions are SelectedPosition::coord() and IGame::selected().
+ */
+namespace Core {
+
+/**
+ * One square of one board: file x (0 = a-file), rank y (0 = White's back rank), half-turn t of the board (0 = White's
+ * first turn, odd = Black to move on it) and timeline id l (may be negative).
+ * Ordered by (x, y, t, l); the order has no meaning beyond making Coord usable as a map key.
+ */
+struct Coord {
+  int8_t x = 0, y = 0;
+  int16_t t = 0, l = 0;
+  constexpr bool operator==(const Coord&) const = default;
+  constexpr auto operator<=>(const Coord&) const = default;
+};
+
+/** A move: source, destination, and what a pawn reaching the last rank becomes (otherwise unused, Queen by default). */
+struct Move {
+  Coord from, to;
+  PieceType promotion = PieceType::Queen;
+  constexpr bool operator==(const Move&) const = default;
+};
+
+} // namespace Core
 
 class Position2D;
 class Piece;
@@ -370,7 +400,9 @@ private:
 
 class TimeLine {
 public:
-  TimeLine(int N, int IDX = 0, int forkAt = -1);
+  static constexpr int NO_PARENT = INT_MIN;
+
+  TimeLine(int N, int IDX = 0, int forkAt = -1, int parentId = NO_PARENT);
 
   /**
    * Get the ID of the timeline.
@@ -414,8 +446,6 @@ public:
     assert(_history.size() > 0);
     return _history.back()->halfTurnNumber();
   }
-
-  static constexpr int NO_PARENT = INT_MIN;
 
   /**
    * Get the ID of the timeline this one was forked from, or NO_PARENT if it is an original timeline.
@@ -480,6 +510,12 @@ struct SelectedPosition {
 
   inline Vector4D toVector4D(void) const {
     return Vector4D(position.x(), position.y(), board->fullTurnNumber(), board->timeLineId());
+  }
+
+  /** The same square as a pointer-free value. */
+  inline Core::Coord coord(void) const {
+    return Core::Coord{static_cast<int8_t>(position.x()), static_cast<int8_t>(position.y()),
+                       static_cast<int16_t>(board->halfTurnNumber()), static_cast<int16_t>(board->timeLineId())};
   }
 };
 
@@ -745,6 +781,27 @@ public:
     return timeLine(timeLineID)->getBoardByHalfTurn(halfTurn);
   }
 
+  // --- Value API (Chess::Core): the same operations without shared_ptr<Board> ---------------------------------------
+
+  /** Whether the board at (c.l, c.t) exists; c.x and c.y are ignored. */
+  inline bool boardExists(Core::Coord c) const { return boardExists(c.l, c.t); }
+
+  /** The board of a timeline at a half-turn (must exist). Boards are immutable once played, hence const. */
+  inline const Board& board(int timeLine, int halfTurn) const { return *getBoard(timeLine, halfTurn); }
+
+  /** Value -> pointer form of a square (its board must exist). The other direction is SelectedPosition::coord(). */
+  SelectedPosition selected(Core::Coord c) const;
+
+  /**
+   * Moves the side to move may make with the piece on `from` (same rules as getMoveablePositions: pseudo-legal, legality
+   * is judged per turn by canSubmit()). A promotion yields one move per choice (Queen, Rook, Bishop, Knight).
+   * Empty if there is no board, no piece of the side to move, or the board is not one it can move on.
+   */
+  std::vector<Core::Move> legalMovesFrom(Core::Coord from) const;
+
+  /** makeMove(Move, PieceType) with a value move; `move.promotion` is the pawn's promotion piece. */
+  void makeMove(const Core::Move& move);
+
   inline std::shared_ptr<Board> getNewBoard(void) const {
     assert(undoable());
     return timeLine(_undoBuffer.back().back())->back();
@@ -952,3 +1009,21 @@ template<> struct NameOfGame<MiscGameTimeLineFragment> {
 };
 
 } // namespace Chess
+
+template <>
+struct std::hash<Chess::Core::Coord> {
+  std::size_t operator()(const Chess::Core::Coord& c) const noexcept {
+    const std::uint64_t packed = (std::uint64_t(std::uint8_t(c.x)) << 48) | (std::uint64_t(std::uint8_t(c.y)) << 32) |
+                                 (std::uint64_t(std::uint16_t(c.t)) << 16) | std::uint64_t(std::uint16_t(c.l));
+    return std::hash<std::uint64_t>()(packed);
+  }
+};
+
+template <>
+struct std::hash<Chess::Core::Move> {
+  std::size_t operator()(const Chess::Core::Move& m) const noexcept {
+    std::size_t h = std::hash<Chess::Core::Coord>()(m.from);
+    h ^= std::hash<Chess::Core::Coord>()(m.to) + 0x9e3779b97f4a7c15ull + (h << 6) + (h >> 2);
+    return h * 8 + static_cast<std::size_t>(m.promotion);
+  }
+};
