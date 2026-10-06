@@ -108,6 +108,7 @@ public:
   void draw(float alpha = 1.0f) const;
   /// A disabled item looks dimmed and ignores clicks (it still takes the pointer).
   void setEnabled(size_t index, bool enabled) { if (index < items_.size()) items_[index].enabled = enabled; }
+  void setLabel(size_t index, std::string label) { if (index < items_.size()) items_[index].label = std::move(label); }
 
 private:
   std::vector<Button> items_;

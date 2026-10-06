@@ -57,6 +57,7 @@ private:
   bool _ended = false;
   bool _embedded = false;
   float _rightInset = UI::Layout::sideInset;
+  bool _autosaveWarned = false; // "Could not autosave" was shown
   bool _autosaving = false; // this game writes the autosave after each submitted turn (set by the first one, or by Continue)
 
   // Answers that are not free (a threat search over the multiverse), cached until the game's state changes

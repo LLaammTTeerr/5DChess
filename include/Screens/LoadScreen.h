@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <string>
+#include "ui/ConfirmArm.h"
 #include "ui/Screen.h"
 
 // "Load Game": the three save slots (what each holds; empty ones are disabled), a Delete button beside each
@@ -17,7 +18,7 @@ private:
   std::array<ui::Button, 3> _delete;
   ui::Button _back, _paste;
   std::array<bool, 3> _used{};
-  int _confirming = -1;  // the slot whose Delete was clicked once
+  ui::ConfirmArm _confirm; // Delete asks twice
   std::string _message;  // "This save can't be loaded"
 
   void build(App& app);

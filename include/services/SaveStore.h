@@ -81,6 +81,8 @@ public:
   /// Is there an autosave file? (Cheap: it is not read; a game that ended deletes its autosave.)
   bool hasAutosave() const { return _storage->exists("autosave"); }
   LoadResult loadAutosave() const { return load("autosave"); }
+  /// Empty (no file), Ready, or Unreadable (a file that is too large, unreadable or not a record: Continue must not be offered).
+  SlotSummary autosaveSummary() const { return summaryOf("autosave"); }
   void clearAutosave() { _storage->remove("autosave"); }
 
   /// `stamp` is the date line shown in the slot list (the caller owns the clock). `droppedPending` as in writeRecord.
@@ -96,6 +98,7 @@ private:
   std::unique_ptr<Storage> _storage;
   static std::string slotName(int slot) { return "slot" + std::to_string(slot + 1); } // slot is 0-based
   LoadResult load(const std::string& name) const;
+  SlotSummary summaryOf(const std::string& name) const;
 };
 
 /// The storage of this platform: the config directory next to settings.txt on desktop, localStorage on the web, memory under

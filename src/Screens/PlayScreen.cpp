@@ -17,6 +17,9 @@ PlayScreen::PlayScreen(const std::string& modeId) : PlayScreen(Chess::GameCatalo
 
 PlayScreen::PlayScreen(std::shared_ptr<Chess::IGame> game, bool isAutosave) : _game(std::move(game)), _autosaving(isAutosave) {
   _camera.setInsets(UI::Layout::safeTop, UI::Layout::sideInset, UI::Layout::safeBottom, UI::Layout::laneLabelW);
+  // A game that is already decided (a loaded record) is not a transition: no win sound, and no autosave left to continue
+  _ended = _game->result() != Chess::GameResult::Ongoing;
+  if (_ended && _autosaving) App::current().saves.clearAutosave();
   // The first frame's input already needs the layout to map clicks onto, and the motion state is seeded from it
   refresh();
 }
@@ -168,13 +171,22 @@ void PlayScreen::submitTurn() {
   _arrows.finish();
   _game->submitTurn();
   clearSelection();
-  // Continue picks up from the last submitted turn: unsubmitted moves are not part of a record
-  _autosaving = App::current().saves.autosave(*_game) || _autosaving;
+  // Continue picks up from the last submitted turn: unsubmitted moves are not part of a record. The Guide's practice board
+  // (embedded) must never overwrite the player's autosave.
+  if (_embedded) return;
+  if (App::current().saves.autosave(*_game)) {
+    _autosaving = true;
+  } else if (!_autosaveWarned) { // say so once: the player may be playing on with nothing to continue
+    _autosaveWarned = true;
+    _saveMenu.notify("Could not autosave this game");
+  }
 }
 
 // Back to the mode list; the autosave is brought up to date (it is already, after every submitted turn) or removed once the game is over.
 void PlayScreen::leave(App& app) {
-  if (_autosaving) {
+  if (_autosaving && !_embedded) {
+    // A game decided during "Checking position..." has not noticed yet: finish the (bounded) search before deciding
+    if (_game->resultPending()) _game->resolveResult(2000000);
     if (_game->result() == Chess::GameResult::Ongoing) app.saves.autosave(*_game);
     else app.saves.clearAutosave();
   }
@@ -335,7 +347,7 @@ void PlayScreen::draw(App& app) const {
 
   play::drawHud(_hud, style);
   _actions.draw();
-  _saveMenu.draw(style, app.screens.navAlpha());
+  if (!_embedded) _saveMenu.draw(style, app.screens.navAlpha());
   _picker.draw(style);
   if (!ongoing) {
     const Chess::GameResult result = _game->result();

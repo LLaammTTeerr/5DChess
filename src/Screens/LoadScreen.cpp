@@ -3,6 +3,7 @@
 #include "Render/UITheme.h"
 #include "Screens/MainMenuScreen.h"
 #include "Screens/PlayScreen.h"
+#include "Input.h"
 #include "services/SaveStore.h"
 
 namespace {
@@ -40,7 +41,7 @@ void LoadScreen::build(App& app) {
   _slots = ui::ButtonList(labels, slots);
   _slots.selectable = false;
   for (int i = 0; i < savegame::kSlots; ++i) _slots.setEnabled(i, _used[i]);
-  _confirming = -1;
+  _confirm.clear();
 }
 
 void LoadScreen::layoutNavRow() {
@@ -65,19 +66,26 @@ void LoadScreen::update(App& app, float dt) {
       return;
     }
     _message = "This save can't be loaded"; // the file stays: it can be deleted here, or looked at in the config folder
-    _confirming = -1;
+    _confirm.clear();
   }
+  // Delete asks twice: the second click must come a moment later (a double-click does not count), the arm expires after
+  // a few seconds and when the pointer leaves the button
+  int hovered = -1;
+  for (int i = 0; i < savegame::kSlots; ++i) {
+    const Rectangle r = _delete[i].rect;
+    const Vector2 p = Input::mousePosition();
+    if (p.x >= r.x && p.x < r.x + r.width && p.y >= r.y && p.y < r.y + r.height) hovered = i;
+  }
+  _confirm.update(dt, hovered);
   for (int i = 0; i < savegame::kSlots; ++i) {
     if (!_delete[i].update(dt, nav)) continue;
-    if (_confirming == i) {
+    if (_confirm.click(i)) {
       app.saves.deleteSlot(i);
       _message.clear();
       build(app);
-    } else {
-      _confirming = i;
     }
   }
-  for (int i = 0; i < savegame::kSlots; ++i) _delete[i].label = _confirming == i ? "Sure?" : "Delete";
+  for (int i = 0; i < savegame::kSlots; ++i) _delete[i].label = _confirm.armed() == i ? "Sure?" : "Delete";
 
   if (_back.update(dt, nav)) {
     app.screens.replace(std::make_unique<MainMenuScreen>());

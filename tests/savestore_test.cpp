@@ -191,3 +191,31 @@ TEST_CASE("summarize reads the header without replaying") {
   CHECK(summarize("5dchess-record 2\nmode: standard\n").state == SlotSummary::State::Unreadable);
   CHECK(summarize("5dchess-record 1\n").state == SlotSummary::State::Unreadable); // no header
 }
+
+TEST_CASE("autosaveSummary: Ready, Unreadable (garbage, oversized) or Empty, so Continue is never a dead end") {
+  TempDir dir("autosum");
+  SaveStore store(std::make_unique<FileStorage>(dir.path.string()));
+  CHECK(store.autosaveSummary().state == SlotSummary::State::Empty);
+  CHECK(store.autosave(*playedGame(2)));
+  CHECK(store.autosaveSummary().state == SlotSummary::State::Ready);
+  writeFile(dir.path / "autosave.5dr", "garbage");
+  CHECK(store.autosaveSummary().state == SlotSummary::State::Unreadable);
+  CHECK(store.hasAutosave());
+  writeFile(dir.path / "autosave.5dr", std::string(kMaxBytes + 1, 'x'));
+  CHECK(store.autosaveSummary().state == SlotSummary::State::Unreadable);
+  store.clearAutosave();
+  CHECK(store.autosaveSummary().state == SlotSummary::State::Empty);
+}
+
+TEST_CASE("temporary files do not linger after a write") {
+  TempDir dir("tmp");
+  FileStorage files(dir.path.string());
+  CHECK(files.write("slot1", "x"));
+  CHECK(files.write("slot1", "y"));
+  int entries = 0;
+  for (const auto& e : fs::directory_iterator(dir.path)) {
+    (void)e;
+    ++entries;
+  }
+  CHECK(entries == 1);
+}

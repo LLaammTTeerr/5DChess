@@ -11,8 +11,8 @@ capture load-screen-records          # Slot 1 Standard / 4 turns, Slot 2 looks f
 click 600 230        # Slot 2: the record is corrupted
 wait 20
 capture load-corrupt-message         # "This save can't be loaded"; the slot is still there
-click 968 230        # Delete (asks again)
-wait 20
+click 968 230        # Delete (asks again; a second click within 0.4 s would not count)
+wait 30
 capture load-delete-confirm
 click 968 230        # Sure?
 wait 40

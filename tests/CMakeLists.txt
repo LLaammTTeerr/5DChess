@@ -16,6 +16,7 @@ add_executable(chess_tests
   position_test.cpp
   notation_test.cpp
   savestore_test.cpp
+  confirm_test.cpp
   selection_test.cpp
   layout_test.cpp
   view_test.cpp

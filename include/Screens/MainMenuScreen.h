@@ -11,7 +11,7 @@ public:
   void draw(App& app) const override;
 
 private:
-  enum class Item { Continue, Versus, Load, Puzzles, Guide, Settings, Exit };
+  enum class Item { Continue, Discard, Versus, Load, Puzzles, Guide, Settings, Exit };
   std::vector<Item> _items;  // what each button of _nav does
   ui::ButtonList _nav;       // [Continue,] Versus, Load game, Puzzles, Guide, Settings, Exit
   std::string _notice;       // "This save can't be loaded" after a failed Continue

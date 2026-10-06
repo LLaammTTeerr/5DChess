@@ -3,6 +3,13 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#ifdef _WIN32
+#include <process.h>
+#define FDCHESS_GETPID _getpid
+#elif !defined(__EMSCRIPTEN__)
+#include <unistd.h>
+#define FDCHESS_GETPID getpid
+#endif
 #include "engine/GameCatalog.h"
 #include "engine/Notation.h"
 #include "engine/Position.h"
@@ -45,7 +52,12 @@ bool FileStorage::write(const std::string& name, const std::string& text) {
   std::error_code ec;
   fs::create_directories(_dir, ec);
   if (ec) return false;
-  const std::string path = pathOf(name), temp = path + ".tmp";
+  #ifdef FDCHESS_GETPID
+  const std::string suffix = ".tmp" + std::to_string(static_cast<long long>(FDCHESS_GETPID())); // two running games must not share it
+#else
+  const std::string suffix = ".tmp";
+#endif
+  const std::string path = pathOf(name), temp = path + suffix;
   {
     std::ofstream out(temp, std::ios::binary | std::ios::trunc);
     if (!out) return false;
@@ -213,10 +225,14 @@ bool SaveStore::saveSlot(int slot, const Chess::IGame& game, const std::string& 
 }
 
 SlotSummary SaveStore::slot(int slot) const {
+  if (slot < 0 || slot >= kSlots) return {};
+  return summaryOf(slotName(slot));
+}
+
+SlotSummary SaveStore::summaryOf(const std::string& name) const {
   SlotSummary s;
-  if (slot < 0 || slot >= kSlots) return s;
   std::string text;
-  switch (_storage->read(slotName(slot), text)) {
+  switch (_storage->read(name, text)) {
     case ReadStatus::Missing: return s;
     case ReadStatus::Ok: return summarize(text);
     case ReadStatus::TooLarge:

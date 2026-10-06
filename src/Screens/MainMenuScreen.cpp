@@ -78,14 +78,19 @@ constexpr const char* kPieces[] = {"king", "queen", "rook", "bishop", "knight", 
 
 MainMenuScreen::MainMenuScreen() {
   // Continue only while there is an unfinished autosaved game to resume (the store deletes the autosave of a finished game)
-  if (App::current().saves.hasAutosave()) _items.push_back(Item::Continue);
+  // An autosave that cannot even be read as a record gets "Discard autosave" instead, so it is never a dead end.
+  switch (App::current().saves.autosaveSummary().state) {
+    case savegame::SlotSummary::State::Ready: _items.push_back(Item::Continue); break;
+    case savegame::SlotSummary::State::Unreadable: _items.push_back(Item::Discard); break;
+    case savegame::SlotSummary::State::Empty: break;
+  }
   for (Item item : {Item::Versus, Item::Load, Item::Puzzles, Item::Guide, Item::Settings}) _items.push_back(item);
 #ifndef __EMSCRIPTEN__  // a browser tab has nothing to exit to
   _items.push_back(Item::Exit);
 #endif
   std::vector<std::string> labels;
   for (Item item : _items) {
-    static const char* const names[] = {"Continue", "Versus", "Load game", "Puzzles", "Guide", "Settings", "Exit"};
+    static const char* const names[] = {"Continue", "Discard autosave", "Versus", "Load game", "Puzzles", "Guide", "Settings", "Exit"};
     labels.push_back(names[static_cast<int>(item)]);
   }
   // Navigation column, vertically centred in the left 300 px
@@ -111,9 +116,18 @@ void MainMenuScreen::update(App& app, float deltaTime) {
     case Item::Continue: {
       const savegame::LoadResult result = app.saves.loadAutosave();
       if (result) app.screens.replace(std::make_unique<PlayScreen>(result.game, true));
-      else { _notice = "This save can't be loaded"; _noticeClock = 0.0f; } // the file stays where it is
+      else {
+        _notice = "This save can't be loaded"; // the file stays until the player discards it
+        _noticeClock = 0.0f;
+        _items[clicked] = Item::Discard;
+        _nav.setLabel(clicked, "Discard autosave");
+      }
       break;
     }
+    case Item::Discard:
+      app.saves.clearAutosave();
+      app.screens.replace(std::make_unique<MainMenuScreen>());
+      break;
     case Item::Versus: app.screens.replace(std::make_unique<ModeSelectScreen>()); break;
     case Item::Load: app.screens.replace(std::make_unique<LoadScreen>()); break;
     case Item::Guide: app.screens.replace(std::make_unique<GuideScreen>()); break;

@@ -1,5 +1,5 @@
-# Settings -> each submenu. Layout (1400x800): main menu buttons are 200x44 at x=50, y=258+60*i
-# (Versus 0, Puzzles 1, Guide 2, Settings 3, Exit 4). Settings tabs are 160x44 at y=150, x=440+180*i.
+# Settings -> each submenu. Layout (1400x800): main menu buttons are 200x44 at x=50, y=228+60*i
+# (Versus 0, Load game 1, Puzzles 2, Guide 3, Settings 4, Exit 5; Continue is on top when there is an autosave). Settings tabs are 160x44 at y=150, x=440+180*i.
 # Piece Theme options are 200x44 at x=50, y=282+64*i (Classic, Modern, Fantasy, Pixel).
 wait 20
 click 150 490        # Settings

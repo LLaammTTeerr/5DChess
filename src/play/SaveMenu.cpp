@@ -36,6 +36,11 @@ Rectangle SaveMenu::panelRect() const {
   return {kLeft, top, kPanelW, kHeader + savegame::kSlots * (kRow + kGap) + kPad - kGap};
 }
 
+Rectangle SaveMenu::slotRect(int slot) const {
+  const Rectangle panel = panelRect();
+  return {panel.x + kPad, panel.y + kHeader + slot * (kRow + kGap), panel.width - 2 * kPad, kRow};
+}
+
 void SaveMenu::say(std::string text, bool warn) {
   _message = std::move(text);
   _warn = warn;
@@ -48,10 +53,12 @@ void SaveMenu::openPanel() {
   std::vector<Rectangle> slots;
   for (int i = 0; i < savegame::kSlots; ++i) {
     labels.push_back(slotLabel(i));
-    slots.push_back({panel.x + kPad, panel.y + kHeader + i * (kRow + kGap), panel.width - 2 * kPad, kRow});
+    slots.push_back(slotRect(i));
+    _occupied[i] = App::current().saves.slot(i).state != savegame::SlotSummary::State::Empty;
   }
   _slots = ui::ButtonList(labels, slots);
   _slots.selectable = false;
+  _overwrite.clear();
   _open = true;
 }
 
@@ -86,7 +93,22 @@ void SaveMenu::update(float dt, bool reachable, const BoardStyle& style, const C
     return;
   }
 
-  const int clicked = _slots.update(dt, true);
+  const Vector2 pointer = Input::mousePosition();
+  int hovered = -1;
+  for (int i = 0; i < savegame::kSlots; ++i)
+    if (inside(slotRect(i), pointer)) hovered = i;
+  const int armedBefore = _overwrite.armed();
+  _overwrite.update(dt, hovered);
+  if (_overwrite.armed() != armedBefore && armedBefore >= 0)
+    _slots.setLabel(armedBefore, slotLabel(armedBefore)); // disarmed (timeout or the pointer left)
+  int clicked = _slots.update(dt, true);
+  if (clicked >= 0 && _occupied[clicked]) {
+    // Overwriting asks once more: the first click only arms the slot (and a double-click does not confirm)
+    if (!_overwrite.click(clicked)) {
+      _slots.setLabel(clicked, "Overwrite slot " + std::to_string(clicked + 1) + "?");
+      clicked = -1;
+    }
+  }
   if (clicked >= 0) {
     bool dropped = false;
     App& app = App::current();
@@ -100,7 +122,10 @@ void SaveMenu::update(float dt, bool reachable, const BoardStyle& style, const C
   const Rectangle panel = panelRect();
   const Vector2 mouse = Input::mousePosition();
   if (inside(panel, mouse)) ui::consumePointer();
-  else if (Input::mousePressed(MOUSE_BUTTON_LEFT) && !saveClicked && !inside(_save.rect, mouse) && !inside(_copy.rect, mouse)) _open = false;
+  else if (Input::mousePressed(MOUSE_BUTTON_LEFT) && !saveClicked && !inside(_save.rect, mouse) && !inside(_copy.rect, mouse)) {
+    _open = false;
+    ui::consumePointer(); // this click only closed the panel: it is not a click on the board underneath
+  }
 }
 
 void SaveMenu::draw(const BoardStyle& style, float navAlpha) const {

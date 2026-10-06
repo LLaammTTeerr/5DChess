@@ -46,27 +46,6 @@ void drawLines(::Font font, float size, const std::vector<std::string>& lines, f
     DrawTextEx(font, lines[i].c_str(), {std::floor(x), std::floor(y + static_cast<float>(i) * lineH)}, size, 0.0f, color);
 }
 
-// The panel in the look of the board view's HUD (rounded with a soft shadow or glow, or a sharp ink rectangle)
-void drawPanel(Rectangle r, const play::BoardStyle& st) {
-  if (st.hudSquare) {
-    DrawRectangleRec(r, st.hudFill);
-    DrawRectangleLinesEx(r, 1.0f, st.hudBorder);
-    return;
-  }
-  const float roundness = 18.0f / std::min(r.width, r.height);
-  if (st.card == play::BoardStyle::Card::Glow) {
-    for (int k = 3; k >= 1; --k) {
-      const Rectangle g = {r.x - k * 4.0f, r.y - k * 4.0f, r.width + k * 8.0f, r.height + k * 8.0f};
-      DrawRectangleRounded(g, 18.0f / std::min(g.width, g.height), 12,
-                           UI::withAlpha(st.hudShadow, static_cast<unsigned char>(st.hudShadow.a * 0.22f / k)));
-    }
-  } else {
-    DrawRectangleRounded({r.x + 2, r.y + 3, r.width, r.height}, roundness, 12, st.hudShadow);
-  }
-  DrawRectangleRounded(r, roundness, 12, st.hudFill);
-  DrawRectangleRoundedLinesEx(r, roundness, 12, 1.0f, st.hudBorder);
-}
-
 void drawCheck(float x, float y, float size, ::Color color) {
   DrawLineEx({x, y + size * 0.55f}, {x + size * 0.38f, y + size * 0.9f}, 3.0f, color);
   DrawLineEx({x + size * 0.38f, y + size * 0.9f}, {x + size, y + size * 0.12f}, 3.0f, color);
@@ -197,7 +176,8 @@ void GuideScreen::draw(App& app) const {
   const guide::Page& page = guide::pages()[static_cast<size_t>(_page)];
   _board->draw(app);
 
-  drawPanel(_panel, style);
+  // the HUD's panel with a fixed corner radius of about 18 px
+  play::drawPanel(_panel, style, 1.0f, 18.0f / std::min(_panel.width, _panel.height));
   const float x = _panel.x + kPad;
   drawLines(UI::Fonts::mono(), UI::Font::mono, _step.lines, x, _step.y, kSmallLine, style.hudMuted);
   drawLines(UI::Fonts::section(), UI::Font::section, _title.lines, x, _title.y, kTitleLine, style.hudText);

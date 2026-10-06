@@ -26,8 +26,7 @@ public:
     const int length = EM_ASM_INT({
       try { const v = localStorage.getItem(UTF8ToString($0)); return v === null ? -1 : v.length; } catch (e) { return -2; }
     }, key.c_str());
-    if (length == -1) return ReadStatus::Missing;
-    if (length < 0) return ReadStatus::Error;
+    if (length < 0) return ReadStatus::Missing; // absent, or storage blocked (getItem throws): nothing to load
     if (static_cast<size_t>(length) > kMaxBytes) return ReadStatus::TooLarge;
     const std::string script = "(function(){try{return localStorage.getItem('" + key + "')||'';}catch(e){return '';}})()";
     if (const char* value = emscripten_run_script_string(script.c_str())) text = value;

@@ -13,7 +13,7 @@
 //   mode <id>            replace the current screen with the game screen of a catalog mode (e.g. standard)
 //   position <file>      same, for a .5dp position file; relative paths are relative to the script's directory
 //   record <file>        same, for a game record (.5dr, see docs/NOTATION.md): the game replayed from it
-//   slot <n> <file>      put the text of a file (a record, or a corrupted one) into save slot n (1-3) of the in-memory store the
+//   slot <n> <file>      put the text of a file (a record, or a corrupted one) into save slot n (1-3; 0 is the autosave) of the in-memory store the
 //                        harness uses instead of the config directory; the Load screen then lists it
 //   (the first three take effect on the next frame: follow them with `wait`)
 //   clicksq <l> <t> <sq>  click a square of the game screen (or the Guide's page) by name wherever the camera has put it: timeline id l,
@@ -147,7 +147,7 @@ bool parseScript(const std::string& path, std::vector<FrameSpec>& out) {
       if (!(ss >> f.record)) return fail("record needs a file");
       out.push_back(f);
     } else if (cmd == "slot") {
-      if (!(ss >> f.slotNo >> f.slotFile) || f.slotNo < 1 || f.slotNo > savegame::kSlots) return fail("slot needs <1-3> <file>");
+      if (!(ss >> f.slotNo >> f.slotFile) || f.slotNo < 0 || f.slotNo > savegame::kSlots) return fail("slot needs <0-3> <file>");
       out.push_back(f);
     } else if (cmd == "capture") {
       if (!(ss >> f.capture)) return fail("capture needs a name");
@@ -211,7 +211,7 @@ int main(int argc, char** argv) {
         if (!file) { std::cerr << scriptPath.string() << ":" << f.line << ": cannot open " << f.slotFile << "\n"; rc = 2; break; }
         std::ostringstream text;
         text << file.rdbuf();
-        app.saves.storage().write("slot" + std::to_string(f.slotNo), text.str());
+        app.saves.storage().write(f.slotNo == 0 ? "autosave" : "slot" + std::to_string(f.slotNo), text.str());
       }
       if (!f.mode.empty() || !f.position.empty() || !f.record.empty()) {
         std::shared_ptr<Chess::IGame> game;
