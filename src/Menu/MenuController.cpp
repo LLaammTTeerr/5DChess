@@ -8,6 +8,7 @@
 #include "gameState.h"
 #include "GameStates/ConcreteGameStates/MainMenuState.h"
 #include "GameStates/ConcreteGameStates/VersusState.h"
+#include "engine/GameCatalog.h"
 #include "Render/View.h"
 #include "Render/Controller.h"
 #include "Render/RenModel.h"
@@ -285,17 +286,7 @@ void VersusMenuController::draw() const {
 
 std::vector<std::string> fetchGameMode(void) {
   std::vector<std::string> gameModes;
-  #define REGISTER_MODE(X) gameModes.push_back(Chess::NameOfGame<X>::value)
-  REGISTER_MODE(Chess::StandardGame);
-  REGISTER_MODE(Chess::CustomGameEmitBishop);
-  REGISTER_MODE(Chess::CustomGameEmitKnight);
-  REGISTER_MODE(Chess::CustomGameEmitQueen);
-  REGISTER_MODE(Chess::CustomGameEmitRook);
-  REGISTER_MODE(Chess::CustomGameKVB);
-  REGISTER_MODE(Chess::MiscGameTimeLineInvasion);
-  REGISTER_MODE(Chess::MiscGameTimeLineBattle);
-  REGISTER_MODE(Chess::MiscGameTimeLineFragment);
-  #undef REGISTER_MODE
+  for (const Chess::ModeInfo& mode : Chess::GameCatalog::modes()) gameModes.push_back(mode.title);
   return gameModes;
 }
 

@@ -3,23 +3,16 @@
 #include <iostream>
 #include <raylib.h> // Assuming raylib is used for rendering
 #include "chess.h"
+#include "engine/GameCatalog.h"
 #include "Render/View.h"
 
 TestingScene::TestingScene(const std::string& gameMode)
     : _gameModeSelected(gameMode) {}
 
 void TestingScene::init(void) {
-  #define TRY_LOAD_MODE(X) if (_gameModeSelected == Chess::NameOfGame<X>::value) { _game = Chess::createGame<X>(); }
-  TRY_LOAD_MODE(Chess::StandardGame);
-  TRY_LOAD_MODE(Chess::CustomGameEmitBishop);
-  TRY_LOAD_MODE(Chess::CustomGameEmitKnight);
-  TRY_LOAD_MODE(Chess::CustomGameEmitQueen);
-  TRY_LOAD_MODE(Chess::CustomGameEmitRook);
-  TRY_LOAD_MODE(Chess::CustomGameKVB);
-  TRY_LOAD_MODE(Chess::MiscGameTimeLineInvasion);
-  TRY_LOAD_MODE(Chess::MiscGameTimeLineBattle);
-  TRY_LOAD_MODE(Chess::MiscGameTimeLineFragment);
-  #undef TRY_LOAD_MODE
+  if (const Chess::ModeInfo* mode = Chess::GameCatalog::findByTitle(_gameModeSelected)) {
+    _game = Chess::GameCatalog::create(mode->id);
+  }
 
   _chessModel = std::make_shared<ChessModel>(_game);
   _chessView = std::make_shared<ChessView>(Vector3{5000, 5000, 1});

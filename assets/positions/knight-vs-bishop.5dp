@@ -1,0 +1,6 @@
+5dchess-position 1
+title: Simplify - Knight vs Bishop
+size: 6
+rules: castling
+to-move: white
+L0 T0w: rnqknr/pppppp/6/6/PPPPPP/RBQKBR

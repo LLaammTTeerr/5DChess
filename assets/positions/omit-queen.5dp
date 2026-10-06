@@ -1,0 +1,6 @@
+5dchess-position 1
+title: Simplify - No Queen
+size: 7
+rules: castling
+to-move: white
+L0 T0w: rnbkbnr/ppppppp/7/7/7/PPPPPPP/RNBKBNR

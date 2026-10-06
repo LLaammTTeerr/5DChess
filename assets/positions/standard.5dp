@@ -1,0 +1,6 @@
+5dchess-position 1
+title: Standard
+size: 8
+rules: double-step castling
+to-move: white
+L0 T0w: rnbkqbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBKQBNR

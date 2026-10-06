@@ -53,7 +53,7 @@ std::shared_ptr<Board> Board::createFork(int timeLineId) {
   return forkedBoard;
 }
 
-TimeLine::TimeLine(int N, int IDX, int forkAt) : _N(N), _ID(IDX), _forkAt(forkAt), _parentId(NO_PARENT) {}
+TimeLine::TimeLine(int N, int IDX, int forkAt, int parentId) : _N(N), _ID(IDX), _forkAt(forkAt), _parentId(parentId) {}
 
 void TimeLine::pushBack(std::shared_ptr<Board> board) {
   _history.push_back(board);
@@ -77,6 +77,7 @@ bool IGame::canMakeMoveFromBoard(std::shared_ptr<Board> board) const {
 }
 
 bool IGame::isTimeLineActive(int id) const {
+  assert(_origMin <= _origMax && "a game needs at least one original timeline");
   if (id >= _origMin and id <= _origMax) return true;
   const int whiteCreated = std::max(0, maxTimeLineId() - _origMax);
   const int blackCreated = std::max(0, _origMin - minTimeLineId());
@@ -394,6 +395,32 @@ std::vector<SelectedPosition> IGame::getMoveablePositions(SelectedPosition selec
                              }),
               moves.end());
   return moves;
+}
+
+SelectedPosition IGame::selected(Core::Coord c) const {
+  return SelectedPosition(getBoard(c.l, c.t), Position2D(c.x, c.y));
+}
+
+std::vector<Core::Move> IGame::legalMovesFrom(Core::Coord from) const {
+  std::vector<Core::Move> result;
+  if (!boardExists(from) or from.x < 0 or from.y < 0 or from.x >= _N or from.y >= _N) return result;
+  const SelectedPosition source = selected(from);
+  const auto piece = source.board->getPiece(source.position);
+  if (piece == nullptr or piece->color() != _currentTurnColor or !canMakeMoveFromBoard(source.board)) return result;
+  const int lastRank = _currentTurnColor == PieceColor::PIECEWHITE ? dim() - 1 : 0;
+  for (const SelectedPosition& to : getMoveablePositions(source)) {
+    if (piece->type() == PieceType::Pawn and to.position.y() == lastRank) {
+      for (PieceType p : {PieceType::Queen, PieceType::Rook, PieceType::Bishop, PieceType::Knight})
+        result.push_back(Core::Move{from, to.coord(), p});
+    } else {
+      result.push_back(Core::Move{from, to.coord()});
+    }
+  }
+  return result;
+}
+
+void IGame::makeMove(const Core::Move& move) {
+  makeMove(Move{selected(move.from), selected(move.to)}, move.promotion);
 }
 
 std::shared_ptr<Piece> makePiece(PieceType type, PieceColor color) {
@@ -734,6 +761,7 @@ struct TurnSearch::Impl {
     return c;
   }
   inline bool isActive(int id) const {
+    assert(origMin <= origMax && "a game needs at least one original timeline");
     if (id >= origMin && id <= origMax) return true;
     const int whiteCreated = std::max(0, maxId - origMax);
     const int blackCreated = std::max(0, origMin - minId);

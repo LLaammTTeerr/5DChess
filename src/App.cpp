@@ -4,6 +4,7 @@
 #include "Scene/SceneManager.h"
 #include "Render/UITheme.h"
 #include "gameState.h"
+#include "engine/GameCatalog.h"
 #include <raylib.h>
 #include <algorithm>
 #include <cassert>
@@ -25,6 +26,7 @@ App& App::current() {
 App::App() {
     settings.reduceMotion = TestMode::get().reduceMotion;
     audio.init(assets);
+    Chess::GameCatalog::setDirectory(assets.root() + "positions"); // one assets root for everything
     gameState = std::make_unique<GameStateModel>();
     scenes = std::make_unique<SceneManager>(gameState.get());
 }

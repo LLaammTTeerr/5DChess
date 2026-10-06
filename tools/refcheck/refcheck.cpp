@@ -8,6 +8,7 @@
 // Coordinates are printed in the ENGINE's terms (timeline ID, half-turn, file x, rank y); compare.js does the
 // mapping to 5d-chess-js (see the header of compare.js).
 #include "chess.h"
+#include "engine/GameCatalog.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -169,7 +170,12 @@ bool buildTurn(IGame& game, std::mt19937& rng, int turn, std::vector<Played>& tu
 
 std::shared_ptr<IGame> makeGame(const std::string& mode) {
   if (mode == "standard") return createGame<StandardGame>();
-  if (mode == "emit_bishop") return createGame<CustomGameEmitBishop>();
+  // "emit_bishop" is the catalog's "Simplify - No Bishop" (RNQKNR, 6x6, castling only), loaded from its position file;
+  // the old hand-written class of that name (RBQKBR) is the same setup as emit_knight.
+  if (mode == "emit_bishop") {
+    GameCatalog::setDirectory(FDCHESS_POSITIONS_DIR);
+    return GameCatalog::create("omit-bishop");
+  }
   if (mode == "emit_knight") return createGame<CustomGameEmitKnight>();
   if (mode == "emit_queen") return createGame<CustomGameEmitQueen>();
   if (mode == "emit_rook") return createGame<CustomGameEmitRook>();

@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <cstdint>
+#include <cstdlib>
 #include <random>
 #include <string>
 #include <vector>
@@ -101,6 +102,47 @@ inline std::string snapshot(const IGame& game) {
     }
   }
   return out;
+}
+
+// Builds a random legal turn (moves on random moveable boards, undoing dead ends) and leaves it pending.
+// Returns false if no legal turn was found within a few attempts. `onMove` sees every move that is made.
+template <class F>
+bool buildRandomTurn(IGame& game, std::mt19937& rng, F&& onMove) {
+  for (int attempt = 0; attempt < 12; ++attempt) {
+    for (int step = 0; step < 10; ++step) {
+      if (game.canSubmit() and test::randInt(rng, 0, 2) != 0) return true;
+      auto moves = game.allPseudoLegalMoves();
+      if (moves.empty()) break;
+      // Pawn moves and castling are favoured, so that double steps, en passant, promotion and castling occur in short games.
+      std::vector<int> weight(moves.size(), 1);
+      int total = 0;
+      for (std::size_t i = 0; i < moves.size(); ++i) {
+        auto piece = moves[i].from.board->getPiece(moves[i].from.position);
+        if (piece->type() == PieceType::Pawn) {
+          weight[i] = 4;
+          const bool sameBoard = moves[i].to.board == moves[i].from.board;
+          if (sameBoard and moves[i].to.position.x() != moves[i].from.position.x()
+              and moves[i].to.board->getPiece(moves[i].to.position) == nullptr)
+            weight[i] = 60; // en passant, when it is on offer
+          if (moves[i].to.position.y() == (piece->color() == PieceColor::PIECEWHITE ? game.dim() - 1 : 0)) weight[i] = 40; // promotion
+        }
+        if (piece->type() == PieceType::King and moves[i].to.board == moves[i].from.board
+            and std::abs(moves[i].to.position.x() - moves[i].from.position.x()) == 2) weight[i] = 12;
+        total += weight[i];
+      }
+      int pick = test::randInt(rng, 0, total - 1);
+      std::size_t idx = 0;
+      while (pick >= weight[idx]) pick -= weight[idx++];
+      Move move = moves[idx];
+      onMove(game, move);
+      static const PieceType promos[] = {PieceType::Queen, PieceType::Rook, PieceType::Bishop, PieceType::Knight};
+      game.makeMove(move, promos[test::randInt(rng, 0, 3)]);
+      if (test::randInt(rng, 0, 5) == 0) game.undo();
+    }
+    if (game.canSubmit()) return true;
+    while (game.undoable()) game.undo();
+  }
+  return false;
 }
 
 } // namespace test

@@ -1,0 +1,6 @@
+5dchess-position 1
+title: Simplify - No Rook
+size: 6
+rules: castling
+to-move: white
+L0 T0w: nbqkbn/pppppp/6/6/PPPPPP/NBQKBN
