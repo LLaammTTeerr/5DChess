@@ -6,82 +6,95 @@
 # Textures are loaded at startup; fonts (per size), sounds and music on first use.
 # The Emscripten --preload-file list is generated from this file (CMakeLists.txt).
 
-texture piece.classic.black_bishop images/Theme_0/black_bishop.png
-texture piece.classic.black_king images/Theme_0/black_king.png
-texture piece.classic.black_knight images/Theme_0/black_knight.png
-texture piece.classic.black_pawn images/Theme_0/black_pawn.png
-texture piece.classic.black_queen images/Theme_0/black_queen.png
-texture piece.classic.black_rook images/Theme_0/black_rook.png
-texture piece.classic.white_bishop images/Theme_0/white_bishop.png
-texture piece.classic.white_king images/Theme_0/white_king.png
-texture piece.classic.white_knight images/Theme_0/white_knight.png
-texture piece.classic.white_pawn images/Theme_0/white_pawn.png
-texture piece.classic.white_queen images/Theme_0/white_queen.png
-texture piece.classic.white_rook images/Theme_0/white_rook.png
+texture piece.pixel.black_bishop images/pieces/pixel/black_bishop.png filter=point
+texture piece.pixel.black_king images/pieces/pixel/black_king.png filter=point
+texture piece.pixel.black_knight images/pieces/pixel/black_knight.png filter=point
+texture piece.pixel.black_pawn images/pieces/pixel/black_pawn.png filter=point
+texture piece.pixel.black_queen images/pieces/pixel/black_queen.png filter=point
+texture piece.pixel.black_rook images/pieces/pixel/black_rook.png filter=point
+texture piece.pixel.white_bishop images/pieces/pixel/white_bishop.png filter=point
+texture piece.pixel.white_king images/pieces/pixel/white_king.png filter=point
+texture piece.pixel.white_knight images/pieces/pixel/white_knight.png filter=point
+texture piece.pixel.white_pawn images/pieces/pixel/white_pawn.png filter=point
+texture piece.pixel.white_queen images/pieces/pixel/white_queen.png filter=point
+texture piece.pixel.white_rook images/pieces/pixel/white_rook.png filter=point
+texture piece.pixel.black_bishop_blink images/pieces/pixel/black_bishop_blink.png filter=point
+texture piece.pixel.black_king_blink images/pieces/pixel/black_king_blink.png filter=point
+texture piece.pixel.black_knight_blink images/pieces/pixel/black_knight_blink.png filter=point
+texture piece.pixel.black_pawn_blink images/pieces/pixel/black_pawn_blink.png filter=point
+texture piece.pixel.black_queen_blink images/pieces/pixel/black_queen_blink.png filter=point
+texture piece.pixel.black_rook_blink images/pieces/pixel/black_rook_blink.png filter=point
+texture piece.pixel.white_bishop_blink images/pieces/pixel/white_bishop_blink.png filter=point
+texture piece.pixel.white_king_blink images/pieces/pixel/white_king_blink.png filter=point
+texture piece.pixel.white_knight_blink images/pieces/pixel/white_knight_blink.png filter=point
+texture piece.pixel.white_pawn_blink images/pieces/pixel/white_pawn_blink.png filter=point
+texture piece.pixel.white_queen_blink images/pieces/pixel/white_queen_blink.png filter=point
+texture piece.pixel.white_rook_blink images/pieces/pixel/white_rook_blink.png filter=point
 
-texture piece.modern.black_bishop images/Theme_1/black_bishop.png
-texture piece.modern.black_king images/Theme_1/black_king.png
-texture piece.modern.black_knight images/Theme_1/black_knight.png
-texture piece.modern.black_pawn images/Theme_1/black_pawn.png
-texture piece.modern.black_queen images/Theme_1/black_queen.png
-texture piece.modern.black_rook images/Theme_1/black_rook.png
-texture piece.modern.white_bishop images/Theme_1/white_bishop.png
-texture piece.modern.white_king images/Theme_1/white_king.png
-texture piece.modern.white_knight images/Theme_1/white_knight.png
-texture piece.modern.white_pawn images/Theme_1/white_pawn.png
-texture piece.modern.white_queen images/Theme_1/white_queen.png
-texture piece.modern.white_rook images/Theme_1/white_rook.png
+texture piece.medieval.black_bishop images/pieces/medieval/black_bishop.png
+texture piece.medieval.black_king images/pieces/medieval/black_king.png
+texture piece.medieval.black_knight images/pieces/medieval/black_knight.png
+texture piece.medieval.black_pawn images/pieces/medieval/black_pawn.png
+texture piece.medieval.black_queen images/pieces/medieval/black_queen.png
+texture piece.medieval.black_rook images/pieces/medieval/black_rook.png
+texture piece.medieval.white_bishop images/pieces/medieval/white_bishop.png
+texture piece.medieval.white_king images/pieces/medieval/white_king.png
+texture piece.medieval.white_knight images/pieces/medieval/white_knight.png
+texture piece.medieval.white_pawn images/pieces/medieval/white_pawn.png
+texture piece.medieval.white_queen images/pieces/medieval/white_queen.png
+texture piece.medieval.white_rook images/pieces/medieval/white_rook.png
 
-texture piece.fantasy.black_bishop images/Theme_2/black_bishop.png
-texture piece.fantasy.black_king images/Theme_2/black_king.png
-texture piece.fantasy.black_knight images/Theme_2/black_knight.png
-texture piece.fantasy.black_pawn images/Theme_2/black_pawn.png
-texture piece.fantasy.black_queen images/Theme_2/black_queen.png
-texture piece.fantasy.black_rook images/Theme_2/black_rook.png
-texture piece.fantasy.white_bishop images/Theme_2/white_bishop.png
-texture piece.fantasy.white_king images/Theme_2/white_king.png
-texture piece.fantasy.white_knight images/Theme_2/white_knight.png
-texture piece.fantasy.white_pawn images/Theme_2/white_pawn.png
-texture piece.fantasy.white_queen images/Theme_2/white_queen.png
-texture piece.fantasy.white_rook images/Theme_2/white_rook.png
+texture piece.bauhaus.black_bishop images/pieces/bauhaus/black_bishop.png
+texture piece.bauhaus.black_king images/pieces/bauhaus/black_king.png
+texture piece.bauhaus.black_knight images/pieces/bauhaus/black_knight.png
+texture piece.bauhaus.black_pawn images/pieces/bauhaus/black_pawn.png
+texture piece.bauhaus.black_queen images/pieces/bauhaus/black_queen.png
+texture piece.bauhaus.black_rook images/pieces/bauhaus/black_rook.png
+texture piece.bauhaus.white_bishop images/pieces/bauhaus/white_bishop.png
+texture piece.bauhaus.white_king images/pieces/bauhaus/white_king.png
+texture piece.bauhaus.white_knight images/pieces/bauhaus/white_knight.png
+texture piece.bauhaus.white_pawn images/pieces/bauhaus/white_pawn.png
+texture piece.bauhaus.white_queen images/pieces/bauhaus/white_queen.png
+texture piece.bauhaus.white_rook images/pieces/bauhaus/white_rook.png
 
-texture piece.pixel.black_bishop images/Theme_3/black_bishop.png filter=point
-texture piece.pixel.black_king images/Theme_3/black_king.png filter=point
-texture piece.pixel.black_knight images/Theme_3/black_knight.png filter=point
-texture piece.pixel.black_pawn images/Theme_3/black_pawn.png filter=point
-texture piece.pixel.black_queen images/Theme_3/black_queen.png filter=point
-texture piece.pixel.black_rook images/Theme_3/black_rook.png filter=point
-texture piece.pixel.white_bishop images/Theme_3/white_bishop.png filter=point
-texture piece.pixel.white_king images/Theme_3/white_king.png filter=point
-texture piece.pixel.white_knight images/Theme_3/white_knight.png filter=point
-texture piece.pixel.white_pawn images/Theme_3/white_pawn.png filter=point
-texture piece.pixel.white_queen images/Theme_3/white_queen.png filter=point
-texture piece.pixel.white_rook images/Theme_3/white_rook.png filter=point
-texture piece.pixel.black_bishop_blink images/Theme_3/black_bishop_blink.png filter=point
-texture piece.pixel.black_king_blink images/Theme_3/black_king_blink.png filter=point
-texture piece.pixel.black_knight_blink images/Theme_3/black_knight_blink.png filter=point
-texture piece.pixel.black_pawn_blink images/Theme_3/black_pawn_blink.png filter=point
-texture piece.pixel.black_queen_blink images/Theme_3/black_queen_blink.png filter=point
-texture piece.pixel.black_rook_blink images/Theme_3/black_rook_blink.png filter=point
-texture piece.pixel.white_bishop_blink images/Theme_3/white_bishop_blink.png filter=point
-texture piece.pixel.white_king_blink images/Theme_3/white_king_blink.png filter=point
-texture piece.pixel.white_knight_blink images/Theme_3/white_knight_blink.png filter=point
-texture piece.pixel.white_pawn_blink images/Theme_3/white_pawn_blink.png filter=point
-texture piece.pixel.white_queen_blink images/Theme_3/white_queen_blink.png filter=point
-texture piece.pixel.white_rook_blink images/Theme_3/white_rook_blink.png filter=point
+texture piece.neon.black_bishop images/pieces/neon/black_bishop.png
+texture piece.neon.black_king images/pieces/neon/black_king.png
+texture piece.neon.black_knight images/pieces/neon/black_knight.png
+texture piece.neon.black_pawn images/pieces/neon/black_pawn.png
+texture piece.neon.black_queen images/pieces/neon/black_queen.png
+texture piece.neon.black_rook images/pieces/neon/black_rook.png
+texture piece.neon.white_bishop images/pieces/neon/white_bishop.png
+texture piece.neon.white_king images/pieces/neon/white_king.png
+texture piece.neon.white_knight images/pieces/neon/white_knight.png
+texture piece.neon.white_pawn images/pieces/neon/white_pawn.png
+texture piece.neon.white_queen images/pieces/neon/white_queen.png
+texture piece.neon.white_rook images/pieces/neon/white_rook.png
 
-texture piece.medieval.black_bishop images/Theme_4/black_bishop.png
-texture piece.medieval.black_king images/Theme_4/black_king.png
-texture piece.medieval.black_knight images/Theme_4/black_knight.png
-texture piece.medieval.black_pawn images/Theme_4/black_pawn.png
-texture piece.medieval.black_queen images/Theme_4/black_queen.png
-texture piece.medieval.black_rook images/Theme_4/black_rook.png
-texture piece.medieval.white_bishop images/Theme_4/white_bishop.png
-texture piece.medieval.white_king images/Theme_4/white_king.png
-texture piece.medieval.white_knight images/Theme_4/white_knight.png
-texture piece.medieval.white_pawn images/Theme_4/white_pawn.png
-texture piece.medieval.white_queen images/Theme_4/white_queen.png
-texture piece.medieval.white_rook images/Theme_4/white_rook.png
+texture piece.origami.black_bishop images/pieces/origami/black_bishop.png
+texture piece.origami.black_king images/pieces/origami/black_king.png
+texture piece.origami.black_knight images/pieces/origami/black_knight.png
+texture piece.origami.black_pawn images/pieces/origami/black_pawn.png
+texture piece.origami.black_queen images/pieces/origami/black_queen.png
+texture piece.origami.black_rook images/pieces/origami/black_rook.png
+texture piece.origami.white_bishop images/pieces/origami/white_bishop.png
+texture piece.origami.white_king images/pieces/origami/white_king.png
+texture piece.origami.white_knight images/pieces/origami/white_knight.png
+texture piece.origami.white_pawn images/pieces/origami/white_pawn.png
+texture piece.origami.white_queen images/pieces/origami/white_queen.png
+texture piece.origami.white_rook images/pieces/origami/white_rook.png
+
+texture piece.ink.black_bishop images/pieces/ink/black_bishop.png
+texture piece.ink.black_king images/pieces/ink/black_king.png
+texture piece.ink.black_knight images/pieces/ink/black_knight.png
+texture piece.ink.black_pawn images/pieces/ink/black_pawn.png
+texture piece.ink.black_queen images/pieces/ink/black_queen.png
+texture piece.ink.black_rook images/pieces/ink/black_rook.png
+texture piece.ink.white_bishop images/pieces/ink/white_bishop.png
+texture piece.ink.white_king images/pieces/ink/white_king.png
+texture piece.ink.white_knight images/pieces/ink/white_knight.png
+texture piece.ink.white_pawn images/pieces/ink/white_pawn.png
+texture piece.ink.white_queen images/pieces/ink/white_queen.png
+texture piece.ink.white_rook images/pieces/ink/white_rook.png
 
 font ui.montserrat_bold fonts/Montserrat-Bold.ttf
 font ui.public_sans_bold fonts/PublicSans-Bold.ttf
@@ -106,3 +119,6 @@ dir positions/ positions/
 
 # The Guide's example positions (one .5dp per page).
 dir guide/ guide/
+
+# The fonts' licence text, shipped next to them (a `dir` entry naming one file: it only matters for the web build).
+dir fonts/OFL.txt fonts/OFL.txt

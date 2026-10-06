@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the "Pixel" piece theme (assets/images/Theme_3).
+"""Generate the "Pixel" piece theme (assets/images/pieces/pixel).
 
 Every piece is an original 16x16 pixel-art "creature": a wide blocky body with
 two vertical slit eyes, tiny side nubs and four stubby legs.  The piece type is
@@ -263,7 +263,7 @@ def make_sheet(path):
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default=os.path.join(here, "..", "assets", "images", "Theme_3"))
+    ap.add_argument("--out", default=os.path.join(here, "..", "assets", "images", "pieces", "pixel"))
     ap.add_argument("--sheet", default=None, help="write a preview contact sheet here (not committed)")
     args = ap.parse_args()
     validate()

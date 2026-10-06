@@ -1,18 +1,30 @@
 # Settings -> each submenu. Layout (1400x800): main menu buttons are 200x44 at x=50, y=228+60*i
 # (Versus 0, Load game 1, Puzzles 2, Guide 3, Settings 4, Exit 5; Continue is on top when there is an autosave). Settings tabs are 160x44 at y=150, x=440+180*i.
-# Piece Theme options are 200x44 at x=50, top y=250+64*i (centre 272+64*i) (Classic, Modern, Fantasy, Pixel, Medieval).
+# Piece Theme options are 200x44 at x=50, top y=218+64*i (centre 240+64*i) (Pixel, Medieval, Bauhaus, Neon, Origami, Ink).
 wait 20
 click 150 490        # Settings
 wait 30
 capture settings-initial
 click 520 172        # Piece Theme tab
 wait 20
-click 150 464        # Pixel
+click 150 240        # Pixel
 wait 20
 capture settings-piece-theme-pixel
-click 150 528        # Medieval
+click 150 304        # Medieval
 wait 20
 capture settings-piece-theme-medieval
+click 150 368        # Bauhaus
+wait 20
+capture settings-piece-theme-bauhaus
+click 150 432        # Neon
+wait 20
+capture settings-piece-theme-neon
+click 150 496        # Origami
+wait 20
+capture settings-piece-theme-origami
+click 150 560        # Ink
+wait 20
+capture settings-piece-theme-ink
 click 700 172        # Music tab
 wait 20
 capture settings-music

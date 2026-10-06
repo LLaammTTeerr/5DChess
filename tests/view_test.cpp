@@ -3,6 +3,8 @@
 #include "play/MultiverseView.h"
 #include "engine/Position.h"
 #include "services/SettingsFile.h"
+#include "Render/PieceThemes.h"
+#include "services/SettingsStore.h"
 #include <filesystem>
 #include <fstream>
 #include <set>
@@ -184,10 +186,6 @@ TEST_CASE("settingsfile: the file lives in the platform's config directory") {
 }
 
 TEST_CASE("piece themes: every theme's textures are in the manifest and on disk") {
-  // Mirrors Themes:: in include/Render/PieceTheme.h (that header needs raylib, which the unit tests do not link).
-  struct ThemeIds { const char* prefix; bool blink; };
-  const ThemeIds themes[] = {{"piece.classic.", false}, {"piece.modern.", false}, {"piece.fantasy.", false},
-                             {"piece.pixel.", true}, {"piece.medieval.", false}};
   const std::filesystem::path assets = std::filesystem::path(FDCHESS_GUIDE_DIR).parent_path();
   std::set<std::string> ids;
   std::ifstream manifest(assets / "manifest.txt");
@@ -200,11 +198,44 @@ TEST_CASE("piece themes: every theme's textures are in the manifest and on disk"
       CHECK_MESSAGE(std::filesystem::exists(assets / path), id << " -> " << path);
     }
   }
-  for (const auto& theme : themes)
+  for (const auto& entry : Themes::all) {
+    const PieceTheme& theme = *entry.theme;
     for (const char* side : {"white", "black"})
       for (const char* piece : {"king", "queen", "rook", "bishop", "knight", "pawn"}) {
         const std::string id = std::string(theme.prefix) + side + "_" + piece;
         CHECK_MESSAGE(ids.count(id) == 1, id);
-        if (theme.blink) CHECK_MESSAGE(ids.count(id + "_blink") == 1, id << "_blink");
+        if (theme.hasBlink) CHECK_MESSAGE(ids.count(id + "_blink") == 1, id << "_blink");
       }
+  }
+}
+
+TEST_CASE("piece themes: names round-trip; a removed theme's saved name is unknown, so the default Pixel stays") {
+  for (const auto& entry : Themes::all) {
+    CHECK(Themes::byName(entry.name) == entry.theme);
+    CHECK(std::string(Themes::nameOf(*entry.theme)) == entry.name);
+  }
+  CHECK(std::string(Themes::all[0].name) == "Pixel"); // the default and the first Settings entry
+  CHECK(std::string(Themes::nameOf(PieceTheme{"piece.classic.", false})) == "Pixel");
+  CHECK(Themes::byName("") == nullptr);
+}
+
+TEST_CASE("settings: a stored theme switches; a removed or unknown theme keeps the default Pixel") {
+  const auto applied = [](const std::string& text) {
+    Settings s;
+    SettingsStore::apply(settingsfile::parse(text), s);
+    return std::string(Themes::nameOf(s.theme));
+  };
+  CHECK(applied("theme=Medieval\n") == "Medieval");
+  CHECK(applied("theme=Ink\nboard_view=Blueprint\n") == "Ink");
+  for (const char* gone : {"Modern", "Classic", "Fantasy", "pixel", ""}) CHECK(applied(std::string("theme=") + gone + "\n") == "Pixel");
+  Settings s;
+  SettingsStore::apply(settingsfile::parse("theme=Neon\n"), s);
+  SettingsStore::apply(settingsfile::parse("theme=Modern\n"), s); // a later unknown name leaves the earlier choice
+  CHECK(std::string(Themes::nameOf(s.theme)) == "Neon");
+  Settings other;
+  SettingsStore::apply(settingsfile::parse("board_view=Blueprint\nsfx=off\nreduce_motion=on\nmusic=Anything\n"), other);
+  CHECK(other.boardView == BoardView::Blueprint);
+  CHECK_FALSE(other.sfx);
+  CHECK(other.reduceMotion);
+  CHECK(other.music == "Anything"); // no predicate here: every track name is accepted
 }

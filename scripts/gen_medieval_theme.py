@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the "Medieval" piece theme (assets/images/Theme_4).
+"""Generate the "Medieval" piece theme (assets/images/pieces/medieval).
 
 Original, heraldic pieces drawn entirely by the code below (no source artwork, no font glyphs): carved ivory with
 gold trim for White, dark walnut with brass trim for Black, crimson cloth for both.  Each piece is a stack of
@@ -417,7 +417,7 @@ def make_sheet(path, sprites):
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default=os.path.join(here, "..", "assets", "images", "Theme_4"))
+    ap.add_argument("--out", default=os.path.join(here, "..", "assets", "images", "pieces", "medieval"))
     ap.add_argument("--sheet", default=None, help="write a preview contact sheet here (docs/screenshots/medieval-pieces.png is this sheet)")
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
