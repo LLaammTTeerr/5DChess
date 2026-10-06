@@ -1,4 +1,5 @@
 #include "services/Assets.h"
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
@@ -74,8 +75,14 @@ Texture2D& Assets::grayTexture(const std::string& id) {
     if (it != _grayTextures.end()) return it->second;
     const Entry* e = entry(_textureFiles, id, "texture");
     Image image = LoadImage(e->path.c_str());
-    ImageColorGrayscale(&image);
-    ImageColorContrast(&image, 10.0f);
+    // Grey by hand on RGBA: ImageColorGrayscale would switch to a 1-channel format and lose the alpha
+    ImageFormat(&image, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+    Color* px = static_cast<Color*>(image.data);
+    for (int i = 0; i < image.width * image.height; ++i) {
+        const float lum = 0.299f * px[i].r + 0.587f * px[i].g + 0.114f * px[i].b;
+        const float c = std::clamp((lum - 128.0f) * 1.1f + 128.0f, 0.0f, 255.0f); // a little contrast
+        px[i].r = px[i].g = px[i].b = static_cast<unsigned char>(c);
+    }
     Texture2D t = LoadTextureFromImage(image);
     UnloadImage(image);
     if (t.id == 0) return texture(id); // cannot happen for a texture that loaded in the constructor; stay in colour

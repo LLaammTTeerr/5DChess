@@ -238,7 +238,7 @@ void BoardScene::drawLanes(const SceneFrame& f, float top) {
       } else {
         const Color hair = fade(st.muted, 0.45f);
         DrawRectangle(8, static_cast<int>(std::round(y0)), W - 16, 1, hair);
-        if (l == hi) DrawRectangle(8, static_cast<int>(std::round(y0 + h)), W - 16, 1, hair);
+        if (l == lo) DrawRectangle(8, static_cast<int>(std::round(y0 + h)), W - 16, 1, hair);
       }
     }
   }
@@ -547,6 +547,7 @@ void BoardScene::drawRuler(const SceneFrame& f, float y, float height) const {
       drawTextCentered(fontOf("ui.public_sans_bold", 13), "Present", presentX, y + 2.0f, 13.0f, WHITE);
     } else if (deep) {
       const Rectangle pill = {presentX - 44, y, 88, 20};
+      drawRoundedRect(pill, 10.0f, {14, 30, 70, 255}); // opaque, so the ruler tick does not show through
       drawRoundedRect(pill, 10.0f, fade(st.accent, 0.16f));
       drawRoundedLines(pill, 10.0f, 1.0f, fade(st.accent, 0.8f));
       drawTextCentered(fontOf("ui.mono", 12), "PRESENT", presentX, y + 3.0f, 12.0f, {197, 255, 243, 255}, 1.5f);

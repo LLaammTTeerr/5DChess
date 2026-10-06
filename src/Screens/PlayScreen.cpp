@@ -67,8 +67,8 @@ void PlayScreen::updatePicker(float dt, const play::BoardStyle& style) {
   const Vector2 a = _camera.worldToScreen({square.x, square.y}), b = _camera.worldToScreen({square.x + square.w, square.y + square.h});
   _picker.show(_game->getCurrentTurnColor());
   _picker.place({a.x, a.y, b.x - a.x, b.y - a.y},
-                {0.0f, UI::Layout::actionRowBottom + 6.0f, static_cast<float>(GetScreenWidth()),
-                 static_cast<float>(GetScreenHeight()) - UI::Layout::actionRowBottom - 6.0f});
+                {0.0f, UI::Layout::safeTop, static_cast<float>(GetScreenWidth()),
+                 static_cast<float>(GetScreenHeight()) - UI::Layout::safeTop});
   if (const auto piece = _picker.update(dt, style.grayPieces, &style.skin)) {
     _animator.finish();
     _arrows.finish();

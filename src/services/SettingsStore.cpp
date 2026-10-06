@@ -70,6 +70,8 @@ void save(const Settings& settings) {
 void load(Settings& settings) {
   const std::string path = settingsPath();
   if (path.empty()) return;
+  std::error_code ec;
+  if (!std::filesystem::is_regular_file(path, ec) || std::filesystem::file_size(path, ec) > 64 * 1024) return; // a settings file is tiny
   std::ifstream in(path);
   if (!in) return;
   std::ostringstream text;
