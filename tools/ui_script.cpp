@@ -13,7 +13,7 @@
 //   mode <id>            replace the current screen with the game screen of a catalog mode (e.g. standard)
 //   position <file>      same, for a .5dp position file; relative paths are relative to the script's directory
 //   (both take effect on the next frame: follow them with `wait`)
-//   clicksq <l> <t> <sq>  click a square of the game screen by name wherever the camera has put it: timeline id l,
+//   clicksq <l> <t> <sq>  click a square of the game screen (or the Guide's page) by name wherever the camera has put it: timeline id l,
 //                        half-turn t of the board (0 = White's first), square like e2 (file a..h, rank 1..8)
 //
 // Determinism: fixed 1/60 s timestep, Reduce motion forced on, audio off, RNG seeded, scripted input
@@ -34,6 +34,7 @@
 #include "TestMode.h"
 #include "engine/GameCatalog.h"
 #include "engine/Position.h"
+#include "Screens/GuideScreen.h"
 #include "Screens/PlayScreen.h"
 #include "PieceTheme.h"
 #include "Render/UITheme.h"
@@ -206,7 +207,8 @@ int main(int argc, char** argv) {
       Vector2 target = f.pos;
       if (f.clickSquare) {
         auto* play = dynamic_cast<PlayScreen*>(app.screens.top());
-        if (!play) { std::cerr << scriptPath.string() << ":" << f.line << ": clicksq needs the game screen\n"; rc = 2; break; }
+        if (auto* guide = dynamic_cast<GuideScreen*>(app.screens.top())) play = guide->board(); // the Guide's page
+        if (!play) { std::cerr << scriptPath.string() << ":" << f.line << ": clicksq needs the game screen or the Guide\n"; rc = 2; break; }
         const Chess::Core::Coord c{static_cast<int8_t>(f.sqX), static_cast<int8_t>(f.sqY), static_cast<int16_t>(f.sqT), static_cast<int16_t>(f.sqL)};
         if (!play->game().boardExists(c)) { std::cerr << scriptPath.string() << ":" << f.line << ": no board at timeline " << f.sqL << ", half-turn " << f.sqT << "\n"; rc = 2; break; }
         target = play->squareToScreen(c);

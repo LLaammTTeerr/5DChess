@@ -13,6 +13,7 @@
 #include "play/MoveAnimator.h"
 #include "play/Selection.h"
 #include "play/TimelineArrows.h"
+#include "Render/UITheme.h"
 #include "ui/Screen.h"
 
 // The game. It orchestrates the play:: modules: pointer input -> Selection -> engine calls, the BoardLayout
@@ -28,6 +29,9 @@ public:
   void click(Chess::Core::Coord square);
   void submit();
   const Chess::IGame& game() const { return *_game; }
+  /// The Guide shows this screen beside its own panel: the Back button is not shown and the boards keep `rightInset`
+  /// pixels at the right of the window free.
+  void embed(float rightInset);
   /// Developer tools: where a square is on screen right now (its centre), so scripted clicks name squares, not pixels.
   Vector2 squareToScreen(Chess::Core::Coord square) const;
 
@@ -48,6 +52,8 @@ private:
 
   std::optional<Chess::Core::Coord> _hover;
   bool _ended = false;
+  bool _embedded = false;
+  float _rightInset = UI::Layout::sideInset;
 
   // Answers that are not free (a threat search over the multiverse), cached until the game's state changes
   bool _canSubmit = false, _noMandatoryBoard = true;

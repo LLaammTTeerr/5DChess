@@ -155,7 +155,7 @@ void drawEndCard(const EndCard& end) {
   UI::drawTextCentered(UI::Fonts::body(), end.reason.c_str(), cx, card.y + 102, UI::Font::body, fa(UI::Color::textMuted));
   DrawRectangle(static_cast<int>(card.x + 40), static_cast<int>(card.y + 146), static_cast<int>(card.width - 80), 1,
                 fa(UI::Color::border));
-  UI::drawTextCentered(UI::Fonts::body(), "Use Back to return to game selection", cx, card.y + 164, UI::Font::body,
+  UI::drawTextCentered(UI::Fonts::body(), end.footer.c_str(), cx, card.y + 164, UI::Font::body,
                        fa(UI::Color::primary));
 
   // Pixel theme: the winner's king hops a few times on top of the card

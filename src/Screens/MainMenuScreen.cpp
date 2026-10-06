@@ -1,5 +1,6 @@
 #include "App.h"
 #include "Screens/MainMenuScreen.h"
+#include "Screens/GuideScreen.h"
 #include "Screens/ModeSelectScreen.h"
 #include "Screens/SettingsScreen.h"
 #include "Render/PieceTheme.h"
@@ -96,9 +97,10 @@ void MainMenuScreen::update(App& app, float deltaTime) {
   const bool nav = app.screens.navShown();  // hidden: still updated (hover eases out) but unreachable
   switch (_nav.update(dt, nav)) {
     case 0: app.screens.replace(std::make_unique<ModeSelectScreen>()); break;
+    case 2: app.screens.replace(std::make_unique<GuideScreen>()); break;
     case 3: app.screens.replace(std::make_unique<SettingsScreen>()); break;
     case 4: app.quit = true; break;  // Exit (absent in the web build)
-    default: break;                  // Puzzles and Guide are not written yet
+    default: break;                  // Puzzles is not written yet
   }
 }
 
