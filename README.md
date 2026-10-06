@@ -10,7 +10,7 @@ Chess with multiverse time travel: a 5D Chess game with timelines, built in C++2
 
 **⬇ Download for Linux/macOS/Windows: <https://github.com/LLaammTTeerr/5DChess/releases/latest>**
 
-![A Standard game in the Deep space board view: boards as lit windows on glowing threads, the present as an aurora, timelines labelled L0, L+1, L-1](docs/screenshots/hero.png)
+![A Standard game in the Deep space board view: boards as lit windows on glowing threads, the present as an aurora, timelines labelled L0, L+1, L-1](docs/screenshots/board-deep-space.png)
 
 ## Table of Contents
 - [Overview](#overview)
@@ -69,7 +69,7 @@ Official-rules visuals: a board's frame says whether you must move on it (mandat
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/timelines.png" alt="Timeline Battle mode with nine timelines in the Deep space view"><br><sub>Timeline Battle: nine timelines branching from the start.</sub></td>
+    <td width="50%"><img src="docs/screenshots/timelines.png" alt="Timeline Battle mode with eight timelines in the Deep space view"><br><sub>Timeline Battle: eight timelines branching from the start.</sub></td>
     <td width="50%"><img src="docs/screenshots/settings.png" alt="Settings screen, Display tab with the Board view option"><br><sub>Settings -> Display: board view and Reduce motion (settings are saved).</sub></td>
   </tr>
 </table>
