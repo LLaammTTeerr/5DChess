@@ -183,6 +183,7 @@ int ButtonList::update(float dt, bool interactive) {
   int clicked = -1;
   for (size_t i = 0; i < items_.size(); ++i) {
     items_[i].rect = {slots_[i].x, slots_[i].y - scroll_, slots_[i].width, slots_[i].height};
+    items_[i].skin = skin;
     if (items_[i].update(dt, inArea) && clicked < 0) clicked = static_cast<int>(i);
   }
   if (clicked >= 0 && selectable) selected = clicked;

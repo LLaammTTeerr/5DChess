@@ -2,6 +2,7 @@
 #include "Audio/AudioManager.h"
 #include "Render/PieceTheme.h"
 #include "services/Assets.h"
+#include "services/SaveStore.h"
 #include "services/Settings.h"
 #include "ui/Screen.h"
 #include <functional>
@@ -18,6 +19,7 @@ private:
 
 public:
   Settings settings;
+  savegame::SaveStore saves{savegame::defaultStorage()};  // the autosave and the three slots (memory only under TestMode)
   AudioManager audio{settings};  // closes the audio device: must outlive `assets`
   Assets assets;
   ThemeManager themes{assets, settings};

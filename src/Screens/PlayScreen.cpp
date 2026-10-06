@@ -15,7 +15,7 @@ using play::Rect;
 
 PlayScreen::PlayScreen(const std::string& modeId) : PlayScreen(Chess::GameCatalog::create(modeId)) {}
 
-PlayScreen::PlayScreen(std::shared_ptr<Chess::IGame> game) : _game(std::move(game)) {
+PlayScreen::PlayScreen(std::shared_ptr<Chess::IGame> game, bool isAutosave) : _game(std::move(game)), _autosaving(isAutosave) {
   _camera.setInsets(UI::Layout::safeTop, UI::Layout::sideInset, UI::Layout::safeBottom, UI::Layout::laneLabelW);
   // The first frame's input already needs the layout to map clicks onto, and the motion state is seeded from it
   refresh();
@@ -32,7 +32,8 @@ void PlayScreen::update(App& app, float dt) {
   _actions.setSkin(&style.skin);
   _back.skin = &style.skin;
   // The buttons come first: whatever has the pointer is not a click on the board
-  if (!_embedded && _back.update(dt, app.screens.navShown())) app.screens.replace(std::make_unique<ModeSelectScreen>());
+  if (!_embedded && _back.update(dt, app.screens.navShown())) leave(app);
+  if (!_embedded) _saveMenu.update(dt, app.screens.navShown(), style, *_game);
   switch (_actions.update(dt)) {
     case play::ActionRow::Action::Undo: undo(); break;
     case play::ActionRow::Action::Deselect: deselect(); break;
@@ -167,6 +168,17 @@ void PlayScreen::submitTurn() {
   _arrows.finish();
   _game->submitTurn();
   clearSelection();
+  // Continue picks up from the last submitted turn: unsubmitted moves are not part of a record
+  _autosaving = App::current().saves.autosave(*_game) || _autosaving;
+}
+
+// Back to the mode list; the autosave is brought up to date (it is already, after every submitted turn) or removed once the game is over.
+void PlayScreen::leave(App& app) {
+  if (_autosaving) {
+    if (_game->result() == Chess::GameResult::Ongoing) app.saves.autosave(*_game);
+    else app.saves.clearAutosave();
+  }
+  app.screens.replace(std::make_unique<ModeSelectScreen>());
 }
 
 void PlayScreen::undo() {
@@ -221,7 +233,10 @@ void PlayScreen::refresh() {
   _hudMotion.setEnded(!ongoing, result == Chess::GameResult::WhiteWins, result == Chess::GameResult::Draw);
 
   if (!ongoing) {
-    if (!_ended) App::current().audio.playSfx(Sfx::Win); // once, on the transition
+    if (!_ended) {
+      App::current().audio.playSfx(Sfx::Win); // once, on the transition
+      if (_autosaving) App::current().saves.clearAutosave(); // nothing left to continue
+    }
     _ended = true;
   }
 }
@@ -320,6 +335,7 @@ void PlayScreen::draw(App& app) const {
 
   play::drawHud(_hud, style);
   _actions.draw();
+  _saveMenu.draw(style, app.screens.navAlpha());
   _picker.draw(style);
   if (!ongoing) {
     const Chess::GameResult result = _game->result();

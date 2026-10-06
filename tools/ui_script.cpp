@@ -12,7 +12,10 @@
 //   capture <name>       render one more frame and write <outdir>/<name>.png (1400x800)
 //   mode <id>            replace the current screen with the game screen of a catalog mode (e.g. standard)
 //   position <file>      same, for a .5dp position file; relative paths are relative to the script's directory
-//   (both take effect on the next frame: follow them with `wait`)
+//   record <file>        same, for a game record (.5dr, see docs/NOTATION.md): the game replayed from it
+//   slot <n> <file>      put the text of a file (a record, or a corrupted one) into save slot n (1-3) of the in-memory store the
+//                        harness uses instead of the config directory; the Load screen then lists it
+//   (the first three take effect on the next frame: follow them with `wait`)
 //   clicksq <l> <t> <sq>  click a square of the game screen (or the Guide's page) by name wherever the camera has put it: timeline id l,
 //                        half-turn t of the board (0 = White's first), square like e2 (file a..h, rank 1..8)
 //
@@ -33,9 +36,11 @@
 #include "Input.h"
 #include "TestMode.h"
 #include "engine/GameCatalog.h"
+#include "engine/Notation.h"
 #include "engine/Position.h"
 #include "Screens/GuideScreen.h"
 #include "Screens/PlayScreen.h"
+#include "services/SaveStore.h"
 #include "PieceTheme.h"
 #include "Render/UITheme.h"
 
@@ -54,6 +59,9 @@ struct FrameSpec {
   bool clickSquare = false;   // the pointer goes to a square of the game screen (resolved when the frame runs)
   int sqL = 0, sqT = 0, sqX = 0, sqY = 0;
   std::string mode, position; // non-empty: open the game screen of that catalog mode / .5dp file before this frame
+  std::string record;         // non-empty: same for a game record file
+  std::string slotFile;       // non-empty: fill save slot `slotNo` with this file's text before this frame
+  int slotNo = 0;
   int line = 0;
 };
 
@@ -135,6 +143,12 @@ bool parseScript(const std::string& path, std::vector<FrameSpec>& out) {
     } else if (cmd == "position") {
       if (!(ss >> f.position)) return fail("position needs a file");
       out.push_back(f);
+    } else if (cmd == "record") {
+      if (!(ss >> f.record)) return fail("record needs a file");
+      out.push_back(f);
+    } else if (cmd == "slot") {
+      if (!(ss >> f.slotNo >> f.slotFile) || f.slotNo < 1 || f.slotNo > savegame::kSlots) return fail("slot needs <1-3> <file>");
+      out.push_back(f);
     } else if (cmd == "capture") {
       if (!(ss >> f.capture)) return fail("capture needs a name");
       out.push_back(f);
@@ -192,10 +206,23 @@ int main(int argc, char** argv) {
     int captured = 0;
     for (const FrameSpec& f : frames) {
       if (WindowShouldClose() || app.quit) break;
-      if (!f.mode.empty() || !f.position.empty()) {
+      if (!f.slotFile.empty()) {
+        std::ifstream file(scriptPath.parent_path() / f.slotFile, std::ios::binary);
+        if (!file) { std::cerr << scriptPath.string() << ":" << f.line << ": cannot open " << f.slotFile << "\n"; rc = 2; break; }
+        std::ostringstream text;
+        text << file.rdbuf();
+        app.saves.storage().write("slot" + std::to_string(f.slotNo), text.str());
+      }
+      if (!f.mode.empty() || !f.position.empty() || !f.record.empty()) {
         std::shared_ptr<Chess::IGame> game;
         try {
           if (!f.mode.empty()) game = Chess::GameCatalog::create(f.mode);
+          else if (!f.record.empty()) {
+            std::ifstream file(scriptPath.parent_path() / f.record, std::ios::binary);
+            std::ostringstream text;
+            text << file.rdbuf();
+            game = Chess::loadRecord(text.str());
+          }
           else game = Chess::Core::loadPositionFile((scriptPath.parent_path() / f.position).string()).makeGame();
         } catch (const std::exception& e) {
           std::cerr << scriptPath.string() << ":" << f.line << ": " << e.what() << "\n";

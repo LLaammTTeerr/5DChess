@@ -9,11 +9,9 @@
 
 namespace play {
 
-namespace {
-
 // A HUD panel in the style of the board view: rounded with a soft shadow (Atlas), a glow (Deep space) or a sharp ink
 // rectangle (Blueprint).
-void drawPanel(Rectangle r, const BoardStyle& st, float alpha = 1.0f) {
+void drawPanel(Rectangle r, const BoardStyle& st, float alpha, float roundness) {
   auto fadeBy = [alpha](::Color c) { c.a = static_cast<unsigned char>(c.a * alpha); return c; };
   if (st.hudSquare) {
     DrawRectangleRec(r, fadeBy(st.hudFill));
@@ -23,14 +21,16 @@ void drawPanel(Rectangle r, const BoardStyle& st, float alpha = 1.0f) {
   if (st.card == BoardStyle::Card::Glow) {
     for (int k = 3; k >= 1; --k) {
       const Rectangle g = {r.x - k * 4.0f, r.y - k * 4.0f, r.width + k * 8.0f, r.height + k * 8.0f};
-      DrawRectangleRounded(g, 1.0f, 12, fadeBy(UI::withAlpha(st.hudShadow, static_cast<unsigned char>(st.hudShadow.a * 0.22f / k))));
+      DrawRectangleRounded(g, roundness, 12, fadeBy(UI::withAlpha(st.hudShadow, static_cast<unsigned char>(st.hudShadow.a * 0.22f / k))));
     }
   } else {
-    DrawRectangleRounded({r.x + 2, r.y + 3, r.width, r.height}, 1.0f, 12, fadeBy(st.hudShadow));
+    DrawRectangleRounded({r.x + 2, r.y + 3, r.width, r.height}, roundness, 12, fadeBy(st.hudShadow));
   }
-  DrawRectangleRounded(r, 1.0f, 12, fadeBy(st.hudFill));
-  DrawRectangleRoundedLinesEx(r, 1.0f, 12, 1.0f, fadeBy(st.hudBorder));
+  DrawRectangleRounded(r, roundness, 12, fadeBy(st.hudFill));
+  DrawRectangleRoundedLinesEx(r, roundness, 12, 1.0f, fadeBy(st.hudBorder));
 }
+
+namespace {
 
 // Slim "<Colour> to move" banner: drops in below the action row (fast), leaves faster, auto-dismisses at ~1.2 s.
 void drawTurnBanner(const HudData& hud, const BoardStyle& st) {
