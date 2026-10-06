@@ -262,7 +262,7 @@ Five piece themes are available: Classic, Modern, Fantasy, Pixel (the default) a
 
 ![Contact sheet of the twelve Pixel theme pieces](docs/screenshots/pixel-pieces.png)
 
-Medieval is an original heraldic theme: carved ivory with gold trim against dark walnut with brass trim, crimson cloth for both (a crossed-arch crown, a pearl coronet, a portcullis tower, a slit mitre with a crosier, an armoured horse head with a plume, a helmed foot soldier with a shield). It is drawn by code, `python3 scripts/gen_medieval_theme.py` (requires Pillow; `--out DIR`, default `assets/images/Theme_4`, and `--sheet PATH` as above), at 4x and reduced with LANCZOS to 256x256, so it stays readable from full size down to about 16 px and in the greyscale Blueprint view.
+Medieval is an original heraldic theme: carved ivory with gold trim against dark walnut with brass trim, crimson cloth for both (a crossed-arch crown, a pearl coronet, a portcullis tower, a slit mitre with a crosier, an armoured horse head with a plume, a helmed foot soldier with a shield). It is drawn by code, `python3 scripts/gen_medieval_theme.py` (requires Pillow 10.1 or newer, produced with 12.1; `--out DIR`, default `assets/images/Theme_4`, and `--sheet PATH` as above), at 4x and reduced with LANCZOS to 256x256 (sampled with mipmaps in the game), so it stays readable from full size down to about 16 px and in the greyscale Blueprint view.
 
 ![Contact sheet of the twelve Medieval theme pieces on light and dark squares, in greyscale, and at 32 and 16 px](docs/screenshots/medieval-pieces.png)
 

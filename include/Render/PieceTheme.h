@@ -12,6 +12,7 @@ struct PieceTheme {
   const char* prefix;
   bool hasBlink;
 };
+// (tests/view_test.cpp keeps a hard-coded copy of these prefixes to check the manifest; update it when adding a theme.)
 namespace Themes {
 inline constexpr PieceTheme classic{"piece.classic.", false};
 inline constexpr PieceTheme modern{"piece.modern.", false};

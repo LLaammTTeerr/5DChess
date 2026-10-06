@@ -1,7 +1,7 @@
 // Developer tool: renders a real game through the PlayScreen
 // with a chosen piece theme and saves a screenshot, then exits.
 //
-//   theme_preview <Classic|Modern|Fantasy|Pixel> <game mode> <output.png> [turns] [options]
+//   theme_preview <Classic|Modern|Fantasy|Pixel|Medieval> <game mode> <output.png> [turns] [options]
 //
 // Game mode: "Standard", "Battle", "Invasion", "Fragment", or any in-game mode name.
 // With turns > 0 (default 2) a few scripted legal moves are played first, preferring
@@ -107,7 +107,7 @@ struct FrameClock {
 
 int main(int argc, char** argv) {
   if (argc < 4) {
-    std::cerr << "usage: theme_preview <Classic|Modern|Fantasy|Pixel> <Standard|Battle|Invasion|Fragment> <out.png> [turns]"
+    std::cerr << "usage: theme_preview <Classic|Modern|Fantasy|Pixel|Medieval> <Standard|Battle|Invasion|Fragment> <out.png> [turns]"
                  " [--demo same|cross] [--dump DIR] [--perf [N]] [--reduce] [--view NAME]\n";
     return 2;
   }

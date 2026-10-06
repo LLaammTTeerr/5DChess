@@ -1,7 +1,7 @@
 # Asset manifest: the single list of files the game loads (and the web build embeds).
 # One asset per line:  <kind> <id> <path relative to assets/> [tag=value ...]
 #   kind  texture | font | sound | music | dir (a directory embedded as a whole, ids unused)
-#   tags  filter=point   point sampling (crisp pixel art)
+#   tags  filter=point   point sampling (crisp pixel art); other textures are smoothed (bilinear, trilinear with mipmaps when power-of-two)
 #         web=no         native only: not embedded in the WebAssembly build
 # Textures are loaded at startup; fonts (per size), sounds and music on first use.
 # The Emscripten --preload-file list is generated from this file (CMakeLists.txt).

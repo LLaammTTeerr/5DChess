@@ -15,7 +15,6 @@
 //   record <file>        same, for a game record (.5dr, see docs/NOTATION.md): the game replayed from it
 //   slot <n> <file>      put the text of a file (a record, or a corrupted one) into save slot n (1-3; 0 is the autosave) of the in-memory store the
 //                        harness uses instead of the config directory; the Load screen then lists it
-//   theme <name>         switch the piece theme (Classic, Modern, Fantasy, Pixel, Medieval) for the following frames
 //   (the first three take effect on the next frame: follow them with `wait`)
 //   clicksq <l> <t> <sq>  click a square of the game screen (or the Guide's page) by name wherever the camera has put it: timeline id l,
 //                        half-turn t of the board (0 = White's first), square like e2 (file a..h, rank 1..8)
@@ -61,7 +60,6 @@ struct FrameSpec {
   int sqL = 0, sqT = 0, sqX = 0, sqY = 0;
   std::string mode, position; // non-empty: open the game screen of that catalog mode / .5dp file before this frame
   std::string record;         // non-empty: same for a game record file
-  std::string theme;          // non-empty: switch the piece theme (Settings name, e.g. Medieval) before this frame
   std::string slotFile;       // non-empty: fill save slot `slotNo` with this file's text before this frame
   int slotNo = 0;
   int line = 0;
@@ -142,9 +140,6 @@ bool parseScript(const std::string& path, std::vector<FrameSpec>& out) {
     } else if (cmd == "mode") {
       if (!(ss >> f.mode)) return fail("mode needs a catalog id");
       out.push_back(f);
-    } else if (cmd == "theme") {
-      if (!(ss >> f.theme) || !Themes::byName(f.theme)) return fail("theme needs a piece theme name (Classic, Modern, Fantasy, Pixel, Medieval)");
-      out.push_back(f);
     } else if (cmd == "position") {
       if (!(ss >> f.position)) return fail("position needs a file");
       out.push_back(f);
@@ -211,7 +206,6 @@ int main(int argc, char** argv) {
     int captured = 0;
     for (const FrameSpec& f : frames) {
       if (WindowShouldClose() || app.quit) break;
-      if (!f.theme.empty()) app.themes.setTheme(*Themes::byName(f.theme));
       if (!f.slotFile.empty()) {
         std::ifstream file(scriptPath.parent_path() / f.slotFile, std::ios::binary);
         if (!file) { std::cerr << scriptPath.string() << ":" << f.line << ": cannot open " << f.slotFile << "\n"; rc = 2; break; }

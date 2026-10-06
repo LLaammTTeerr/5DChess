@@ -9,7 +9,6 @@ click 520 172        # Piece Theme tab
 wait 20
 click 150 528        # Medieval
 wait 20
-capture medieval-settings
 click 880 172        # Display tab
 wait 20
 mode standard

@@ -8,11 +8,11 @@ smooth vector parts (polygons, ellipses, rounded rectangles, round-capped stroke
   * every part is filled with a banded, cylinder-like gradient (light on the left, shade on the right),
   * gets a thin dark inner stroke, a bright rim on its upper-left edge and a dark rim on its lower-right edge,
   * and the union of all parts is wrapped in one thick dark outline, so the piece reads on light, dark and grey
-    squares (and greyscale: Blueprint view) at any size down to ~14 px.
+    squares (and greyscale: Blueprint view) at any size down to about 16 px.
 
 Everything is drawn at 4x (1024 px) and reduced with LANCZOS to 256x256 RGBA for clean anti-aliasing.  Pixels outside
 the piece are fully transparent but carry the outline colour in RGB, so premultiplied or greyscale conversion never
-leaves a light halo.  Output is deterministic (no randomness); re-running is idempotent.
+leaves a light halo.  Requires Pillow >= 10.1 (ImageFont.load_default(size=...); produced with 12.1).  Output is deterministic (no randomness); re-running is idempotent.
 
 Silhouettes: King = crimson cap with crossed arches, orb and cross; Queen = coronet of pearl-tipped points;
 Rook = crenellated tower with a portcullis gate; Bishop = mitre with a diagonal slit and a crosier; Knight = armoured
@@ -233,7 +233,7 @@ def base(width=64.0):
 
 
 def pawn():
-    stem = spoly(sym([(146, 112), (151, 146), (164, 190), (176, 214)]) , sharp=(0, 3, 4, 7))
+    stem = spoly(sym([(146, 112), (151, 146), (164, 190), (176, 214)]), sharp=(0, 3, 4, 7))
     return [
         Part([stem]),
         *base(60),
@@ -353,7 +353,7 @@ def knight():
         Part([circ(115, 90, 6.5)], "dark", stroke=False, rim=False, shade=False),
         Part([circ(113.5, 88, 2.2)], "trim", stroke=False, rim=False, shade=False),
         Part([ell(38, 138, 46, 147)], "dark", stroke=False, rim=False, shade=False),
-            ]
+    ]
 
 
 PIECES = {"king": king, "queen": queen, "rook": rook, "bishop": bishop, "knight": knight, "pawn": pawn}
@@ -365,7 +365,7 @@ def render(piece, side):
 
 
 # ---------------------------------------------------------------- contact sheet
-def make_sheet(path):
+def make_sheet(path, sprites):
     cell = 200
     light, dark, grey = (241, 230, 207), (30, 33, 68), (236, 236, 236)
     font = ImageFont.load_default(size=14)
@@ -373,10 +373,9 @@ def make_sheet(path):
     w = pad + 6 * (cell + 6) + pad
     # 4 big rows + greyscale rows + small rows
     small_rows = [32, 16]
-    h = pad + 18 + 4 * (cell + 6) + 2 * (cell + 6) // 1 // 1 + 120
+    h = pad + 18 + 4 * (cell + 6) + 2 * (cell // 2 + 6) + 120
     sheet = Image.new("RGBA", (w, h), (60, 60, 60, 255))
     d = ImageDraw.Draw(sheet)
-    sprites = {(s, p): render(p, s) for s in ("white", "black") for p in ORDER}
 
     def tile(x, y, size, bg, spr, gray=False):
         d.rectangle([x, y, x + size - 1, y + size - 1], fill=bg + (255,))
@@ -419,15 +418,15 @@ def main():
     here = os.path.dirname(os.path.abspath(__file__))
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=os.path.join(here, "..", "assets", "images", "Theme_4"))
-    ap.add_argument("--sheet", default=None, help="write a preview contact sheet here (not committed)")
+    ap.add_argument("--sheet", default=None, help="write a preview contact sheet here (docs/screenshots/medieval-pieces.png is this sheet)")
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
-    for side in ("white", "black"):
-        for piece in ORDER:
-            render(piece, side).save(os.path.join(args.out, f"{side}_{piece}.png"), optimize=True)
+    sprites = {(side, piece): render(piece, side) for side in ("white", "black") for piece in ORDER}
+    for (side, piece), img in sprites.items():
+        img.save(os.path.join(args.out, f"{side}_{piece}.png"), optimize=True)
     print("wrote", len(ORDER) * 2, "pieces to", os.path.normpath(args.out))
     if args.sheet:
-        make_sheet(args.sheet)
+        make_sheet(args.sheet, sprites)
         print("sheet:", args.sheet)
 
 
