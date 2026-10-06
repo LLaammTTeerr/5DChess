@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Engine value API: `Chess::Core::Coord` / `Chess::Core::Move` (hashable, comparable, pointer-free) and `IGame::legalMovesFrom`, `makeMove(Core::Move)`, `boardExists(Coord)`, `board()`, `selected()`; the old shared_ptr API still works.
+- Position text format (`.5dp`, [docs/POSITIONS.md](docs/POSITIONS.md)) with parser/writer (`include/engine/Position.h`); `GameCatalog` loads the nine game modes from `assets/positions/*.5dp` and is the single mode registry for the menu, the scenes and the developer tools.
+
 ### Changed
 - Internal: one `App` context (src/App.cpp) owns Assets, audio, settings, theme and scenes; `assets/manifest.txt` is the single list of loaded assets and also generates the web build's preload list. The ResourceManager/ThemeManager/UI::Fonts singletons are gone. Unused assets (old buttons, backgrounds, `chess.png`, `images/EndGame.png`, Nunito and unused Montserrat fonts) were deleted.
 - The engine now implements the official 5D Chess rules ([docs/RULES.md](docs/RULES.md)): active and inactive timelines, the present, mandatory boards, check through time and across timelines, castling, en passant and promotion choice, with every rule traced to its source and compared move by move against the reference engine 5d-chess-js (`tools/refcheck`; Standard and Simplify modes; the three multi-timeline Misc modes have no reference mapping).
@@ -16,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI screenshot tests: the endgame script now plays a real two-turn checkmate and a new script a six-turn stalemate.
 
 ### Fixed
+- "Simplify - No Bishop" was a copy of "No Knight" (bishops, no knights). It now has knights and no bishops (`omit-bishop`: rnqknr / PPPPPP / RNQKNR on 6x6); the test `omit-bishop fix` pins this.
 - Rules bugs found while aligning the engine with the reference: bishops, rooks, queens and kings could not move or slide forward in time (the king had no +t steps, the rook no +t slide, the bishop only -t, and queen +t slides were capped by the source board's turn number).
 - Pawn timeline direction was reversed: a pawn's forward step on the timeline axis is towards the opponent's timelines (White towards lower IDs, Black towards higher), and timeline IDs follow the creator (White positive, Black negative).
 - Moves were not required on every board of the present: a turn could be ended with boards unmoved, or with a king left capturable; this is now judged per turn (`canSubmit()`).

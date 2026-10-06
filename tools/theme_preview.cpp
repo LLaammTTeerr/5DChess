@@ -26,6 +26,7 @@
 #include <exception>
 #include "chess.h"
 #include "App.h"
+#include "engine/GameCatalog.h"
 #include "PieceTheme.h"
 #include "TestMode.h"
 #include "Render/View.h"
@@ -36,13 +37,15 @@
 
 namespace {
 
+// A catalog id, a catalog title, or one of the short names "Standard", "Battle", "Invasion", "Fragment".
 std::shared_ptr<Chess::IGame> makeGame(const std::string& mode) {
   using namespace Chess;
-  if (mode == "Standard" || mode == NameOfGame<StandardGame>::value) return createGame<StandardGame>();
-  if (mode == "Battle" || mode == NameOfGame<MiscGameTimeLineBattle>::value) return createGame<MiscGameTimeLineBattle>();
-  if (mode == "Invasion" || mode == NameOfGame<MiscGameTimeLineInvasion>::value) return createGame<MiscGameTimeLineInvasion>();
-  if (mode == "Fragment" || mode == NameOfGame<MiscGameTimeLineFragment>::value) return createGame<MiscGameTimeLineFragment>();
-  return nullptr;
+  static const std::pair<const char*, const char*> aliases[] = {
+      {"Standard", "standard"}, {"Battle", "timeline-battle"}, {"Invasion", "timeline-invasion"}, {"Fragment", "timeline-fragment"}};
+  for (const auto& [alias, id] : aliases)
+    if (mode == alias) return GameCatalog::create(id);
+  if (const ModeInfo* info = GameCatalog::findByTitle(mode)) return GameCatalog::create(info->id);
+  return GameCatalog::create(mode);
 }
 
 // Finds a legal move on any moveable board without applying it. Cross-board moves win when preferCross.
