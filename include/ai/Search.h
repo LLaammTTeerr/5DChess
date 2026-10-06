@@ -47,7 +47,7 @@ public:
   Search(const Search&) = delete;
   Search& operator=(const Search&) = delete;
 
-  /** Continue for at most about `nodeBudget` nodes (a step may overshoot by the slice it is in: at most ~40 nodes). Once Done, stays Done. */
+  /** Continue for at most about `nodeBudget` nodes (a step may overshoot by the slice it is in: one generator move or proof slice, see docs/AI.md). Once Done, stays Done. */
   Status step(int nodeBudget);
   Status status() const;
 

@@ -25,6 +25,10 @@ struct EvalWeights {
  */
 int evaluate(const IGame& game, PieceColor perspective, const EvalWeights& weights = {});
 
+/** Pieces on the latest board of every timeline: the size of the work one evaluation or king-safety test does. The search
+ *  charges its node budget in proportion to it, so that a node costs about the same time in every position. */
+int positionLoad(const IGame& game);
+
 /** Number of timelines created by `color` (a created timeline's first board belongs to the opponent's turn). */
 int timelinesCreatedBy(const IGame& game, PieceColor color);
 

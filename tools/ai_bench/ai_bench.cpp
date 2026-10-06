@@ -99,13 +99,15 @@ void decide(const std::string& path) {
   std::stringstream text;
   text << in.rdbuf();
   const auto game = Core::parsePosition(text.str()).makeGame();
+  std::printf("timelines %d, mandatory boards %zu, pieces on the tips %d\n", game->timeLineCount(), game->mandatoryBoards().size(), ai::positionLoad(*game));
   for (ai::Level level : {ai::Level::Easy, ai::Level::Normal, ai::Level::Hard}) {
-    ai::Search s(*game, {level, 1});
+    ai::Search s(*game, {level, 1, std::getenv("AI_CAP") ? std::atoll(std::getenv("AI_CAP")) : 0});
     const auto t0 = Clock::now();
     while (s.step(500) == ai::Search::Status::Running) {}
     std::printf("%-7s nodes %9lld  %8.0f ms  depth %d  score %d  mate %d  fallback %d  turn %zu moves\n", levelName(level), s.progress().nodes,
                 secondsSince(t0) * 1000, s.progress().depth, s.progress().bestScore, s.progress().mateFound, s.progress().usedFallback,
                 s.bestTurn().size());
+    if (std::getenv("AI_SHOW")) for (const auto& m : s.bestTurn()) std::printf("    (L%dT%d)%d,%d > (L%dT%d)%d,%d\n", m.from.l, m.from.t, m.from.x, m.from.y, m.to.l, m.to.t, m.to.x, m.to.y);
   }
 }
 

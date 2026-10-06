@@ -50,7 +50,8 @@ A resumable generator that builds turns move by move on its own clone of the gam
 
 Not complete by design: beams, and no moves on optional boards (except jumps that clear the obligation). **Fallback ladder**
 when the generator finds no turn at all (e.g. the only escape from check is a quiet jump of an optional board): (1) the first
-pass is repeated in *rescue mode* (optional-board moves included, unlimited jumps, wider beam), so the turns are still
+pass is repeated in *rescue mode* (optional-board moves included, unlimited jumps, wider beam, up to `maxNodes / 50` dead ends; about 3% of extreme in-check
+multi-board positions are still beyond it), so the turns are still
 searched and evaluated; (2) only if that fails too, `TurnSearch` (exact) supplies a legal turn, which is then scored (mate /
 stalemate proof and static evaluation) and reported with `Progress::usedFallback`.
 
@@ -61,11 +62,18 @@ last turn searched is the opponent's reply and a capture is never judged without
 the start of a side's turn; its children are the generator's turns; after a turn is generated the position is cloned and
 submitted (`submitTurn()`).
 
-* **Node cap.** `maxNodes` is a hard cap on everything: generator moves, proof chunks and turn clones all count (clones and
-  submits cost `4 + timelines`, a generator move `1 + 2/3 timelines`). It is tested at every logical point (a turn was
-  generated, a proof ended); the only work allowed past it is the first pass up to its first evaluated root turn, because a
-  legal turn is always returned. On many mandatory boards the root turn count and the proof size shrink (`scaleForBoards`).
-  Overshoot is at most one turn's work (a decision stays within ~1.05x of the cap).
+* **Node cap and cost model.** `maxNodes` is a hard cap on everything: generator moves, proof slices and turn clones all
+  count, in proportion to the real work, so that a "node" takes about the same time in every position. A generator move
+  costs `1 + pieces on all tips / 16 + timelines / 3 + mandatory boards` (computed once per frame), cloning and submitting a
+  turn `4 + timelines + pieces / 12`, one 32-node slice of the opponent's legal-turn proof `32 x (1 + (pieces / 64 +
+  mandatory boards) / 2)`. The cap is tested at every logical point (a turn was generated, a proof ended) and inside the
+  generator (it is handed only what is left of the cap, so it stops at the same move however the caller slices its
+  budget). The only work allowed past it is the first pass up to its first evaluated root turn, because a legal turn is
+  always returned; that work is bounded too: after a quarter of the cap spent in the first pass's generator it *squeezes*
+  (beam 1, one scored survivor per frame, few more dead ends). On many mandatory boards the root turn count and the proof
+  size shrink (`scaleForBoards`). A cap smaller than one complete turn on 14 boards (about 10-40k nodes) cannot be
+  honoured. Result: a decision stays within about 1.0-1.3x of its cap, and Hard stays near 2 s native on 16-21 timeline
+  multiverses; the price is depth: Hard reaches only depth 1-2 there, Normal depth 1-2.
 * **Mate / stalemate proof at every node.** After submitting, the game's own legal-turn proof (the `TurnSearch` armed by
   `submitTurn()`) is stepped for up to `probeNodes` nodes. "No legal turn" is a mate (`+-MateScore - ply`) or a stalemate
   (0). This is exact, so a mate in one is found whenever the mating turn is among the candidates, and a turn that allows a
@@ -90,8 +98,8 @@ submitted (`submitTurn()`).
 
 All state lives in `Search::Impl`: an explicit stack of plies (each with its generator), no recursion across `step()`
 calls, no threads, no globals. `step(nodeBudget)` returns after about `nodeBudget` nodes (it may overshoot by the slice it
-is in, at most ~40 nodes: one generator move, whose cost is `1 + timelines / 3` so that big multiverses count more, or a
-32-node slice of the mate proof). A node is one move tried by the generator, or one node of the mate proof.
+is in: one generator move or one proof slice, whose charges are given in the cost model above: a few nodes in small
+positions, up to a few hundred in big multiverses). A node is one unit of that charge.
 
 The result depends only on the position, the options and the seed: not on how the caller slices its budgets, and not on
 timing. The node limit is only tested at logical points (a root turn is complete, an iteration ends), where the node count is
@@ -137,18 +145,17 @@ Beams narrow towards the leaves; exact numbers are in `levelParams()` (`src/ai/S
 | Timeline Battle opening | Easy / Normal / Hard | 1 000 / 218 000 / 946 000 | 0.6 / 146 / 620 ms | 0.4 / 0.6 / 0.8 ms |
 | Timeline Battle, after 12 turns | Easy / Normal / Hard | 2 200 / 150 000 / 905 000 | 2 / 178 / 970 ms | 0.9 / 1.3 / 1.5 ms |
 
-Throughput is 0.8-1.8 M nodes/s (the node counts of the opening/midgame table above are from before the cap change and
-are only indicative; Easy is weak through depth and beam, not through blindness to jumps). The cap is hard. On big
-multiverses (`ai_bench big`: positions with 15-19 timelines and 2-13 mandatory boards, Release, one core):
+Throughput is 0.5-2 M nodes/s (the table above is from before the cost model was introduced and is only indicative; Easy is
+weak through depth and beam, not through blindness to jumps). The cap is hard. On big multiverses (`ai_bench big`, Release,
+one core, loaded machine):
 
-| Level (cap) | Nodes / cap | Time |
-|---|---|---|
-| Easy (10 000) | 0.23-0.65 | 2-5 ms |
-| Normal (300 000) | 0.64-1.03 | 0.24-0.43 s |
-| Hard (1 200 000) | 1.00-1.00 | 1.1-1.9 s |
+| Positions | Level (cap) | Nodes / cap | Time |
+|---|---|---|---|
+| Timeline Invasion, 15 timelines (`big`) | Easy (10 000) / Normal (300 000) / Hard (1 200 000) | 0.1-0.4 / 1.00 / 1.00 | 1 / 0.1 / 0.4-0.6 s |
+| Standard, 16-21 timelines, 9-18 mandatory boards, in check | Easy / Normal / Hard | 0.4-0.9 / 1.0 / 1.0 | 5 ms / 0.2-0.4 s / 0.7-2.1 s |
 
-Before the cap fix the same kind of positions cost Normal up to 2.6x its cap (6.9M nodes, 12.8 s on a 17-timeline position)
-and Hard up to 4.5 s.
+Before the cost model the same kind of positions cost Normal up to 2.0x its cap (12.8 s on one 17-timeline position) and Hard
+8.7-9.1 s on full-board Standard multiverses (14-18 mandatory boards, in check), Normal about 2 s, Easy up to 5x its cap.
 
 Self-play (`ai_bench selfplay --games 18 --turns 40`, nine modes, colours alternate, unfinished games adjudicated by material
 > 300 cp, so a score is wins + draws/2):
@@ -166,6 +173,8 @@ Hard vs Normal was not completed (each Hard game takes minutes). Losses to Easy 
 * Turn generation is a beam: a mate or a defence that needs one particular move on a *second* board, among many equal ones, can
   be missed unless it gives check on its board (check detection is same-board geometry; discovered and cross-board checks
   are not detected, they rank by score). The mate proof itself is exact.
+* On 16+ timelines Hard reaches only depth 1-2 within its cap (the cap is in work units: a big multiverse makes every node
+  expensive); on the web build, which is several times slower, think time grows accordingly (lower `maxNodes` there if needed).
 * Optional boards are used only in rescue mode (when nothing else is legal); otherwise only jumps that clear the obligation,
   so the AI does not make "extra" moves on boards it is not obliged to move on. Jumps are limited per node (`maxTravel`); big multiverses are searched shallowly because a node costs
   more (the node cap counts that, so time stays roughly constant).

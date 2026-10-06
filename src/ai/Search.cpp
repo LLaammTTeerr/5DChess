@@ -12,6 +12,7 @@ namespace {
 
 constexpr int Inf = 1000000;
 constexpr int MaxPlies = 6;
+constexpr int PROBE_DIV = 2;
 constexpr int ProbeChunk = 32; ///< nodes of the opponent's legal-turn proof per slice
 /** Iterative deepening: completed searches of 1, 2, 4, 6 turns. Even depths end with the opponent's reply, so a capture on
  *  the last turn is never judged without the recapture; depth 1 is the ordering pass and the Easy level. */
@@ -112,6 +113,7 @@ struct Ply {
   int leaves = 0;
   std::unique_ptr<IGame> child; // the position after the current turn was submitted
   int probed = 0;
+  long long probeCost = ProbeChunk; // budget charged per proof slice: real work grows with the position
   std::vector<Core::Move> moves; // the current turn (kept at the root only)
 };
 
@@ -197,7 +199,12 @@ struct Search::Impl {
    *  work that may go on past it, and only until one root turn is evaluated: a legal turn is always returned. */
   bool capHit() const { return total() >= params.maxNodes and (depthDone >= 1 or rootDone >= 1); }
 
-  static long long leafCost(int timelines) { return 4 + timelines; }
+  /** Budget charged for one 32-node slice of the opponent's legal-turn proof: its nodes cost more on big multiverses. */
+  static long long probeSliceCost(const IGame& child) {
+    return ProbeChunk * (1 + (positionLoad(child) / 64 + int(child.mandatoryBoards().size())) / PROBE_DIV);
+  }
+
+  static long long leafCost(const IGame& game) { return 4 + game.timeLineCount() + positionLoad(game) / 12; }
 
   /** Cap reached: abandon the running iteration. */
   bool abortIteration() {
@@ -212,7 +219,7 @@ struct Search::Impl {
     g.deepBeam = std::max(g.deepBeam, 6);
     g.maxTravel = NoLimit;
     g.optionalBoards = true;
-    g.maxFailures = 400;
+    g.maxFailures = int(std::max<long long>(400, params.maxNodes / 50)); // rescue work stays a small multiple of the cap
     return g;
   }
 
@@ -227,7 +234,9 @@ struct Search::Impl {
   void pushPly(std::unique_ptr<IGame> game, int alpha, int beta) {
     Ply p;
     p.mover = game->getCurrentTurnColor();
-    p.gen = std::make_unique<TurnGen>(std::move(game), genParams(stack.size()));
+    GenParams gen = genParams(stack.size());
+    if (stack.empty() and iteration == 0) gen.squeezeAfter = std::max<long long>(params.maxNodes / (rescued ? 1 : 4), 1); // the first pass is not stopped by the cap
+    p.gen = std::make_unique<TurnGen>(std::move(game), gen);
     p.alpha = alpha;
     p.beta = beta;
     stack.push_back(std::move(p));
@@ -423,7 +432,18 @@ struct Search::Impl {
           return;
         }
         if (p.gen) {
-          switch (p.gen->advance(budget)) {
+          // The generator may not run past the node cap: it gets at most what is left (a move may overshoot it by its cost), and
+          // stops at the same logical move however the caller slices its budget.
+          long long allowed = budget;
+          if (depthDone >= 1 or rootDone >= 1) allowed = std::min(budget, std::max<long long>(1, params.maxNodes - total()));
+          const long long offered = allowed;
+          const TurnGen::Result r = p.gen->advance(allowed);
+          budget -= offered - allowed;
+          if (r == TurnGen::Result::Pause and capHit()) {
+            abortIteration();
+            return;
+          }
+          switch (r) {
             case TurnGen::Result::Pause: return;
             case TurnGen::Result::Done: finishPly(); return;
             case TurnGen::Result::Leaf: break;
@@ -440,18 +460,18 @@ struct Search::Impl {
         }
         if (capHit()) { abortIteration(); return; }
         ++p.leaves;
-        budget -= leafCost(p.leaf->timeLineCount()); // cloning and submitting a turn is real work too
+        budget -= leafCost(*p.leaf); // cloning and submitting a turn is real work too
         p.child = p.leaf->clone();
         p.child->submitTurn(); // arms the opponent's legal-turn proof
         p.probed = 0;
+        p.probeCost = probeSliceCost(*p.child);
         p.phase = Ply::Phase::Probe;
         return;
       }
       case Ply::Phase::Probe: {
-        const long long chunk = ProbeChunk; // fixed, so that the outcome does not depend on how the caller slices its budget
-        p.child->stepResultSearch(int(chunk));
-        budget -= chunk;
-        p.probed += int(chunk);
+        p.child->stepResultSearch(ProbeChunk); // fixed slice and charge, so that the outcome does not depend on how the caller slices its budget
+        budget -= p.probeCost;
+        p.probed += ProbeChunk;
         if (p.child->resultPending() and p.probed < params.probeNodes) return;
         if (capHit()) { abortIteration(); return; }
         const GameResult r = p.child->result();

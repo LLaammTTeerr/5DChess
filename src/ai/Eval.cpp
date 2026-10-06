@@ -51,6 +51,17 @@ int placement(const Cell cell, int x, int y, int n, const EvalWeights& w) {
 
 } // namespace
 
+int positionLoad(const IGame& game) {
+  int pieces = 0;
+  const int n = game.dim();
+  for (const auto& line : game.getTimeLines()) {
+    const std::shared_ptr<Board> board = line->back();
+    for (int y = 0; y < n; ++y)
+      for (int x = 0; x < n; ++x) pieces += !board->cell(x, y).empty();
+  }
+  return pieces;
+}
+
 int evaluate(const IGame& game, PieceColor perspective, const EvalWeights& w) {
   int score = 0; // White's point of view first
   const int n = game.dim();

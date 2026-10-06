@@ -6,6 +6,8 @@ namespace Chess::ai {
 
 namespace {
 
+constexpr int CostDivisor = 16; // pieces on all tips per extra node of cost (calibrated with ai_bench big)
+
 bool isTravel(const Core::Move& m) { return m.from.t != m.to.t or m.from.l != m.to.l; }
 
 /** Does the piece on (x, y) of `board` attack a king of colour `victim` on that board (ordinary chess geometry)? */
@@ -49,6 +51,7 @@ bool attacksKing(const Board& board, int x, int y, PieceColor victim) {
 
 void TurnGen::generateMoves(Frame& f) {
   f.generated = true;
+  _cost = 1 + positionLoad(*_game) / CostDivisor + _game->timeLineCount() / 3 + int(_game->mandatoryBoards().size());
   auto boards = _game->mandatoryBoards(); // (a copy: sorted below)
   if (boards.empty()) return;
   std::sort(boards.begin(), boards.end(), [](const auto& a, const auto& b) { return a->timeLineId() < b->timeLineId(); });
@@ -78,11 +81,21 @@ void TurnGen::generateMoves(Frame& f) {
   }
 }
 
-std::vector<std::array<int, 8>> TurnGen::turnKey() const {
-  std::vector<std::array<int, 8>> key;
+void TurnGen::spend() {
+  _spent += cost();
+  if (_params.squeezeAfter > 0 and _spent >= _params.squeezeAfter) {
+    _params.squeezeAfter = 0;
+    _squeezed = true;
+    _params.beam = _params.deepBeam = 1;
+    _params.maxFailures = std::min(_params.maxFailures, _failures + 2);
+  }
+}
+
+std::vector<std::array<int, 9>> TurnGen::turnKey() const {
+  std::vector<std::array<int, 9>> key;
   for (const auto& pm : _game->pendingMoves()) {
     const Core::Move& m = pm.move;
-    key.push_back({m.from.x, m.from.y, m.from.t, m.from.l, m.to.x, m.to.y, m.to.t, m.to.l});
+    key.push_back({m.from.x, m.from.y, m.from.t, m.from.l, m.to.x, m.to.y, m.to.t, m.to.l, int(m.promotion)});
   }
   std::sort(key.begin(), key.end());
   return key;
@@ -103,9 +116,11 @@ TurnGen::Result TurnGen::advance(long long& budget) {
     Frame& f = _stack.back();
     if (!f.generated) generateMoves(f);
 
+    if (_squeezed and f.cands.size() >= 1) f.scan = f.moves.size(); // squeezed: one survivor per frame is enough
     if (f.scan < f.moves.size()) { // scoring phase: one node per move
       const Core::Move m = f.moves[f.scan++];
       budget -= cost();
+      spend();
       _game->makeMove(m);
       if (!TurnSearch::kingCapturable(*_game, _mover)) {
         const bool check = _params.checksFirst and attacksKing(*_game->getNewBoard(), m.to.x, m.to.y, opposite(_mover));
@@ -128,14 +143,15 @@ TurnGen::Result TurnGen::advance(long long& budget) {
         ++f.travel;
       }
       budget -= cost();
+      spend();
       _game->makeMove(m);
       if (_game->canSubmit()) {
-        ++f.taken;
-        for (std::size_t i = 0; i + 1 < _stack.size(); ++i) _stack[i].yielded = true;
         if (!_seen.insert(turnKey()).second) { // the same set of moves in another order
           _game->undo();
           continue;
         }
+        for (std::size_t i = 0; i + 1 < _stack.size(); ++i) _stack[i].yielded = true;
+        ++f.taken;
         _undoLeaf = true;
         return Result::Leaf;
       }

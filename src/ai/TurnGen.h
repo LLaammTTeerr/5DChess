@@ -42,6 +42,10 @@ struct GenParams {
   /** Children that yield no turn (dead ends) the whole generator may explore before it gives up; bounds the work in positions
    *  where almost every move leaves a king capturable. */
   int maxFailures = 64;
+  /** Squeeze: once the generator itself has spent this many nodes (0 = never) it narrows to beam 1 and tolerates only a few
+   *  more dead ends, so that it ends soon with whatever it has. The search sets it on the first pass, where the node cap does
+   *  not interrupt generation before a first turn exists. Counted in the generator's own work: independent of step slicing. */
+  long long squeezeAfter = 0;
   /** Moves after which the moved piece attacks a king of the opponent on its board (a mate threat the static score cannot
    *  see) are ordered before all others and are exempt from the time-jump limit. Same-board attacks only: discovered and
    *  cross-board checks are not detected. */
@@ -87,12 +91,16 @@ private:
   bool _started = false;
   bool _undoLeaf = false;
   int _failures = 0;
-  std::set<std::vector<std::array<int, 8>>> _seen; ///< move sets of the leaves returned so far
+  long long _spent = 0;
+  bool _squeezed = false;
+  std::set<std::vector<std::array<int, 9>>> _seen; ///< move sets of the leaves returned so far
 
   void generateMoves(Frame& f);
-  std::vector<std::array<int, 8>> turnKey() const;
-  /** Work of one move tried: a node costs more in positions with many timelines (copies, threat tests); at least 1. */
-  long long cost() const { return 1 + _game->timeLineCount() * 2 / 3; }
+  void spend();
+  std::vector<std::array<int, 9>> turnKey() const;
+  /** Work of one move tried: a node costs more in positions with many timelines and pieces (copies, threat tests, evaluation: all scan every tip); at least 1. */
+  long long cost() const { return _cost; }
+  long long _cost = 1;
 };
 
 } // namespace Chess::ai
