@@ -1,0 +1,7 @@
+# White's rook on a1 gives check on a8 (Ra8+): after Submit Black's king on h8 is attacked and the check animation runs.
+5dchess-position 1
+title: UI check in one
+size: 8
+rules: double-step castling
+to-move: white
+L0 T1w: 7k/8/8/8/8/8/8/R3K3

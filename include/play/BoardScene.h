@@ -68,7 +68,8 @@ public:
   void drawTails(const SceneFrame& f) const;
   void drawJumpArcs(const SceneFrame& f) const;
   void drawJumpBadges(const SceneFrame& f) const;
-  void drawChecks(const SceneFrame& f) const;
+  /// `reveal` (0..1): how much of each attack line has drawn from the attacker towards the king (the check animation).
+  void drawChecks(const SceneFrame& f, float reveal = 1.0f) const;
 
   // --- Screen space, over the boards (inside the board clip) ---
   void drawCardLabels(const SceneFrame& f, const BoardLayout& layout) const;

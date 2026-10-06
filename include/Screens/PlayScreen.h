@@ -51,6 +51,8 @@ public:
   /// Replaces "White to move" / "Black to move" in the HUD pill (and silences the turn banner) while non-empty.
   void setHudTitle(std::string title) { _hudTitle = std::move(title); }
   void showEndCard(bool shown) { _showEndCard = shown; }
+  /// Esc: cancels an open promotion choice, else the picked-up piece (true: there was something to cancel).
+  bool escape(App& app) override;
   /// Developer tools: where a square is on screen right now (its centre), so scripted clicks name squares, not pixels.
   Vector2 squareToScreen(Chess::Core::Coord square) const;
 
@@ -94,7 +96,16 @@ private:
   // Answers that are not free (a threat search over the multiverse), cached until the game's state changes
   bool _canSubmit = false, _noMandatoryBoard = true;
 
+  // Feedback motion state
+  bool _slidePending = false;                      // a turn was submitted: the next rebuild starts the present-column slide
+  bool _checkSeeded = false;                       // the first rebuild only seeds _lastKings
+  std::vector<Chess::Core::Coord> _lastKings;      // attacked kings of the last rebuild (a change starts the check pulse)
+  bool _previewArmed = false;                      // the pointer has moved since the last click: the hover preview may show
+  Vector2 _lastPointer{-1.0f, -1.0f};
+
   void boardInput();
+  /// Feedback motion (MoveAnimator / play/MotionOverlay): hover preview, live arc, hovered card frame, clicks that are refused.
+  void feedbackInput();
   void updatePicker(float dt, const play::BoardStyle& style);
   void perform(const play::Intent& intent);
   void makeMove(const Chess::Core::Move& move);

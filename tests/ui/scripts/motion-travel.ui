@@ -1,0 +1,62 @@
+# Motion: Full, then a Standard game to a time-travel jump that creates a timeline, captured mid-animation:
+# hover preview of the knight's moves (with a dashed arc to the other boards), the live arc to the hovered time-travel target,
+# the new lane unfolding from its parent, the halo on the board the knight left, and the present column sliding on Submit.
+# Settings layout: Settings (150,490); Display tab (880,172); Motion cycle (700,532); Back (125,25); Submit (841,90).
+wait 20
+click 150 490
+wait 30
+click 880 172
+wait 20
+click 700 532        # Motion: Reduced -> Full
+wait 10
+click 125 25
+wait 30
+mode standard
+wait 120
+clicksq 0 0 e2
+wait 40
+clicksq 0 0 e4
+wait 60
+click 841 90         # Submit: the present column slides to Black's board
+wait 3
+capture motion-slide-f3
+wait 5
+capture motion-slide-f8
+wait 8
+capture motion-slide-f16
+wait 60
+clicksq 0 1 e7
+wait 40
+clicksq 0 1 e5
+wait 60
+click 841 90
+wait 90
+move 700 700         # the pointer rests away from the boards, then comes to the knight: the preview starts after a short dwell
+wait 5
+hoversq 0 2 g1
+wait 12
+capture motion-preview-f12
+wait 14
+capture motion-preview-f26
+clicksq 0 2 g1       # pick the knight up
+wait 40
+hoversq 0 0 g3       # a time-travel target two boards back: the arc grows towards it
+wait 3
+capture motion-livearc-f3
+wait 4
+capture motion-livearc-f7
+wait 40
+capture motion-livearc-settled
+clicksq 0 0 g3       # the jump creates timeline L+1
+wait 3
+capture motion-lane-f3
+wait 4
+capture motion-lane-f7
+wait 5
+capture motion-lane-f12
+wait 8
+capture motion-lane-f20
+wait 40
+capture motion-lane-f60
+wait 40
+capture motion-lane-settled

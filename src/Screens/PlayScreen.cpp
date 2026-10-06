@@ -1,6 +1,7 @@
 #include "Screens/PlayScreen.h"
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include "App.h"
 #include "Input.h"
 #include "TestMode.h"
@@ -9,6 +10,8 @@
 #include "engine/GameCatalog.h"
 #include "engine/Notation.h"
 #include "play/BoardRenderer.h"
+#include "play/Feedback.h"
+#include "play/MotionOverlay.h"
 
 using Chess::Core::Coord;
 using play::BoardKey;
@@ -131,6 +134,59 @@ void PlayScreen::boardInput() {
     if (square && Input::mousePressed(MOUSE_BUTTON_LEFT)) click(*square);
   }
   if (!ui::pointerConsumed()) _camera.handleInput(); // not over a button or the Guide's panel
+  feedbackInput();
+}
+
+// ---- Feedback motion (WS3) ----
+void PlayScreen::feedbackInput() {
+  std::optional<Coord> piece;                                          // hover preview: a piece that could be picked up
+  std::optional<std::pair<Coord, Coord>> arc;                          // live arc: selected piece -> hovered cross-board target
+  std::optional<BoardKey> chrome;                                      // the frame of the card under the pointer
+  const Vector2 pointer = Input::mousePosition();
+  if (Input::mousePressed(MOUSE_BUTTON_LEFT)) _previewArmed = false; // a click must be followed by a move before the preview returns
+  else if (std::fabs(pointer.x - _lastPointer.x) + std::fabs(pointer.y - _lastPointer.y) > 2.0f) _previewArmed = true;
+  _lastPointer = pointer;
+
+  if (!ui::pointerConsumed() && !_ended) {
+    const Vector2 world = _camera.screenToWorld(pointer);
+    for (const auto& slot : _layout.boards())
+      if (BoardLayout::cardRect(slot.rect).contains(world.x, world.y) && !slot.rect.contains(world.x, world.y)) chrome = BoardKey{slot.timeline, slot.halfTurn};
+    if (!inputBlocked()) {
+      if (_hover && !_selection.active() && _previewArmed && play::Selection::canPickUp(*_hover, *_game)) piece = _hover;
+      if (_hover && _selection.active() && !_selection.promotionTarget()) {
+        const auto& targets = _selection.targets();
+        const Coord from = *_selection.from();
+        if (std::find(targets.begin(), targets.end(), *_hover) != targets.end() && play::keyOf(*_hover) != play::keyOf(from)) arc = {from, *_hover};
+      }
+    } else if (aiToMove() && !_locked && Input::mousePressed(MOUSE_BUTTON_LEFT)) {
+      // The computer's turn: a click on a board is ignored, but says so
+      if (const auto square = _layout.hitTest(world.x, world.y)) {
+        _animator.rejected(*square, play::Intent::Reason::ComputerThinking);
+        App::current().audio.playSfx(Sfx::Illegal);
+      }
+    }
+  }
+  _animator.previewHover(piece);
+  _animator.liveArcTo(arc);
+  _animator.hoverChrome(chrome);
+  if (_animator.previewWantsTargets() && piece) {
+    std::vector<Coord> targets;
+    for (const auto& m : _game->legalMovesFrom(*piece))
+      if (std::find(targets.begin(), targets.end(), m.to) == targets.end()) targets.push_back(m.to);
+    _animator.previewTargets(std::move(targets));
+  }
+}
+
+bool PlayScreen::escape(App&) {
+  if (_selection.promotionTarget()) {
+    _selection.cancelPromotion();
+    return true;
+  }
+  if (_selection.active()) {
+    clearSelection();
+    return true;
+  }
+  return false;
 }
 
 void PlayScreen::click(Coord square) {
@@ -151,6 +207,10 @@ void PlayScreen::perform(const play::Intent& intent) {
       _camera.focusSelected(BoardLayout::boardRect(intent.from.l, intent.from.t));
       break;
     case Kind::Move: makeMove(intent.move); break;
+    case Kind::Rejected: // nothing happens to the game, but the click is answered
+      _animator.rejected(intent.from, intent.reason);
+      App::current().audio.playSfx(Sfx::Illegal);
+      break;
   }
 }
 
@@ -179,14 +239,16 @@ void PlayScreen::makeMove(const Chess::Core::Move& move) {
   const bool sameBoard = flight.from == play::keyOf(move.to);
 
   _game->makeMove(move);
-  // TODO: Sfx::Check / Sfx::Castle / Sfx::Promote / Sfx::Draw once the rules implement them.
-  App::current().audio.playSfx(isCapture ? Sfx::Capture : Sfx::Move);
   clearSelection();
 
   // The piece travels to its square on the newly created board (same-board moves slide on that new board), and the
   // camera flies there; the new board is not in the layout until refresh()
   const Chess::Board& created = *_game->getNewBoard();
   flight.to = {created.timeLineId(), created.halfTurnNumber()};
+  // Sounds: a move that creates a timeline, a capture, a plain move (a check is announced by rebuild(), a submit by the hand-over)
+  const bool newTimeline = _view.timeline(created.timeLineId()) == nullptr;
+  App::current().audio.playSfx(newTimeline ? Sfx::Branch : isCapture ? Sfx::Capture : Sfx::Move);
+  if (!sameBoard) _animator.markSource(flight.from); // the board the piece left keeps a halo for a moment
   if (sameBoard) flight.from = flight.to;
   if (!flight.piece.empty()) _animator.startFlight(flight);
   _camera.focusNewest(BoardLayout::boardRect(flight.to.first, flight.to.second));
@@ -218,6 +280,7 @@ void PlayScreen::doSubmit() {
   _animator.finish();
   _arrows.finish();
   _game->submitTurn();
+  _slidePending = true;
   clearSelection();
   autosaveNow();
 }
@@ -368,6 +431,7 @@ void PlayScreen::updateAi(float dt) {
       makeMove(_aiMoves[_aiNext++]);
     } else if (_game->canSubmit()) {
       _game->submitTurn();
+      _slidePending = true;
       cancelAi();
       autosaveNow();
     } else { // cannot happen (the search verifies its turn): hand the side over rather than stall
@@ -430,10 +494,34 @@ void PlayScreen::rebuild() {
   _animator.syncBoards(_layout); // new boards grow in
   _arrows.set(play::timelineArrows(*_game));
   _canSubmit = _game->canSubmit();
+  const int presentBefore = _view.presentHalfTurn;
   _view = play::MultiverseView::build(*_game);
+  _animator.previewReset(); // the game changed: the hovered piece's targets are asked for again
   _camera.setExtraBounds(play::BoardScene::jumpBounds(play::boardStyle(App::current().settings.boardView), _view));
   _noMandatoryBoard = std::none_of(_view.boards.begin(), _view.boards.end(),
                                    [](const play::BoardInfo& b) { return b.role == play::BoardRole::Mandatory; });
+
+  // Feedback motion: a king that is newly attacked pulses and sounds; a submitted turn slides the present column and lifts the
+  // boards of the side that now has the move
+  std::vector<Coord> kings;
+  for (const auto& c : _view.checks)
+    if (std::find(kings.begin(), kings.end(), c.king) == kings.end()) kings.push_back(c.king);
+  const bool newCheck = _checkSeeded && !kings.empty() && kings != _lastKings;
+  const bool decided = _game->result() != Chess::GameResult::Ongoing;
+  if (newCheck) {
+    _animator.checkStarted(kings);
+    if (!decided) App::current().audio.playSfx(Sfx::Check);
+  }
+  _lastKings = std::move(kings);
+  _checkSeeded = true;
+  if (_slidePending) {
+    _slidePending = false;
+    std::vector<BoardKey> movers;
+    for (const auto& b : _view.boards)
+      if (b.role != play::BoardRole::Past) movers.push_back({b.timeline, b.halfTurn});
+    _animator.handOver(presentBefore, _view.presentHalfTurn, movers);
+    if (!newCheck && !decided) App::current().audio.playSfx(Sfx::Submit);
+  }
 }
 
 std::string PlayScreen::hint() const {
@@ -504,6 +592,8 @@ void PlayScreen::draw(App& app) const {
   // Behind everything: the background, then lanes and the present column (they run under the HUD)
   _scene.drawBackground(style);
   if (!_layout.boards().empty()) _scene.drawLanes(frame, UI::Layout::rulerY);
+  play::overlay::drawLaneUnfold(_animator.unfoldingLanes(), _view, camera, [&] { _scene.drawBackground(style); }); // new lane unfolds
+  play::overlay::drawPresentSlide(_animator.presentSlide(), camera, style);
 
   // The boards never draw over the HUD bars: they are clipped to the free area (plus a little for halos)
   constexpr float kClipPad = 12.0f;
@@ -537,9 +627,22 @@ void PlayScreen::draw(App& app) const {
       if (c.king.l == slot.timeline && c.king.t == slot.halfTurn) look.markChecked(c.king.x, c.king.y);
     return look;
   };
-  for (size_t i = 0; i < slots.size(); ++i) play::drawBoardHalo(slots[i].rect, lookOf(i), style, _scene.soft());
-  for (size_t i = 0; i < slots.size(); ++i)
+  for (size_t i = 0; i < slots.size(); ++i) {
+    play::overlay::BoardShift shift(_animator.boardOffset({slots[i].timeline, slots[i].halfTurn}, zoom));
+    play::drawBoardHalo(slots[i].rect, lookOf(i), style, _scene.soft());
+  }
+  {
+    const auto source = _animator.sourceHalo(); // glows: the board a time-travel move left, the target of the live arc
+    if (source.alpha > 0.0f && _layout.contains(source.key.first, source.key.second))
+      play::overlay::drawBoardGlow(BoardLayout::boardRect(source.key.first, source.key.second), source.alpha, style, _scene.soft(), true);
+    const auto& glow = _animator.targetGlow();
+    if (glow.alpha > 0.0f && _layout.contains(glow.key.first, glow.key.second))
+      play::overlay::drawBoardGlow(BoardLayout::boardRect(glow.key.first, glow.key.second), glow.alpha, style, _scene.soft(), false);
+  }
+  for (size_t i = 0; i < slots.size(); ++i) {
+    play::overlay::BoardShift shift(_animator.boardOffset({slots[i].timeline, slots[i].halfTurn}, zoom));
     play::drawBoard(_game->board(slots[i].timeline, slots[i].halfTurn), slots[i].rect, lookOf(i), style, zoom);
+  }
 
   if (from) play::drawBoardOutline(BoardLayout::boardRect(from->l, from->t), style, zoom);
 
@@ -552,6 +655,17 @@ void PlayScreen::draw(App& app) const {
                           fading.alpha, style);
   const auto& hover = _animator.hoverNow();
   if (hover.alpha > 0.0f && _hover) play::drawHoverSquare(squareOf(*_hover), hover.alpha, style);
+
+  {
+    const auto flash = _animator.rejectFlash(); // a refused click
+    if (flash.alpha > 0.0f && _layout.contains(flash.key.first, flash.key.second))
+      play::overlay::drawRejectFlash(BoardLayout::squareRect(BoardLayout::boardRect(flash.key.first, flash.key.second), dim, flash.x, flash.y), flash.alpha);
+    if (!from) { // what the piece under the pointer could do
+      play::overlay::drawMovePreview(_animator.previewFading(), *_game, style, zoom, !UI::Motion::reduced());
+      play::overlay::drawMovePreview(_animator.previewNow(), *_game, style, zoom, !UI::Motion::reduced());
+    }
+    play::overlay::drawCheckPulse(_animator.checkedKings(), _animator.checkPulseNow(), dim, style, zoom);
+  }
 
   if (from) {
     const auto& targets = _selection.targets();
@@ -566,8 +680,9 @@ void PlayScreen::draw(App& app) const {
   }
   if (_highlight && _layout.contains(_highlight->l, _highlight->t))
     play::drawSelectedSquare(squareOf(*_highlight), zoom, style);
+  if (const auto* arc = _animator.liveArc(); arc && from) play::overlay::drawLiveArc(*arc, dim, style, zoom); // the time-travel move to the hovered square
   _scene.drawJumpBadges(frame);
-  _scene.drawChecks(frame);
+  _scene.drawChecks(frame, _animator.checkDrawOn());
   play::drawFlights(_animator.flights(), gray);
   EndMode2D();
 
@@ -578,9 +693,11 @@ void PlayScreen::draw(App& app) const {
   if (!_layout.boards().empty()) {
     _scene.drawRuler(frame, UI::Layout::rulerY, UI::Layout::rulerH);
     _scene.drawLaneLabels(frame, {0.0f, UI::Layout::safeTop - 8.0f, UI::Layout::laneLabelW, safe.height + 16.0f});
+    if (const auto* arc = _animator.liveArc(); arc && from) play::overlay::drawTargetRuler(arc->to, arc->grow, camera, style);
   }
 
   play::drawHud(_hud, style);
+  play::overlay::drawHintAlert(_animator.hintAlert().text, _animator.hintAlert().alpha, style); // the reason for a refused click
   _actions.draw();
   if (!_embedded) _saveMenu.draw(style, app.screens.navAlpha());
   _picker.draw(style);
