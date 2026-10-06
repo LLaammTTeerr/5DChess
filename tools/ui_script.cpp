@@ -1,4 +1,4 @@
-// ui_script: runs the REAL game (same SceneManager / scenes / menus as src/main.cpp, via App::frame) from a
+// ui_script: runs the REAL game (same ScreenStack / screens as src/main.cpp, via App::frame) from a
 // script file with deterministic injected input, and saves screenshots. Safety net for UI refactors.
 //
 //   ui_script <script.ui> <outdir>
@@ -27,8 +27,6 @@
 #include "App.h"
 #include "Input.h"
 #include "TestMode.h"
-#include "Scene/SceneManager.h"
-#include "gameState.h"
 #include "PieceTheme.h"
 #include "Render/UITheme.h"
 

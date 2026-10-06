@@ -56,6 +56,7 @@ inline constexpr float lg = 24.0f;
 inline constexpr float xl = 32.0f;
 inline constexpr float buttonHeight = 44.0f; // minimum touch/click target
 inline constexpr float buttonSpacing = 12.0f;
+inline constexpr float actionButtonWidth = 130.0f; // in-game Undo / Deselect / Submit
 inline constexpr float radius = 0.25f;       // DrawRectangleRounded roundness
 inline constexpr float outline = 3.0f;       // selection outline
 }

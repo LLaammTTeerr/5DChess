@@ -1,10 +1,5 @@
 #include "Render/Controller.h"
 #include "App.h"
-#include "MenuController.h"
-#include "MenuComponent.h"
-#include "MenuCommand.h"
-#include "MenuView.h"
-#include "MenuItemView.h"
 #include "Render/UITheme.h"
 #include "Audio/AudioManager.h"
 
@@ -15,7 +10,7 @@
 
 ChessController::ChessController(ChessModel& m, ChessView& v) : model(m), view(v) {
     setupViewCallbacks();
-    initInGameMenu();
+    layoutButtons();
 }
 
 void ChessController::updateCurrentBoardFromModel() {
@@ -68,7 +63,7 @@ void ChessController::update(float deltaTime) {
   view.updatePresentLine(presentLineData);
   
   // Update menu button states based on current game state
-  updateMenuButtonStates();
+  updateButtonStates();
 
   // Boards the current player may still move from get an accent border
   for (const auto& board : _currentBoard) {
@@ -91,13 +86,12 @@ void ChessController::update(float deltaTime) {
   }
 }
 
-void ChessController::handleInput() {
-    // The in-game menu gets first dibs on the mouse: no board selection under a menu button
-    bool mouseOverMenu = _inGameMenuController && _inGameMenuController->isMouseOverMenu();
-    view.handleInput(mouseOverMenu);
-    if (_inGameMenuController) {
-        _inGameMenuController->handleInput();
-    }
+void ChessController::handleInput(float deltaTime) {
+    // The action buttons get first dibs on the pointer: no board selection under a button
+    if (_undo.update(deltaTime)) handleUndoMove();
+    if (_deselect.update(deltaTime)) handleDeselectPosition();
+    if (_submit.update(deltaTime)) handleSubmitMove();
+    view.handleInput(ui::pointerConsumed());
 }
 
 void ChessController::setupViewCallbacks() {
@@ -417,10 +411,10 @@ std::vector<std::shared_ptr<BoardView>> ChessController::computeHighlightedBoard
     return highlightedViews;
   }
 
-void ChessController::render() {
+void ChessController::render() const {
   view.render();
   view.renderHud();
-  renderInGameMenu();
+  for (const ui::Button* b : {&_undo, &_deselect, &_submit}) b->draw();
 
   const Chess::GameResult result = model._game->result();
   if (result != Chess::GameResult::Ongoing) {
@@ -432,45 +426,15 @@ void ChessController::render() {
 
 
 
-void ChessController::initInGameMenu() {
-   _inGameMenuSystem = std::make_shared<Menu>("In-Game Menu", true);
-  
-  std::shared_ptr<MenuComponent> Undo = std::make_shared<MenuItem>("Undo", true);
-  auto UndoCommand = std::make_unique<UndoMoveCommand>();
-  UndoCommand->setCallback([this](){
-    handleUndoMove(); 
-  });
-  Undo->setCommand(std::move(UndoCommand));
-
-  std::shared_ptr<MenuComponent> Deselect = std::make_shared<MenuItem>("Deselect", true);
-  auto DeselectCommand = std::make_unique<DeselectMoveCommand>();
-  DeselectCommand->setCallback([this](){
-    handleDeselectPosition();
-  });
-  Deselect->setCommand(std::move(DeselectCommand));
-
-  std::shared_ptr<MenuComponent> Submit = std::make_shared<MenuItem>("Submit", true);
-  auto SubmitCommand = std::make_unique<SubmitMoveCommand>();
-  SubmitCommand->setCallback([this](){
-    handleSubmitMove();
-  });
-  Submit->setCommand(std::move(SubmitCommand));
-
-  _inGameMenuSystem->addItem(Undo);
-  _inGameMenuSystem->addItem(Deselect);
-  _inGameMenuSystem->addItem(Submit);
-
-  _inGameMenuController = std::make_shared<InGameMenuController>(_inGameMenuSystem);
+void ChessController::layoutButtons() {
+  // Just below the HUD pill (drawn at the top centre by ChessView)
+  const auto slots = ui::row({0.0f, UI::Layout::actionRowY, static_cast<float>(GetScreenWidth()), UI::Space::buttonHeight}, 3,
+                             UI::Space::actionButtonWidth, UI::Space::buttonSpacing);
+  _undo.rect = slots[0];
+  _deselect.rect = slots[1];
+  _submit.rect = slots[2];
 }
 
-
-void ChessController::renderInGameMenu() const {
-  if (_inGameMenuController) {
-    _inGameMenuController->draw();
-  } else {
-    std::cerr << "InGameMenuController is not initialized!" << std::endl;
-  }
-}
 
 const ChessController::TurnStatus& ChessController::turnStatus() const {
   const Chess::IGame* game = model._game.get();
@@ -506,35 +470,15 @@ HudData ChessController::computeHud() const {
   return hud;
 }
 
-void ChessController::updateMenuButtonStates() {
-  if (!_inGameMenuSystem) {
-    return; // Menu not initialized yet
-  }
-
-  // Find menu items by title
-  MenuComponent* undoItem = _inGameMenuSystem->findItem("Undo");
-  MenuComponent* submitItem = _inGameMenuSystem->findItem("Submit");
-  MenuComponent* deselectItem = _inGameMenuSystem->findItem("Deselect");
-
-  // Update Undo button: enabled if there are moves to undo
-  if (undoItem) {
-    bool canUndo = model._game->undoable() && model._game->result() == Chess::GameResult::Ongoing;
-    undoItem->setEnabled(canUndo);
-  }
-
-  // Update Submit button: enabled once the turn is complete and legal (engine rule: canSubmit)
-  if (submitItem) {
-    _moveableBoards = model._game->getMoveableBoards();
-    submitItem->setEnabled(turnStatus().canSubmit);
-  }
-
-  // Update Deselect button: enabled if there's a current move state to deselect
-  // (i.e., not in the initial SELECT_FROM_BOARD phase or has selections made)
-  if (deselectItem) {
-    bool canDeselect = (model._currentMoveState.currentPhase != MovePhase::SELECT_FROM_BOARD ||
-                        model._currentMoveState.selectedBoard != nullptr) && model._game->result() == Chess::GameResult::Ongoing;
-    deselectItem->setEnabled(canDeselect);
-  }
+void ChessController::updateButtonStates() {
+  const bool ongoing = model._game->result() == Chess::GameResult::Ongoing;
+  _undo.enabled = model._game->undoable() && ongoing;
+  // Submit: enabled once the turn is complete and legal (engine rule: canSubmit)
+  _moveableBoards = model._game->getMoveableBoards();
+  _submit.enabled = turnStatus().canSubmit;
+  // Deselect: enabled when a move is in progress (past the initial board selection, or a board is chosen)
+  _deselect.enabled = (model._currentMoveState.currentPhase != MovePhase::SELECT_FROM_BOARD ||
+                       model._currentMoveState.selectedBoard != nullptr) && ongoing;
 }
 
 void ChessController::clearSelection() {
@@ -556,7 +500,7 @@ void ChessController::handleUndoMove() {
   clearSelection();
   
   // Update menu button states after game state change
-  updateMenuButtonStates();
+  updateButtonStates();
 }
 
 void ChessController::handleSubmitMove() {
@@ -569,7 +513,7 @@ void ChessController::handleSubmitMove() {
   clearSelection();
   
   // Update menu button states after game state change
-  updateMenuButtonStates();
+  updateButtonStates();
 }
 
 void ChessController::handleDeselectPosition() {
@@ -578,7 +522,7 @@ void ChessController::handleDeselectPosition() {
   // No validity check needed - button is disabled when invalid
   clearSelection();
   // Update menu button states after game state change
-  updateMenuButtonStates();
+  updateButtonStates();
 }
 
 std::vector<TimelineArrowData> ChessController::computeTimelineArrows() const {

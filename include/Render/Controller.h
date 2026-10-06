@@ -8,25 +8,23 @@
 #include "Render/BoardView.h"
 #include "View.h"
 #include "RenModel.h"
+#include "ui/Widgets.h"
 
 // Forward declarations
-class InGameMenuController;
-class MenuComponent;
 struct TimelineArrowData; // Forward declaration for timeline arrows
 class ChessController {
 private:
   ChessModel& model;
   ChessView& view;
 
-  std::shared_ptr<InGameMenuController> _inGameMenuController;
-  std::shared_ptr<MenuComponent> _inGameMenuSystem;
+  // The Undo / Deselect / Submit row under the HUD pill
+  ui::Button _undo{"Undo", {}}, _deselect{"Deselect", {}}, _submit{"Submit", {}, true};
 private:
   bool _isGameEnd = false;
 private:
-  void initInGameMenu();
-  void renderInGameMenu() const;
-  void updateMenuButtonStates();
-  std::vector<std::shared_ptr<Chess::Board>> _moveableBoards; // refreshed by updateMenuButtonStates()
+  void layoutButtons();
+  void updateButtonStates();
+  std::vector<std::shared_ptr<Chess::Board>> _moveableBoards; // refreshed by updateButtonStates()
   /// canSubmit() and "no mandatory board left" are not free (a threat search over the multiverse), and the HUD and the
   /// menu ask every frame: cache them until the game's stateVersion() changes.
   struct TurnStatus { bool canSubmit = false; bool mandatoryEmpty = true; };
@@ -78,12 +76,12 @@ private:
 public:
   ChessController(ChessModel& m, ChessView& v);
   void update(float deltaTime);
-  void handleInput();
-  void clearHover() { view.clearHover(); }
+  /// Updates the action buttons (they take the pointer first), then the board input.
+  void handleInput(float deltaTime);
   /// Developer tools / scripted demos: drive the same paths a click would
   void scriptedSelect(Chess::SelectedPosition p) { handleSelectedPosition(p); }
   void scriptedSubmit() { handleSubmitMove(); }
-  void render();
+  void render() const;
 
 private:
   void setupViewCallbacks();

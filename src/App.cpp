@@ -1,9 +1,8 @@
 #include "App.h"
 #include "Input.h"
 #include "TestMode.h"
-#include "Scene/SceneManager.h"
+#include "Screens/MainMenuScreen.h"
 #include "Render/UITheme.h"
-#include "gameState.h"
 #include "engine/GameCatalog.h"
 #include <raylib.h>
 #include <algorithm>
@@ -27,8 +26,7 @@ App::App() {
     settings.reduceMotion = TestMode::get().reduceMotion;
     audio.init(assets);
     Chess::GameCatalog::setDirectory(assets.root() + "positions"); // one assets root for everything
-    gameState = std::make_unique<GameStateModel>();
-    scenes = std::make_unique<SceneManager>(gameState.get());
+    screens.push(std::make_unique<MainMenuScreen>());
 }
 
 App::~App() = default;
@@ -39,12 +37,12 @@ void App::frame(const std::function<void()>& beforePresent) {
     static int frames = 0; static double sum = 0, worst = 0;
     const double t0 = perf ? GetTime() : 0.0;
     audio.update();
-    scenes->update(Input::frameTime());
+    screens.update(*this, Input::frameTime());
 
     BeginDrawing();
     ClearBackground(UI::Color::bg);
 
-    scenes->render();
+    screens.draw(*this);
 
     const double cpuMs = perf ? (GetTime() - t0) * 1000.0 : 0.0; // before EndDrawing: it sleeps to hold the target FPS
     if (beforePresent) beforePresent();

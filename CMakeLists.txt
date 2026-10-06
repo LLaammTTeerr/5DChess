@@ -69,13 +69,7 @@ if(FDCHESS_BUILD_GAME)
   target_include_directories(5dchess PRIVATE
     include
     include/Audio
-    include/Commands
-    include/GameStates
-    include/GameStates/ConcreteGameStates
-    include/Menu
-    include/Render
-    include/Scene
-    include/Scene/ConcreteScene)
+    include/Render)
   target_compile_definitions(5dchess PRIVATE FDCHESS_VERSION="${PROJECT_VERSION}")
   target_link_libraries(5dchess PRIVATE chess_core raylib)
   if(APPLE)

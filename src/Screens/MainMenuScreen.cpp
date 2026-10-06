@@ -1,10 +1,11 @@
 #include "App.h"
-#include "MainMenuScene.h"
+#include "Screens/MainMenuScreen.h"
+#include "Screens/ModeSelectScreen.h"
+#include "Screens/SettingsScreen.h"
 #include "Render/PieceTheme.h"
 #include "Render/UITheme.h"
 #include "Render/Motion.h"
 #include <cmath>
-#include <iostream>
 #include <string>
 #include <raylib.h>
 
@@ -71,21 +72,37 @@ constexpr const char* kPieces[] = {"king", "queen", "rook", "bishop", "knight", 
 
 } // namespace
 
-void MainMenuScene::init(void) {}
 
-void MainMenuScene::handleInput(void) {}
+MainMenuScreen::MainMenuScreen() {
+  std::vector<std::string> labels = {"Versus", "Puzzles", "Guide", "Settings"};
+#ifndef __EMSCRIPTEN__  // a browser tab has nothing to exit to
+  labels.push_back("Exit");
+#endif
+  // Navigation column, vertically centred in the left 300 px
+  const auto slots = ui::column({50.0f, 0.0f, 200.0f, static_cast<float>(GetScreenHeight())},
+                                static_cast<int>(labels.size()), UI::Space::buttonHeight, UI::Space::md);
+  _nav = ui::ButtonList(labels, slots);
+  _nav.selectable = false;
+  _enter.start(0.0f, 1.0f, UI::Motion::slow, UI::Motion::easeOutCubic, 0.0f, true);
+}
 
-void MainMenuScene::update(float deltaTime) {
+void MainMenuScreen::update(App& app, float deltaTime) {
   const float dt = UI::Motion::safeDt(deltaTime);
   // The drifting field, the bob and the blink all freeze under Reduce motion
   if (!UI::Motion::reduced()) _time += dt;
   _enter.update(dt);
   _enterClock += dt;
+
+  const bool nav = app.screens.navShown();  // hidden: still updated (hover eases out) but unreachable
+  switch (_nav.update(dt, nav)) {
+    case 0: app.screens.replace(std::make_unique<ModeSelectScreen>()); break;
+    case 3: app.screens.replace(std::make_unique<SettingsScreen>()); break;
+    case 4: app.quit = true; break;  // Exit (absent in the web build)
+    default: break;                  // Puzzles and Guide are not written yet
+  }
 }
 
-void MainMenuScene::render() {
-  ClearBackground(UI::Color::bg);
-  UI::Cursor::beginFrame();
+void MainMenuScreen::draw(App& app) const {
 
   const float W = static_cast<float>(GetScreenWidth());
   const float H = static_cast<float>(GetScreenHeight());
@@ -128,7 +145,7 @@ void MainMenuScene::render() {
   const float rowW = kCount * sprite + 6 * innerGap + 5 * outerGap;
   float x = std::floor(cx - rowW / 2.0f);
   const float baseY = blockTop + 218.0f;
-  Assets& assets = App::current().assets;
+  Assets& assets = app.assets;
   for (int i = 0; i < kCount; ++i) {
     const int pieceIdx = i / 2;
     const bool white = (i % 2) == 0;
@@ -150,24 +167,6 @@ void MainMenuScene::render() {
                    {x, baseY + bob + lift, sprite, sprite}, {0, 0}, 0.0f, UI::withAlpha(WHITE, ca));
     x += sprite + ((i % 2 == 0) ? innerGap : outerGap);
   }
+
+  _nav.draw(app.screens.navAlpha());
 }
-
-void MainMenuScene::cleanup(void) {}
-
-bool MainMenuScene::isActive(void) const { return _isActive; }
-
-std::string MainMenuScene::getName(void) const { return "MainMenuScene"; }
-
-std::string MainMenuScene::getGameStateName(void) const {
-  return "MAIN_MENU";
-}
-
-void MainMenuScene::onEnter() {
-  _isActive = true;
-  _enterClock = 0.0f;
-  _enter.start(0.0f, 1.0f, UI::Motion::slow, UI::Motion::easeOutCubic, 0.0f, true);
-}
-
-void MainMenuScene::onExit() { _isActive = false; }
-
-bool MainMenuScene::shouldTransition() const { return false; }

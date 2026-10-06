@@ -1,0 +1,12 @@
+# ESC hides the navigation buttons; hovering Versus first must not leave it hovered when they come back.
+# Versus is 200x44 at x=50, y=258 on desktop.
+wait 20
+move 150 280
+wait 10
+key ESCAPE
+wait 20
+move 700 400
+wait 5
+key ESCAPE
+wait 20
+capture nav-toggle-restored
