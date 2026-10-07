@@ -116,3 +116,5 @@ void PuzzleListScreen::draw(App& app) const {
                        UI::Font::body, UI::Color::textMuted);
   _back.draw(app.screens.navAlpha());
 }
+
+void PuzzleListScreen::back(App& app) { app.screens.replace(std::make_unique<MainMenuScreen>()); }

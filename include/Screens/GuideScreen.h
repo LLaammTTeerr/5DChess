@@ -13,6 +13,8 @@ public:
   explicit GuideScreen(int page = 0);
   void update(App& app, float dt) override;
   void draw(App& app) const override;
+  bool escape(App& app) override; // Esc cancels on the embedded board first
+  void back(App& app) override;   // then does what the Back button does
 
   /// Developer tools: the game screen of the current page (to click squares by name), and the page number (0-based).
   PlayScreen* board() const { return _board.get(); }

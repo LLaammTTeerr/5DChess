@@ -42,6 +42,11 @@ struct TipState { size_t id = 0; double since = 0.0, last = -10.0; };
 TipState g_tip;
 }
 
+namespace {
+struct QueuedTip { Rectangle anchor{}; std::string text; float alpha = 0.0f; bool set = false; };
+QueuedTip g_queued;
+}
+
 void tooltip(Rectangle anchor, const std::string& text) {
   if (text.empty() || !hovered(anchor)) return;
   const size_t id = std::hash<std::string>{}(text) ^ (static_cast<size_t>(anchor.x) * 31u + static_cast<size_t>(anchor.y) * 131071u);
@@ -51,6 +56,15 @@ void tooltip(Rectangle anchor, const std::string& text) {
   const double shown = now - g_tip.since - kTooltipDwell;
   if (shown < 0.0) return;
   const float a = UI::Motion::reduced() ? 1.0f : UI::Motion::clamp01(static_cast<float>(shown) / UI::Motion::fast);
+  g_queued = {anchor, text, a, true}; // painted by flushTooltip() at the end of the frame, over everything
+}
+
+void flushTooltip() {
+  if (!g_queued.set) return;
+  const Rectangle anchor = g_queued.anchor;
+  const std::string text = g_queued.text;
+  const float a = g_queued.alpha;
+  g_queued.set = false;
 
   // Wrap to the width of a short paragraph; explicit '\n' starts a new line
   const ::Font font = UI::Fonts::body();
@@ -74,6 +88,8 @@ void tooltip(Rectangle anchor, const std::string& text) {
   float x = anchor.x + anchor.width / 2 - (w + 2 * pad) / 2;
   float y = anchor.y + anchor.height + 8.0f;
   if (y + h > H - 6.0f) y = anchor.y - h - 8.0f;
+  // Under an anchor above the turn ruler the bubble would cover the ruler: open above the anchor when there is room
+  if (anchor.y < UI::Layout::rulerY && y + h > UI::Layout::rulerY - 2.0f && anchor.y - h - 8.0f >= 4.0f) y = anchor.y - h - 8.0f;
   x = std::clamp(x, 6.0f, std::max(6.0f, W - w - 2 * pad - 6.0f));
   const Rectangle box = {std::floor(x), std::floor(y), w + 2 * pad, h};
   auto fade = [a](Color c) { c.a = static_cast<unsigned char>(c.a * a); return c; };

@@ -137,6 +137,10 @@ void PlayScreen::boardInput() {
 }
 
 bool PlayScreen::escape(App&) {
+  if (_game->result() != Chess::GameResult::Ongoing && _showEndCard && !_reviewing) { // the end card: Esc is "Review board"
+    _reviewing = true;
+    return true;
+  }
   if (_selection.promotionTarget()) {
     _selection.cancelPromotion();
     return true;

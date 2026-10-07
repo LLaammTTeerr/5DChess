@@ -74,6 +74,7 @@ void ScreenStack::draw(App& app) const {
                      UI::withAlpha(WHITE, static_cast<unsigned char>(255.0f * a)));
     }
   }
+  ui::flushTooltip(); // the tooltip of the frame, over the screen and the fading snapshot
 }
 
 void ScreenStack::applyPending(App& app) {

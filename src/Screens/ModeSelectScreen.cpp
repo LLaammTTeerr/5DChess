@@ -146,3 +146,5 @@ void ModeSelectScreen::draw(App& app) const {
   _back.draw(app.screens.navAlpha());
   if (_canPlay) _play.draw(app.screens.navAlpha());
 }
+
+void ModeSelectScreen::back(App& app) { app.screens.replace(std::make_unique<MainMenuScreen>()); }
