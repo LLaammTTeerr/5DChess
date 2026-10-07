@@ -80,7 +80,7 @@ mode, Play) or by a record with the `# vs-computer:` line (`record`, `slot`).
 | puzzles-solve | the solution Re1-e8: the success card, then the list with a check mark |
 | puzzles-refuted | a first turn of a mate in 2 that does not win by force: Black's refuting defence is played, then "Not quite - Black has a defence" |
 | puzzles-mate2 | a mate in 2: the engine's reply played on the board and the second turn awaited; Show solution replayed from the start |
-| layout-embedded | the Guide and a puzzle: the pill, action row and controls bar centred on the board view beside the side panel; the Submit tooltip listing the pending move; the controls bar gone after 3 idle seconds and back when the pointer moves |
+| layout-embedded | the Guide and a puzzle: the pill, action row and controls bar centred on the board view beside the side panel; the Submit tooltip listing the pending move; the controls bar stays on a fresh game however long it is idle (it fades after 3 idle seconds only once a turn has been handed over) |
 | layout-banner | Motion: Full: the turn change after Submit 3, 9, 24, 48 and 90 frames in (the pill's hint segment cross-fades to "Black to move"; nothing covers the ruler) |
 | layout-tooltips | tooltips: none before the 400 ms dwell, then Submit (the moves), Undo, the L0 lane pill, a ruler tick |
 | layout-long-labels | the longest slot row ("Simplify - Knight vs Bishop vs Computer" with its turns and date) in the Load screen and the Save panel |

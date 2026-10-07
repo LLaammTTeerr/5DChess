@@ -104,6 +104,7 @@ private:
   UI::Motion::Tween _thinkFade;
   double _clock = 0.0;
   float _idle = 0.0f, _controls = 1.0f;
+  int _turnChanges = 0; // the controls bar stays until the first turn has been handed over
 
   bool _endActive = false, _endWhiteWon = true, _endDraw = false;
   float _endClock = 0.0f;
@@ -127,6 +128,11 @@ public:
   /// The skin of the board view (nullptr: the default cream skin).
   void setSkin(const ui::Skin* skin) {
     _undo.skin = _deselect.skin = _submit.skin = _overview.skin = _next.skin = skin;
+  }
+  /// Reviewing a finished game: the Deselect slot becomes "Result" (enabled), which brings the end card back.
+  void setReview(bool on) {
+    _deselect.label = on ? "Result" : "Deselect";
+    if (on) _deselect.enabled = true;
   }
   void setEnabled(bool undo, bool deselect, bool submit) {
     _undo.enabled = undo;

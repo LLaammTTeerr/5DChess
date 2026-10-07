@@ -44,11 +44,11 @@ float textW(::Font font, const std::string& s, float size) { return MeasureTextE
 // The longest of the candidate controls lines that fits `maxW` (the last one is cut with "..." if even it does not)
 std::string controlsLine(bool cameraControls, ::Font font, float maxW) {
   const std::string sep = std::string("  ") + kDot + "  ";
-  // Home / Space belong to the camera that reports a state (cameraLabel); until then only keys that always work are listed
+  // Home / Space belong to the camera that reports a state (cameraLabel); until then the keys of the camera as it is
   const std::string candidates[] = {
       cameraControls ? "Overview (Home)" + sep + "Next board (Space)" + sep + "Drag/Wheel" + sep + "H: hide menu"
-                     : "Click: select" + sep + "Drag/Wheel: pan/zoom",
-      cameraControls ? "Overview (Home)" + sep + "Next board (Space)" + sep + "Drag/Wheel" : "Click: select" + sep + "Drag/Wheel",
+                     : "Click: select" + sep + "Drag/Wheel: pan/zoom" + sep + "Z: auto-zoom" + sep + "X: fit",
+      cameraControls ? "Overview (Home)" + sep + "Next board (Space)" + sep + "Drag/Wheel" : "Click: select" + sep + "Drag/Wheel: pan/zoom",
       cameraControls ? "Overview (Home)" + sep + "Next board (Space)" : "Click: select",
   };
 
@@ -87,7 +87,7 @@ void drawHud(const HudData& hud, const BoardStyle& st) {
     const float outDur = exitDuration(fast);
     swap = easeOutCubic(clamp01(hud.bannerClock / fast)) * (1.0f - easeInCubic(clamp01((hud.bannerClock - (1.2f - outDur)) / outDur)));
   }
-  const std::string swapText = hud.bannerWhite ? "White to move" : "Black to move";
+  const std::string swapText = "Your move"; // (the status segment already names the colour)
 
   const float pad = UI::Space::md;
   const float chipD = 16.0f;
@@ -116,7 +116,7 @@ void drawHud(const HudData& hud, const BoardStyle& st) {
 
   const Rectangle pill = {std::floor(cx - w / 2), UI::Layout::hudPillY, w, h};
   drawPanel(pill, st);
-  ui::audit::within("HUD pill", status + " | " + turnInfo + " | " + hintShown, pill, {margin / 2, 0.0f, availW - margin, screenH});
+  if (ui::audit::enabled()) ui::audit::within("HUD pill", status + " | " + turnInfo + " | " + hintShown, pill, {margin / 2, 0.0f, availW - margin, screenH});
 
   float x = pill.x + pad;
   const float cy = pill.y + h / 2;
@@ -177,7 +177,7 @@ void drawHud(const HudData& hud, const BoardStyle& st) {
     const Rectangle bar = {std::floor(cx - (cw + 2 * pad) / 2), screenH - UI::Layout::controlsBarMargin - UI::Layout::controlsBarH,
                            cw + 2 * pad, UI::Layout::controlsBarH};
     drawPanel(bar, st, 0.92f * a);
-    ui::audit::within("controls bar", cam + " " + controls, bar, {0.0f, 0.0f, availW, screenH});
+    if (ui::audit::enabled()) ui::audit::within("controls bar", cam + " " + controls, bar, {0.0f, 0.0f, availW, screenH});
     float bx = bar.x + pad;
     const float by = std::floor(bar.y + (bar.height - UI::Font::mono) / 2 - 1);
     if (!cam.empty()) {
@@ -188,6 +188,13 @@ void drawHud(const HudData& hud, const BoardStyle& st) {
       bx += camW;
     }
     DrawTextEx(monoFont, controls.c_str(), {bx, by}, UI::Font::mono, 0, faded(st.hudMuted, a));
+  }
+  if (hud.controlsAlpha < 0.997f) { // the bar is away: a small chip says where it is (the pointer near the bottom brings it back)
+    const float a = 1.0f - hud.controlsAlpha;
+    const float w = textW(monoFont, "Controls", UI::Font::mono) + 2 * UI::Space::sm;
+    const Rectangle chip = {std::floor(cx - w / 2), screenH - UI::Layout::controlsBarMargin - 22.0f, w, 22.0f};
+    DrawRectangleRounded(chip, 1.0f, 8, faded(st.hudFill, 0.8f * a));
+    DrawTextEx(monoFont, "Controls", {chip.x + UI::Space::sm, chip.y + 3.0f}, UI::Font::mono, 0, faded(st.hudMuted, a));
   }
 }
 
@@ -313,9 +320,13 @@ void HudMotion::update(float dt) {
   // The controls bar steps aside after a few seconds without pointer input, and returns when the pointer moves or nears it
   const Vector2 delta = Input::mouseDelta();
   const bool nearBottom = Input::mousePosition().y > static_cast<float>(GetScreenHeight()) - 90.0f;
-  if (delta.x != 0.0f || delta.y != 0.0f || Input::mousePressed(MOUSE_BUTTON_LEFT) || Input::mouseWheel() != 0.0f || nearBottom) _idle = 0.0f;
+  bool key = false;
+  for (int k : {KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN, KEY_SPACE, KEY_TAB, KEY_ENTER, KEY_HOME, KEY_H, KEY_U, KEY_Z, KEY_X, KEY_Q, KEY_R, KEY_B, KEY_N})
+    key = key || Input::keyPressed(k);
+  if (delta.x != 0.0f || delta.y != 0.0f || Input::mousePressed(MOUSE_BUTTON_LEFT) || Input::mouseWheel() != 0.0f || nearBottom || key) _idle = 0.0f;
   else _idle += dt;
-  const float target = _idle < kControlsIdle ? 1.0f : 0.0f;
+  // (a new player is not left without the controls: they step aside only once a turn has been handed over)
+  const float target = _idle < kControlsIdle || _turnChanges < 1 ? 1.0f : 0.0f;
   if (UI::Motion::reduced()) _controls = target;
   else _controls = target > _controls ? std::min(target, _controls + dt / UI::Motion::fast) : std::max(target, _controls - dt / UI::Motion::base);
 }
@@ -323,6 +334,7 @@ void HudMotion::update(float dt) {
 void HudMotion::setTurn(bool whiteToMove) {
   if (_seeded && whiteToMove != _white) {
     // Turn change: the hint segment of the pill says whose turn it is for a moment; the chip cross-fades
+    ++_turnChanges;
     _bannerActive = true;
     _bannerClock = 0.0f;
     _chip.start(_chip.value(), whiteToMove ? 1.0f : 0.0f, UI::Motion::fast, UI::Motion::easeOutCubic, 0.0f, true);
@@ -451,10 +463,11 @@ void ActionRow::draw() const {
     // A badge on Undo: how many moves of this turn it would take back one by one
     const Vector2 c = {_undo.rect.x + _undo.rect.width - 6.0f, _undo.rect.y + 6.0f};
     const std::string n = std::to_string(std::min(_undoCount, 99));
-    DrawCircleV(c, 10.0f, UI::Color::primary);
+    const ui::Skin& skin = _undo.skin ? *_undo.skin : ui::defaultSkin();
+    DrawCircleV(c, 10.0f, skin.primary);
     const ::Font font = UI::Fonts::mono();
     const Vector2 ts = MeasureTextEx(font, n.c_str(), UI::Font::minimum, 0);
-    DrawTextEx(font, n.c_str(), {std::floor(c.x - ts.x / 2), std::floor(c.y - ts.y / 2)}, UI::Font::minimum, 0, UI::Color::onAccent);
+    DrawTextEx(font, n.c_str(), {std::floor(c.x - ts.x / 2), std::floor(c.y - ts.y / 2)}, UI::Font::minimum, 0, skin.onPrimary);
   }
 }
 

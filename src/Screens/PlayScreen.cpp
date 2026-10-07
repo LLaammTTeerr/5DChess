@@ -55,7 +55,7 @@ void PlayScreen::update(App& app, float dt) {
   // The buttons come first: whatever has the pointer is not a click on the board
   if (!_embedded && _back.update(dt, app.screens.navShown())) leave(app);
   if (!_embedded) _saveMenu.update(dt, app.screens.navShown(), style, *_game, _vs ? &*_vs : nullptr, _aiPlaying);
-  if (endCardShown()) { // the end card is modal: its buttons take the pointer before anything else
+  if (endCardShown() && !_embedded) { // (embedded boards show no buttons) the end card is modal: its buttons take the pointer before anything else
     _endButtons.setSkin(&style.skin);
     _endButtons.setRematch(!_embedded && Chess::GameCatalog::findById(_game->modeId()) != nullptr);
     switch (_endButtons.update(dt, true)) {
@@ -65,10 +65,11 @@ void PlayScreen::update(App& app, float dt) {
       case play::EndCardButtons::Action::None: break;
     }
   }
+  else if (endCardShown() && ui::hovered(play::endCardRect(false))) ui::consumePointer(); // (an embedded board's card is no way to click through)
   const play::ActionRow::Action action = _actions.update(dt);
   switch (_locked ? play::ActionRow::Action::None : action) { // (Undo stays available on the computer's turn: it takes the turn back)
     case play::ActionRow::Action::Undo: undo(); break;
-    case play::ActionRow::Action::Deselect: deselect(); break;
+    case play::ActionRow::Action::Deselect: if (_reviewing) _reviewing = false; else deselect(); break; // (reviewing: "Result" brings the card back)
     case play::ActionRow::Action::Submit: submitTurn(); break;
     case play::ActionRow::Action::Overview: break;  // the camera's Home and Next board are handled once the HUD is given
     case play::ActionRow::Action::NextBoard: break; // HudData::cameraLabel / nextBoardLabel (they show the buttons)
@@ -271,7 +272,14 @@ std::string PlayScreen::submitTip(bool ongoing) const {
   if (aiToMove()) return "The computer is playing its turn";
   if (_canSubmit && !inputBlocked()) {
     std::string text = "Hand in this turn:";
-    for (const Chess::Core::PlayedMove& m : _game->pendingMoves()) text += "\n" + Chess::toNotation(m.move, m.promotes);
+    auto square = [](const Chess::Core::Coord& c) { return std::string(1, static_cast<char>('a' + c.x)) + std::to_string(c.y + 1); };
+    for (const Chess::Core::PlayedMove& m : _game->pendingMoves()) {
+      const auto& from = m.move.from;
+      const auto& to = m.move.to;
+      text += "\n" + square(from) + "-" + square(to);
+      if (from.l != to.l || from.t != to.t) text += " to " + play::timelineLabel(to.l) + " \xC2\xB7 T" + std::to_string(to.t / 2 + 1);
+      if (m.promotes) text += " (promotes)";
+    }
     return text;
   }
   if (_selection.promotionTarget()) return "Choose a promotion first";
@@ -465,6 +473,7 @@ void PlayScreen::refresh() {
   _hud.submitTip = submitTip(ongoing);
   if (_reviewing && _hudTitle.empty())
     _hud.title = result == Chess::GameResult::WhiteWins ? "White wins" : result == Chess::GameResult::BlackWins ? "Black wins" : "Draw";
+  _actions.setReview(_reviewing);
   _actions.sync(_hud);
   _hudMotion.setEnded(!ongoing, result == Chess::GameResult::WhiteWins, result == Chess::GameResult::Draw);
 

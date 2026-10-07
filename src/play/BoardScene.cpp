@@ -538,7 +538,7 @@ void BoardScene::drawCardLabels(const SceneFrame& f, const BoardLayout& layout) 
       const float room = card.w * zoom - left - 22.0f * std::min(zoom, 1.0f);
       const std::string shown = ui::ellipsized(label, room, [&](const std::string& t) { return textWidth(font, t, size); });
       drawText(font, shown, p.x + left, p.y + (footer - size) / 2.0f - 1.0f, size, fade(color, a));
-      ui::audit::fit("card label", shown, textWidth(font, shown, size), size, {0, 0, card.w * zoom, footer});
+      if (ui::audit::enabled()) ui::audit::fit("card label", shown, textWidth(font, shown, size), size, {0, 0, card.w * zoom, footer});
     } else {
       const Vector2 top = f.toScreen({card.x, card.y});
       if (CheckCollisionPointRec(mouse, {top.x, top.y, card.w * zoom, card.h * zoom}) && !ui::pointerConsumed()) {
@@ -712,7 +712,7 @@ void BoardScene::drawRuler(const SceneFrame& f, float y, float height) const {
       DrawRectangleRec(pill, st.accent);
       drawTextCentered(badgeFont, badgeText, bx, ty, 14.0f, WHITE, badgeSpacing);
     }
-    ui::audit::fit("present badge", badgeText, textWidth(badgeFont, badgeText, 14.0f, badgeSpacing), 14.0f, {0, 0, badgeW - 8.0f, badgeH});
+    if (ui::audit::enabled()) ui::audit::fit("present badge", badgeText, textWidth(badgeFont, badgeText, 14.0f, badgeSpacing), 14.0f, {0, 0, badgeW - 8.0f, badgeH});
   }
 
   // The strip of the whole multiverse at the right end, while part of it is out of view
@@ -789,7 +789,7 @@ void BoardScene::drawLaneLabels(const SceneFrame& f, Rectangle area) const {
           const Font font = fontOf("ui.public_sans", UI::Font::minimum);
           drawRoundedLines({x, yy, 68, 24}, 12.0f, 1.2f, fade(st.muted, alpha));
           drawTextCentered(font, "inactive", x + 34, yy + 3.0f, small, fade(st.muted, alpha));
-          ui::audit::fit("inactive tag", "inactive", textWidth(font, "inactive", small), small, {0, 0, 64.0f, 24.0f});
+          if (ui::audit::enabled()) ui::audit::fit("inactive tag", "inactive", textWidth(font, "inactive", small), small, {0, 0, 64.0f, 24.0f});
           queueTip({x, yy, 68, 24}, "Inactive: this timeline is too far behind to need moves.");
         }
       } else if (deep) {
@@ -806,7 +806,7 @@ void BoardScene::drawLaneLabels(const SceneFrame& f, Rectangle area) const {
           const Font font = fontOf("ui.mono", UI::Font::minimum);
           drawRoundedLines({x, yy, 92, 24}, 12.0f, 1.0f, fade(st.muted, alpha));
           drawTextCentered(font, "INACTIVE", x + 46, yy + 3.0f, small, fade(st.muted, alpha), 1.0f);
-          ui::audit::fit("inactive tag", "INACTIVE", textWidth(font, "INACTIVE", small, 1.0f), small, {0, 0, 88.0f, 24.0f});
+          if (ui::audit::enabled()) ui::audit::fit("inactive tag", "INACTIVE", textWidth(font, "INACTIVE", small, 1.0f), small, {0, 0, 88.0f, 24.0f});
           queueTip({x, yy, 92, 24}, "Inactive: this timeline is too far behind to need moves.");
         }
       } else {
@@ -821,7 +821,7 @@ void BoardScene::drawLaneLabels(const SceneFrame& f, Rectangle area) const {
           const Font font = fontOf("ui.mono", UI::Font::minimum);
           DrawRectangleLinesEx({x, yy, 92, 24}, 1.0f, fade(st.muted, alpha));
           drawTextCentered(font, "INACTIVE", x + 46, yy + 3.0f, small, fade(st.muted, alpha), 1.0f);
-          ui::audit::fit("inactive tag", "INACTIVE", textWidth(font, "INACTIVE", small, 1.0f), small, {0, 0, 88.0f, 24.0f});
+          if (ui::audit::enabled()) ui::audit::fit("inactive tag", "INACTIVE", textWidth(font, "INACTIVE", small, 1.0f), small, {0, 0, 88.0f, 24.0f});
           queueTip({x, yy, 92, 24}, "Inactive: this timeline is too far behind to need moves.");
         }
       }

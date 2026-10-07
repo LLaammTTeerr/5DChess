@@ -1,5 +1,7 @@
 #pragma once
 #include <optional>
+#include <string>
+#include <vector>
 #include "ui/Screen.h"
 
 // Settings: three tabs (Piece Theme, Music, Display), each showing its options below.
@@ -19,6 +21,9 @@ private:
   ui::ButtonList _options;          // theme names or music tracks
   std::optional<ui::Toggle> _toggle;  // Sound effects (Music tab) or Motion (Display tab)
   std::optional<ui::Cycle> _boardView; // Display tab: Board view: Deep space / Atlas / Blueprint
+
+  mutable std::string _noteText;               // the description shown at the right and its wrapped lines (draw() caches them)
+  mutable std::vector<std::string> _noteLines;
 
   void openTab(App& app, int tab);
 };

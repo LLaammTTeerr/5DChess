@@ -185,7 +185,7 @@ void Button::draw(float alpha) const {
     const float room = maxW - (detail.empty() ? 0.0f : dw + pad);
     const std::string shown = ellipsize ? ui::ellipsized(label, room, [&](const std::string& t) { return widthOf(t, nominal); }) : label;
     const float shownW = widthOf(shown, nominal);
-    ui::audit::fit(detail.empty() ? "row label" : "row label + detail", shown, shownW + (detail.empty() ? 0.0f : dw + pad), textH,
+    if (ui::audit::enabled()) ui::audit::fit(detail.empty() ? "row label" : "row label + detail", shown, shownW + (detail.empty() ? 0.0f : dw + pad), textH,
                    {0, 0, maxW, r.height});
     DrawTextEx(font, shown.c_str(), {std::floor(r.x + pad), ty}, nominal, 0.0f, fade(text));
     if (!detail.empty()) {
@@ -203,11 +203,11 @@ void Button::draw(float alpha) const {
       shown = ui::ellipsized(label, maxW, [&](const std::string& t) { return widthOf(t, nominal); });
     } else {
       size = std::fmax(static_cast<float>(UI::Font::minimum), size * maxW / w); // shrink a long label (min 14 px) instead of overflowing
-      ui::audit::shrunk("button label", label, size, nominal);
+      if (ui::audit::enabled()) ui::audit::shrunk("button label", label, size, nominal);
     }
   }
   const Vector2 ts = MeasureTextEx(font, shown.c_str(), size, 0.0f);
-  ui::audit::fit("button label", shown, ts.x, ts.y, {0, 0, r.width - 8.0f, r.height});
+  if (ui::audit::enabled()) ui::audit::fit("button label", shown, ts.x, ts.y, {0, 0, r.width - 8.0f, r.height});
   DrawTextEx(font, shown.c_str(), {std::floor(r.x + (r.width - ts.x) / 2), std::floor(r.y + (r.height - ts.y) / 2)}, size, 0.0f,
              fade(text));
   if (!tip.empty() && over_) ui::tooltip(rect, tip);

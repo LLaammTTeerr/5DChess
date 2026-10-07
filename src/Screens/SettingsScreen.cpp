@@ -130,9 +130,13 @@ void SettingsScreen::draw(App& app) const {
     const ::Font font = UI::Fonts::body();
     const float room = static_cast<float>(GetScreenWidth()) - kPaneX - 50.0f;
     float y = kColumnTop + 6.0f;
-    for (const std::string& line : wrapText(font, UI::Font::body, note, room)) {
+    if (note != _noteText) { // wrapped once per change of tab or board view, not every frame
+      _noteText = note;
+      _noteLines = wrapText(font, UI::Font::body, note, room);
+    }
+    for (const std::string& line : _noteLines) {
       DrawTextEx(font, line.c_str(), {kPaneX, std::floor(y)}, UI::Font::body, 0.0f, UI::Color::textMuted);
-      ui::audit::fit("settings note", line, MeasureTextEx(font, line.c_str(), UI::Font::body, 0.0f).x, UI::Font::body, {0, 0, room, 30.0f});
+      if (ui::audit::enabled()) ui::audit::fit("settings note", line, MeasureTextEx(font, line.c_str(), UI::Font::body, 0.0f).x, UI::Font::body, {0, 0, room, 30.0f});
       y += 26.0f;
     }
   }
