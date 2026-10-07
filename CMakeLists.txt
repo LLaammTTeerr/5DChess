@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.28)
 
 project(5DChess
-    VERSION 1.1.1
+    VERSION 1.2.0
   DESCRIPTION "Multidimensional chess with timeline mechanics"
   LANGUAGES C CXX)
 

@@ -343,6 +343,7 @@ theme_preview <Pixel|Medieval|Bauhaus|Neon|Origami|Ink> <Standard|Battle|Invasio
 - ~~v0.5.0~~: widget/screen UI rewrite, three board views (Deep space, Atlas, Blueprint), official-rules visuals, promotion picker, saved settings, move notation and game records in the engine: done.
 - ~~v1.0.0~~: Play vs Computer, Puzzles, the interactive Guide, save/load and six original piece themes: done.
 - ~~v1.1.0~~: playability pass: calm camera with click-to-focus and keyboard navigation, layout fixes, feedback motion and sounds: done.
+- ~~v1.2.0~~: Play view and the turn checklist for many-timeline turns: done.
 - **After 1.0** (ideas): online play between two browsers, more puzzles and a daily puzzle, a stronger Hard level that runs in a Web Worker, analysis mode (step through a saved game with the engine's evaluation), and cross-checking the Misc modes against 5d-chess-js.
 
 ## Known limitations
