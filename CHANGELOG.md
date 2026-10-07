@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-07
+
+A pass over the game from the point of view of the person playing it: nothing overlaps or spills, the camera stays calm and readable, and motion explains each move.
+
+- **Calmer camera**: Overview, Focus and your own framing; it never moves by itself mid-turn. Click a small board to focus it, double-click for the overview, Space for the next board that needs a move, Home for everything, arrow keys for a board cursor. The wheel zooms around the pointer.
+- **Layout**: twelve overlap and overflow issues addressed (turn banner, Present badge, side-panel screens, jump labels, lists, save slots), tooltips, clearer Undo and Submit, and an end-of-game card with Rematch and Review. Every screenshot test now fails on overflowing text.
+- **Motion and sound**: illegal clicks shake with a reason, hover previews legal moves, time travel draws a live arc, new timelines unfold, check pulses; Esc steps back, H hides the menu.
+
 ### Added
 - **Layout audit.** Under the UI test harness every text drawn through a button, the HUD, a panel, the lane / card / ruler labels or a centred title reports its measured size and the box it must fit in (`include/ui/Audit.h`); anything that overflows prints a `UI-OVERFLOW` line and `tests/ui/run.sh` fails (a label drawn smaller than nominal prints a `UI-SHRUNK` note). `ui::ellipsized` (`include/ui/TextFit.h`) is the one cut-with-dots routine, unit tested.
 - **Tooltips**: `ui::tooltip` (400 ms dwell, then a short fade; none under Reduce motion) on Submit (the moves it hands in, or why it is disabled), Undo, Deselect, the lane pills ("L+1: created by White at T3, branching from L0", plus why a timeline is inactive), the ruler ticks ("Turn 3, White"), jump badges (the text that no longer fits beside them) and the minimap. `ui::Button::tip` makes any button show one.
@@ -42,7 +50,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Ghost tags at the screen edge for the boards a picked-up piece can reach when they are off-screen; clicking one frames both boards.
 - `BoardCamera` is graphics-free (`play_core`) and unit tested; new `BoardLayout::boardAt / find / neighbour / columnBounds / cardBounds`. `ui_script`: `dblclick`, `dblclicksq`, `drag`, `movesq`, `clickcard`, `zoom?`, `camlog`, `camstill` and `camexpect`; nine `camera-*` UI scripts.
 
-### Changed
 - **Camera and navigation** (replaces the follow / fit / free camera): three framings, Overview, Focus and Free, plus a lock while a piece is picked up. The camera no longer moves on its own except where the player's next action needs a board that is not readable: Submit focuses the one board that needs a move (or frames the present column when several do), a time-travel move keeps the source and the new board in view, and a piece picked up on a board smaller than zoom 0.8 brings it up in the same motion as the click. It never refits in the middle of a turn, never flies back after 10 seconds and never pans to a selected piece. The jump arcs no longer count in the fit. Every move is one tween of the position and the zoom (260 ms focus, 360 ms overview, 200 ms hops; 80 ms linear under Reduce motion), and any drag, wheel or key interrupts it. Automatic zooms snap to 0.6 / 0.8 / 1.0 / 1.25; the wheel zooms around the pointer, 12 % a notch, between 0.4 and 2.5, with no accumulator; a drag pans at once (no 100 ms dead time) and never selects. The computer's moves follow the same rules 150 ms after each move.
 - Esc also steps back the framing (promotion, then selection, then back to the Overview). The Z (auto-zoom) and X (fit) keys are gone; the minimap strip focuses the board you click.
 - Release notes on GitHub now start with the version's CHANGELOG section (`scripts/changelog_section.sh`), followed by the list of merged PRs; the release workflow fails early if the section is missing.
@@ -218,7 +225,8 @@ The first complete release: a computer opponent, puzzles, an interactive guide, 
 - Dead and unused files and code.
 - Tracked `.DS_Store` and `.vscode` files.
 
-[Unreleased]: https://github.com/LLaammTTeerr/5DChess/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/LLaammTTeerr/5DChess/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/LLaammTTeerr/5DChess/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/LLaammTTeerr/5DChess/compare/v0.5.0...v1.0.0
 [0.5.0]: https://github.com/LLaammTTeerr/5DChess/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/LLaammTTeerr/5DChess/compare/v0.3.0...v0.4.0
