@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Game screen: nothing enters the HUD zone.** The present column and the lane bands no longer run up behind the Undo / Deselect / Submit row, and the "Present" badge no longer sits directly under it: the HUD zone (Back / Save / Copy, the status pill, the action row, Overview / Next board) ends at `UI::Layout::hudBottom`, the turn ruler starts 8 px below it, and the scene (and the camera's safe rect) below the ruler. The present column now hangs from the middle of its badge. Disabled buttons of the Deep space view are opaque, so nothing reads through them.
+- Also found by the new overlap audit: the status pill could run under the Back button of the Guide and puzzle screens (it now stops short of it); the Present badge could lie over the minimap at the right end of the ruler (it stops before it); the minimap's frame could poke out of the ruler on many timelines; the Save panel reached 17 px under the Undo button (narrower now); the embedded Guide and puzzle boards drew their first frame without the side panel's inset.
+
+### Changed
+- **Mode select** has two columns: a Setup panel at the left (Opponent, You play and Level, each label above its row of choices, the level's description inside the panel; with Two players it holds only Opponent) and the list of game modes at the right in its own panel, whole rows only, clear of the Back / Play row and the footer. The mode list no longer moves when the opponent changes.
+
+### Added
+- **Overlap audit.** Under the UI test harness the buttons, status pill, controls bar, Present badge, ruler, minimap, side panels, popups, list viewports, the top edge of the present column and of the lane bands, and the HUD zone register their screen-space rect as they draw (`ui::audit::rect`, guarded by `ui::audit::enabled()`, so a shipped build pays one branch). A pair that intersects, or comes closer than its clear space (1 px; 8 px around the Present badge), without an explicit allowed-containment rule (a button inside its panel, the badge on the ruler) prints `UI-OVERLAP a vs b`, and `tests/ui/run.sh` fails on any such line.
+
 ## [1.1.0] - 2026-10-07
 
 A pass over the game from the point of view of the person playing it: nothing overlaps or spills, the camera stays calm and readable, and motion explains each move.

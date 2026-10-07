@@ -1,10 +1,10 @@
 # A time-travel move keeps both boards in view; the Submit after it focuses the one board Black must move on.
 # Standard: 1. e4 e5, then the knight g1 on the present board jumps back to g3 on the first board (a new timeline, L+1).
-# Layout (1400x800): Versus (150,250); Standard row (690,184); Play (808,712); Submit (841,90).
+# Layout (1400x800): Versus (150,250); Standard row (905,224); Play (808,712); Submit (841,90).
 wait 20
 click 150 250        # Versus
 wait 30
-click 690 184        # Standard
+click 905 224        # Standard
 wait 20
 click 808 712        # Play
 wait 120

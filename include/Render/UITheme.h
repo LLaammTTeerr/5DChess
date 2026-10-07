@@ -72,7 +72,9 @@ namespace Fonts {
 ::Font subtitle(); // Public Sans Regular, Font::subtitle
 }
 
-// In-game screen-space layout shared by the HUD, the action buttons and the camera safe area.
+// In-game screen-space layout shared by the HUD, the action buttons and the camera safe area. From the top: the HUD zone (back / save /
+// copy, status pill, action row, Overview / Next board; no scene element enters it), a gap, the turn ruler, then the scene. Lanes and
+// the present column start at the ruler or below.
 namespace Layout {
 inline constexpr float hudPillY       = 12.0f;
 inline constexpr float actionRowY     = 68.0f;   // top of the Undo/Deselect/Submit row
@@ -81,7 +83,9 @@ inline constexpr float controlsBarH   = 32.0f;
 inline constexpr float controlsBarMargin = 12.0f; // gap between the bar and the window bottom
 inline constexpr float safeGap        = 12.0f;    // breathing room between UI and the boards
 inline constexpr float sideInset      = 24.0f;
-inline constexpr float rulerY         = actionRowBottom + 8.0f;  // the turn ruler (T1 T2 ...) under the action row
+inline constexpr float backRight      = 25.0f + 200.0f + 12.0f; // the Back button (x 25, 200 wide) and the gap the status pill keeps from it
+inline constexpr float hudBottom      = actionRowBottom + 8.0f;  // the HUD zone is [0, hudBottom)
+inline constexpr float rulerY         = hudBottom + 8.0f;        // the turn ruler (T1 T2 ...) under the HUD zone
 inline constexpr float rulerH         = 30.0f;
 inline constexpr float laneLabelW     = 128.0f;  // left column of the lane labels (L0, L+1, ...)
 inline constexpr float safeTop    = rulerY + rulerH + 10.0f;

@@ -1,24 +1,24 @@
-# Versus with the computer: the opponent / side / level rows of the mode screen, then the mode list below them.
-# Layout (1400x800): main menu Versus (150,250). Opponent row y=122: Two players (671,122), Computer (833,122).
-#   Side row y=174: White (644), Black (752), Random (860); Level row y=226: Easy (644), Normal (752), Hard (860).
-#   With the computer the mode list starts lower: Standard (690,320). Back/Play at y=712 (Play 808).
+# Versus with the computer: the Setup panel (opponent / side / level rows) at the left of the mode screen, the mode list at the right.
+# Layout (1400x800): main menu Versus (150,250). Setup panel x=200..600: Opponent row y=254: Two players (310), Computer (492);
+#   side row y=350: White (280), Black (400), Random (520); level row y=446: Easy (280), Normal (400), Hard (520).
+#   The mode list is the same with or without the computer: Standard (905,224). Back/Play at y=712 (Play 808).
 wait 20
 click 150 250        # Versus
 wait 30
-click 833 122        # Computer
+click 492 254        # Computer
 wait 40
 capture vs-setup-defaults       # White and Normal (the defaults), the level's one-line description
-click 860 174        # Random
-click 860 226        # Hard
+click 520 350        # Random
+click 520 446        # Hard
 wait 20
 capture vs-setup-random-hard
-click 752 174        # Black
-click 644 226        # Easy
+click 400 350        # Black
+click 280 446        # Easy
 wait 20
 capture vs-setup-black-easy
-click 690 320        # Standard
+click 905 224        # Standard
 wait 30
 capture vs-setup-standard-selected   # Play appears
-click 671 122        # back to Two players: the extra rows go and the list moves up, the selection stays
+click 310 254        # back to Two players: the extra rows go and the list moves up, the selection stays
 wait 40
 capture vs-setup-two-players

@@ -44,13 +44,21 @@ for s in "${scripts[@]}"; do
   tail -1 "$UI_OUT/$(basename "$s").log"
 done
 
-# The layout audit (include/ui/Audit.h) prints "UI-OVERFLOW ..." for every text that does not fit its box; "UI-SHRUNK" lines are notes.
+# The layout audit (include/ui/Audit.h) prints "UI-OVERFLOW ..." for every text that does not fit its box and "UI-OVERLAP a vs b" for
+# every pair of HUD / chrome rects that intersect without an allowed-containment rule; "UI-SHRUNK" lines are notes.
+OVERFLOW=0
 if grep -h "^UI-OVERFLOW" "$UI_OUT"/*.log > "$UI_OUT/overflow.txt" 2>/dev/null && [[ -s "$UI_OUT/overflow.txt" ]]; then
   echo "layout audit: text that does not fit its box:" >&2
   sort -u "$UI_OUT/overflow.txt" >&2
   OVERFLOW=1
-else
-  OVERFLOW=0
+fi
+for s in "${scripts[@]}"; do   # each line is prefixed with its script (the same pair can show up in several)
+  grep "^UI-OVERLAP" "$UI_OUT/$(basename "$s").log" 2>/dev/null | sed "s/^/$(basename "$s"): /" || true
+done > "$UI_OUT/overlap.txt"
+if [[ -s "$UI_OUT/overlap.txt" ]]; then
+  echo "layout audit: elements that overlap (screen-space rects, see include/ui/Audit.h):" >&2
+  cat "$UI_OUT/overlap.txt" >&2
+  OVERFLOW=1
 fi
 grep -h "^UI-SHRUNK" "$UI_OUT"/*.log 2>/dev/null | sort -u | sed 's/^/note: /' || true
 

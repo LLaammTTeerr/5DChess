@@ -1,11 +1,11 @@
 # Click to focus. A Standard game, four half-turns (1. e4 e5 2. Nf3 Nc6), then Home: the Overview of five boards at zoom ~0.78 (< 0.8).
 # A single click on a square below zoom 0.8 focuses that board (zoom 1.0) and selects the piece in one motion; Esc steps back: the
 # selection first, then the framing. A click on a card's label strip, or on a board that is history, focuses that board.
-# Layout (1400x800): Versus (150,250); Standard row (690,184); Play (808,712); Submit (841,90).
+# Layout (1400x800): Versus (150,250); Standard row (905,224); Play (808,712); Submit (841,90).
 wait 20
 click 150 250        # Versus
 wait 30
-click 690 184        # Standard
+click 905 224        # Standard
 wait 20
 click 808 712        # Play
 wait 120

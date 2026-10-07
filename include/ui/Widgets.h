@@ -113,6 +113,7 @@ public:
   int selected = -1;       // index of the selected item or -1
   bool selectable = true;  // false: plain buttons (a navigation column), a click does not select
   const Skin* skin = nullptr;  // for every item; nullptr: defaultSkin()
+  Color fadeTo{250, 249, 245, 255};  // what a clipped list's rows fade into at the viewport's edges: the colour behind it (UI::Color::bg)
 
   ButtonList() = default;
   // `viewport` (optional) clips and scrolls the slots; `scrollbarW` reserves a scrollbar strip at its right edge.

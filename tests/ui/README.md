@@ -64,7 +64,7 @@ mode, Play) or by a record with the `# vs-computer:` line (`record`, `slot`).
 | main-menu | menu at rest |
 | settings | tabs; Piece Theme with each of the six themes selected in turn (Pixel, Medieval, Bauhaus, Neon, Origami, Ink); Music; Display |
 | versus | mode list (Two players, with the Opponent row); Standard selected, Play visible |
-| vs-setup | Opponent: Computer with the side and level rows and the level's description; Random / Hard; Black / Easy; Standard selected; back to Two players (the rows go, the list moves up) |
+| vs-setup | Opponent: Computer in the Setup panel with the side and level rows and the level's description; Random / Hard; Black / Easy; Standard selected; back to Two players (the panel shrinks to Opponent; the mode list stays) |
 | vs-play | vs Computer, Easy, as White: start, e2-e4 and Submit, the "Computer is thinking" HUD frozen mid-search, a click on the computer's pawn ignored, the computer's reply, the player in control again |
 | vs-undo | Undo against the computer: disabled at the start; after a round; an unsubmitted move first; then the whole round (player's turn and the reply); while the computer thinks (search cancelled) |
 | vs-save | the Load screen with two vs-Computer slots; loading a record as Black (the computer, White, has opened); a reply; Continue resumes the vs-Computer game from the autosave; Undo there |
@@ -112,6 +112,10 @@ its measured size (`MeasureTextEx` with the real fonts) and the box it must fit 
 `UI-OVERFLOW ...` to the script's log and `run.sh` then exits non-zero (even when every screenshot matches); a label that had to be drawn
 smaller than its nominal size prints a `UI-SHRUNK` note. The log's last line, `UI-AUDIT <n> texts checked`, shows the audit ran. The
 game's canvas is 1400x800 on every platform (the web page scales it with CSS), so this is also the web build's layout.
+
+## Overlap audit
+
+HUD and chrome elements register their screen-space rectangle as they draw (`ui::audit::rect`, in `include/ui/Audit.h`): every button (a scrolling list registers its viewport instead of its rows), the status pill, controls bar, Present badge, ruler, minimap, side panels (mode select, Guide, puzzles), the Save panel, the HUD zone (`[0, UI::Layout::hudBottom)`) and the top edges of the present column and the lane bands. At the end of each frame every pair that intersects, or comes closer than the clear space of either (1 px, 8 px around the Present badge), prints `UI-OVERLAP <a> vs <b> (<rects>)` unless an explicit rule allows it (a button inside its panel, the badge on the ruler, the Save panel dropping over the scene). Lane bands and the present column are only checked against the HUD zone and the ruler: that is where the scene must not enter. `run.sh` fails on any such line and lists them with their script. Add a rule to `kAllowed` in `src/ui/Audit.cpp` only for a deliberate overlap; call `ui::audit::rect` after `ui::audit::enabled()` so a shipped build builds no names. The log ends with `UI-AUDIT-OVERLAP <n> rects over <m> frames`.
 
 ## Tolerance
 

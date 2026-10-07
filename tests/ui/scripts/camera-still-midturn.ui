@@ -1,11 +1,11 @@
 # The camera stays still in the middle of a turn: no refit, no pan to the picked-up piece, no fly-back. After White's first turn the
 # camera focuses the board Black must move on (1.25); from there to the Submit the only things that may move it are the player's
 # own drag / wheel / keys. `camstill on` fails the script if the zoom or target changes on any frame; `camlog on` prints them.
-# Layout (1400x800): Versus (150,250); Standard row (690,184); Play (808,712); Submit (841,90); Undo (558,90).
+# Layout (1400x800): Versus (150,250); Standard row (905,224); Play (808,712); Submit (841,90); Undo (558,90).
 wait 20
 click 150 250        # Versus
 wait 30
-click 690 184        # Standard
+click 905 224        # Standard
 wait 20
 click 808 712        # Play
 wait 120
