@@ -33,7 +33,4 @@ struct PlayViewFrame {
 /// drawn by drawBoard() under a matrix that maps the board's world rectangle onto the card's screen rectangle.
 void drawPlayView(const PlayViewLayout& layout, const PlayViewFrame& frame);
 
-/// The summary line above the grid ("Your boards this turn: 5 must move, 1 waiting").
-std::string playViewSummary(const PlayViewLayout& layout, bool turnActive);
-
 } // namespace play

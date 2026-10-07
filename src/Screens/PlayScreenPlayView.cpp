@@ -38,6 +38,7 @@ void PlayScreen::togglePlayView(bool on) {
   _arrows.finish();
   cancelDeferredCamera();
   _playView = on;
+  _cycle = -1;
   applyInsets(); // [TurnPanel] the list goes away in the Play view and comes back with the multiverse
   _cursorShown = false;
   _pvCursor.reset();
@@ -105,7 +106,7 @@ void PlayScreen::playViewClick(Vector2 mouse) {
     case Kind::Close: _pv.closeBrowse(); break;
     case Kind::Inactive: _pv.browseBoard(hit.key.first, hit.key.second); break;
     case Kind::Chrome:
-      if (_pv.card(hit.key.first)) _pvCursor = hit.key.first; // the frame of a card: the keyboard cursor goes there
+      if (_pv.isCard(hit.key)) _pvCursor = hit.key.first; // the frame of a card (not of the inspector): the keyboard cursor goes there
       break;
     case Kind::Square:
       if (_ended || inputBlocked()) break;

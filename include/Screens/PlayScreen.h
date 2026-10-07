@@ -77,6 +77,8 @@ public:
   /// of its parts, for the UI script's `pvclick <kind> <l> <t>`: "hist" (a timeline's history stack), "tab" (an inspector tab of board l,t),
   /// "chip" (an inactive timeline's chip), "close" (the inspector's close button). nullopt: it is not on screen.
   bool playView() const { return _playView; }
+  /// Developer tools: the width kept free at the right of the boards (the turn panel open: kInset; else the margin).
+  float boardInsetNow() const { return _rightInset; }
   void setPlayView(bool on) { togglePlayView(on); }
   std::optional<Vector2> playViewPoint(const std::string& what, int timeline, int halfTurn) const;
 

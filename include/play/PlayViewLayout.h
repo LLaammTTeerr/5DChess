@@ -12,9 +12,10 @@ namespace play {
 
 /// Play view: a second way to show the multiverse (README, Features -> Play view). One big card per ACTIVE timeline, showing that
 /// timeline's present board, in a grid that makes the squares as large as the free rectangle allows; beside every card a stack of
-/// its history; the inactive timelines in a collapsed row; and one more cell at the end of the grid, the *inspector*, that shows
-/// whatever is not a card: the past boards a lifted piece can jump to (the docked target), and the history of a timeline the player
-/// asked to read. No graphics dependency, so every number here is unit tested; play/PlayView draws it.
+/// its history; the inactive timelines in a collapsed row; and the *inspector*, that shows whatever is not a card: the past boards a
+/// lifted piece can jump to (the docked target), and the history of a timeline the player asked to read. The inspector is one more cell at
+/// the end of the grid when that costs no square size (decided once a turn); otherwise it lies over the least relevant card while it has
+/// something to show. The grid's columns and square size are fixed for the turn: a branch adds a row or scrolls, nothing is reflowed. No graphics dependency, so every number here is unit tested; play/PlayView draws it.
 ///
 /// Everything is in screen pixels. The caller hands over the free rectangle (the window minus the HUD and any side panel); the layout
 /// never leaves it.
@@ -46,6 +47,8 @@ struct Grid {
 /// The grid for `count` cells of `dim` x `dim` boards in `area` that maximises the square size (capped at maxSquare; 0: kMaxBoard / dim): the number of
 /// columns is tried from 1 to `count`. When even `minSquare` does not fit every row, the squares stay at minSquare and the grid scrolls.
 Grid gridFor(const Rect& area, int count, int dim, float maxSquare = 0.0f, float minSquare = kMinSquare);
+
+Grid gridWith(const Rect& area, int count, int dim, int cols, float square);
 
 /// The groups the cards are ordered in: boards that must move, boards that may, the rest (waiting / ahead).
 enum class Group { MustMove, Optional, Waiting };
@@ -111,13 +114,13 @@ public:
   const std::vector<PlayCard>& cards() const { return _cards; }
   const PlayCard* card(int timeline) const;
   bool anyPlayable() const;
-  /// How many cards carry each chip (the summary line above the grid).
+  /// How many cards carry each chip.
   struct Counts {
     int must = 0, optional = 0, waiting = 0, moved = 0;
   };
   Counts counts() const;
 
-  // ---- the inspector (the grid's last cell) ----
+  // ---- the inspector (the grid's last cell, or a panel over a card: see the class comment) ----
   enum class Mode { Empty, Targets, History };
   /// What the lifted piece can reach: boards that are not cards go to the inspector. nullopt `from`: nothing is lifted.
   void setSelection(const std::optional<Chess::Core::Coord>& from, const std::vector<Chess::Core::Coord>& targets);
@@ -145,8 +148,12 @@ public:
   const Rect& gridArea() const { return _gridArea; }   // what the cards are clipped to
   const std::vector<InactiveChip>& inactive() const { return _inactive; }
   const Rect& inactiveRow() const { return _inactiveRow; }
-  /// The strip above the grid that says how many boards need a move (screen pixels; empty when there is no room).
-  const Rect& summaryRect() const { return _summary; }
+  /// The inspector has something to show and a place on screen (a reserved cell, or over a card).
+  bool inspectorVisible() const { return _inspectorShown; }
+  /// The timeline whose card the inspector covers right now (nullopt: it has a cell of its own, or nothing to show).
+  std::optional<int> coveredTimeline() const { return _covered; }
+  /// The inspector got a cell of its own this turn.
+  bool inspectorReserved() const { return _reserved; }
 
   // ---- scrolling ----
   bool scrolls() const { return _grid.scrolls; }
@@ -190,12 +197,19 @@ private:
   std::map<int, std::pair<int, int>> _span; // timeline -> (first, last) half-turn, for the History tabs
   std::map<int, bool> _activeOf;
 
-  Rect _area, _summary, _inactiveRow, _gridArea, _closeRect;
+  Rect _area, _inactiveRow, _gridArea, _closeRect;
   int _dim = 8;
   pv::Grid _grid;
   float _scroll = 0.0f;
   int _tabScroll = 0;
   Cell _inspector;
+  bool _inspectorShown = false, _reserved = true, _decided = false;
+  std::optional<int> _covered;
+  int _cols = 1, _decidedDim = 0;
+  float _square = 0;
+  Rect _decidedArea;
+  std::optional<Chess::Core::Coord> _selFrom;
+  std::vector<int> _targetCards;
 
   // inspector state
   std::optional<Key> _browse;                       // History mode: the board shown

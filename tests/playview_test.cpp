@@ -145,11 +145,83 @@ TEST_CASE("PlayViewLayout: place() puts every card inside the area, clear of the
     for (const Rect& r : rects) CHECK_FALSE(overlap(r, c.cell));
     rects.push_back(c.cell);
   }
-  CHECK(inside(kFree, layout.inspectorCell()));
-  for (const Rect& r : rects) CHECK_FALSE(overlap(r, layout.inspectorCell()));
+  if (layout.inspectorReserved()) { // a cell of its own: clear of every card
+    CHECK(inside(kFree, layout.inspectorCell()));
+    for (const Rect& r : rects) CHECK_FALSE(overlap(r, layout.inspectorCell()));
+  }
 }
 
-TEST_CASE("PlayViewLayout: 11 timelines keep at least 20 px squares") {
+TEST_CASE("PlayViewLayout: the inspector never lowers the square size: a cell of its own only when it is free (3, 8 and 11 timelines)") {
+  for (int n : {3, 6, 8, 11}) {
+    CAPTURE(n);
+    auto game = timelines(n, 8);
+    PlayViewLayout layout;
+    layout.sync(*game, play::MultiverseView::build(*game));
+    layout.place(kFree, 8);
+    const pv::Grid without = pv::gridFor(layout.gridArea(), n, 8), with = pv::gridFor(layout.gridArea(), n + 1, 8);
+    CHECK(layout.grid().square == without.square); // the best the cards alone get
+    CHECK(layout.inspectorReserved() == (with.square >= without.square));
+    MESSAGE(n << " timelines: " << without.square << " px without the inspector's cell, " << with.square << " with; reserved: " << layout.inspectorReserved());
+  }
+  // 8 timelines: a 9th cell costs 31 -> 25 px, so the inspector is a panel over the least relevant card
+  auto game = timelines(8, 8);
+  PlayViewLayout layout;
+  layout.sync(*game, play::MultiverseView::build(*game));
+  layout.place(kFree, 8);
+  CHECK_FALSE(layout.inspectorReserved());
+  CHECK_FALSE(layout.inspectorVisible()); // nothing to show: no panel
+  std::vector<Rect> before;
+  for (const auto& c : layout.cards()) before.push_back(c.card);
+
+  const int from = layout.cards().front().timeline;
+  layout.setSelection(Coord{int8_t(1), int8_t(1), int16_t(8), int16_t(from)}, {{int8_t(2), int8_t(2), int16_t(3), int16_t(from)}});
+  layout.place(kFree, 8);
+  REQUIRE(layout.inspectorVisible());
+  REQUIRE(layout.coveredTimeline().has_value());
+  CHECK(*layout.coveredTimeline() != from); // the lifted piece's card stays uncovered
+  for (size_t i = 0; i < before.size(); ++i) { // no card moved
+    CHECK(layout.cards()[i].card.x == before[i].x);
+    CHECK(layout.cards()[i].card.y == before[i].y);
+  }
+  const play::PlayCard* covered = layout.card(*layout.coveredTimeline());
+  CHECK(layout.inspectorCell().x == covered->cell.x);
+  CHECK(layout.inspectorCell().y == covered->cell.y);
+  // a click on the covered card's squares belongs to the inspector's board
+  const Rect sq = *layout.squareRect(Coord{int8_t(2), int8_t(2), int16_t(3), int16_t(from)});
+  const auto h = layout.hit(sq.centerX(), sq.centerY());
+  REQUIRE(h.kind == PlayViewLayout::Hit::Kind::Square);
+  CHECK(h.square.t == 3);
+  CHECK(h.square.l == from);
+  layout.setSelection(std::nullopt, {});
+  layout.place(kFree, 8);
+  CHECK_FALSE(layout.inspectorVisible()); // gone again; the covered card is itself
+}
+
+TEST_CASE("PlayViewLayout: a branch mid-turn keeps the columns and the square size: a row is added or the grid scrolls") {
+  auto game = timelines(6, 8);
+  PlayViewLayout layout;
+  layout.sync(*game, play::MultiverseView::build(*game));
+  layout.place(kFree, 8);
+  const int cols = layout.grid().cols;
+  const float square = layout.grid().square;
+  std::vector<Rect> before;
+  for (const auto& c : layout.cards()) before.push_back(c.card);
+  for (int id : {-3, 4, -4}) { // timelines appear, one after the other
+    game->addCreatedTimeLine(id, 9);
+    layout.sync(*game, play::MultiverseView::build(*game));
+    layout.place(kFree, 8);
+    CHECK(layout.grid().cols == cols);
+    CHECK(layout.grid().square == square);
+  }
+  REQUIRE(layout.cards().size() >= 7);
+  for (size_t i = 0; i < before.size(); ++i) { // the first cards did not move
+    CHECK(layout.cards()[i].card.x == before[i].x);
+    CHECK(layout.cards()[i].card.w == before[i].w); // (a new row may recentre the grid vertically)
+  }
+  CHECK(layout.cards().back().chip == play::Chip::Moved);
+}
+
+TEST_CASE("PlayViewLayout: 11 timelines keep at least 20 px squares (and the inspector has its cell: it is free there)") {
   auto game = timelines(11, 8);
   const auto view = play::MultiverseView::build(*game);
   PlayViewLayout layout;
@@ -292,8 +364,8 @@ TEST_CASE("PlayViewLayout: scrolling is clamped and only when the grid overflows
   big.place(kFree, 8);
   CHECK(big.scroll() > 0.0f);
   CHECK(big.scroll() <= big.grid().contentHeight);
-  const float bottom = big.inspectorCell().y + big.inspectorCell().h;
-  CHECK(bottom <= big.gridArea().y + big.gridArea().h + 1.0f); // the last cell is reachable
+  const float bottom = big.cards().back().cell.y + big.cards().back().cell.h;
+  CHECK(bottom <= big.gridArea().y + big.gridArea().h + 1.0f); // the last card is reachable
 }
 
 // ---- the real positions of the UI scripts (tests/ui/records) ----

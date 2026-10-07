@@ -1,0 +1,22 @@
+# Play view against the computer (tests/ui/records/vs-white-easy.5dr: Easy, you are White, T2w): a move, Submit, the computer's search frozen part-way
+# (the cards show no chips while it thinks), its reply flown onto the card, and the next turn starting in the Play view again.
+startplayview on
+record ../records/vs-white-easy.5dr
+wait 90
+camexpect playview 1
+clicksq 0 2 g1
+wait 20
+clicksq 0 2 f3
+wait 30
+ainodes 1
+click 841 90         # Submit
+move 1380 600
+wait 20
+ainodes 0
+wait 5
+capture play-view-vs-thinking
+ainodes 400
+waitai
+wait 40
+camexpect playview 1
+capture play-view-vs-reply

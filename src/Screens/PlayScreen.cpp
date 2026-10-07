@@ -689,7 +689,7 @@ void PlayScreen::afterMove(const Chess::Core::Move& move, const play::BoardKey& 
 void PlayScreen::markSubmitted(bool delayed) {
   _submitRule = true;
   _submitRuleDelayed = delayed;
-  if (!_embedded && App::current().settings.startInPlayView && !_playView) togglePlayView(true); // [Play view] "Start turns in Play view"
+  if (!_embedded && App::current().settings.startInPlayView && !_playView && !_ended && _game->result() == Chess::GameResult::Ongoing) togglePlayView(true); // [Play view] "Start turns in Play view"
 }
 
 // After a submit: exactly one Mandatory board: focus it (at >= 0.8). Several: the present column. A view the player put there

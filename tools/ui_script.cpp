@@ -38,6 +38,8 @@
 //                        change fails the script. Checks "the camera does not move by itself mid-turn"
 //   camexpect state <Overview|Focus|Free>   fail the script unless the camera is in that framing (takes no frame)
 //   camexpect squareat <l> <t> <sq> <x> <y>|pointer  fail unless that square's centre is within 1.5 px of x,y (or of the pointer: zoom around it)
+//   camexpect inset <px>                    fail unless the boards keep that many px free at the right (340: the turn list is open; 24: folded, or the Play view)
+//   camexpect playview <0|1>                fail unless the Play view is on / off
 //   camexpect nextboard <0|1>               fail unless the "a Mandatory board is off-screen" state matches
 //   camexpect zoom <min> <max>              fail unless the zoom is within [min, max]
 //   camexpect visible <l> <t> [fraction]    fail unless that board's card is at least `fraction` (default 1) inside the free area
@@ -427,6 +429,14 @@ int main(int argc, char** argv) {
             const Vector2 at = play->squareToScreen(coord);
             if (std::abs(at.x - x) > 1.5f || std::abs(at.y - y) > 1.5f)
               bad("camexpect squareat " + std::to_string(l) + " " + std::to_string(t) + " " + sq + ": the square is at (" + std::to_string(at.x) + "," + std::to_string(at.y) + "), not (" + std::to_string(x) + "," + std::to_string(y) + ")");
+          } else if (a1 == "inset") {
+            float want = 0;
+            args >> want;
+            if (std::abs(play->boardInsetNow() - want) > 0.5f) bad("camexpect inset " + std::to_string(static_cast<int>(want)) + ": it is " + std::to_string(static_cast<int>(play->boardInsetNow())));
+          } else if (a1 == "playview") {
+            int want = 0;
+            args >> want;
+            if ((play->playView() ? 1 : 0) != want) bad("camexpect playview " + std::to_string(want) + ": it is " + std::to_string(want ? 0 : 1));
           } else if (a1 == "nextboard") {
             int want = 0;
             args >> want;

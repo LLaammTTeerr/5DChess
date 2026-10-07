@@ -50,14 +50,15 @@ private:
   float _k;
 };
 
-BoardLook lookOf(const PlayViewFrame& f, BoardKey key) {
+BoardLook lookOf(const PlayViewFrame& f, BoardKey key, bool dim = false) {
   BoardLook look;
   look.enter = f.animator.enterProgress(key);
   if (const BoardInfo* info = f.view.board(key.first, key.second)) {
     look.role = info->role;
-    look.inactive = info->inactive;
+    look.inactive = info->inactive || dim;
     look.whiteToMove = info->whiteToMove;
   } else {
+    look.inactive = dim;
     look.whiteToMove = key.second % 2 == 0;
   }
   look.blink = f.blink;
@@ -209,22 +210,22 @@ void drawBoardOverlays(const PlayViewFrame& f, BoardKey key, float k) {
 }
 
 // One board of the grid or the inspector: halo first (for all boards before any card), then the card and what lies on it
-void haloOf(const Chrome& c, BoardKey key, const Rect& boardPx) {
+void haloOf(const Chrome& c, BoardKey key, const Rect& boardPx, bool dim = false) {
   const Rect world = BoardLayout::boardRect(key.first, key.second);
   BoardSpace space(boardPx, world);
   overlay::BoardShift shift(c.f.animator.boardOffset(key, space.k()));
-  play::drawBoardHalo(world, lookOf(c.f, key), c.st, c.f.soft);
+  play::drawBoardHalo(world, lookOf(c.f, key, dim), c.st, c.f.soft);
   const auto source = c.f.animator.sourceHalo();
   if (source.alpha > 0.0f && source.key.first == key.first) overlay::drawBoardGlow(world, source.alpha, c.st, c.f.soft, true, space.k());
   const auto& glow = c.f.animator.targetGlow();
   if (glow.alpha > 0.0f && glow.key == key) overlay::drawBoardGlow(world, glow.alpha, c.st, c.f.soft, false, space.k());
 }
 
-void drawBoardBody(const Chrome& c, BoardKey key, const Rect& boardPx) {
+void drawBoardBody(const Chrome& c, BoardKey key, const Rect& boardPx, bool dim = false) {
   const Rect world = BoardLayout::boardRect(key.first, key.second);
   BoardSpace space(boardPx, world);
   overlay::BoardShift shift(c.f.animator.boardOffset(key, space.k()));
-  play::drawBoard(c.f.game.board(key.first, key.second), world, lookOf(c.f, key), c.st, space.k());
+  play::drawBoard(c.f.game.board(key.first, key.second), world, lookOf(c.f, key, dim), c.st, space.k());
   drawBoardOverlays(c.f, key, space.k());
 }
 
@@ -232,6 +233,18 @@ void drawRing(const Chrome& c, const Rect& card, float k, float gap, float thick
   const Rectangle r = ray(grow(card, gap));
   if (c.st.card == BoardStyle::Card::Ink) DrawRectangleLinesEx(r, thickness, color);
   else drawRoundedLines(r, (12.0f + gap) * k, thickness, color);
+}
+
+// A dashed frame: what is not a live card (a past or inactive board in the inspector)
+void drawDashedRing(const Rect& card, float gap, float thickness, Color color) {
+  const Rect r = grow(card, gap);
+  path::Poly poly;
+  poly.add({r.x, r.y});
+  poly.add({r.x + r.w, r.y});
+  poly.add({r.x + r.w, r.y + r.h});
+  poly.add({r.x, r.y + r.h});
+  poly.add({r.x, r.y});
+  path::stroke(poly, 1.0f, color, thickness, 8.0f, 5.0f);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -260,16 +273,16 @@ void drawHistoryStack(const Chrome& c, const PlayCard& card) {
     play::drawBoard(c.f.game.board(key.first, key.second), world, look, st, space.k());
   }
   if (hot) drawRoundedLines(ray(grow(thumb, 2.0f)), 4.0f, 2.0f, st.accent);
-  const Font font = monoFont(11);
+  const Font font = monoFont(12);
   std::string caption = boardLabel(key.second);
   if (card.history > 1) caption += " +" + std::to_string(card.history - 1);
-  const std::string shown = ui::ellipsized(caption, h.w + 2.0f, [&](const std::string& t) { return textWidth(font, t, 11.0f); });
-  drawTextMid(font, shown, h.x + h.w / 2.0f, thumb.y + thumb.h + 5.0f, 11.0f, hot ? st.accent : st.hudMuted);
-  if (hot && h.w >= 52.0f) drawTextMid(font, "history", h.x + h.w / 2.0f, thumb.y - 14.0f, 11.0f, st.accent);
+  const std::string shown = ui::ellipsized(caption, h.w + 2.0f, [&](const std::string& t) { return textWidth(font, t, 12.0f); });
+  drawTextMid(font, shown, h.x + h.w / 2.0f, thumb.y + thumb.h + 5.0f, 12.0f, hot ? st.accent : st.hudMuted);
+  if (hot && h.w >= 52.0f) drawTextMid(font, "history", h.x + h.w / 2.0f, thumb.y - 15.0f, 12.0f, st.accent);
   ui::tooltip(ray(h), "History of " + timelineLabel(card.timeline) + ": " + std::to_string(card.history) + (card.history == 1 ? " board" : " boards") +
                           ". Click to read it (E)");
   if (ui::audit::enabled()) {
-    ui::audit::fit("history caption", shown, textWidth(font, shown, 11.0f), 11.0f, {0, 0, h.w + 2.0f, 16.0f});
+    ui::audit::fit("history caption", shown, textWidth(font, shown, 12.0f), 12.0f, {0, 0, h.w + 2.0f, 17.0f});
     ui::audit::rect("history " + timelineLabel(card.timeline), ray(h), ui::audit::Kind::Card);
   }
 }
@@ -295,17 +308,17 @@ void drawTab(const Chrome& c, const InspectorTab& tab, bool twoLines) {
   const Rectangle r = ray(tab.rect);
   drawRoundedRect(r, 6.0f, tab.current ? st.accent : st.hudFill);
   drawRoundedLines(r, 6.0f, hot ? 2.0f : 1.0f, hot ? st.accent2 : st.hudBorder);
-  const Font font = monoFont(11);
+  const Font font = monoFont(12);
   const Color text = tab.current ? WHITE : st.hudText;
   if (twoLines) {
-    drawTextMid(font, timelineLabel(tab.key.first), r.x + r.width / 2.0f, r.y + 3.0f, 11.0f, text);
-    drawTextMid(font, boardLabel(tab.key.second), r.x + r.width / 2.0f, r.y + 16.0f, 11.0f, text);
+    drawTextMid(font, timelineLabel(tab.key.first), r.x + r.width / 2.0f, r.y + 4.0f, 12.0f, text);
+    drawTextMid(font, boardLabel(tab.key.second), r.x + r.width / 2.0f, r.y + 18.0f, 12.0f, text);
   } else {
-    drawTextMid(font, boardLabel(tab.key.second), r.x + r.width / 2.0f, r.y + (r.height - 11.0f) / 2.0f - 1.0f, 11.0f, text);
+    drawTextMid(font, boardLabel(tab.key.second), r.x + r.width / 2.0f, r.y + (r.height - 12.0f) / 2.0f - 1.0f, 12.0f, text);
   }
   if (ui::audit::enabled()) {
     const std::string longest = twoLines ? timelineLabel(tab.key.first) : boardLabel(tab.key.second);
-    ui::audit::fit("inspector tab", longest, textWidth(font, longest, 11.0f), 11.0f, {0, 0, r.width, r.height});
+    ui::audit::fit("inspector tab", longest, textWidth(font, longest, 12.0f), 12.0f, {0, 0, r.width, r.height});
     ui::audit::rect("tab " + timelineLabel(tab.key.first) + " " + boardLabel(tab.key.second), r, ui::audit::Kind::Button);
   }
 }
@@ -313,16 +326,21 @@ void drawTab(const Chrome& c, const InspectorTab& tab, bool twoLines) {
 void drawInspector(const Chrome& c) {
   const PlayViewLayout& layout = c.layout;
   const BoardStyle& st = c.st;
+  if (!layout.inspectorVisible()) return;
   const auto key = layout.inspectorKey();
   const Rect card = layout.inspectorCard();
   const float k = layout.inspectorBoard().w / BoardLayout::kBoardSize;
   if (key && c.f.game.boardExists(key->first, key->second)) {
-    drawBoardBody(c, *key, layout.inspectorBoard());
+    // Not a live card: the board is dimmed, its frame dashed and its label says what it is
+    drawBoardBody(c, *key, layout.inspectorBoard(), true);
     const bool targets = layout.mode() == PlayViewLayout::Mode::Targets;
-    if (targets) drawRing(c, card, k, 2.0f, 2.0f, st.accent2);
+    drawDashedRing(card, 2.0f, 2.0f, targets ? st.accent2 : Color{74, 98, 140, 255});
     const BoardInfo* info = c.f.view.board(key->first, key->second);
-    drawFooter(c, card, k, cardLabel(key->first, key->second), targets ? "jump target" : info && info->inactive ? "inactive" : "history", targets ? st.accent : Color{112, 108, 100, 255},
-               key->second % 2 == 0, info && info->inactive);
+    const TimelineInfo* timeline = c.f.view.timeline(key->first);
+    const bool past = timeline && key->second < timeline->lastHalfTurn, inactive = info && info->inactive;
+    const std::string what = past ? "past" : inactive ? "inactive" : "";
+    drawFooter(c, card, k, cardLabel(key->first, key->second) + (what.empty() ? "" : " (" + what + ")"),
+               targets ? "jump target" : what.empty() ? "board" : what, targets ? st.accent : Color{74, 98, 140, 255}, key->second % 2 == 0, false);
   } else {
     drawPlaceholder(c, card);
   }
@@ -335,7 +353,7 @@ void drawInspector(const Chrome& c) {
       const bool hot = !ui::pointerConsumed() && layout.closeRect().contains(c.mouse.x, c.mouse.y);
       drawRoundedRect(r, 6.0f, st.hudFill);
       drawRoundedLines(r, 6.0f, hot ? 2.0f : 1.0f, hot ? st.accent2 : st.hudBorder);
-      drawTextMid(monoFont(11), "close", r.x + r.width / 2.0f, r.y + (r.height - 11.0f) / 2.0f - 1.0f, 11.0f, st.hudText);
+      drawTextMid(monoFont(12), "close", r.x + r.width / 2.0f, r.y + (r.height - 12.0f) / 2.0f - 1.0f, 12.0f, st.hudText);
       if (ui::audit::enabled()) ui::audit::rect("inspector close", r, ui::audit::Kind::Button);
     }
     const bool two = layout.mode() == PlayViewLayout::Mode::Targets;
@@ -351,8 +369,8 @@ void drawInactiveRow(const Chrome& c) {
   if (layout.inactiveRow().h <= 0.0f) return;
   const BoardStyle& st = c.st;
   const Rect row = layout.inactiveRow();
-  const Font font = monoFont(11);
-  drawText(font, "Inactive", row.x + 4.0f, row.y + (row.h - 11.0f) / 2.0f - 1.0f, 11.0f, st.hudMuted);
+  const Font font = monoFont(12);
+  drawText(font, "Inactive", row.x + 4.0f, row.y + (row.h - 12.0f) / 2.0f - 1.0f, 12.0f, st.hudMuted);
   if (ui::audit::enabled()) ui::audit::rect("inactive row", ray(row), ui::audit::Kind::Card);
   int hidden = 0;
   for (const InactiveChip& chip : layout.inactive()) {
@@ -366,22 +384,22 @@ void drawInactiveRow(const Chrome& c) {
     drawRoundedRect(r, r.height / 2.0f, current ? st.accent : st.hudFill);
     drawRoundedLines(r, r.height / 2.0f, hot ? 2.0f : 1.0f, hot ? st.accent2 : st.hudBorder);
     const std::string label = cardLabel(chip.timeline, chip.halfTurn);
-    const std::string shown = ui::ellipsized(label, r.width - 12.0f, [&](const std::string& t) { return textWidth(font, t, 11.0f); });
-    drawTextMid(font, shown, r.x + r.width / 2.0f, r.y + (r.height - 11.0f) / 2.0f - 1.0f, 11.0f, current ? WHITE : st.hudText);
+    const std::string shown = ui::ellipsized(label, r.width - 12.0f, [&](const std::string& t) { return textWidth(font, t, 12.0f); });
+    drawTextMid(font, shown, r.x + r.width / 2.0f, r.y + (r.height - 12.0f) / 2.0f - 1.0f, 12.0f, current ? WHITE : st.hudText);
     if (ui::audit::enabled()) {
-      ui::audit::fit("inactive chip", shown, textWidth(font, shown, 11.0f), 11.0f, {0, 0, r.width - 8.0f, r.height});
+      ui::audit::fit("inactive chip", shown, textWidth(font, shown, 12.0f), 12.0f, {0, 0, r.width - 8.0f, r.height});
       ui::audit::rect("inactive " + timelineLabel(chip.timeline), r, ui::audit::Kind::Button);
     }
     ui::tooltip(r, "Inactive timeline " + timelineLabel(chip.timeline) + ": click to look at its board");
   }
   if (hidden > 0) {
     const std::string more = "+" + std::to_string(hidden);
-    drawText(font, more, row.x + row.w - textWidth(font, more, 11.0f) - 4.0f, row.y + (row.h - 11.0f) / 2.0f - 1.0f, 11.0f, st.hudMuted);
+    drawText(font, more, row.x + row.w - textWidth(font, more, 12.0f) - 4.0f, row.y + (row.h - 12.0f) / 2.0f - 1.0f, 12.0f, st.hudMuted);
   }
 }
 
 // Where a pending (or last turn's) jump ends: the card of the timeline it landed on
-std::optional<Rect> jumpEnd(const PlayViewLayout& layout, const MultiverseView& view, const Chess::Core::Move& move) {
+const PlayCard* jumpDest(const PlayViewLayout& layout, const MultiverseView& view, const Chess::Core::Move& move) {
   const PlayCard* dest = layout.card(move.to.l);
   if (!dest || dest->halfTurn != move.to.t + 1) { // a jump into the past starts a timeline of its own
     dest = nullptr;
@@ -389,26 +407,28 @@ std::optional<Rect> jumpEnd(const PlayViewLayout& layout, const MultiverseView& 
       if (t.created && t.parent == move.to.l && (t.forkHalfTurn == move.to.t || t.forkHalfTurn == move.to.t + 1))
         if (const PlayCard* cand = layout.card(t.id)) dest = cand;
   }
-  if (!dest) return std::nullopt;
-  return BoardLayout::squareRect(dest->board, layout.dim(), move.to.x, move.to.y);
+  return dest;
 }
 
 void drawArcs(const Chrome& c) {
   const BoardStyle& st = c.st;
   const PlayViewLayout& layout = c.layout;
   const PlayViewFrame& f = c.f;
-  // the jumps of the pending turn (solid) and of the last turn (faint)
+  // the jumps of the pending turn (solid); last turn's only while the pointer is on a card they join, so they do not cut across pieces
   for (const JumpInfo& j : f.view.jumps) {
-    const auto a = layout.squareOnTimeline(j.move.from.l, j.move.from.x, j.move.from.y);
-    const auto b = jumpEnd(layout, f.view, j.move);
-    if (!a || !b) continue;
+    const PlayCard* src = layout.card(j.move.from.l);
+    const PlayCard* dst = jumpDest(layout, f.view, j.move);
+    if (!src || !dst) continue;
+    if (!j.pending && !(src->card.contains(c.mouse.x, c.mouse.y) || dst->card.contains(c.mouse.x, c.mouse.y))) continue;
+    const Rect a = BoardLayout::squareRect(src->board, layout.dim(), j.move.from.x, j.move.from.y);
+    const Rect b = BoardLayout::squareRect(dst->board, layout.dim(), j.move.to.x, j.move.to.y);
     path::Poly poly;
-    arcPath(poly, centreOf(*a), centreOf(*b));
-    const float alpha = j.pending ? 0.85f : 0.30f;
+    arcPath(poly, centreOf(a), centreOf(b));
+    const float alpha = j.pending ? 0.85f : 0.6f;
     path::stroke(poly, 1.0f, fade(st.accent, alpha), 2.2f);
     arrowHead(poly, 8.0f, fade(st.accent, alpha));
   }
-  // nothing lifted, the pointer rests on a piece: a faint dashed arc to every other board its moves lead to
+  // nothing lifted, the pointer rests on a piece: a dashed arc to every other board its moves lead to
   if (!f.selection.from()) {
     for (const MoveAnimator::PreviewLayer* layer : {&f.animator.previewFading(), &f.animator.previewNow()}) {
       if (!layer->valid || layer->alpha <= 0.0f) continue;
@@ -422,12 +442,12 @@ void drawArcs(const Chrome& c) {
         if (const auto b = layout.squareRect(t)) {
           path::Poly poly;
           arcPath(poly, centreOf(*a), centreOf(*b));
-          path::stroke(poly, 1.0f, fade(st.accent, 0.40f * std::min(1.0f, layer->alpha)), 1.4f, 7.0f, 6.0f);
+          path::stroke(poly, 1.0f, fade(st.accent, 0.6f * std::min(1.0f, layer->alpha)), 2.0f, 7.0f, 6.0f);
         }
       }
     }
   }
-  // the lifted piece: a faint dashed arc to every other board it can reach, and the live arc to the one under the pointer
+  // the lifted piece: a dashed arc to every other board it can reach, and the live arc to the one under the pointer
   if (const auto from = f.selection.from()) {
     if (const auto a = layout.squareRect(*from)) {
       std::vector<BoardKey> done;
@@ -438,7 +458,7 @@ void drawArcs(const Chrome& c) {
         if (const auto b = layout.squareRect(t)) {
           path::Poly poly;
           arcPath(poly, centreOf(*a), centreOf(*b));
-          path::stroke(poly, 1.0f, fade(st.accent, 0.40f), 1.5f, 7.0f, 6.0f);
+          path::stroke(poly, 1.0f, fade(st.accent, 0.6f), 2.0f, 7.0f, 6.0f);
         }
       }
     }
@@ -448,8 +468,8 @@ void drawArcs(const Chrome& c) {
         path::Poly poly;
         arcPath(poly, centreOf(*a), centreOf(*b));
         path::stroke(poly, arc->grow, fade(st.accent, 0.28f), 7.0f);
-        path::stroke(poly, arc->grow, st.accent, 2.4f, 9.0f, 6.0f);
-        if (arc->grow > 0.97f) arrowHead(poly, 11.0f, st.accent);
+        path::stroke(poly, arc->grow, fade(st.accent, 0.9f), 2.4f, 9.0f, 6.0f);
+        if (arc->grow > 0.97f) arrowHead(poly, 11.0f, fade(st.accent, 0.9f));
       }
     }
   }
@@ -474,40 +494,9 @@ void drawFlightsOnCards(const Chrome& c) {
 
 } // namespace
 
-std::string playViewSummary(const PlayViewLayout& layout, bool turnActive) {
-  const auto n = layout.counts();
-  std::string out;
-  auto add = [&](int count, const char* what) {
-    if (count <= 0) return;
-    if (!out.empty()) out += ", ";
-    out += std::to_string(count) + " " + what;
-  };
-  if (!turnActive) {
-    add(static_cast<int>(layout.cards().size()), "boards");
-    return out.empty() ? "No boards" : "Present boards: " + out;
-  }
-  add(n.must, "must move");
-  add(n.optional, "optional");
-  add(n.moved, "moved");
-  add(n.waiting, "waiting");
-  return out.empty() ? "No boards" : "Your boards this turn: " + out;
-}
-
 void drawPlayView(const PlayViewLayout& layout, const PlayViewFrame& f) {
   const BoardStyle& st = f.style;
   const Chrome c{layout, f, st, Input::mousePosition()};
-
-  if (layout.summaryRect().h > 0.0f) {
-    const Rect s = layout.summaryRect();
-    const std::string text = playViewSummary(layout, f.showChips);
-    const Font font = monoFont(12);
-    drawText(font, text, s.x + 4.0f, s.y + (s.h - 12.0f) / 2.0f - 1.0f, 12.0f, st.hudText);
-    if (ui::audit::enabled()) {
-      const float w = textWidth(font, text, 12.0f);
-      ui::audit::fit("play view summary", text, w, 12.0f, {0, 0, s.w, s.h});
-      ui::audit::rect("play summary", {s.x, s.y, std::min(s.w, w + 8.0f), s.h}, ui::audit::Kind::Text);
-    }
-  }
 
   // Cards are clipped to the grid area (a little extra at the sides and bottom for halos) while it scrolls
   const Rect g = layout.gridArea();
@@ -516,11 +505,11 @@ void drawPlayView(const PlayViewLayout& layout, const PlayViewFrame& f) {
 
   std::vector<const PlayCard*> shown;
   for (const PlayCard& card : layout.cards())
-    if (overlaps(grow(card.card, 40.0f), g)) shown.push_back(&card);
-  const bool inspectorShown = layout.inspectorKey() && f.game.boardExists(layout.inspectorKey()->first, layout.inspectorKey()->second) &&
+    if (overlaps(grow(card.card, 40.0f), g) && !(layout.coveredTimeline() && *layout.coveredTimeline() == card.timeline)) shown.push_back(&card);
+  const bool inspectorShown = layout.inspectorVisible() && layout.inspectorKey() && f.game.boardExists(layout.inspectorKey()->first, layout.inspectorKey()->second) &&
                               overlaps(layout.inspectorCell(), g);
   for (const PlayCard* card : shown) haloOf(c, {card->timeline, card->halfTurn}, card->board);
-  if (inspectorShown) haloOf(c, *layout.inspectorKey(), layout.inspectorBoard());
+  if (inspectorShown) haloOf(c, *layout.inspectorKey(), layout.inspectorBoard(), true);
   for (const PlayCard* card : shown) drawPlayCard(c, *card, f.cursor && *f.cursor == card->timeline);
   drawInspector(c);
   drawArcs(c);

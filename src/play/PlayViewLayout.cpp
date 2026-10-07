@@ -55,10 +55,17 @@ Grid gridFor(const Rect& area, int count, int dim, float maxSquare, float minSqu
     const int cols = std::clamp(static_cast<int>(std::floor((area.w + kCellGap) / (c.cellW + kCellGap))), 1, count);
     best = {cols, (count + cols - 1) / cols, std::ceil(minSquare)};
   }
-  g.cols = best.cols;
-  g.rows = best.rows;
-  g.square = best.square;
-  g.size = cellSize(best.square, dim);
+  return gridWith(area, count, dim, best.cols, best.square);
+}
+
+Grid gridWith(const Rect& area, int count, int dim, int cols, float square) {
+  Grid g;
+  if (count <= 0 || dim <= 0 || cols <= 0) return g;
+  const int rows = (count + cols - 1) / cols;
+  g.cols = cols;
+  g.rows = rows;
+  g.square = square;
+  g.size = cellSize(square, dim);
   const float totalW = static_cast<float>(g.cols) * g.size.cellW + static_cast<float>(g.cols - 1) * kCellGap;
   g.contentHeight = static_cast<float>(g.rows) * g.size.cellH + static_cast<float>(g.rows - 1) * kCellGap;
   g.scrolls = g.contentHeight > area.h + 0.5f;
@@ -113,6 +120,7 @@ void PlayViewLayout::reset() {
   _tabs.clear();
   _scroll = 0.0f;
   _tabScroll = 0;
+  _decided = false;
 }
 
 void PlayViewLayout::sync(const Chess::IGame& game, const MultiverseView& view) {
@@ -130,6 +138,7 @@ void PlayViewLayout::sync(const Chess::IGame& game, const MultiverseView& view) 
 
   if (!_seeded || turnKey != _turnKey) { // a new turn: choose the order from the boards' roles
     _seeded = true;
+    _decided = false; // the grid's columns, square size and the inspector's place are chosen again for the new turn
     _turnKey = turnKey;
     _start.clear();
     std::vector<pv::OrderKey> keys;
@@ -183,7 +192,7 @@ void PlayViewLayout::sync(const Chess::IGame& game, const MultiverseView& view) 
     if (active != _activeOf.end() && !active->second && span != _span.end()) _browse = Key{*_justMoved, span->second.second};
     _justMoved.reset();
   }
-  if (_browse) { // the board browsed is gone (an undo), or is now a card
+  if (_browse) { // the board browsed is gone (an undo)
     const auto span = _span.find(_browse->first);
     if (span == _span.end() || _browse->second < span->second.first || _browse->second > span->second.second) _browse.reset();
   }
@@ -222,6 +231,11 @@ bool PlayViewLayout::isCard(Key key) const {
 
 void PlayViewLayout::setSelection(const std::optional<Chess::Core::Coord>& from, const std::vector<Chess::Core::Coord>& targets) {
   _targetBoards.clear();
+  _selFrom = from;
+  _targetCards.clear();
+  if (from)
+    for (const Chess::Core::Coord& t : targets)
+      if (std::find(_targetCards.begin(), _targetCards.end(), t.l) == _targetCards.end()) _targetCards.push_back(t.l);
   if (from) {
     std::vector<std::pair<Key, int>> boards;
     for (const Chess::Core::Coord& t : targets) {
@@ -301,23 +315,31 @@ PlayViewLayout::Cell PlayViewLayout::makeCell(const Rect& cell, const pv::CellSi
 void PlayViewLayout::place(const Rect& area, int dim) {
   _area = area;
   _dim = dim;
-  // the strip above the grid (the summary), the collapsed inactive row below it
-  constexpr float kSummaryH = 22.0f, kGap = 6.0f;
-  _summary = area.h > 320.0f ? Rect{area.x, area.y, area.w, kSummaryH} : Rect{};
+  constexpr float kGap = 6.0f;
   Rect gridArea = area;
-  if (_summary.h > 0.0f) {
-    gridArea.y += kSummaryH + kGap;
-    gridArea.h -= kSummaryH + kGap;
-  }
   _inactiveRow = {};
   if (!_inactive.empty()) {
     _inactiveRow = {area.x, area.y + area.h - pv::kInactiveRowH, area.w, pv::kInactiveRowH};
     gridArea.h -= pv::kInactiveRowH + kGap;
   }
   _gridArea = gridArea;
+  resolveInspector();
 
-  const int count = static_cast<int>(_cards.size()) + 1; // + the inspector
-  _grid = pv::gridFor(gridArea, count, dim);
+  // Once a turn (and again when the window changes) the grid's columns and square size are chosen, and whether the inspector gets a cell of its
+  // own: only when that costs no square size. Afterwards a card that appears (a branch) adds a row, or scrolls: nothing is reflowed.
+  const int cards = static_cast<int>(_cards.size());
+  if (cards > 0 && (!_decided || _decidedDim != dim || _decidedArea.w != gridArea.w || _decidedArea.h != gridArea.h)) {
+    const pv::Grid without = pv::gridFor(gridArea, cards, dim), with = pv::gridFor(gridArea, cards + 1, dim);
+    _reserved = with.square >= without.square;
+    const pv::Grid& chosen = _reserved ? with : without;
+    _cols = chosen.cols;
+    _square = chosen.square;
+    _decided = true;
+    _decidedDim = dim;
+    _decidedArea = gridArea;
+  }
+  const int count = cards + (_reserved ? 1 : 0);
+  _grid = pv::gridWith(gridArea, count, dim, std::max(1, _cols), _square);
   _scroll = _grid.scrolls ? std::clamp(_scroll, 0.0f, std::max(0.0f, _grid.contentHeight - gridArea.h)) : 0.0f;
   for (size_t i = 0; i < _cards.size(); ++i) {
     Rect cell = _grid.cells[i];
@@ -328,9 +350,33 @@ void PlayViewLayout::place(const Rect& area, int dim) {
     _cards[i].card = c.card;
     _cards[i].board = c.board;
   }
-  Rect last = _grid.cells.empty() ? Rect{} : _grid.cells.back();
-  last.y -= _scroll;
-  _inspector = makeCell(last, _grid.size);
+
+  // The inspector: the grid's last cell when it was reserved, else (only while it has something to show) over the least relevant card
+  _covered.reset();
+  _inspectorShown = false;
+  if (_reserved && !_grid.cells.empty()) {
+    Rect last = _grid.cells.back();
+    last.y -= _scroll;
+    _inspector = makeCell(last, _grid.size);
+    _inspectorShown = true;
+  } else if (_mode != Mode::Empty && !_cards.empty()) {
+    int best = -1, bestScore = -1;
+    for (size_t i = 0; i < _cards.size(); ++i) {
+      const PlayCard& c = _cards[i];
+      int score = c.chip == Chip::Waiting ? 0 : c.chip == Chip::Moved ? 1 : c.chip == Chip::Optional ? 2 : 3;
+      const bool involved = (_selFrom && _selFrom->l == c.timeline) ||
+                            std::find(_targetCards.begin(), _targetCards.end(), c.timeline) != _targetCards.end();
+      if (involved) score += 10; // the lifted piece's card and the cards it can reach stay uncovered when anything else will do
+      if (best < 0 || score <= bestScore) { // the later card wins a tie
+        best = static_cast<int>(i);
+        bestScore = score;
+      }
+    }
+    _covered = _cards[static_cast<size_t>(best)].timeline;
+    _inspector = Cell{_cards[static_cast<size_t>(best)].cell, _cards[static_cast<size_t>(best)].histRect, _cards[static_cast<size_t>(best)].card,
+                      _cards[static_cast<size_t>(best)].board};
+    _inspectorShown = true;
+  }
 
   // the chips of the inactive timelines, after a label
   float x = area.x + 74.0f;
@@ -339,21 +385,20 @@ void PlayViewLayout::place(const Rect& area, int dim) {
     if (_inactiveRow.h <= 0.0f || chip.rect.x + chip.rect.w > area.x + area.w) chip.rect = {};
     x += 96.0f + 4.0f;
   }
-  resolveInspector();
   placeTabs();
 }
 
 void PlayViewLayout::placeTabs() {
   _tabs.clear();
   _closeRect = {};
-  if (_mode == Mode::Empty || !_inspectKey) return;
+  if (_mode == Mode::Empty || !_inspectKey || !_inspectorShown) return;
   const Rect col = _inspector.hist;
   float y = col.y;
-  float chipH = 30.0f;
+  float chipH = 36.0f; // two lines of 12 px
   if (_mode == Mode::History) { // a close button first, then every board of the timeline, newest first
-    _closeRect = {col.x, y, col.w, 20.0f};
-    y += 24.0f;
-    chipH = 22.0f;
+    _closeRect = {col.x, y, col.w, 26.0f};
+    y += 30.0f;
+    chipH = 26.0f;
   }
   std::vector<std::pair<Key, int>> entries;
   if (_mode == Mode::Targets) {
@@ -394,12 +439,14 @@ void PlayViewLayout::reveal(const Rect& rect) {
 // Looking things up
 
 std::optional<Rect> PlayViewLayout::boardRect(Key key) const {
+  if (_inspectorShown && _inspectKey && *_inspectKey == key) return _inspector.board;
   if (const PlayCard* c = card(key.first); c && c->halfTurn == key.second) return c->board;
   if (_inspectKey && *_inspectKey == key) return _inspector.board;
   return std::nullopt;
 }
 
 std::optional<Rect> PlayViewLayout::cardRect(Key key) const {
+  if (_inspectorShown && _inspectKey && *_inspectKey == key) return _inspector.card;
   if (const PlayCard* c = card(key.first); c && c->halfTurn == key.second) return c->card;
   if (_inspectKey && *_inspectKey == key) return _inspector.card;
   return std::nullopt;
@@ -448,7 +495,22 @@ PlayViewLayout::Hit PlayViewLayout::hit(float x, float y) const {
     }
     return false;
   };
+  if (_covered) { // the inspector lies over a card: it takes the clicks there
+    if (_inspectKey && onBoard(_inspector.board, _inspector.card, *_inspectKey)) return h;
+    if (_closeRect.w > 0.0f && _closeRect.contains(x, y)) {
+      h.kind = Hit::Kind::Close;
+      return h;
+    }
+    for (const InspectorTab& tab : _tabs)
+      if (tab.rect.contains(x, y)) {
+        h.kind = Hit::Kind::Tab;
+        h.key = tab.key;
+        return h;
+      }
+    if (_inspector.cell.contains(x, y)) return h; // the rest of the covered cell: nothing
+  }
   for (const PlayCard& c : _cards) {
+    if (_covered && c.timeline == *_covered) continue;
     if (onBoard(c.board, c.card, {c.timeline, c.halfTurn})) return h;
     if (c.history > 0 && c.histRect.contains(x, y)) {
       h.kind = Hit::Kind::History;
@@ -456,17 +518,18 @@ PlayViewLayout::Hit PlayViewLayout::hit(float x, float y) const {
       return h;
     }
   }
-  if (_inspectKey && onBoard(_inspector.board, _inspector.card, *_inspectKey)) return h;
-  if (_closeRect.w > 0.0f && _closeRect.contains(x, y)) {
+  if (!_covered && _inspectorShown && _inspectKey && onBoard(_inspector.board, _inspector.card, *_inspectKey)) return h;
+  if (!_covered && _closeRect.w > 0.0f && _closeRect.contains(x, y)) {
     h.kind = Hit::Kind::Close;
     return h;
   }
-  for (const InspectorTab& tab : _tabs)
-    if (tab.rect.contains(x, y)) {
-      h.kind = Hit::Kind::Tab;
-      h.key = tab.key;
-      return h;
-    }
+  if (!_covered)
+    for (const InspectorTab& tab : _tabs)
+      if (tab.rect.contains(x, y)) {
+        h.kind = Hit::Kind::Tab;
+        h.key = tab.key;
+        return h;
+      }
   return h;
 }
 
