@@ -1,0 +1,52 @@
+# The docked turn checklist (play/TurnPanel) on a six-timeline Standard game: White to move at T5w, five boards to move on (L+3, L+2, L+1,
+# L-1, L-2) and L0, which is ahead. The panel is 300 px wide at the right; its rows are 48 px from y=112 (row n's middle: y = 136 + 48 n),
+# so a row is clicked at x=1200.
+record ../records/many-boards.5dr
+wait 150
+capture checklist-start
+
+# Three of the five boards played: ticked rows keep their place and name their move; the pill and the header say 3 / 5; Submit stays locked
+clicksq 3 8 d1
+wait 40
+clicksq 3 8 b3
+wait 60
+clicksq 2 8 b1
+wait 40
+clicksq 2 8 a3
+wait 60
+clicksq 1 8 d2
+wait 40
+clicksq 1 8 d4
+wait 60
+key HOME
+wait 40
+capture checklist-three-of-five
+
+# The pointer on a row rings its board in the multiverse (the L-1 row)
+move 1200 280
+wait 12
+capture checklist-hover-row
+
+# L-2's queen jumps to L-1: both rows are done at once ("queen arrived from L-2"), Submit is ready
+clicksq -2 8 d1
+wait 40
+# (the target board is above the view: drag it into sight so no ghost tag covers c2)
+drag 300 300 300 560 6
+wait 30
+hoversq -1 8 c2
+wait 30
+clicksq -1 8 c2
+wait 80
+key HOME
+wait 40
+capture checklist-ready
+
+# Undo takes the last move back and the rows with it
+key U
+wait 40
+capture checklist-undo
+
+# A click on a row shows that board (Focus)
+click 1200 280
+wait 60
+capture checklist-row-focus

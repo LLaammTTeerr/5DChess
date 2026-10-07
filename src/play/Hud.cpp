@@ -97,7 +97,10 @@ void drawHud(const HudData& hud, const BoardStyle& st) {
   const float infoW = textW(monoFont, turnInfo, UI::Font::mono);
   const float gap = UI::Space::md;
   const float dotR = 2.5f, dotsW = 3 * dotR * 2 + 2 * UI::Space::xs + UI::Space::sm;
-  const float fixedW = pad + chipD + UI::Space::sm + statusW + gap + 1 + gap + infoW + pad;
+  // [TurnPanel] "3 / 5 boards": how many of this turn's boards are moved on (only when there are several)
+  const std::string boardsText = hud.boardsTotal >= 2 ? std::to_string(hud.boardsDone) + " / " + std::to_string(hud.boardsTotal) + " boards" : std::string();
+  const float boardsW = boardsText.empty() ? 0.0f : textW(monoFont, boardsText, UI::Font::mono);
+  const float fixedW = pad + chipD + UI::Space::sm + statusW + gap + 1 + gap + infoW + (boardsText.empty() ? 0.0f : gap + 1 + gap + boardsW) + pad;
   // The pill is centred; it never reaches the Back button at the top left (which the game's own screens draw there)
   const float maxPill = std::min(availW - 2 * margin, 2.0f * (cx - UI::Layout::backRight));
   const bool thinkingHint = hud.thinking > 0.003f && !hud.hint.empty();
@@ -142,6 +145,13 @@ void drawHud(const HudData& hud, const BoardStyle& st) {
   DrawTextEx(monoFont, turnInfo.c_str(), {std::floor(x), std::floor(cy - UI::Font::mono / 2.0f - 1)}, UI::Font::mono, 0,
              st.hudMuted);
   x += infoW;
+  if (!boardsText.empty()) {
+    x += gap;
+    DrawRectangle(static_cast<int>(x), static_cast<int>(pill.y + 10), 1, static_cast<int>(h - 20), st.hudBorder);
+    x += 1 + gap;
+        DrawTextEx(monoFont, boardsText.c_str(), {std::floor(x), std::floor(cy - UI::Font::mono / 2.0f - 1)}, UI::Font::mono, 0, hud.boardsReady ? st.hudText : st.hudMuted);
+    x += boardsW;
+  }
   if (hasHint) {
     x += gap;
     DrawRectangle(static_cast<int>(x), static_cast<int>(pill.y + 10), 1, static_cast<int>(h - 20), st.hudBorder);
@@ -325,7 +335,7 @@ void HudMotion::update(float dt) {
   const Vector2 delta = Input::mouseDelta();
   const bool nearBottom = Input::mousePosition().y > static_cast<float>(GetScreenHeight()) - 90.0f;
   bool key = false;
-  for (int k : {KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN, KEY_SPACE, KEY_TAB, KEY_ENTER, KEY_HOME, KEY_H, KEY_U, KEY_Z, KEY_X, KEY_Q, KEY_R, KEY_B, KEY_N})
+  for (int k : {KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN, KEY_SPACE, KEY_TAB, KEY_ENTER, KEY_HOME, KEY_H, KEY_U, KEY_Z, KEY_X, KEY_C, KEY_Q, KEY_R, KEY_B, KEY_N})
     key = key || Input::keyPressed(k);
   if (delta.x != 0.0f || delta.y != 0.0f || Input::mousePressed(MOUSE_BUTTON_LEFT) || Input::mouseWheel() != 0.0f || nearBottom || key) _idle = 0.0f;
   else _idle += dt;

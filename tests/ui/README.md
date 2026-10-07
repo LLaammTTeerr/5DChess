@@ -104,6 +104,10 @@ mode, Play) or by a record with the `# vs-computer:` line (`record`, `slot`).
 | camera-still-midturn | `camstill`: from Black's board being focused to the Submit the camera does not move (selecting, switching pieces, moving, Undo) |
 | camera-vs-computer | vs Computer as Black: the computer opens, the camera frames the player's board; the reply is framed too |
 | rules-visuals | tests/ui/positions: check (attack line from the rook to the king), an inactive timeline (dimmed, tagged), the promotion picker and a chosen promotion |
+| turn-checklist | the docked turn panel on a six-timeline Standard game (many-boards.5dr, five boards to move, L0 ahead): the start; three of five boards played (rows tick, "3 / 5 boards" in the pill and the header); the pointer on a row (its board is ringed); a jump from L-2 to L-1 completing both rows with Submit ready; Undo; a click on a row focusing its board |
+| turn-checklist-opponent | White plays its five boards and submits: Black's panel lists White's moves; a click on the jump line shows both boards and flashes its squares; C folds the panel away (the HUD button shows the count) and brings it back |
+| turn-checklist-many | eleven timelines (many-boards-11tl.5dr): the list shows whole rows with a faded edge, scrolls with the wheel (one row a notch) and stops at its end |
+| turn-checklist-vs | vs Computer (vs-white-easy.5dr): the panel's last turn is the computer's; after Nf3 and Submit it shows the computer's reply; Undo takes the round back and the rows follow |
 
 ## Layout audit
 

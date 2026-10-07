@@ -1,0 +1,40 @@
+# The turn panel's "Opponent's last turn" and its fold: the six-timeline game (many-boards.5dr), White plays its five boards (one of them a
+# jump from L-2 to L-1) and submits; Black's panel then lists White's moves. A click on a line shows that move's board and flashes
+# its squares; C folds the panel away and brings it back.
+record ../records/many-boards.5dr
+wait 150
+clicksq 3 8 d1
+wait 40
+clicksq 3 8 b3
+wait 60
+clicksq 2 8 b1
+wait 40
+clicksq 2 8 a3
+wait 60
+clicksq 1 8 d2
+wait 40
+clicksq 1 8 d4
+wait 60
+clicksq -2 8 d1
+wait 40
+drag 300 300 300 560 6
+wait 30
+hoversq -1 8 c2
+wait 30
+clicksq -1 8 c2
+wait 80
+key ENTER
+wait 120
+capture checklist-black-turn
+
+# The jump: its board comes into view with the board it went to, and both squares are marked
+click 1200 595
+wait 30
+capture checklist-opponent-move
+
+# C folds the panel away: the boards get the width back, the HUD button says how many boards are done; C opens it again
+key C
+wait 40
+capture checklist-collapsed
+key C
+wait 40

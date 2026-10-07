@@ -23,6 +23,7 @@ add_executable(chess_tests
   textfit_test.cpp
   camera_test.cpp
   view_test.cpp
+  turn_checklist_test.cpp
   guide_test.cpp
   ai_test.cpp
   vsai_test.cpp
@@ -31,6 +32,7 @@ target_link_libraries(chess_tests PRIVATE play_core ai_core chess_core doctest::
 target_include_directories(chess_tests PRIVATE ${PROJECT_SOURCE_DIR}/src) # ai/TurnGen.h (internal) is tested directly
 target_compile_definitions(chess_tests PRIVATE FDCHESS_POSITIONS_DIR="${PROJECT_SOURCE_DIR}/assets/positions"
   FDCHESS_UI_POSITIONS_DIR="${PROJECT_SOURCE_DIR}/tests/ui/positions"
+  FDCHESS_UI_RECORDS_DIR="${PROJECT_SOURCE_DIR}/tests/ui/records"
   FDCHESS_AI_POSITIONS_DIR="${PROJECT_SOURCE_DIR}/tests/ai"
   FDCHESS_GUIDE_DIR="${PROJECT_SOURCE_DIR}/assets/guide"
   FDCHESS_PUZZLES_DIR="${PROJECT_SOURCE_DIR}/assets/puzzles")

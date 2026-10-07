@@ -1,8 +1,14 @@
 #pragma once
+#include <string>
 #include <vector>
 #include "chess.h"
 
 namespace play {
+
+/// "L0", "L+1", "L-2": the timeline label (ASCII minus; the UI fonts have no U+2212).
+std::string timelineLabel(int id);
+/// "T3w" / "T3b": the board label (turns count from 1; w = White to move there).
+std::string boardLabel(int halfTurn);
 
 /// What a board means for the player this turn.
 enum class BoardRole {
