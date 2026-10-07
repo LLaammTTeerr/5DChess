@@ -26,6 +26,9 @@
 //   hoversq <l> <t> <sq>  the same, but only move the pointer onto the square (hover previews, live arcs)
 //   (movesq is an alias of hoversq)
 //   clickcard <l> <t> clicks the label strip of a board's card
+//   pvclick <kind> <l> <t>  click a part of the Play view (P toggles it): kind hist (the history stack of timeline l), tab (the inspector's tab for board l,t),
+//                        chip (the inactive timeline l's chip), close (the inspector's close button)
+//   startplayview on|off  the Settings -> Display option "Start turns in Play view" (takes no frame: set it before `record` / `mode`)
 //   dblclick <x> <y>     two clicks on consecutive frames (a double-click: the camera toggles Focus <-> Overview)
 //   dblclicksq <l> <t> <sq>  the same on a square, by name
 //   drag <x0> <y0> <x1> <y1> [steps]  press at x0,y0, move to x1,y1 in `steps` (6) frames with the button held, release: pans the camera
@@ -38,7 +41,7 @@
 //   camexpect nextboard <0|1>               fail unless the "a Mandatory board is off-screen" state matches
 //   camexpect zoom <min> <max>              fail unless the zoom is within [min, max]
 //   camexpect visible <l> <t> [fraction]    fail unless that board's card is at least `fraction` (default 1) inside the free area
-//   (key names: A..Z, 0..9, F1..F12, ESCAPE, SPACE, ENTER, TAB, SHIFT_TAB, HOME, PLUS, MINUS, BACKSPACE, UP, DOWN, LEFT, RIGHT, DELETE)
+//   (key names: A..Z, 0..9, F1..F12, ESCAPE, SPACE, ENTER, TAB, SHIFT_TAB, HOME, PLUS, MINUS, BACKSPACE, UP, DOWN, LEFT, RIGHT, DELETE, LBRACKET, RBRACKET)
 //
 // Determinism: fixed 1/60 s timestep, Reduce motion forced on, audio off, RNG seeded, scripted input
 // (see include/TestMode.h and include/Input.h).
@@ -83,10 +86,12 @@ struct FrameSpec {
   std::string capture;  // non-empty: export the finished frame under this name
   bool clickSquare = false;   // the pointer goes to a square of the game screen (resolved when the frame runs)
   bool cardStrip = false;     // ... or to the label strip of a board's card (sqL, sqT)
+  std::string pvKind;         // ... or to a part of the Play view (pvclick: hist, tab, chip, close)
   int sqL = 0, sqT = 0, sqX = 0, sqY = 0;
   std::string mode, position; // non-empty: open the game screen of that catalog mode / .5dp file before this frame
   std::string record;         // non-empty: same for a game record file
   bool waitAi = false;        // run frames until the computer opponent is quiet
+  int startPlayView = -1;     // 0 / 1: set Settings::startInPlayView (takes no frame)
   int aiNodes = -2;           // >= -1: set TestMode::aiNodesPerFrame before this frame (-1: the wall-clock budget)
   std::string slotFile;       // non-empty: fill save slot `slotNo` with this file's text before this frame
   int slotNo = 0;
@@ -100,7 +105,7 @@ const std::map<std::string, int>& keyTable() {
         {"ESCAPE", KEY_ESCAPE}, {"ESC", KEY_ESCAPE}, {"SPACE", KEY_SPACE}, {"ENTER", KEY_ENTER},
         {"TAB", KEY_TAB}, {"BACKSPACE", KEY_BACKSPACE}, {"UP", KEY_UP}, {"DOWN", KEY_DOWN}, {"HOME", KEY_HOME},
         {"PLUS", KEY_EQUAL}, {"MINUS", KEY_MINUS}, {"SHIFT_TAB", KEY_TAB},
-        {"LEFT", KEY_LEFT}, {"RIGHT", KEY_RIGHT}, {"DELETE", KEY_DELETE},
+        {"LEFT", KEY_LEFT}, {"RIGHT", KEY_RIGHT}, {"DELETE", KEY_DELETE}, {"LBRACKET", KEY_LEFT_BRACKET}, {"RBRACKET", KEY_RIGHT_BRACKET},
     };
     for (char c = 'A'; c <= 'Z'; ++c) m[std::string(1, c)] = KEY_A + (c - 'A');
     for (char c = '0'; c <= '9'; ++c) m[std::string(1, c)] = KEY_ZERO + (c - '0');
@@ -177,6 +182,14 @@ bool parseScript(const std::string& path, std::vector<FrameSpec>& out) {
       f.clickSquare = true;
       f.setPos = true;
       out.push_back(f);
+    } else if (cmd == "pvclick") {
+      if (!(ss >> f.pvKind >> f.sqL >> f.sqT)) return fail("pvclick needs <hist|tab|chip|close> <timeline> <half-turn>");
+      f.setPos = true;
+      out.push_back(f);       // hover first
+      FrameSpec p; p.line = n; p.press = true;
+      out.push_back(p);
+      FrameSpec r; r.line = n; r.release = true;
+      out.push_back(r);
     } else if (cmd == "clickcard") {
       if (!(ss >> f.sqL >> f.sqT)) return fail("clickcard needs <timeline> <half-turn>");
       f.cardStrip = true;
@@ -249,6 +262,11 @@ bool parseScript(const std::string& path, std::vector<FrameSpec>& out) {
       out.push_back(f);
     } else if (cmd == "slot") {
       if (!(ss >> f.slotNo >> f.slotFile) || f.slotNo < 0 || f.slotNo > savegame::kSlots) return fail("slot needs <0-3> <file>");
+      out.push_back(f);
+    } else if (cmd == "startplayview") {
+      std::string arg;
+      if (!(ss >> arg) || (arg != "on" && arg != "off")) return fail("startplayview needs on or off");
+      f.startPlayView = arg == "on" ? 1 : 0;
       out.push_back(f);
     } else if (cmd == "ainodes") {
       std::string arg;
@@ -427,6 +445,10 @@ int main(int argc, char** argv) {
         continue;
       }
       if (f.aiNodes >= -1) tm.aiNodesPerFrame = f.aiNodes;
+      if (f.startPlayView >= 0) {
+        app.settings.startInPlayView = f.startPlayView != 0;
+        continue;
+      }
       if (f.waitAi) {
         in.pressed[0] = false;
         in.wheel = 0.0f;
@@ -447,7 +469,12 @@ int main(int argc, char** argv) {
         continue;
       }
       Vector2 target = f.pos;
-      if (f.cardStrip) {
+      if (!f.pvKind.empty()) {
+        PlayScreen* play = playScreen();
+        const auto at = play ? play->playViewPoint(f.pvKind, f.sqL, f.sqT) : std::nullopt;
+        if (!at) { std::cerr << scriptPath.string() << ":" << f.line << ": pvclick " << f.pvKind << " " << f.sqL << " " << f.sqT << ": not on screen (is the Play view on?)" << std::endl; rc = 2; break; }
+        target = *at;
+      } else if (f.cardStrip) {
         PlayScreen* play = playScreen();
         if (!play) { std::cerr << scriptPath.string() << ":" << f.line << ": clickcard needs the game screen or the Guide\n"; rc = 2; break; }
         if (!play->game().boardExists({0, 0, static_cast<int16_t>(f.sqT), static_cast<int16_t>(f.sqL)})) {

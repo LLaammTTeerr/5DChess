@@ -1,0 +1,16 @@
+5dchess-record 1
+mode: standard
+T1w: (L0T1)c2>(L0T1)c3
+T1b: (L0T1)a7>(L0T1)a6
+T2w: (L0T2)b2>(L0T2)b4
+T2b: (L0T2)b8>(L0T1)b6
+T2w: (L-1T2)h2>(L-1T2)h4
+T2b: (L-1T2)b6>(L-1T2)d5
+T3w: (L-1T3)g1>(L-1T3)h3 (L0T3)d1>(L-1T3)c2
+T3b: (L1T3)d5>(L-1T3)e5 (L0T3)g8>(L0T3)f6
+T4w: (L0T4)b1>(L0T3)b3 (L-1T4)d2>(L-1T4)d3
+T3b: (L2T3)g8>(L0T4)g8
+T4w: (L1T4)c2>(L2T4)c2 (L0T5)c1>(L0T4)d1
+T4b: (L-1T4)d5>(L-1T3)d3
+T4w: (L-2T4)e2>(L-2T4)d3
+T4b: (L2T4)b7>(L2T4)b6 (L3T4)d7>(L3T4)d5 (L-2T4)c7>(L-2T4)c6 (L1T4)f7>(L1T4)f5

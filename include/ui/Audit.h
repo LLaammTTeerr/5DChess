@@ -28,6 +28,7 @@ enum class Kind {
   List,     // the viewport of a scrolling list
   Text,     // a title or a footer line
   Ruler,    // the turn ruler
+  Card,     // a board card, history stack or the inspector of the Play view (the buttons of its tab column lie inside it)
   Band,     // the top edge of a lane band: where the scene begins (only checked against the HUD zone and the ruler)
   PresentBand, // the top edge of the present column: hangs from the ruler, so it may lie inside it (but never in the HUD zone)
   HudZone   // [0, hudBottom): nothing of the scene (Ruler, Band) may enter it

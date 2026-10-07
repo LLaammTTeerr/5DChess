@@ -239,3 +239,17 @@ TEST_CASE("settings: a stored theme switches; a removed or unknown theme keeps t
   CHECK(other.reduceMotion);
   CHECK(other.music == "Anything"); // no predicate here: every track name is accepted
 }
+
+TEST_CASE("settings: Start turns in Play view is off by default and read from start_in_play_view") {
+  Settings s;
+  CHECK_FALSE(s.startInPlayView);
+  SettingsStore::apply(settingsfile::parse("start_in_play_view=on\n"), s);
+  CHECK(s.startInPlayView);
+  SettingsStore::apply(settingsfile::parse("start_in_play_view=maybe\n"), s); // not a boolean: the value stays
+  CHECK(s.startInPlayView);
+  SettingsStore::apply(settingsfile::parse("start_in_play_view=off\n"), s);
+  CHECK_FALSE(s.startInPlayView);
+  Settings other;
+  other.startInPlayView = true;
+  CHECK_FALSE(other == Settings{});
+}

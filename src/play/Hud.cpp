@@ -42,8 +42,15 @@ float textW(::Font font, const std::string& s, float size) { return MeasureTextE
 ::Color faded(::Color c, float a) { c.a = static_cast<unsigned char>(c.a * UI::Motion::clamp01(a)); return c; }
 
 // The longest of the candidate controls lines that fits `maxW` (the last one is cut with "..." if even it does not)
-std::string controlsLine(bool cameraControls, ::Font font, float maxW) {
+std::string controlsLine(bool cameraControls, bool playView, ::Font font, float maxW) {
   const std::string sep = std::string("  ") + kDot + "  ";
+  if (playView) { // the Play view has no camera: its own keys
+    const std::string lines[] = {"Next board (Space)" + sep + "Arrows" + sep + "E: history" + sep + "Multiverse (M)" + sep + "H: hide menu",
+                                 "Next board (Space)" + sep + "E: history" + sep + "Multiverse (M)", "Next board (Space)" + sep + "Multiverse (M)"};
+    for (const std::string& c : lines)
+      if (textW(font, c, UI::Font::mono) <= maxW) return c;
+    return ui::ellipsized(lines[2], maxW, [&](const std::string& t) { return textW(font, t, UI::Font::mono); });
+  }
   // Home / Space belong to the camera that reports a state (cameraLabel); until then the keys of the camera as it is
   const std::string candidates[] = {
       cameraControls ? "Overview (Home)" + sep + "Next board (Space)" + sep + "Drag/Wheel" + sep + "H: hide menu"
@@ -185,7 +192,7 @@ void drawHud(const HudData& hud, const BoardStyle& st) {
     const std::string& cam = hud.cameraLabel;
     const float chipW = cam.empty() ? 0.0f : textW(monoFont, cam, UI::Font::mono) + 2 * UI::Space::sm;
     const float camW = cam.empty() ? 0.0f : chipW + gap;
-    const std::string controls = controlsLine(!cam.empty(), monoFont, maxPill - 2 * pad - camW);
+    const std::string controls = controlsLine(!cam.empty(), hud.playView, monoFont, maxPill - 2 * pad - camW);
     const float cw = textW(monoFont, controls, UI::Font::mono) + camW;
     const Rectangle bar = {std::floor(cx - (cw + 2 * pad) / 2), screenH - UI::Layout::controlsBarMargin - UI::Layout::controlsBarH,
                            cw + 2 * pad, UI::Layout::controlsBarH};
@@ -197,8 +204,8 @@ void drawHud(const HudData& hud, const BoardStyle& st) {
     if (!cam.empty()) {
       DrawRectangleRounded({bx, bar.y + 5.0f, chipW, bar.height - 10.0f}, 1.0f, 8, faded(UI::withAlpha(st.accent, 40), a));
       DrawTextEx(monoFont, cam.c_str(), {bx + UI::Space::sm, by}, UI::Font::mono, 0, faded(st.hudText, a));
-      const std::string what = cam == "Overview" ? "Every board is in view." : cam == "Focus" ? "Zoomed on one board." : "Your own framing: dragging or the wheel put it here.";
-      ui::tooltip({bx, bar.y + 5.0f, chipW, bar.height - 10.0f}, what + " Home shows the whole multiverse.");
+      const std::string what = hud.playView ? "One card per timeline's present board; history sits beside each card." : cam == "Overview" ? "Every board is in view." : cam == "Focus" ? "Zoomed on one board." : "Your own framing: dragging or the wheel put it here.";
+      ui::tooltip({bx, bar.y + 5.0f, chipW, bar.height - 10.0f}, what + (hud.playView ? " M shows the whole multiverse." : " Home shows the whole multiverse."));
       bx += camW;
     }
     DrawTextEx(monoFont, controls.c_str(), {bx, by}, UI::Font::mono, 0, faded(st.hudMuted, a));
@@ -408,7 +415,7 @@ EndCard HudMotion::endCard() const {
 // ---------------------------------------------------------------------------------------------------------------------
 
 namespace {
-constexpr float kOverviewW = 124.0f, kNextW = 140.0f, kClusterGap = UI::Space::sm + 4.0f;
+constexpr float kOverviewW = 124.0f, kNextW = 140.0f, kViewW = 156.0f, kClusterGap = UI::Space::sm + 4.0f;
 }
 
 ActionRow::ActionRow() {
@@ -419,15 +426,20 @@ ActionRow::ActionRow() {
 void ActionRow::layout(float availableWidth) {
   _availableW = availableWidth;
   const float y = UI::Layout::actionRowY, h = UI::Space::buttonHeight;
-  _overview.rect = {availableWidth - UI::Layout::sideInset - kOverviewW, y, kOverviewW, h};
+  // The right cluster, from the right edge: Overview (multiverse view only), the view toggle, Next board
+  float right = availableWidth - UI::Layout::sideInset;
+  _overview.rect = {right - kOverviewW, y, kOverviewW, h};
+  if (_overviewShown || !_viewShown) right = _overview.rect.x - kClusterGap;
+  _view.rect = {right - kViewW, y, kViewW, h};
+  if (_viewShown) right = _view.rect.x - kClusterGap;
   // Beside a side panel there is no room for the long label: "To move" (the tooltip and the controls bar say the rest)
   const bool roomy = availableWidth >= 1100.0f;
   const float nextW = roomy ? kNextW : 90.0f;
   _next.label = roomy ? "Next board" : "To move";
-  _next.rect = {_overview.rect.x - kClusterGap - nextW, y, nextW, h};
+  _next.rect = {right - nextW, y, nextW, h};
   auto slots = ui::row({0.0f, y, availableWidth, h}, 3, UI::Space::actionButtonWidth, UI::Space::buttonSpacing);
   // The side panel leaves little room: slide the centred trio left before it would run into Next board
-  const float clusterLeft = _nextShown ? _next.rect.x : _overviewShown ? _overview.rect.x : availableWidth;
+  const float clusterLeft = _nextShown ? _next.rect.x : _viewShown ? _view.rect.x : _overviewShown ? _overview.rect.x : availableWidth;
   const float over = slots[2].x + slots[2].width + UI::Space::md - clusterLeft;
   if (over > 0.0f) {
     const float shift = std::min(over, std::max(0.0f, slots[0].x - UI::Layout::sideInset - 200.0f));
@@ -440,7 +452,10 @@ void ActionRow::layout(float availableWidth) {
 
 void ActionRow::sync(const HudData& hud) {
   const bool overview = !hud.cameraLabel.empty();
-  _overviewShown = overview;
+  _overviewShown = overview && !hud.playView;
+  _view.label = hud.playView ? "Multiverse [M]" : "Play view [P]";
+  _view.primary = hud.playView;
+  _view.tip = hud.playView ? "Back to the map of every board (M)" : "One big card for each timeline's present board (P)";
   _overview.tip = "Fit every board on screen (Home)";
   _undo.label = hud.undoLabel.empty() ? "Undo" : hud.undoLabel;
   _undoCount = hud.undoCount;
@@ -452,9 +467,11 @@ void ActionRow::sync(const HudData& hud) {
   _submit.tip = hud.submitTip;
   _next.tip = hud.nextBoardLabel.empty() ? std::string() : hud.nextBoardLabel + " (Space)";
   const bool shown = !hud.nextBoardLabel.empty();
-  if (shown != _nextShown || overview != _overviewLaidOut) {
+  const bool viewShown = hud.playViewAvailable;
+  if (shown != _nextShown || _overviewShown != _overviewLaidOut || viewShown != _viewShown) {
     _nextShown = shown;
-    _overviewLaidOut = overview;
+    _overviewLaidOut = _overviewShown;
+    _viewShown = viewShown;
     layout(_availableW);
   }
 }
@@ -465,6 +482,7 @@ ActionRow::Action ActionRow::update(float dt) {
   if (_deselect.update(dt) && action == Action::None) action = Action::Deselect;
   if (_submit.update(dt) && action == Action::None) action = Action::Submit;
   if (_overviewShown && _overview.update(dt) && action == Action::None) action = Action::Overview;
+  if (_viewShown && _view.update(dt) && action == Action::None) action = Action::ToggleView;
   if (_nextShown && _next.update(dt) && action == Action::None) action = Action::NextBoard;
   return action;
 }
@@ -472,6 +490,7 @@ ActionRow::Action ActionRow::update(float dt) {
 void ActionRow::draw() const {
   for (const ui::Button* b : {&_undo, &_deselect, &_submit}) b->draw();
   if (_overviewShown) _overview.draw();
+  if (_viewShown) _view.draw();
   if (_nextShown) _next.draw();
   if (_undoCount > 1) {
     // A badge on Undo: how many moves of this turn it would take back one by one
