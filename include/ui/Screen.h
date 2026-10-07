@@ -19,9 +19,12 @@ public:
   /// Esc was pressed: cancel whatever is open (a promotion choice, a picked-up piece). Returns whether there was something to
   /// cancel. Esc never hides the navigation controls any more (that is the H key).
   virtual bool escape(App&) { return false; }
+  /// Esc with nothing to cancel on a screen that is not the first one: go back (the screen does what its Back button does).
+  /// Screens that have a Back button override this; the default does nothing.
+  virtual void back(App&) {}
 };
 
-// The top-left Back button (Settings and the game; a navigation control: ESC hides it, see below).
+// The top-left Back button (Settings and the game; a navigation control: H hides it, see below).
 ui::Button backButton();
 
 // Owns the screens. push / pop / replace are applied at the end of the frame's update (a screen can safely
@@ -62,6 +65,7 @@ private:
   UI::Motion::Tween _fade;       // 0 -> 1 progress of the cross-fade
   RenderTexture2D _snapshot{};   // outgoing screen, drawn over the new one with alpha 1 - progress
   bool _hasSnapshot = false;
+  mutable RenderTexture2D _incoming{}; // the incoming screen while it slides in (see draw())
 
   void applyPending(App& app);
   void captureSnapshot(App& app);

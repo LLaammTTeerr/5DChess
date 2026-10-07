@@ -5,6 +5,7 @@
 #include "Render/Motion.h"
 #include "Render/UITheme.h"
 #include "play/Feedback.h"
+#include "play/BoardScene.h"
 #include "play/Hud.h"
 #include "play/Paths.h"
 
@@ -40,10 +41,7 @@ void arrowHead(const path::Poly& poly, float size, Color color) {
 }
 
 // Screen x of the middle of the half-turn column `halfTurn` (fractional columns lie between)
-float columnX(const Camera2D& camera, float halfTurn) {
-  const Rect first = BoardLayout::boardRect(0, 0);
-  return GetWorldToScreen2D({first.centerX() + halfTurn * BoardLayout::kPitch, 0.0f}, camera).x;
-}
+float columnX(const Camera2D& camera, float halfTurn) { return GetWorldToScreen2D({BoardScene::presentColumnX(halfTurn), 0.0f}, camera).x; }
 
 } // namespace
 
@@ -59,7 +57,7 @@ BoardShift::~BoardShift() {
 }
 
 void drawLaneUnfold(const std::vector<MoveAnimator::LaneUnfold>& lanes, const MultiverseView& view, const Camera2D& camera,
-                    const std::function<void()>& paintBackground) {
+                    float presentX, const std::function<void()>& paintBackground) {
   const int W = GetScreenWidth(), H = GetScreenHeight();
   const int top = static_cast<int>(UI::Layout::rulerY);
   for (const auto& lane : lanes) {
@@ -74,18 +72,40 @@ void drawLaneUnfold(const std::vector<MoveAnimator::LaneUnfold>& lanes, const Mu
     const float hy0 = fromTop ? visible.y1 : y0, hy1 = fromTop ? y0 + h : visible.y0;
     const float cy0 = std::max(hy0, static_cast<float>(top)), cy1 = std::min(hy1, static_cast<float>(H));
     if (cy1 <= cy0) continue;
-    BeginScissorMode(0, static_cast<int>(std::floor(cy0)), W, static_cast<int>(std::ceil(cy1 - cy0)) + 1);
-    paintBackground();
-    EndScissorMode();
+    // Only this lane's rows are repainted, and the present column (its glow) is left out so it survives the unfold
+    const float colHalf = BoardLayout::kPitch * camera.zoom / 2.0f + 8.0f;
+    const int sy = static_cast<int>(std::floor(cy0)), sh = static_cast<int>(std::ceil(cy1 - cy0)) + 1;
+    const int left = std::clamp(static_cast<int>(presentX - colHalf), 0, W), right = std::clamp(static_cast<int>(presentX + colHalf), 0, W);
+    if (left > 0) {
+      BeginScissorMode(0, sy, left, sh);
+      paintBackground();
+      EndScissorMode();
+    }
+    if (right < W) {
+      BeginScissorMode(right, sy, W - right, sh);
+      paintBackground();
+      EndScissorMode();
+    }
   }
 }
 
-void drawBoardGlow(const Rect& board, float alpha, const BoardStyle& style, const SoftBox& soft, bool source) {
+void drawBoardGlow(const Rect& board, float alpha, const BoardStyle& style, const SoftBox& soft, bool source, float zoom) {
   if (alpha <= 0.01f) return;
   const Rectangle card = toRay(BoardLayout::cardRect(board));
-  const Color c = source ? style.accent2 : style.accent;
-  soft.draw(card, fade(c, (source ? 0.85f : 0.65f) * alpha));
-  soft.draw(card, fade(c, 0.35f * alpha));
+  if (!source) { // the live arc's target: one soft pass
+    soft.draw(card, fade(style.accent, 0.5f * alpha));
+    return;
+  }
+  // The board a move came from: a dashed outline (it does not stack with the glows)
+  const float px = onePx(zoom), pad = 7.0f;
+  path::Poly poly;
+  const Rectangle r = {card.x - pad, card.y - pad, card.width + 2 * pad, card.height + 2 * pad};
+  poly.add({r.x, r.y});
+  poly.add({r.x + r.width, r.y});
+  poly.add({r.x + r.width, r.y + r.height});
+  poly.add({r.x, r.y + r.height});
+  poly.add({r.x, r.y});
+  path::stroke(poly, 1.0f, fade(style.accent2, alpha), 2.5f * px, 10.0f * px, 7.0f * px);
 }
 
 void drawRejectFlash(const Rect& square, float alpha) {

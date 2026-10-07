@@ -93,7 +93,7 @@ void SaveMenu::update(float dt, bool reachable, const BoardStyle& style, const C
     }
   }
   if (!_open) return;
-  if (!reachable) { // ESC hid the navigation controls: the panel goes with them
+  if (!reachable) { // H hid the navigation controls: the panel goes with them
     _open = false;
     return;
   }

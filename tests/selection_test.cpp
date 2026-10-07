@@ -201,7 +201,7 @@ TEST_CASE("Selection: pieces on a board that is history cannot be picked up") {
   auto game = newGame("standard");
   game->makeMove(Core::Move{e2, e4});
   const Intent::Reason reason = Selection::rejection(d2, *game);
-  CHECK((reason == Intent::Reason::HistoryBoard || reason == Intent::Reason::NotYourPiece));
+  CHECK(reason == Intent::Reason::HistoryBoard);
   CHECK(Selection::rejection(Coord{4, 4, 0, 0}, *game) == Intent::Reason::None); // empty
   CHECK_FALSE(Selection::canPickUp(d2, *game));
 }

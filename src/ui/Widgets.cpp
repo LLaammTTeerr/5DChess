@@ -120,6 +120,8 @@ bool Button::update(float dt, bool reachable) {
   hover_ = hot_ ? std::fmin(1.0f, hover_ + step) : std::fmax(0.0f, hover_ - step);
   if (entering_) enter_.update(dt);
 
+  if (press && enabled) { press_.value = 0.98f; press_.velocity = 0.0f; press_.target = 1.0f; }
+  press_.update(dt);
   if (press) App::current().audio.playSfx(Sfx::Click);
   return press;
 }
@@ -135,10 +137,9 @@ void Button::draw(float alpha) const {
   if (hot_) UI::Cursor::requestHand();
   auto fade = [alpha](Color c) { c.a = static_cast<unsigned char>(c.a * alpha); return c; };
   Rectangle r = {rect.x, rect.y + rise, rect.width, rect.height};
-  if (pressed_ && enabled && !UI::Motion::reduced()) { // pressed: 0.98x about the centre (tactile; none under Reduce motion)
-    constexpr float kPressScale = 0.98f;
-    r = {r.x + r.width * (1.0f - kPressScale) / 2.0f, r.y + r.height * (1.0f - kPressScale) / 2.0f, r.width * kPressScale,
-         r.height * kPressScale};
+  if (!UI::Motion::reduced() && std::fabs(press_.value - 1.0f) > 0.0005f) { // a press dips to 0.98x about the centre and springs back
+    const float s = press_.value;
+    r = {r.x + r.width * (1.0f - s) / 2.0f, r.y + r.height * (1.0f - s) / 2.0f, r.width * s, r.height * s};
   }
 
   const Skin& k = skin ? *skin : defaultSkin();

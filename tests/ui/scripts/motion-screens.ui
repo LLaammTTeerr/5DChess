@@ -19,3 +19,6 @@ capture motion-screens-forward-f3
 click 690 304        # a click during the fade: it picks "Simplify - No Knight"
 wait 60
 capture motion-screens-click-through
+click 808 712        # Play: the game screen slides in as a whole (boards and HUD, not only the background)
+wait 3
+capture motion-screens-play-f3

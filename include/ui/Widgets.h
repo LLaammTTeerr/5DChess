@@ -77,6 +77,7 @@ private:
   bool hot_ = false, over_ = false, pressStartedHere_ = false, pressed_ = false, entering_ = false;
   float hover_ = 0.0f; // 0..1, eased toward hot_ over ~150 ms
   UI::Motion::Tween enter_;
+  UI::Motion::Spring press_{1.0f, 600.0f, 0.7f}; // 1 at rest; a press dips it to 0.98
 };
 
 // A button showing one of two labels that flips a bool when clicked.

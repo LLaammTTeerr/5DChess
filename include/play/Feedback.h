@@ -22,7 +22,7 @@ inline constexpr float kCheckDrawOnSeconds = 0.22f;
 inline constexpr float kHandOverSeconds = 0.26f;   // present column slide
 inline constexpr float kLiftPixels = 4.0f;         // boards of the side to move lift this much...
 inline constexpr float kLiftStagger = 0.04f;       // ...one after the other
-inline constexpr float kSourceHaloSeconds = 1.5f;  // the board a time-travel move came from
+inline constexpr float kSourceHaloSeconds = 1.0f;  // the board a time-travel move came from
 inline constexpr float kChromeLiftPixels = 2.0f;   // hovered card frame
 
 /// What the HUD says for a rejected click.

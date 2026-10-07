@@ -28,13 +28,14 @@ private:
 
 // ---- Screen space, right after the lanes and before the boards ----
 /// A new timeline's lane unfolds: the part of its band that has not unfolded yet is painted over with the background again
-/// (`paintBackground` draws the view's background). The lane grows from the side of its parent lane.
+/// (`paintBackground` draws the view's background); the present column (screen x `presentX`) and the other lanes are left alone.
+/// The lane grows from the side of its parent lane.
 void drawLaneUnfold(const std::vector<MoveAnimator::LaneUnfold>& lanes, const MultiverseView& view, const Camera2D& camera,
-                    const std::function<void()>& paintBackground);
+                    float presentX, const std::function<void()>& paintBackground);
 
 // ---- World space, before the boards (with the halos) ----
-/// The glow of a board (the target of the live arc, the source of the last time-travel move).
-void drawBoardGlow(const Rect& board, float alpha, const BoardStyle& style, const SoftBox& soft, bool source);
+/// The target of the live arc glows (one soft pass); the board a time-travel move left gets a dashed outline.
+void drawBoardGlow(const Rect& board, float alpha, const BoardStyle& style, const SoftBox& soft, bool source, float zoom);
 
 // ---- World space, over the boards ----
 void drawRejectFlash(const Rect& square, float alpha);

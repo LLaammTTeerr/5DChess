@@ -257,7 +257,7 @@ void MoveAnimator::updateFeedback(float dt) {
     _pvDwell += dt;
   }
   if (!_pvWanted && _pvNow.valid) { _pvOld = _pvNow; _pvNow = {}; }
-  if (_pvNow.valid) _pvNow.alpha = reduced() ? 1.0f : std::fmin(1.0f, _pvNow.alpha + dt / base * 0.8f); // ~150 ms
+  if (_pvNow.valid) _pvNow.alpha = reduced() ? 1.0f : std::fmin(1.0f, _pvNow.alpha + dt / 0.15f); // 150 ms
   if (_pvOld.valid) {
     _pvOld.alpha = reduced() ? 0.0f : _pvOld.alpha - dt / 0.10f;
     if (_pvOld.alpha <= 0.0f) _pvOld = {};
