@@ -136,7 +136,7 @@ void PlayScreen::updatePicker(float dt, const play::BoardStyle& style) {
                 b = toVector(_camera.worldToScreen({square.x + square.w, square.y + square.h}));
   _picker.show(_game->getCurrentTurnColor());
   const play::Rect card = BoardLayout::cardRect(BoardLayout::boardRect(target->l, target->t));
-  const Vector2 c0 = _camera.worldToScreen({card.x, card.y}), c1 = _camera.worldToScreen({card.x + card.w, card.y + card.h});
+  const Vector2 c0 = toVector(_camera.worldToScreen({card.x, card.y})), c1 = toVector(_camera.worldToScreen({card.x + card.w, card.y + card.h}));
   _picker.place({a.x, a.y, b.x - a.x, b.y - a.y},
                 {0.0f, UI::Layout::safeTop, static_cast<float>(GetScreenWidth()) - (_embedded ? _rightInset : 0.0f),
                  static_cast<float>(GetScreenHeight()) - UI::Layout::safeTop - UI::Layout::safeBottom},
@@ -205,6 +205,25 @@ void PlayScreen::feedbackInput() {
 // A click (press and release without a drag). Single: select / move on a square (zooming onto the board when it is small), focus a
 // card's chrome or a board that cannot be moved on. Double: toggle Focus <-> Overview.
 void PlayScreen::onClick(Vector2 mouse) {
+  // The minimap at the right end of the ruler: a click focuses that board
+  {
+    Camera2D camera{};
+    camera.offset = toVector(_camera.offset());
+    camera.target = toVector(_camera.target());
+    camera.zoom = _camera.zoom();
+    const float screenW = static_cast<float>(GetScreenWidth()), screenH = static_cast<float>(GetScreenHeight());
+    const Rectangle safe = {UI::Layout::laneLabelW, UI::Layout::safeTop, screenW - UI::Layout::laneLabelW - _rightInset,
+                            screenH - UI::Layout::safeTop - UI::Layout::safeBottom};
+    const play::SceneFrame frame{play::boardStyle(App::current().settings.boardView), _view, camera, _game->dim(), safe};
+    if (const auto board = play::BoardScene::minimapBoardAt(frame, UI::Layout::rulerY, UI::Layout::rulerH, mouse)) {
+      _cursorShown = false;
+      _lastClickTime = -1e9;
+      cancelDeferredCamera();
+      _camera.focusBoard(cardOf(board->first, board->second), kFocusZoom);
+      return;
+    }
+  }
+
   const double now = Input::time();
   const bool doubleClick = now - _lastClickTime < kDoubleClickTime &&
                            std::hypot(mouse.x - _lastClickPos.x, mouse.y - _lastClickPos.y) < kDoubleClickPixels;
@@ -1004,6 +1023,20 @@ void PlayScreen::draw(App& app) const {
   if (!_layout.boards().empty()) {
     _scene.drawRuler(frame, UI::Layout::rulerY, UI::Layout::rulerH);
     _scene.drawLaneLabels(frame, {0.0f, UI::Layout::safeTop - 8.0f, UI::Layout::laneLabelW, safe.height + 16.0f});
+  }
+
+  // Cursor: a grab hand while the camera is dragged, a hand over a ghost tag, "not allowed" over squares nothing can be done on
+  if (_dragging) {
+    UI::Cursor::request(UI::Cursor::Kind::Grab);
+  } else if (!ui::pointerConsumed()) {
+    const Vector2 mouse = Input::mousePosition();
+    for (const Ghost& g : ghostCards())
+      if (CheckCollisionPointRec(mouse, g.rect)) UI::Cursor::request(UI::Cursor::Kind::Hand);
+    const Vector2 world = toVector(_camera.screenToWorld(toVec(mouse)));
+    if (const auto square = _layout.hitTest(world.x, world.y)) {
+      const play::BoardInfo* info = _view.board(square->l, square->t);
+      if (inputBlocked() || _ended || (info && info->role == play::BoardRole::Past)) UI::Cursor::request(UI::Cursor::Kind::NotAllowed);
+    }
   }
 
   play::drawHud(_hud, style);

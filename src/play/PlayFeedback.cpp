@@ -25,7 +25,8 @@ void PlayFeedback::input(const Pointer& in) {
   _lastPointer = pointer;
 
   if (in.pointerFree && !in.ended) {
-    const Vector2 world = in.camera.screenToWorld(pointer);
+    const Vec2 w2 = in.camera.screenToWorld({pointer.x, pointer.y});
+    const Vector2 world = {w2.x, w2.y};
     for (const auto& slot : in.layout.boards())
       if (BoardLayout::cardRect(slot.rect).contains(world.x, world.y) && !slot.rect.contains(world.x, world.y))
         chrome = BoardKey{slot.timeline, slot.halfTurn};
