@@ -465,7 +465,7 @@ void BoardScene::drawJumpBadges(const SceneFrame& f) const {
   }
 }
 
-void BoardScene::drawChecks(const SceneFrame& f) const {
+void BoardScene::drawChecks(const SceneFrame& f, float reveal) const {
   const BoardStyle& st = f.style;
   if (f.view.checks.empty()) return;
   const float px = onePx(f.zoom());
@@ -483,14 +483,15 @@ void BoardScene::drawChecks(const SceneFrame& f) const {
     path::Poly poly;
     poly.add(from);
     poly.add({tip.x - dir.x * 6.0f * px, tip.y - dir.y * 6.0f * px});
-    path::stroke(poly, 1.0f, fade(st.check, 0.16f + 0.22f * pulse), (9.0f + 4.0f * pulse) * px);
-    path::stroke(poly, 1.0f, st.check, (2.6f + 0.8f * pulse) * px);
+    path::stroke(poly, reveal, fade(st.check, 0.16f + 0.22f * pulse), (9.0f + 4.0f * pulse) * px);
+    path::stroke(poly, reveal, st.check, (2.6f + 0.8f * pulse) * px);
+    DrawCircleV(from, 4.0f * px, st.check);
+    if (reveal < 0.999f) continue; // the head and the ring at the king appear once the line has arrived
     // arrow head at the king, a dot on the attacker, a ring round the king
     const Vector2 side = {-dir.y, dir.x};
     const float hs = 9.0f * px;
     triangleBoth(tip, {tip.x - dir.x * hs + side.x * hs * 0.6f, tip.y - dir.y * hs + side.y * hs * 0.6f},
                  {tip.x - dir.x * hs - side.x * hs * 0.6f, tip.y - dir.y * hs - side.y * hs * 0.6f}, st.check);
-    DrawCircleV(from, 4.0f * px, st.check);
     DrawRing(to, ringR - 1.0f * px, ringR + 1.0f * px, 0, 360, 32, fade(st.check, 0.75f + 0.25f * pulse));
   }
 }

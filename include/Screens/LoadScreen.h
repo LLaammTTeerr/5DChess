@@ -12,6 +12,7 @@ public:
   LoadScreen();
   void update(App& app, float dt) override;
   void draw(App& app) const override;
+  void back(App& app) override; // Esc: what the Back button does
 
 private:
   ui::ButtonList _slots;

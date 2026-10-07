@@ -6,15 +6,27 @@ namespace play {
 using Chess::Core::Coord;
 
 namespace {
-// A piece of the side to move, on a board it can still move on
-bool canPickUp(const Coord& c, const Chess::IGame& game) {
-  if (!game.boardExists(c)) return false;
+std::optional<Chess::Piece> pieceAt(const Coord& c, const Chess::IGame& game) {
+  if (!game.boardExists(c)) return std::nullopt;
   const Chess::Board& board = game.board(c.l, c.t);
-  if (c.x < 0 || c.y < 0 || c.x >= board.dim() || c.y >= board.dim()) return false;
-  const auto piece = board.at(Chess::Position2D(c.x, c.y));
-  return piece && piece->color == game.getCurrentTurnColor() && game.canMakeMoveFromBoard(game.getBoard(c.l, c.t));
+  if (c.x < 0 || c.y < 0 || c.x >= board.dim() || c.y >= board.dim()) return std::nullopt;
+  return board.at(Chess::Position2D(c.x, c.y));
 }
 } // namespace
+
+bool Selection::canPickUp(const Coord& c, const Chess::IGame& game) {
+  const auto piece = pieceAt(c, game);
+  return piece && piece->color == game.getCurrentTurnColor() && game.canMakeMoveFromBoard(game.getBoard(c.l, c.t));
+}
+
+Intent::Reason Selection::rejection(const Coord& c, const Chess::IGame& game) {
+  const auto piece = pieceAt(c, game);
+  if (!piece || game.result() != Chess::GameResult::Ongoing) return Intent::Reason::None;
+  if (piece->color != game.getCurrentTurnColor()) return Intent::Reason::NotYourPiece;
+  const auto board = game.getBoard(c.l, c.t);
+  if (game.canMakeMoveFromBoard(board)) return Intent::Reason::None;
+  return game.timeLine(c.l)->back() == board ? Intent::Reason::OtherSidesBoard : Intent::Reason::HistoryBoard;
+}
 
 Intent Selection::click(std::optional<Coord> square, const Chess::IGame& game) {
   Intent intent;
@@ -41,7 +53,14 @@ Intent Selection::click(std::optional<Coord> square, const Chess::IGame& game) {
       return intent;
     }
   }
-  if (!canPickUp(c, game)) return intent;
+  if (!canPickUp(c, game)) {
+    intent.reason = rejection(c, game);
+    if (intent.reason != Intent::Reason::None) {
+      intent.kind = Intent::Kind::Rejected;
+      intent.from = c;
+    }
+    return intent;
+  }
 
   _from = c;
   _moves = game.legalMovesFrom(c);

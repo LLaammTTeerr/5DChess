@@ -78,9 +78,9 @@ void TimelineArrows::set(const std::vector<Arrow>& arrows) {
     for (const auto& k : _scratch) {
       if (std::binary_search(_known.begin(), _known.end(), k)) continue;
       Anim anim{k, {}};
-      // Branches draw slowly after the new board has started to grow; threads quickly
+      // Branches draw slowly, together with the new timeline's lane unfolding (100 ms earlier than the boards used to); threads quickly
       anim.t.start(0.0f, 1.0f, k.branch ? UI::Motion::slow : UI::Motion::base, UI::Motion::easeOutCubic,
-                   k.branch ? 0.10f : 0.05f);
+                   k.branch ? 0.0f : 0.05f);
       if (!anim.t.done()) _active.push_back(anim);
     }
   }

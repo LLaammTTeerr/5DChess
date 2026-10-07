@@ -21,6 +21,9 @@ Selected from two Kenney packs, converted to mono 44.1 kHz Ogg Vorbis. The `Lice
 | `game-won.ogg` | `select_006.ogg` | Interface Sounds |
 | `game-drawn.ogg` | `question_002.ogg` | Interface Sounds |
 | `click.ogg` | `click_001.ogg` | Interface Sounds |
+| `submit.ogg` | `confirmation_001.ogg` | Interface Sounds |
+| `branch.ogg` | `maximize_006.ogg` | Interface Sounds |
+| `illegal.ogg` | `impactSoft_medium_000.ogg` | Impact Sounds |
 
 ## Music (`assets/backgroundmusic/`)
 

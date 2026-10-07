@@ -1,6 +1,7 @@
 #include "Screens/PlayScreen.h"
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include "App.h"
 #include "Input.h"
 #include "TestMode.h"
@@ -9,6 +10,7 @@
 #include "engine/GameCatalog.h"
 #include "engine/Notation.h"
 #include "play/BoardRenderer.h"
+#include "play/Feedback.h"
 
 using Chess::Core::Coord;
 using play::BoardKey;
@@ -131,6 +133,23 @@ void PlayScreen::boardInput() {
     if (square && Input::mousePressed(MOUSE_BUTTON_LEFT)) click(*square);
   }
   if (!ui::pointerConsumed()) _camera.handleInput(); // not over a button or the Guide's panel
+  _feedback.input({*_game, _layout, _camera, _selection, _hover, !ui::pointerConsumed(), inputBlocked(), aiToMove(), _locked, _ended});
+}
+
+bool PlayScreen::escape(App&) {
+  if (_game->result() != Chess::GameResult::Ongoing && _showEndCard && !_reviewing) { // the end card: Esc is "Review board"
+    _reviewing = true;
+    return true;
+  }
+  if (_selection.promotionTarget()) {
+    _selection.cancelPromotion();
+    return true;
+  }
+  if (_selection.active()) {
+    clearSelection();
+    return true;
+  }
+  return false;
 }
 
 void PlayScreen::click(Coord square) {
@@ -151,6 +170,9 @@ void PlayScreen::perform(const play::Intent& intent) {
       _camera.focusSelected(BoardLayout::boardRect(intent.from.l, intent.from.t));
       break;
     case Kind::Move: makeMove(intent.move); break;
+    case Kind::Rejected: // nothing happens to the game, but the click is answered
+      _feedback.refused(intent.from, intent.reason);
+      break;
   }
 }
 
@@ -179,14 +201,13 @@ void PlayScreen::makeMove(const Chess::Core::Move& move) {
   const bool sameBoard = flight.from == play::keyOf(move.to);
 
   _game->makeMove(move);
-  // TODO: Sfx::Check / Sfx::Castle / Sfx::Promote / Sfx::Draw once the rules implement them.
-  App::current().audio.playSfx(isCapture ? Sfx::Capture : Sfx::Move);
   clearSelection();
 
   // The piece travels to its square on the newly created board (same-board moves slide on that new board), and the
   // camera flies there; the new board is not in the layout until refresh()
   const Chess::Board& created = *_game->getNewBoard();
   flight.to = {created.timeLineId(), created.halfTurnNumber()};
+  _feedback.moved(_view.timeline(created.timeLineId()) == nullptr, isCapture, sameBoard, flight.from); // sound, source-board mark
   if (sameBoard) flight.from = flight.to;
   if (!flight.piece.empty()) _animator.startFlight(flight);
   _camera.focusNewest(BoardLayout::boardRect(flight.to.first, flight.to.second));
@@ -218,6 +239,7 @@ void PlayScreen::doSubmit() {
   _animator.finish();
   _arrows.finish();
   _game->submitTurn();
+  _feedback.turnSubmitted();
   clearSelection();
   autosaveNow();
 }
@@ -368,6 +390,7 @@ void PlayScreen::updateAi(float dt) {
       makeMove(_aiMoves[_aiNext++]);
     } else if (_game->canSubmit()) {
       _game->submitTurn();
+      _feedback.turnSubmitted();
       cancelAi();
       autosaveNow();
     } else { // cannot happen (the search verifies its turn): hand the side over rather than stall
@@ -430,10 +453,12 @@ void PlayScreen::rebuild() {
   _animator.syncBoards(_layout); // new boards grow in
   _arrows.set(play::timelineArrows(*_game));
   _canSubmit = _game->canSubmit();
+  const int presentBefore = _view.presentHalfTurn;
   _view = play::MultiverseView::build(*_game);
   _camera.setExtraBounds(play::BoardScene::jumpBounds(play::boardStyle(App::current().settings.boardView), _view));
   _noMandatoryBoard = std::none_of(_view.boards.begin(), _view.boards.end(),
                                    [](const play::BoardInfo& b) { return b.role == play::BoardRole::Mandatory; });
+  _feedback.rebuilt(*_game, _view, presentBefore);
 }
 
 std::string PlayScreen::hint() const {
@@ -503,7 +528,10 @@ void PlayScreen::draw(App& app) const {
 
   // Behind everything: the background, then lanes and the present column (they run under the HUD)
   _scene.drawBackground(style);
+  const play::PlayFeedback::Draw fx{style, _view, _layout, *_game, camera, _scene, _selection.from().has_value()};
+  _feedback.beforeLanes(_scene);
   if (!_layout.boards().empty()) _scene.drawLanes(frame, UI::Layout::rulerY);
+  _feedback.afterLanes(fx);
 
   // The boards never draw over the HUD bars: they are clipped to the free area (plus a little for halos)
   constexpr float kClipPad = 12.0f;
@@ -537,9 +565,15 @@ void PlayScreen::draw(App& app) const {
       if (c.king.l == slot.timeline && c.king.t == slot.halfTurn) look.markChecked(c.king.x, c.king.y);
     return look;
   };
-  for (size_t i = 0; i < slots.size(); ++i) play::drawBoardHalo(slots[i].rect, lookOf(i), style, _scene.soft());
-  for (size_t i = 0; i < slots.size(); ++i)
+  for (size_t i = 0; i < slots.size(); ++i) {
+    play::overlay::BoardShift shift(_animator.boardOffset({slots[i].timeline, slots[i].halfTurn}, zoom));
+    play::drawBoardHalo(slots[i].rect, lookOf(i), style, _scene.soft());
+  }
+  _feedback.behindCards(fx);
+  for (size_t i = 0; i < slots.size(); ++i) {
+    play::overlay::BoardShift shift(_animator.boardOffset({slots[i].timeline, slots[i].halfTurn}, zoom));
     play::drawBoard(_game->board(slots[i].timeline, slots[i].halfTurn), slots[i].rect, lookOf(i), style, zoom);
+  }
 
   if (from) play::drawBoardOutline(BoardLayout::boardRect(from->l, from->t), style, zoom);
 
@@ -566,8 +600,9 @@ void PlayScreen::draw(App& app) const {
   }
   if (_highlight && _layout.contains(_highlight->l, _highlight->t))
     play::drawSelectedSquare(squareOf(*_highlight), zoom, style);
+  _feedback.overBoards(fx);
   _scene.drawJumpBadges(frame);
-  _scene.drawChecks(frame);
+  _scene.drawChecks(frame, _animator.checkDrawOn());
   play::drawFlights(_animator.flights(), gray);
   EndMode2D();
 
@@ -581,6 +616,7 @@ void PlayScreen::draw(App& app) const {
   }
 
   play::drawHud(_hud, style);
+  _feedback.overHud(fx);
   _actions.draw();
   if (!_embedded) _saveMenu.draw(style, app.screens.navAlpha());
   _picker.draw(style);

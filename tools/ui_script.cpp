@@ -23,6 +23,7 @@
 //                        script fails). Does nothing when the game is not against the computer
 //   clicksq <l> <t> <sq>  click a square of the game screen (or the Guide's page) by name wherever the camera has put it: timeline id l,
 //                        half-turn t of the board (0 = White's first), square like e2 (file a..h, rank 1..8)
+//   hoversq <l> <t> <sq>  the same, but only move the pointer onto the square (hover previews, live arcs)
 //
 // Determinism: fixed 1/60 s timestep, Reduce motion forced on, audio off, RNG seeded, scripted input
 // (see include/TestMode.h and include/Input.h).
@@ -147,6 +148,15 @@ bool parseScript(const std::string& path, std::vector<FrameSpec>& out) {
       out.push_back(p);
       FrameSpec r; r.line = n; r.release = true;
       out.push_back(r);
+    } else if (cmd == "hoversq") {
+      std::string sq;
+      if (!(ss >> f.sqL >> f.sqT >> sq) || sq.size() != 2 || sq[0] < 'a' || sq[0] > 'h' || sq[1] < '1' || sq[1] > '8')
+        return fail("hoversq needs <timeline> <half-turn> <square, e.g. e2>");
+      f.sqX = sq[0] - 'a';
+      f.sqY = sq[1] - '1';
+      f.clickSquare = true;
+      f.setPos = true;
+      out.push_back(f);
     } else if (cmd == "mode") {
       if (!(ss >> f.mode)) return fail("mode needs a catalog id");
       out.push_back(f);

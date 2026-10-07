@@ -42,6 +42,11 @@ struct TipState { size_t id = 0; double since = 0.0, last = -10.0; };
 TipState g_tip;
 }
 
+namespace {
+struct QueuedTip { Rectangle anchor{}; std::string text; float alpha = 0.0f; bool set = false; };
+QueuedTip g_queued;
+}
+
 void tooltip(Rectangle anchor, const std::string& text) {
   if (text.empty() || !hovered(anchor)) return;
   const size_t id = std::hash<std::string>{}(text) ^ (static_cast<size_t>(anchor.x) * 31u + static_cast<size_t>(anchor.y) * 131071u);
@@ -51,6 +56,15 @@ void tooltip(Rectangle anchor, const std::string& text) {
   const double shown = now - g_tip.since - kTooltipDwell;
   if (shown < 0.0) return;
   const float a = UI::Motion::reduced() ? 1.0f : UI::Motion::clamp01(static_cast<float>(shown) / UI::Motion::fast);
+  g_queued = {anchor, text, a, true}; // painted by flushTooltip() at the end of the frame, over everything
+}
+
+void flushTooltip() {
+  if (!g_queued.set) return;
+  const Rectangle anchor = g_queued.anchor;
+  const std::string text = g_queued.text;
+  const float a = g_queued.alpha;
+  g_queued.set = false;
 
   // Wrap to the width of a short paragraph; explicit '\n' starts a new line
   const ::Font font = UI::Fonts::body();
@@ -74,6 +88,14 @@ void tooltip(Rectangle anchor, const std::string& text) {
   float x = anchor.x + anchor.width / 2 - (w + 2 * pad) / 2;
   float y = anchor.y + anchor.height + 8.0f;
   if (y + h > H - 6.0f) y = anchor.y - h - 8.0f;
+  // Under an anchor above the turn ruler the bubble would cover the ruler: open beside the anchor instead (right, else left)
+  if (anchor.y < UI::Layout::rulerY && y + h > UI::Layout::rulerY - 2.0f) {
+    const float bw = w + 2 * pad;
+    y = anchor.y + anchor.height / 2 - h / 2;
+    if (anchor.x + anchor.width + 8.0f + bw <= W - 6.0f) x = anchor.x + anchor.width + 8.0f;
+    else if (anchor.x - 8.0f - bw >= 6.0f) x = anchor.x - 8.0f - bw;
+    else y = anchor.y - h - 8.0f;
+  }
   x = std::clamp(x, 6.0f, std::max(6.0f, W - w - 2 * pad - 6.0f));
   const Rectangle box = {std::floor(x), std::floor(y), w + 2 * pad, h};
   auto fade = [a](Color c) { c.a = static_cast<unsigned char>(c.a * a); return c; };
@@ -120,6 +142,8 @@ bool Button::update(float dt, bool reachable) {
   hover_ = hot_ ? std::fmin(1.0f, hover_ + step) : std::fmax(0.0f, hover_ - step);
   if (entering_) enter_.update(dt);
 
+  if (press && enabled) { press_.value = 0.98f; press_.velocity = 0.0f; press_.target = 1.0f; }
+  press_.update(dt);
   if (press) App::current().audio.playSfx(Sfx::Click);
   return press;
 }
@@ -134,7 +158,11 @@ void Button::draw(float alpha) const {
   if (alpha <= 0.003f) return;
   if (hot_) UI::Cursor::requestHand();
   auto fade = [alpha](Color c) { c.a = static_cast<unsigned char>(c.a * alpha); return c; };
-  const Rectangle r = {rect.x, rect.y + rise, rect.width, rect.height};
+  Rectangle r = {rect.x, rect.y + rise, rect.width, rect.height};
+  if (!UI::Motion::reduced() && std::fabs(press_.value - 1.0f) > 0.0005f) { // a press dips to 0.98x about the centre and springs back
+    const float s = press_.value;
+    r = {r.x + r.width * (1.0f - s) / 2.0f, r.y + r.height * (1.0f - s) / 2.0f, r.width * s, r.height * s};
+  }
 
   const Skin& k = skin ? *skin : defaultSkin();
   Color bg, border, text;

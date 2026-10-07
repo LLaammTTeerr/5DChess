@@ -23,7 +23,7 @@ TEST_CASE("Selection: clicking nothing, an empty square or an enemy piece does n
   Selection s;
   CHECK(s.click(std::nullopt, *game).kind == Intent::Kind::None);
   CHECK(s.click(Coord{4, 4, 0, 0}, *game).kind == Intent::Kind::None); // empty square
-  CHECK(s.click(e7, *game).kind == Intent::Kind::None);                // Black's pawn, White to move
+  CHECK(s.click(e7, *game).kind == Intent::Kind::Rejected); // Black's pawn, White to move
   CHECK_FALSE(s.active());
 }
 
@@ -57,7 +57,7 @@ TEST_CASE("Selection: a click on an empty or enemy square keeps the selection, a
   Selection s;
   s.click(e2, *game);
   CHECK(s.click(Coord{0, 4, 0, 0}, *game).kind == Intent::Kind::None);
-  CHECK(s.click(e7, *game).kind == Intent::Kind::None);
+  CHECK(s.click(e7, *game).kind == Intent::Kind::Rejected);
   CHECK(s.click(std::nullopt, *game).kind == Intent::Kind::None);
   CHECK(s.active());
   CHECK(s.click(e2, *game).kind == Intent::Kind::Clear);
@@ -82,9 +82,10 @@ TEST_CASE("Selection: boards the player can no longer move on cannot be picked f
   auto game = newGame("standard");
   game->makeMove(Core::Move{e2, e4}); // White's pawn moved: the t=0 board is history, the new board is Black's
   Selection s;
-  CHECK(s.click(d2, *game).kind == Intent::Kind::None);                       // White piece on the old board
-  CHECK(s.click(Coord{3, 1, 1, 0}, *game).kind == Intent::Kind::None);        // White piece, but board is Black's turn
-  CHECK(s.click(Coord{4, 6, 1, 0}, *game).kind == Intent::Kind::None);        // Black piece, Black's board, White to move
+  CHECK(s.click(d2, *game).kind == Intent::Kind::Rejected);                   // White piece on the old board
+  CHECK(s.click(d2, *game).reason == Intent::Reason::HistoryBoard);
+  CHECK(s.click(Coord{3, 1, 1, 0}, *game).reason == Intent::Reason::OtherSidesBoard); // the latest board, but the other side's turn there
+  CHECK(s.click(Coord{4, 6, 1, 0}, *game).kind == Intent::Kind::Rejected);
   CHECK(s.click(Coord{0, 0, 9, 0}, *game).kind == Intent::Kind::None);        // no such board
   CHECK_FALSE(s.active());
 }
@@ -175,4 +176,32 @@ TEST_CASE("Selection: a finished game gives no intent") {
   Selection s;
   CHECK(s.click(Coord{0, 0, 0, 0}, game).kind == Intent::Kind::None);
   CHECK_FALSE(s.active());
+  CHECK(Selection::rejection(Coord{0, 0, 0, 0}, game) == Intent::Reason::None);
+}
+
+TEST_CASE("Selection: a refused click says why (Rejected) and leaves the selection alone") {
+  auto game = newGame("standard");
+  Selection s;
+  const Intent enemy = s.click(e7, *game); // Black's pawn while White is to move
+  CHECK(enemy.kind == Intent::Kind::Rejected);
+  CHECK(enemy.reason == Intent::Reason::NotYourPiece);
+  CHECK(enemy.from == e7);
+  CHECK(s.click(Coord{4, 4, 0, 0}, *game).kind == Intent::Kind::None); // an empty square is not a refusal
+  CHECK(s.click(Coord{0, 0, 9, 0}, *game).kind == Intent::Kind::None); // no such board
+  CHECK(s.click(std::nullopt, *game).kind == Intent::Kind::None);
+
+  s.click(e2, *game);
+  REQUIRE(s.active());
+  CHECK(s.click(e7, *game).kind == Intent::Kind::Rejected); // while a piece is picked up
+  CHECK(s.active());
+  CHECK(*s.from() == e2);
+}
+
+TEST_CASE("Selection: pieces on a board that is history cannot be picked up") {
+  auto game = newGame("standard");
+  game->makeMove(Core::Move{e2, e4});
+  const Intent::Reason reason = Selection::rejection(d2, *game);
+  CHECK(reason == Intent::Reason::HistoryBoard);
+  CHECK(Selection::rejection(Coord{4, 4, 0, 0}, *game) == Intent::Reason::None); // empty
+  CHECK_FALSE(Selection::canPickUp(d2, *game));
 }

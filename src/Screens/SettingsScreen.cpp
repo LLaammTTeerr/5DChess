@@ -142,3 +142,5 @@ void SettingsScreen::draw(App& app) const {
   }
   _back.draw(app.screens.navAlpha());
 }
+
+void SettingsScreen::back(App& app) { app.screens.replace(std::make_unique<MainMenuScreen>()); }

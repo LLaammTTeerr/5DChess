@@ -1,0 +1,27 @@
+# Motion: Full, then a check given and submitted (tests/ui/positions/check-in-one.5dp: Ra1-a8+ against the king on h8), captured
+# mid-animation: Black's king square pulses and the attack line draws on from the rook.
+# Settings layout: Settings (150,490); Display tab (880,172); Motion cycle (700,532); Back (125,25); Submit (841,90).
+wait 20
+click 150 490
+wait 30
+click 880 172
+wait 20
+click 700 532        # Motion: Reduced -> Full
+wait 10
+click 125 25
+wait 30
+position ../positions/check-in-one.5dp
+wait 120
+clicksq 0 0 a1       # the rook
+wait 40
+clicksq 0 0 a8
+wait 60
+click 841 90
+wait 4
+capture motion-check-f4
+wait 5
+capture motion-check-f9
+wait 8
+capture motion-check-f17
+wait 60
+capture motion-check-settled

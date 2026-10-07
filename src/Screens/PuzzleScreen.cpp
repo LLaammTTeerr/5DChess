@@ -531,3 +531,7 @@ void PuzzleScreen::draw(App& app) const {
     _list.draw(a);
   }
 }
+
+bool PuzzleScreen::escape(App& app) { return _board && _board->escape(app); }
+
+void PuzzleScreen::back(App& app) { app.screens.replace(std::make_unique<PuzzleListScreen>()); }

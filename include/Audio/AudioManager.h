@@ -7,7 +7,9 @@ class Assets;
 struct Settings;
 
 // Sound effects the game can trigger.
-enum class Sfx { Move, Capture, Castle, Click, Draw, Win, Check, Promote, Count };
+// Submit: the turn is handed over; Branch: a move created a new timeline; Check: the move left a king attacked; Illegal: a click
+// that cannot do anything (a soft thud).
+enum class Sfx { Move, Capture, Castle, Click, Draw, Win, Check, Promote, Submit, Branch, Illegal, Count };
 
 // Audio service owned by App: one streamed background track plus preloaded sound effects. Selected music
 // and the sfx on/off flag live in Settings; sounds and streams are owned by Assets.

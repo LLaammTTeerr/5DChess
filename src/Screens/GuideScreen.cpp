@@ -224,3 +224,7 @@ void GuideScreen::draw(App& app) const {
   }
   _back.draw(a);
 }
+
+bool GuideScreen::escape(App& app) { return _board && _board->escape(app); }
+
+void GuideScreen::back(App& app) { app.screens.replace(std::make_unique<MainMenuScreen>()); }

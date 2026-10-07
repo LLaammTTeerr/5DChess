@@ -18,6 +18,7 @@ add_executable(chess_tests
   savestore_test.cpp
   confirm_test.cpp
   selection_test.cpp
+  feedback_test.cpp
   layout_test.cpp
   textfit_test.cpp
   view_test.cpp

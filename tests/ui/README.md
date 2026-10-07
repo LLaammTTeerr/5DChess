@@ -33,14 +33,14 @@ on, audio device never opened, RNG seeded, the computer opponent's search steppe
 reads in the game go through `Input::` (include/Input.h), which reads raylib normally and a scripted state in test mode. The only
 random source is the seed of a new game against the computer (raylib's generator, which the harness seeds); blinks and the menu
 field are pure functions of the (fixed) clock. Reduce motion
-means screenshots show the end state of animations (the Display tab reads "Motion: Reduced").
+means screenshots show the end state of animations (the Display tab reads "Motion: Reduced"). The `motion-*` scripts switch Settings -> Display to Motion: Full first (the setting is what the animations read) and capture mid-animation frames; the frame counts in their capture names are frames after the triggering click.
 
 ## Script language (`scripts/*.ui`)
 
 One command per line, `#` starts a comment: `wait <frames>`, `move <x> <y>`, `click <x> <y>`, `wheel <dy>`,
 `key <NAME>`, `capture <name>` (writes `<name>.png`; names must be unique across scripts). Coordinates are real
 screen pixels; each script documents the layout it derives them from. The game screen is driven by name instead:
-`clicksq <timeline> <half-turn> <square>` clicks a square (e.g. `clicksq 0 2 g1`) wherever the camera has put it, so
+`clicksq <timeline> <half-turn> <square>` clicks a square (`hoversq` with the same arguments only moves the pointer there) (e.g. `clicksq 0 2 g1`) wherever the camera has put it, so
 scripts do not depend on the zoom. `clicksq` also targets the Guide's page. `mode <catalog id>`, `position <file.5dp>` and `record <file.5dr>` (relative to the script's directory,
 e.g. `../positions/check.5dp`, `../records/branch.5dr`) open a game directly; follow them with `wait`. `slot <1-3> <file>` puts a file's text into a
 save slot (saves live in memory under the harness, never in the config directory, and the date is fixed), so the Load screen can be shown with chosen contents. The harness runs with defaults, so every
@@ -66,7 +66,7 @@ mode, Play) or by a record with the `# vs-computer:` line (`record`, `slot`).
 | game-standard | e2 selected, e2-e4, submit, black e7-e5, submit, knight time-travel jump creating a timeline (a branch connector and a jump arc) |
 | game-battle | Time Line Battle: start, pawn selected, three moves, submitted, black move |
 | endgame | Time Line Fragment: a two-turn checkmate; "Black wins!" / "Checkmate" card |
-| nav-toggle | ESC hides and restores the nav buttons; none left hovered |
+| nav-toggle | H hides and restores the nav buttons (Esc no longer does: it cancels a selection); none left hovered |
 | stalemate | Time Line Fragment: a six-turn stalemate through time travel; "Draw" / "Stalemate" card |
 | board-styles | Settings -> Display -> Board view cycled through Atlas (default), Blueprint and Deep space; the same Standard mid-game (knight picked up) in each |
 | medieval, bauhaus, neon, origami, ink | Piece Theme -> that theme chosen in Settings; the same Standard mid-game as board-styles with its pieces in Atlas, Blueprint (greyscale) and Deep space |
@@ -84,6 +84,11 @@ mode, Play) or by a record with the `# vs-computer:` line (`record`, `slot`).
 | layout-banner | Motion: Full: the turn change after Submit 3, 9, 24, 48 and 90 frames in (the pill's hint segment cross-fades to "Black to move"; nothing covers the ruler) |
 | layout-tooltips | tooltips: none before the 400 ms dwell, then Submit (the moves), Undo, the L0 lane pill, a ruler tick |
 | layout-long-labels | the longest slot row ("Simplify - Knight vs Bishop vs Computer" with its turns and date) in the Load screen and the Save panel |
+| motion-shake | Motion: Full: a refused click (Black's pawn on White's turn) mid-shake and settled, a click on a history board |
+| motion-travel | Motion: Full: the present marker sliding after a move, the boards lifting on Submit, the hover preview of the knight, the live arc to a time-travel target, the halo on the board the knight left |
+| motion-lane | Motion: Full: Black's jump creating L-1, its lane unfolding from L0 |
+| motion-check | Motion: Full: Ra8+ submitted, the checked king pulsing and the attack line drawing on |
+| motion-screens | Motion: Full: a screen sliding in (back and forward) and a click during the cross-fade reaching the new screen |
 | rules-visuals | tests/ui/positions: check (attack line from the rook to the king), an inactive timeline (dimmed, tagged), the promotion picker and a chosen promotion |
 
 ## Layout audit

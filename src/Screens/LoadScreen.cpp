@@ -125,3 +125,5 @@ void LoadScreen::draw(App& app) const {
   _paste.draw(app.screens.navAlpha());
 #endif
 }
+
+void LoadScreen::back(App& app) { app.screens.replace(std::make_unique<MainMenuScreen>()); }

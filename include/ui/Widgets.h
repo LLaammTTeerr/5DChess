@@ -27,10 +27,12 @@ std::vector<Rectangle> row(Rectangle area, int n, float itemW, float gap);
 // ---- Tooltip ----------------------------------------------------------------------------------------------
 // Immediate mode: call every frame while the pointer is over `anchor` (Button does it for its `tip`, other callers check the
 // pointer themselves with hovered()). The bubble appears under the anchor (above it near the bottom) after the pointer has rested
-// on the same anchor for kTooltipDwell seconds, fading in (at once under Reduce motion); `text` may hold '\n'. Draw late in the
-// frame: it is painted at once, over what was drawn before it.
+// on the same anchor for kTooltipDwell seconds, fading in (at once under Reduce motion); `text` may hold '\n'. The bubble is queued and
+// painted by flushTooltip() after the whole screen.
 inline constexpr double kTooltipDwell = 0.4;
 void tooltip(Rectangle anchor, const std::string& text);
+/// Paints the tooltip that was asked for this frame (ScreenStack::draw calls it after the screen, so a tip is never covered).
+void flushTooltip();
 /// True when the pointer is inside `r` (screen space).
 bool hovered(Rectangle r);
 
@@ -77,6 +79,7 @@ private:
   bool hot_ = false, over_ = false, pressStartedHere_ = false, pressed_ = false, entering_ = false;
   float hover_ = 0.0f; // 0..1, eased toward hot_ over ~150 ms
   UI::Motion::Tween enter_;
+  UI::Motion::Spring press_{1.0f, 600.0f, 0.7f}; // 1 at rest; a press dips it to 0.98
 };
 
 // A button showing one of two labels that flips a bool when clicked.

@@ -21,6 +21,8 @@ public:
   explicit PuzzleScreen(int index); // index into puzzles::all()
   void update(App& app, float dt) override;
   void draw(App& app) const override;
+  bool escape(App& app) override; // Esc cancels on the embedded board first
+  void back(App& app) override;   // then does what the Back button does
 
   /// Developer tools: the game screen (to click squares by name).
   PlayScreen* board() const { return _board.get(); }

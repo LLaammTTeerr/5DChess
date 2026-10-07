@@ -13,6 +13,7 @@
 #include "play/SaveMenu.h"
 #include "play/Hud.h"
 #include "play/MoveAnimator.h"
+#include "play/PlayFeedback.h"
 #include "play/Selection.h"
 #include "play/TimelineArrows.h"
 #include "play/VsAi.h"
@@ -51,6 +52,9 @@ public:
   /// Replaces "White to move" / "Black to move" in the HUD pill (and silences the turn banner) while non-empty.
   void setHudTitle(std::string title) { _hudTitle = std::move(title); }
   void showEndCard(bool shown) { _showEndCard = shown; }
+  /// Esc: cancels an open promotion choice, else the picked-up piece (true: there was something to cancel).
+  bool escape(App& app) override;
+  void back(App& app) override { if (!_embedded) leave(app); }
   /// Developer tools: where a square is on screen right now (its centre), so scripted clicks name squares, not pixels.
   Vector2 squareToScreen(Chess::Core::Coord square) const;
 
@@ -63,6 +67,7 @@ private:
   play::Selection _selection;
   play::BoardCamera _camera;
   play::MoveAnimator _animator;
+  play::PlayFeedback _feedback{_animator}; // feedback motion and cues (play/PlayFeedback)
   play::TimelineArrows _arrows;
   play::HudMotion _hudMotion;
   play::HudData _hud;

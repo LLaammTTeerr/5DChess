@@ -253,7 +253,8 @@ The game changes its working directory to the executable's folder, so it can be 
 - **In-game buttons**: Undo, Deselect and Submit (greyed out when unavailable); under Back, **Save** (opens the three save slots) and, on desktop, **Copy** (the game's record to the clipboard)
 
 ### Keyboard Shortcuts
-- **ESC**: Show or hide the navigation buttons (shown by default; Back returns to game selection)
+- **ESC**: Cancel what is open: the promotion choice, then the picked-up piece
+- **H**: Show or hide the navigation buttons (shown by default; Back returns to game selection)
 - **Z**: Toggle camera auto-zoom
 - **X**: Fit the boards in view (manual auto-zoom)
 
@@ -275,7 +276,7 @@ The game changes its working directory to the executable's folder, so it can be 
 ### User Interface
 - **Runs everywhere**: native on Linux, macOS and Windows, and in the browser (WebAssembly build)
 - **Animated main menu**: a code-drawn hero with a drifting field of timeline boards and idling Pixel creatures
-- **Motion**: shared tokens and easing (`include/Render/Motion.h`); pieces slide or arc across boards, new boards grow in, selected pieces lift, menus stagger in, screens cross-fade, and the status pill announces the side to move. Animations never delay game state or input. Settings -> Display -> **Motion: Reduced** makes changes instant or short cross-fades
+- **Motion**: shared tokens and easing (`include/Render/Motion.h`); pieces slide or arc across boards, new boards grow in, selected pieces lift, menus stagger in, screens cross-fade, and the status pill announces the side to move. Feedback motion: a click that cannot do anything shakes the card, flashes the square red and says why; hovering a piece previews its moves (dashed arcs to the other boards they lie on); a time-travel target shows its arc live before you click; a new timeline's lane unfolds from its parent; a newly attacked king pulses and the attack line draws on; Submit slides the present column and lifts the boards of the side to move. Animations never delay game state or input. Settings -> Display -> **Motion: Reduced** makes changes instant or short cross-fades
 - **Pixel theme with blinking creatures**: Pixel-theme pieces blink at random intervals when zoomed in
 - **HUD and controls bar**: side to move, turn, next-step hint, Undo / Deselect / Submit, and an end-of-game card with **Rematch**, **Review board** and **Back to menu**; styled to match the board view (the menus stay cream). Next to a Guide or Puzzle panel the HUD centres on the board view. Hovering Submit lists the moves it hands in (or says why it is disabled), and lane pills, ruler ticks, the inactive tag and jump badges have tooltips (after a short rest of the pointer). A minimap strip at the right end of the ruler appears while part of the multiverse is off screen
 - **Readable layout**: no text may overflow its box: under the UI test harness every label, HUD segment and panel line reports its measured size and `tests/ui/run.sh` fails on any that does not fit ([tests/ui/README.md](tests/ui/README.md))
@@ -285,7 +286,7 @@ The game changes its working directory to the executable's folder, so it can be 
 
 ### Audio
 - **Background music**: three CC0 piano tracks, off by default; pick one in Settings → Music. The choice is global and persists across screens; the track is streamed and starts after your first click (browser autoplay policy).
-- **Sound effects**: move, capture, game won and menu-button clicks, with an on/off toggle ("Sound effects" in Settings → Music). Check, castle, promotion and draw sounds are bundled but wait for those rules to exist.
+- **Sound effects**: move, capture, game won, menu-button clicks, plus cues for Submit, a move that creates a timeline, a check and a refused click, with an on/off toggle ("Sound effects" in Settings → Music). Castle, promotion and draw sounds are bundled but wait for those rules to exist.
 - Without an audio device the game runs silently.
 
 ### Piece Themes
