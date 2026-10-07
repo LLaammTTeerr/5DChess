@@ -57,7 +57,22 @@ std::string submitLine(const TurnChecklist& c) {
 
 TurnChecklist turnChecklist(const Chess::IGame& game) {
   TurnChecklist out;
-  if (game.result() != Chess::GameResult::Ongoing) return out;
+  if (!game.history().empty()) {
+    const Chess::Core::PlayedTurn& turn = game.history().back();
+    out.lastByWhite = turn.presentHalfTurn % 2 == 0;
+    out.lastLabel = boardLabel(turn.presentHalfTurn);
+    for (const PlayedMove& m : turn.moves) {
+      LastMove l;
+      l.from = m.move.from;
+      l.to = m.move.to;
+      l.text = timelineLabel(m.move.from.l) + "  " + moveText(game, m);
+      out.last.push_back(std::move(l));
+    }
+  }
+  if (game.result() != Chess::GameResult::Ongoing) {
+    out.over = true;
+    return out;
+  }
 
   // The turn as it began: the pending moves taken back on a copy (a board that was moved on is then a board to move on again)
   std::unique_ptr<Chess::IGame> start;
@@ -132,19 +147,6 @@ TurnChecklist turnChecklist(const Chess::IGame& game) {
   out.submit = game.canSubmit() ? SubmitState::Ready
                : out.boardsLeft > 0 ? SubmitState::BoardsLeft
                : pending.empty() ? SubmitState::MoveFirst : SubmitState::KingExposed;
-
-  if (!game.history().empty()) {
-    const Chess::Core::PlayedTurn& turn = game.history().back();
-    out.lastByWhite = turn.presentHalfTurn % 2 == 0;
-    out.lastLabel = boardLabel(turn.presentHalfTurn);
-    for (const PlayedMove& m : turn.moves) {
-      LastMove l;
-      l.from = m.move.from;
-      l.to = m.move.to;
-      l.text = timelineLabel(m.move.from.l) + "  " + moveText(game, m);
-      out.last.push_back(std::move(l));
-    }
-  }
   return out;
 }
 

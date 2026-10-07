@@ -205,4 +205,16 @@ TEST_CASE("TurnChecklist: a jump into the past can take the present back: boards
   }
   CHECK(moved == c.done);
   CHECK(c.rows.size() == before.rows.size()); // the rows are still the boards the turn began with
+
+  // Submitting it ends the game (White has no legal turn and is not in check: a draw): no rows any more, the deciding turn stays
+  game->submitTurn();
+  game->resolveResult();
+  REQUIRE(game->result() != GameResult::Ongoing);
+  const play::TurnChecklist over = play::turnChecklist(*game);
+  CHECK(over.over);
+  CHECK(over.rows.empty());
+  CHECK(over.lastLabel == "T3b");
+  CHECK_FALSE(over.lastByWhite);
+  REQUIRE(over.last.size() == 1);
+  CHECK(over.last[0].text == "L+1  Bc4 -> L+1 \xC2\xB7 T2b c3");
 }

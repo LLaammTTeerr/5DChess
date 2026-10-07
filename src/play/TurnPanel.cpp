@@ -128,9 +128,10 @@ void TurnPanel::layout() {
   _geo.header = {x + kPad, y, inner, kHeaderH};
   y += kHeaderH + 8.0f;
 
+  const bool over = _checklist.over; // a decided game: the header and the last turn only
   const int nRows = static_cast<int>(_checklist.rows.size());
   const int nLines = static_cast<int>(_checklist.last.size());
-  const float submitBlock = 8.0f + 1.0f + 8.0f + 24.0f + 20.0f;
+  const float submitBlock = over ? 0.0f : 8.0f + 1.0f + 8.0f + 24.0f + 20.0f;
   const float lastHead = 8.0f + 1.0f + 8.0f + 24.0f + 4.0f;
   const float minLines = static_cast<float>(std::clamp(nLines, 1, 4)) * kLineH;
   const int rowsFit = std::max(1, static_cast<int>(std::floor((bottom - y - submitBlock - lastHead - minLines) / kRowH)));
@@ -142,10 +143,15 @@ void TurnPanel::layout() {
   _rows.scroll = std::clamp(_rows.scroll, 0.0f, _rows.maxScroll());
   y += rowsH;
 
-  _geo.dividerA = y + 8.0f;
-  _geo.submit = {x + kPad, y + 8.0f + 1.0f + 8.0f, inner, 24.0f};
-  _geo.submitNote = {x + kPad, _geo.submit.y + 24.0f, inner, 20.0f};
-  y = _geo.submitNote.y + 20.0f;
+  if (over) {
+    _geo.submit = _geo.submitNote = {};
+    y -= 8.0f; // (the gap under the header: the rule under it follows at once)
+  } else {
+    _geo.dividerA = y + 8.0f;
+    _geo.submit = {x + kPad, y + 8.0f + 1.0f + 8.0f, inner, 24.0f};
+    _geo.submitNote = {x + kPad, _geo.submit.y + 24.0f, inner, 20.0f};
+    y = _geo.submitNote.y + 20.0f;
+  }
 
   _geo.dividerB = y + 8.0f;
   _geo.lastHeader = {x + kPad, _geo.dividerB + 1.0f + 8.0f, inner, 24.0f};
@@ -235,7 +241,8 @@ void TurnPanel::draw(const Chess::IGame& game, const BoardStyle& style, float bu
   if (ui::audit::enabled()) {
     ui::audit::rect("turn panel", panel, ui::audit::Kind::Panel);
     ui::audit::rect("turn panel header", _geo.header, ui::audit::Kind::Text);
-    ui::audit::rect("turn panel submit", {_geo.submit.x, _geo.submit.y, _geo.submit.width, _geo.submit.height + _geo.submitNote.height}, ui::audit::Kind::Text);
+    if (!_checklist.over)
+      ui::audit::rect("turn panel submit", {_geo.submit.x, _geo.submit.y, _geo.submit.width, _geo.submit.height + _geo.submitNote.height}, ui::audit::Kind::Text);
     ui::audit::rect("turn panel last turn", _geo.lastHeader, ui::audit::Kind::Text);
     ui::audit::rect("turn panel boards", _rows.view, ui::audit::Kind::List);
     ui::audit::rect("turn panel moves", _lines.view, ui::audit::Kind::List);
@@ -250,6 +257,10 @@ void TurnPanel::draw(const Chess::IGame& game, const BoardStyle& style, float bu
   }
 
   // ---- One row per board ----
+  if (_checklist.over) {
+    DrawRectangle(static_cast<int>(panel.x + kPad), static_cast<int>(_geo.dividerB), static_cast<int>(inner), 1, style.hudBorder);
+    return drawLast(style, panel, inner);
+  }
   const bool rowsScroll = _rows.maxScroll() > 0.0f;
   BeginScissorMode(static_cast<int>(_rows.view.x), static_cast<int>(_rows.view.y), static_cast<int>(_rows.view.width), static_cast<int>(_rows.view.height));
   for (int i = 0; i < _rows.count; ++i) {
@@ -321,8 +332,14 @@ void TurnPanel::draw(const Chess::IGame& game, const BoardStyle& style, float bu
                style.hudMuted, _geo.submitNote);
   }
 
-  // ---- The opponent's last turn ----
   DrawRectangle(static_cast<int>(panel.x + kPad), static_cast<int>(_geo.dividerB), static_cast<int>(inner), 1, style.hudBorder);
+  drawLast(style, panel, inner);
+}
+
+// ---- The opponent's last turn (or, in a decided game, the turn that decided it) ----
+void TurnPanel::drawLast(const BoardStyle& style, Rectangle panel, float inner) const {
+  const ::Font body = UI::Fonts::body(), mono = UI::Fonts::mono();
+  (void)panel;
   {
     std::string head = _lastHeading;
     if (!_checklist.lastLabel.empty()) head += " \xC2\xB7 " + _checklist.lastLabel;

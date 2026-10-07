@@ -82,6 +82,7 @@ private:
 
   void layout();
   void scrollInput(List& list, bool& dragging, Vector2 mouse, bool inside);
+  void drawLast(const BoardStyle& style, Rectangle panel, float inner) const;
 };
 
 } // namespace play

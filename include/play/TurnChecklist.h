@@ -42,11 +42,12 @@ struct TurnChecklist {
   SubmitState submit = SubmitState::MoveFirst;
   bool lastByWhite = true;        // who played `last`
   std::string lastLabel;          // "T5w": the half-turn the opponent's turn began at (empty: no turn played yet)
-  std::vector<LastMove> last;     // the opponent's last submitted turn
+  std::vector<LastMove> last;     // the opponent's last submitted turn (once the game is over: the turn that decided it)
+  bool over = false;              // the game is decided: no rows, nothing to submit
 };
 
 /// The checklist of the side to move: pure, from what the engine already knows (mandatory and moveable boards, the pending moves, the history).
-/// Everything is empty once the game is over.
+/// Once the game is over there are no rows, only the last turn.
 TurnChecklist turnChecklist(const Chess::IGame& game);
 
 /// A move in readable form, as it was played on `game` (its boards still hold the position before the move): "e2-e4", "Ng1xf3",

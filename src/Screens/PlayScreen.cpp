@@ -842,7 +842,7 @@ std::vector<PlayScreen::Ghost> PlayScreen::ghostCards() const {
 
 play::TurnPanel::Mode PlayScreen::turnPanelMode() const {
   using Mode = play::TurnPanel::Mode;
-  if (_embedded || _game->result() != Chess::GameResult::Ongoing) return Mode::Off; // (the Guide and the puzzles have their own panel)
+  if (_embedded) return Mode::Off; // (the Guide and the puzzles have their own panel; a decided game keeps it, showing the turn that decided it)
   return play::TurnPanel::wanted() ? Mode::Open : Mode::Collapsed;
 }
 
@@ -954,8 +954,8 @@ void PlayScreen::refresh() {
     const play::TurnChecklist& c = _turnPanel.checklist();
     _hud.boardsDone = ongoing && !_embedded ? c.done : 0;
     _hud.boardsTotal = ongoing && !_embedded ? c.total : 0;
-    _turnPanel.setHeadings(aiTurn ? "Computer's turn" : "This turn",
-                           !_vs ? "Opponent's last turn" : aiTurn ? "Your last turn" : "Computer's last turn");
+    _turnPanel.setHeadings(!ongoing ? "Game over" : aiTurn ? "Computer's turn" : "This turn",
+                           !ongoing ? "Final turn" : !_vs ? "Opponent's last turn" : aiTurn ? "Your last turn" : "Computer's last turn");
   }
   _hud.undoLabel = takeBackCount() > 0 ? "Undo turn" : "Undo move";
   _hud.undoCount = static_cast<int>(_game->pendingMoves().size());
