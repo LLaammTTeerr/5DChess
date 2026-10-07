@@ -149,8 +149,7 @@ void drawHud(const HudData& hud, const BoardStyle& st) {
     x += gap;
     DrawRectangle(static_cast<int>(x), static_cast<int>(pill.y + 10), 1, static_cast<int>(h - 20), st.hudBorder);
     x += 1 + gap;
-    const bool all = hud.boardsDone >= hud.boardsTotal;
-    DrawTextEx(monoFont, boardsText.c_str(), {std::floor(x), std::floor(cy - UI::Font::mono / 2.0f - 1)}, UI::Font::mono, 0, all ? st.hudText : st.hudMuted);
+        DrawTextEx(monoFont, boardsText.c_str(), {std::floor(x), std::floor(cy - UI::Font::mono / 2.0f - 1)}, UI::Font::mono, 0, hud.boardsReady ? st.hudText : st.hudMuted);
     x += boardsW;
   }
   if (hasHint) {

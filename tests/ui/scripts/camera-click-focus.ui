@@ -1,4 +1,4 @@
-# Click to focus. A Standard game, four half-turns (1. e4 e5 2. Nf3 Nc6), then Home: the Overview of five boards at zoom ~0.78 (< 0.8).
+# Click to focus. A Standard game, four half-turns (1. e4 e5 2. Nf3 Nc6), then Home: the Overview of five boards at zoom ~0.56 (< 0.8; the turn panel narrows the free area).
 # A single click on a square below zoom 0.8 focuses that board (zoom 1.0) and selects the piece in one motion; Esc steps back: the
 # selection first, then the framing. A click on a card's label strip, or on a board that is history, focuses that board.
 # Layout (1400x800): Versus (150,250); Standard row (905,224); Play (808,712); Submit (841,90).
@@ -36,7 +36,7 @@ wait 60
 key HOME
 wait 40
 camexpect state Overview
-camexpect zoom 0.5 0.79
+camexpect zoom 0.55 0.65
 capture camera-click-focus-overview
 clicksq 0 4 f3       # the white knight on a board too small to read: the camera comes up and the piece is picked up
 wait 40

@@ -1,5 +1,6 @@
 #include "play/TurnChecklist.h"
 #include <algorithm>
+#include <cctype>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -48,14 +49,20 @@ std::string moveText(const Chess::IGame& game, const PlayedMove& played) {
 std::string submitLine(const TurnChecklist& c) {
   switch (c.submit) {
     case SubmitState::Ready: return "Submit: ready";
-    case SubmitState::BoardsLeft: return "Submit: locked - " + std::to_string(c.boardsLeft) + (c.boardsLeft == 1 ? " board left" : " boards left");
-    case SubmitState::MoveFirst: return "Submit: locked - make a move";
-    case SubmitState::KingExposed: return "Submit: locked - a king is exposed";
+    case SubmitState::BoardsLeft: return "Submit locked: " + std::to_string(c.boardsLeft) + (c.boardsLeft == 1 ? " board left" : " boards left");
+    case SubmitState::MoveFirst: return "Submit locked: make a move";
+    case SubmitState::KingExposed: return "Submit locked: a king is exposed";
   }
   return "";
 }
 
-TurnChecklist turnChecklist(const Chess::IGame& game) {
+std::string submitNote(const TurnChecklist& c) {
+  if (c.submit == SubmitState::Ready) return "Enter: submit";
+  if (c.submit == SubmitState::BoardsLeft) return "Space: next board";
+  return "";
+}
+
+TurnChecklist turnChecklist(const Chess::IGame& game, std::optional<bool> canSubmit) {
   TurnChecklist out;
   if (!game.history().empty()) {
     const Chess::Core::PlayedTurn& turn = game.history().back();
@@ -113,7 +120,7 @@ TurnChecklist turnChecklist(const Chess::IGame& game) {
     row.timeline = e.key.first;
     row.halfTurn = e.key.second;
     row.label = boardTitle(row.timeline, row.halfTurn);
-    row.inactive = e.inactive;
+    row.inactive = !game.isTimeLineActive(row.timeline);
     row.state = e.group;
     if (e.group != RowState::Waiting && game.timeLine(row.timeline)->back()->halfTurnNumber() <= row.halfTurn) {
       // not moved on: what it is now
@@ -127,7 +134,9 @@ TurnChecklist turnChecklist(const Chess::IGame& game) {
         for (const PlayedMove& m : pending)
           if (m.move.to.l == row.timeline && m.move.to.t == row.halfTurn) {
             const auto piece = pieceAt(game, m.move.from);
-            row.detail = (piece ? Chess::pieceName(piece->type) : std::string("piece")) + " arrived from " + timelineLabel(m.move.from.l);
+            std::string name = piece ? Chess::pieceName(piece->type) : std::string("piece");
+            name[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(name[0])));
+            row.detail = name + " from " + boardTitle(m.move.from.l, m.move.from.t);
             break;
           }
     }
@@ -144,7 +153,7 @@ TurnChecklist turnChecklist(const Chess::IGame& game) {
   out.boardsLeft = static_cast<int>(mandatoryNow.size());
   out.total = anyMandatory ? out.done + out.boardsLeft
                            : static_cast<int>(std::count_if(out.rows.begin(), out.rows.end(), [](const ChecklistRow& r) { return r.state != RowState::Waiting; }));
-  out.submit = game.canSubmit() ? SubmitState::Ready
+  out.submit = canSubmit.value_or(game.canSubmit()) ? SubmitState::Ready
                : out.boardsLeft > 0 ? SubmitState::BoardsLeft
                : pending.empty() ? SubmitState::MoveFirst : SubmitState::KingExposed;
   return out;

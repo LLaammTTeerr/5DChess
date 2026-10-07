@@ -1,4 +1,5 @@
 #pragma once
+#include <optional>
 #include <string>
 #include <vector>
 #include "chess.h"
@@ -18,7 +19,7 @@ struct ChecklistRow {
   int timeline = 0, halfTurn = 0;
   RowState state = RowState::Waiting;
   std::string label;  // "L+1 · T5w"
-  std::string detail; // Moved: the move ("e2-e4", "Ng1 -> L-1 · T3w f3", "queen arrived from L-2"); otherwise empty
+  std::string detail; // Moved: the move ("e2-e4", "Ng1 -> L-1 · T3w f3", "Queen from L-2 · T5w"); otherwise empty
   bool inactive = false; // an inactive timeline (it only has optional moves)
 };
 
@@ -48,13 +49,16 @@ struct TurnChecklist {
 
 /// The checklist of the side to move: pure, from what the engine already knows (mandatory and moveable boards, the pending moves, the history).
 /// Once the game is over there are no rows, only the last turn.
-TurnChecklist turnChecklist(const Chess::IGame& game);
+/// `canSubmit`: the answer of game.canSubmit() when the caller already has it (it is not free).
+TurnChecklist turnChecklist(const Chess::IGame& game, std::optional<bool> canSubmit = std::nullopt);
 
 /// A move in readable form, as it was played on `game` (its boards still hold the position before the move): "e2-e4", "Ng1xf3",
 /// "e7-e8=Q", and for a move to another board "Ng1 -> L-1 · T3w f3" (ASCII: the UI fonts have no arrows).
 std::string moveText(const Chess::IGame& game, const Chess::Core::PlayedMove& played);
 
-/// "Submit: ready" / "Submit: locked - 2 boards left".
+/// "Submit: ready" / "Submit locked: 2 boards left".
 std::string submitLine(const TurnChecklist& checklist);
+/// The small line under it: "Enter: submit" when ready, "Space: next board" while boards are left, else empty.
+std::string submitNote(const TurnChecklist& checklist);
 
 } // namespace play

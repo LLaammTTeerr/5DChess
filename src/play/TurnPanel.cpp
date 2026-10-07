@@ -62,10 +62,10 @@ const char* chipText(RowState s) {
 // The second line of a row that has no move yet
 const char* rowNote(const ChecklistRow& r) {
   switch (r.state) {
-    case RowState::MustMove: return "Move here to submit";
+    case RowState::MustMove: return "Needs a move";
     case RowState::Optional: return r.inactive ? "Inactive timeline" : "You may move here";
     case RowState::Moved: return "";
-    case RowState::Waiting: return "Ahead: nothing to do";
+    case RowState::Waiting: return r.halfTurn % 2 == 0 ? "Waiting for White" : "Waiting for Black";
   }
   return "";
 }
@@ -192,7 +192,8 @@ TurnPanel::Events TurnPanel::update(float dt, Mode mode, bool buttonReachable, c
     const float screenW = static_cast<float>(GetScreenWidth());
     const bool open = mode == Mode::Open;
     std::string label = open ? "Hide list" : "Turn list";
-    if (!open && _checklist.total >= 2) label += " " + std::to_string(_checklist.done) + "/" + std::to_string(_checklist.total);
+    if (!open && _checklist.submit == SubmitState::Ready && !_checklist.over && _human) label += ": ready";
+    else if (!open && _checklist.total >= 2 && !_checklist.over) label += " " + std::to_string(_checklist.done) + "/" + std::to_string(_checklist.total);
     const float w = std::max(kHudButtonW, textW(UI::Fonts::button(), label, UI::Font::button) + 2.0f * UI::Space::md);
     _toggle.label = label;
     _toggle.rect = {screenW - UI::Layout::sideInset - w, UI::Layout::hudPillY, w, UI::Space::buttonHeight};
@@ -251,9 +252,12 @@ void TurnPanel::draw(const Chess::IGame& game, const BoardStyle& style, float bu
 
   // ---- Header: "This turn · 3 / 5 boards" ----
   {
-    std::string head = _turnHeading;
-    if (_checklist.total > 0) head += " \xC2\xB7 " + std::to_string(_checklist.done) + " / " + std::to_string(_checklist.total) + (_checklist.total == 1 ? " board" : " boards");
-    drawFitted("turn panel header", button, UI::Font::button, head, _geo.header.x, _geo.header.y, inner, style.hudText, _geo.header);
+    const float w = drawFitted("turn panel header", button, UI::Font::button, _turnHeading, _geo.header.x, _geo.header.y, inner, style.hudText, _geo.header);
+    if (_checklist.total >= 2) { // the count is bright only when Submit is ready (not merely when every board is moved)
+      const std::string count = " \xC2\xB7 " + std::to_string(_checklist.done) + " / " + std::to_string(_checklist.total) + " boards";
+      drawFitted("turn panel header", button, UI::Font::button, count, _geo.header.x + w, _geo.header.y, inner - w,
+                 _checklist.submit == SubmitState::Ready && _human ? style.hudText : style.hudMuted, _geo.header);
+    }
   }
 
   // ---- One row per board ----
@@ -285,7 +289,10 @@ void TurnPanel::draw(const Chess::IGame& game, const BoardStyle& style, float bu
       look.inactive = r.inactive;
       look.whiteToMove = r.halfTurn % 2 == 0;
       BeginMode2D(camera);
-      drawBoard(game.board(r.timeline, r.halfTurn), board, look, style, s);
+      // a board that was moved on shows the board it became
+      const bool after = r.state == RowState::Moved && game.boardExists(r.timeline, r.halfTurn + 1);
+      if (after) look.whiteToMove = (r.halfTurn + 1) % 2 == 0;
+      drawBoard(game.board(r.timeline, r.halfTurn + (after ? 1 : 0)), board, look, style, s);
       EndMode2D();
     }
     const float tx = row.x + 2.0f + kThumbW + 10.0f;
@@ -311,7 +318,7 @@ void TurnPanel::draw(const Chess::IGame& game, const BoardStyle& style, float bu
                whole ? Rectangle{tx, row.y, chipR.x - 6.0f - tx, kRowH} : Rectangle{0, 0, 4000, 4000});
 
     // line 2: the move played, or what the row means
-    const std::string second = r.state == RowState::Moved ? r.detail : rowNote(r);
+    const std::string second = r.state == RowState::Moved ? r.detail : _human ? rowNote(r) : std::string();
     drawFitted("turn row detail", mono, UI::Font::minimum, second, tx, row.y + 27.0f, right - tx, r.state == RowState::Moved ? style.hudText : style.hudMuted,
                whole ? Rectangle{tx, row.y, right - tx, kRowH} : Rectangle{0, 0, 4000, 4000});
   }
@@ -325,11 +332,12 @@ void TurnPanel::draw(const Chess::IGame& game, const BoardStyle& style, float bu
   // ---- What Submit hands in ----
   DrawRectangle(static_cast<int>(panel.x + kPad), static_cast<int>(_geo.dividerA), static_cast<int>(inner), 1, style.hudBorder);
   {
-    const bool ready = _checklist.submit == SubmitState::Ready;
-    DrawCircleV({_geo.submit.x + 6.0f, _geo.submit.y + 12.0f}, 5.0f, ready ? style.optional : style.mandatory);
-    drawFitted("turn panel submit", body, UI::Font::body, submitLine(_checklist), _geo.submit.x + 18.0f, _geo.submit.y + 1.0f, inner - 18.0f, style.hudText, _geo.submit);
-    drawFitted("turn panel submit note", mono, UI::Font::minimum, "Space: next board to move", _geo.submitNote.x + 18.0f, _geo.submitNote.y + 1.0f, inner - 18.0f,
-               style.hudMuted, _geo.submitNote);
+    const bool ready = _checklist.submit == SubmitState::Ready && _human;
+    DrawCircleV({_geo.submit.x + 6.0f, _geo.submit.y + 12.0f}, 5.0f, !_human ? style.hudMuted : ready ? style.optional : style.mandatory);
+    drawFitted("turn panel submit", body, UI::Font::body, _human ? submitLine(_checklist) : std::string("Computer to move"), _geo.submit.x + 18.0f, _geo.submit.y + 1.0f,
+               inner - 18.0f, style.hudText, _geo.submit);
+    drawFitted("turn panel submit note", mono, UI::Font::minimum, _human ? submitNote(_checklist) : std::string(), _geo.submitNote.x + 18.0f, _geo.submitNote.y + 1.0f,
+               inner - 18.0f, style.hudMuted, _geo.submitNote);
   }
 
   DrawRectangle(static_cast<int>(panel.x + kPad), static_cast<int>(_geo.dividerB), static_cast<int>(inner), 1, style.hudBorder);

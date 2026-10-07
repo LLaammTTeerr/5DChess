@@ -44,6 +44,8 @@ public:
   }
   const TurnChecklist& checklist() const { return _checklist; }
 
+  /// False while the computer plays its turn: the panel does not talk to the human then (no notes, no Submit advice).
+  void setHumanTurn(bool human) { _human = human; }
   /// What the screen shows from now on (draw() follows it even before the next update()).
   void setMode(Mode mode) { _mode = mode; }
 
@@ -71,6 +73,7 @@ private:
   };
 
   Mode _mode = Mode::Off;
+  bool _human = true;
   TurnChecklist _checklist;
   std::string _turnHeading = "This turn", _lastHeading = "Opponent's last turn";
   Geometry _geo;

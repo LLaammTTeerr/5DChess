@@ -3,12 +3,15 @@
 record ../records/vs-white-easy.5dr
 wait 60
 capture checklist-vs-start
+ainodes 0            # the computer's search is frozen: the panel while it is the computer's turn
 clicksq 0 2 g1
 wait 30
 clicksq 0 2 f3
 wait 30
 key ENTER
-wait 4
+wait 30
+capture checklist-vs-thinking
+ainodes 400
 waitai
 wait 60
 capture checklist-vs-replied

@@ -905,7 +905,7 @@ void PlayScreen::rebuild() {
   _noMandatoryBoard = std::none_of(_view.boards.begin(), _view.boards.end(),
                                    [](const play::BoardInfo& b) { return b.role == play::BoardRole::Mandatory; });
   _feedback.rebuilt(*_game, _view, presentBefore);
-  if (!_embedded) _turnPanel.setChecklist(play::turnChecklist(*_game)); // [TurnPanel]
+  if (!_embedded) _turnPanel.setChecklist(play::turnChecklist(*_game, _canSubmit)); // [TurnPanel]
 }
 
 std::string PlayScreen::hint() const {
@@ -954,6 +954,8 @@ void PlayScreen::refresh() {
     const play::TurnChecklist& c = _turnPanel.checklist();
     _hud.boardsDone = ongoing && !_embedded ? c.done : 0;
     _hud.boardsTotal = ongoing && !_embedded ? c.total : 0;
+    _hud.boardsReady = ongoing && !_embedded && !aiTurn && c.submit == play::SubmitState::Ready;
+    _turnPanel.setHumanTurn(!aiTurn);
     _turnPanel.setHeadings(!ongoing ? "Game over" : aiTurn ? "Computer's turn" : "This turn",
                            !ongoing ? "Final turn" : !_vs ? "Opponent's last turn" : aiTurn ? "Your last turn" : "Computer's last turn");
   }

@@ -1,6 +1,7 @@
 #include <doctest/doctest.h>
 
 #include "engine/Notation.h"
+#include "engine/Position.h"
 #include "play/TurnChecklist.h"
 
 #include <fstream>
@@ -49,7 +50,7 @@ TEST_CASE("TurnChecklist: the start position has one mandatory board and nothing
   CHECK(c.total == 1);
   CHECK(c.boardsLeft == 1);
   CHECK(c.submit == play::SubmitState::BoardsLeft);
-  CHECK(play::submitLine(c) == "Submit: locked - 1 board left");
+  CHECK(play::submitLine(c) == "Submit locked: 1 board left");
   CHECK(c.last.empty());
   CHECK(c.lastLabel.empty());
 }
@@ -120,7 +121,7 @@ TEST_CASE("TurnChecklist: a six-timeline turn lists its five mandatory boards fi
   // newest timeline first within a group
   for (size_t i = 1; i < 5; ++i) CHECK(c.rows[i - 1].timeline > c.rows[i].timeline);
   CHECK(c.submit == play::SubmitState::BoardsLeft);
-  CHECK(play::submitLine(c) == "Submit: locked - 5 boards left");
+  CHECK(play::submitLine(c) == "Submit locked: 5 boards left");
   // the opponent's last turn is Black's four moves of T4b
   CHECK_FALSE(c.lastByWhite);
   CHECK(c.lastLabel == "T4b");
@@ -141,7 +142,7 @@ TEST_CASE("TurnChecklist: moves tick boards off; a jump onto another present boa
   CHECK(row(two, 2)->detail == "Nb1-a3");
   CHECK(two.rows[0].timeline == 3); // a moved row keeps its place
   CHECK(two.submit == play::SubmitState::BoardsLeft);
-  CHECK(play::submitLine(two) == "Submit: locked - 3 boards left");
+  CHECK(play::submitLine(two) == "Submit locked: 3 boards left");
 
   // L-2's queen jumps to L-1's present board: both rows are done
   game->makeMove(move(-2, present, "d1", "c2", -1, present));
@@ -152,7 +153,7 @@ TEST_CASE("TurnChecklist: moves tick boards off; a jump onto another present boa
   CHECK(row(three, -2)->detail == "Qd1 -> L-1 \xC2\xB7 T5w c2");
   REQUIRE(row(three, -1));
   CHECK(row(three, -1)->state == RowState::Moved);
-  CHECK(row(three, -1)->detail == "queen arrived from L-2");
+  CHECK(row(three, -1)->detail == "Queen from L-2 \xC2\xB7 T5w");
 
   game->undo();
   const play::TurnChecklist back = play::turnChecklist(*game);
@@ -217,4 +218,71 @@ TEST_CASE("TurnChecklist: a jump into the past can take the present back: boards
   CHECK_FALSE(over.lastByWhite);
   REQUIRE(over.last.size() == 1);
   CHECK(over.last[0].text == "L+1  Bc4 -> L+1 \xC2\xB7 T2b c3");
+}
+
+namespace {
+std::shared_ptr<IGame> uiPosition(const char* name) {
+  return Chess::Core::loadPositionFile(std::string(FDCHESS_UI_POSITIONS_DIR) + "/" + name).makeGame();
+}
+} // namespace
+
+TEST_CASE("TurnChecklist: Submit note follows the state: Enter when ready, Space while boards are left, nothing else") {
+  auto game = newGame("standard");
+  CHECK(play::submitNote(play::turnChecklist(*game)) == "Space: next board");
+  game->makeMove(CMove{Coord{4, 1, 0, 0}, Coord{4, 3, 0, 0}});
+  CHECK(play::submitNote(play::turnChecklist(*game)) == "Enter: submit");
+}
+
+TEST_CASE("TurnChecklist: every board moved is not the same as Submit being ready (a king left exposed)") {
+  auto game = uiPosition("check.5dp"); // White is in check from the rook on e8
+  std::unique_ptr<IGame> exposed;
+  const auto board = game->getMoveableBoards().front();
+  for (int x = 0; x < game->dim() && !exposed; ++x)
+    for (int y = 0; y < game->dim() && !exposed; ++y)
+      for (const CMove& m : game->legalMovesFrom(Coord{int8_t(x), int8_t(y), int16_t(board->halfTurnNumber()), int16_t(board->timeLineId())})) {
+        auto trial = game->clone();
+        trial->makeMove(m);
+        if (trial->mandatoryBoards().empty() && !trial->canSubmit()) {
+          exposed = std::move(trial);
+          break;
+        }
+      }
+  REQUIRE(exposed);
+  const play::TurnChecklist c = play::turnChecklist(*exposed);
+  CHECK(c.boardsLeft == 0);
+  CHECK(c.done == c.total); // "1 / 1 boards" ...
+  CHECK(c.submit == play::SubmitState::KingExposed); // ... and still not ready
+  CHECK(play::submitLine(c) == "Submit locked: a king is exposed");
+  CHECK(play::submitNote(c).empty());
+}
+
+TEST_CASE("TurnChecklist: promotion in the move text, and an inactive timeline's row") {
+  auto promotion = uiPosition("promotion.5dp");
+  Chess::Core::PlayedMove played{CMove{Coord{4, 6, 2, 0}, Coord{4, 7, 2, 0}, PieceType::Knight}, true};
+  CHECK(play::moveText(*promotion, played) == "e7-e8=N");
+  played.move.promotion = PieceType::Queen;
+  CHECK(play::moveText(*promotion, played) == "e7-e8=Q");
+
+  auto game = uiPosition("inactive.5dp");
+  const play::TurnChecklist c = play::turnChecklist(*game);
+  bool found = false;
+  for (const auto& r : c.rows)
+    if (r.inactive) {
+      found = true;
+      CHECK(r.state == RowState::Optional); // an inactive timeline only has optional moves
+    }
+  CHECK(found);
+}
+
+TEST_CASE("TurnChecklist: while the other side is to move the rows are theirs and the last turn is ours") {
+  auto game = newGame("standard");
+  game->makeMove(CMove{Coord{4, 1, 0, 0}, Coord{4, 3, 0, 0}});
+  game->submitTurn();
+  game->resolveResult();
+  const play::TurnChecklist c = play::turnChecklist(*game);
+  REQUIRE(c.rows.size() == 1);
+  CHECK(c.rows[0].state == RowState::MustMove);
+  CHECK(c.rows[0].halfTurn == 1); // Black's board
+  CHECK(c.lastByWhite);
+  CHECK(c.submit == play::SubmitState::BoardsLeft);
 }
