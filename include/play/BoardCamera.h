@@ -127,6 +127,7 @@ private:
   float fitZoom(const Rect& r) const;
   void goTo(Vec2 target, float zoom, float duration, bool easeInOut, bool snap = false);
   void clampTarget();
+  void panRaw(Vec2 screenDelta);
   static float clampWheel(float current, float wanted);
 };
 

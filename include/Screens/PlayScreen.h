@@ -85,6 +85,7 @@ private:
   Vector2 _pressPos{}, _flingVelocity{};
   double _lastClickTime = -1e9;
   Vector2 _lastClickPos{};
+  bool _selectedBeforeClick = false; // ... and a piece was already picked up
   bool _focusedBeforeClick = false; // the first click of a (possible) double-click found its board already focused
   // Keyboard: the board cursor (a ring around a card), the Space / Tab cycle through the boards that need a move
   std::optional<std::pair<int, int>> _cursor; // (timeline, half-turn)

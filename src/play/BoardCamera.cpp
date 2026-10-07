@@ -160,7 +160,7 @@ void BoardCamera::update(float dt) {
     if (u >= 1.0f) finishTween();
   }
   if (_fling.x != 0.0f || _fling.y != 0.0f) {
-    pan({_fling.x * dt, _fling.y * dt});
+    panRaw({_fling.x * dt, _fling.y * dt}); // (not pan(): that would end the coast)
     const float k = std::exp(-dt / kFlingDecay);
     _fling = {_fling.x * k, _fling.y * k};
     if (std::fabs(_fling.x) + std::fabs(_fling.y) < 20.0f) _fling = {};
@@ -170,6 +170,7 @@ void BoardCamera::update(float dt) {
 // The window or the insets changed: the same framing again for the new free area (a jump, not a tween)
 void BoardCamera::reframe() {
   if (!_seeded || _state == State::Free) return;
+  finishTween();
   const State state = _state;
   const Rect frame = _frame;
   float z = std::clamp(fitZoom(frame), kMinFitZoom, kMaxOverviewZoom);
@@ -269,15 +270,20 @@ bool BoardCamera::peek(const Rect& card, float fraction, bool automatic) {
 
 // ---- the player's motion -------------------------------------------------------------------------------------------------------
 
-void BoardCamera::pan(Vec2 d) {
-  cancel();
-  _state = State::Free;
+void BoardCamera::panRaw(Vec2 d) {
   _target.x -= d.x / _zoom;
   _target.y -= d.y / _zoom;
   clampTarget();
 }
 
+void BoardCamera::pan(Vec2 d) {
+  cancel();
+  _state = State::Free;
+  panRaw(d);
+}
+
 void BoardCamera::zoomAt(Vec2 p, float factor) {
+  if (clampWheel(_zoom, _zoom * factor) == _zoom) return; // at a limit: nothing happens (no cancel, no state change)
   cancel();
   _state = State::Free;
   const Vec2 anchor = screenToWorld(p);

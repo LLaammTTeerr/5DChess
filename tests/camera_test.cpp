@@ -390,9 +390,14 @@ TEST_CASE("BoardCamera: fling coasts for a moment and stops, and not under Reduc
   cam.pan({1, 0});
   const float x0 = cam.target().x;
   cam.fling({600.0f, 0.0f});
+  for (int i = 0; i < 5; ++i) { // it keeps moving over the first frames
+    const float before = cam.target().x;
+    cam.update(1.0f / 60.0f);
+    CHECK(cam.target().x < before);
+  }
   run(cam, 1.0f);
   const float x1 = cam.target().x;
-  CHECK(x1 < x0); // dragged right: the world moved right under the view
+  CHECK(x0 - x1 > 30.0f); // dragged right: the world moved right under the view
   run(cam, 1.0f);
   CHECK(cam.target().x == x1);
 

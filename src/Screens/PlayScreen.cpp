@@ -150,13 +150,14 @@ void PlayScreen::updatePicker(float dt, const play::BoardStyle& style) {
 
 void PlayScreen::boardInput() {
   _hover.reset();
-  if (ui::pointerConsumed()) { // over a button or the Guide's panel
-    _pressValid = _dragging = false;
+  const bool consumed = ui::pointerConsumed(); // over a button or the Guide's panel
+  if (consumed && !_dragging) { // (a drag in progress carries on over them)
+    _pressValid = false;
     feedbackInput();
     return;
   }
   const Vector2 mouse = Input::mousePosition();
-  if (!inputBlocked()) { // the computer's turn, or a puzzle screen driving the game: the boards only look and pan
+  if (!consumed && !inputBlocked()) { // the computer's turn, or a puzzle screen driving the game: the boards only look and pan
     const Vector2 world = toVector(_camera.screenToWorld(toVec(mouse)));
     _hover = _layout.hitTest(world.x, world.y);
   }
@@ -167,7 +168,7 @@ void PlayScreen::boardInput() {
     _camera.wheel(toVec(mouse), wheel);
   }
 
-  if (Input::mousePressed(MOUSE_BUTTON_LEFT)) {
+  if (!consumed && Input::mousePressed(MOUSE_BUTTON_LEFT)) {
     _pressValid = true;
     _dragging = false;
     _pressPos = mouse;
@@ -214,17 +215,19 @@ void PlayScreen::onClick(Vector2 mouse) {
 
   const Vector2 world = toVector(_camera.screenToWorld(toVec(mouse)));
   const auto slot = _layout.boardAt(world.x, world.y);
-  const auto framed = [&](const play::BoardLayout::Slot& s) { // this board is what the camera is focused on
+  const auto framed = [&](const play::BoardLayout::Slot& s) { // the camera is focused on this board (alone, or together with another)
     const Rect card = BoardLayout::cardRect(s.rect);
-    return _camera.state() == play::BoardCamera::State::Focus && _camera.frameRect().x == card.x && _camera.frameRect().y == card.y;
+    return _camera.state() == play::BoardCamera::State::Focus && _camera.frameRect().contains(card.centerX(), card.centerY());
   };
 
-  if (doubleClick) { // the first click already did its own thing (a selection stays; a board may have been focused): this one only frames
+  if (doubleClick) { // purely a framing toggle: a selection the first click made is put down again
+    if (_selection.active() && !_selectedBeforeClick) clearSelection();
     if (slot && !_focusedBeforeClick) _camera.focusBoard(BoardLayout::cardRect(slot->rect), kFocusZoom);
     else goHome();
     return;
   }
   _focusedBeforeClick = slot && framed(*slot); // what a double-click toggles
+  _selectedBeforeClick = _selection.active();
 
   // A ghost card (a target board off-screen): pan so that the piece's board and the target's are both in view
   if (_selection.from())
@@ -760,9 +763,9 @@ void PlayScreen::handleKeys() {
   if (Input::keyPressed(KEY_UP)) moveCursor(Dir::Up);
   if (Input::keyPressed(KEY_DOWN)) moveCursor(Dir::Down);
   if (Input::keyPressed(KEY_ENTER) || Input::keyPressed(KEY_KP_ENTER)) {
+    const Rect cursorCard = _cursor ? cardOf(_cursor->first, _cursor->second) : Rect{};
     const bool framed = _cursor && _camera.state() == play::BoardCamera::State::Focus &&
-                        _camera.frameRect().x == cardOf(_cursor->first, _cursor->second).x &&
-                        _camera.frameRect().y == cardOf(_cursor->first, _cursor->second).y;
+                        _camera.frameRect().contains(cursorCard.centerX(), cursorCard.centerY());
     if (_cursorShown && _cursor && !framed) focusCursor();
     else if (!_selection.active() && _submitEnabled) submitTurn();
   }
@@ -785,7 +788,7 @@ std::vector<PlayScreen::Ghost> PlayScreen::ghostCards() const {
     if (key == play::keyOf(*from) || std::find(seen.begin(), seen.end(), key) != seen.end()) continue;
     seen.push_back(key);
     const Rect card = cardOf(key.first, key.second);
-    if (_camera.isBoardVisible(card, 0.5f)) continue;
+    if (_camera.isBoardVisible(card, 0.1f)) continue; // a board that is mostly out of view, or not in view at all
     const Vector2 target = toVector(_camera.worldToScreen({card.centerX(), card.centerY()}));
     Vector2 d = {target.x - centre.x, target.y - centre.y};
     const float len = std::hypot(d.x, d.y);

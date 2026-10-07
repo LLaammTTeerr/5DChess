@@ -257,8 +257,12 @@ The game changes its working directory to the executable's folder, so it can be 
 - **In-game buttons**: Undo, Deselect and Submit (greyed out when unavailable); under Back, **Save** (opens the three save slots) and, on desktop, **Copy** (the game's record to the clipboard)
 
 ### Keyboard Shortcuts
+<<<<<<< HEAD
 - **ESC**: steps back one level at a time: a pending promotion, then the picked-up piece, then the framing (back to the Overview)
 - **H**: Show or hide the navigation buttons (shown by default; Back returns to game selection)
+=======
+- **ESC**: steps back one level at a time: a pending promotion, then the picked-up piece, then the framing (back to the Overview); with nothing left to step back it shows or hides the navigation buttons (in the Guide the page's board is stepped back the same way, so after focusing a board the first Esc returns to the Overview and a second one hides the buttons) (shown by default; Back returns to game selection)
+>>>>>>> bf11e50 (Camera review fixes: working drag inertia, pure double-click, containment framing checks)
 - **Home**: Overview (all boards, or the present column and its neighbours when the field is too big to read)
 - **Space** / **Tab** (**Shift+Tab** backwards): the next board that needs a move (boards you must move on first, then the optional ones), focused at a readable zoom
 - **Arrow keys**: move the board cursor (a ring around the card) between boards: left / right along a timeline, up / down between timelines; it starts on the first board that needs a move
