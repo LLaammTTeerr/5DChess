@@ -141,7 +141,6 @@ private:
   Rectangle itemsArea() const { return {view_.x, view_.y, view_.width - scrollbarW_, view_.height}; }
   Rectangle scrollbar() const { return {view_.x + view_.width - scrollbarW_, view_.y, scrollbarW_, view_.height}; }
   Rectangle handle() const;
-  bool moreBelow() const { return clipped() && maxScroll_ > 0.0f && scroll_ < maxScroll_ - 0.5f; }
   void scrollInput();
 };
 

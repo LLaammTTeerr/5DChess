@@ -40,8 +40,8 @@ public:
   static float presentColumnX(float halfTurn);
   /// Draw the present marker (column glow, ruler badge) at this (fractional) half-turn instead of the view's present; clear to
   /// follow the view again. The caller owns the tween.
-  void setPresentColumn(float halfTurn) { _presentOverride = halfTurn; }
-  void clearPresentColumn() { _presentOverride.reset(); }
+  /// t >= 0: the fractional half-turn column in force; t < 0: follow the view again.
+  void setPresentAt(float t) { if (t >= 0.0f) _presentOverride = t; else _presentOverride.reset(); }
 
   /// The overview strip drawn at the right end of the ruler while some boards are off screen (or tiny): one cell per board, the
   /// present column tinted, the visible part outlined. Geometry for the camera code: nullopt when the strip is not shown.

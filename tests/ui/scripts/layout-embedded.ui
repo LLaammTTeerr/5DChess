@@ -1,5 +1,5 @@
 # The game board embedded beside a side panel (Guide, Puzzle): the status pill, the action row and the controls bar centre on the
-# board view (the window minus the 424 px panel), the bar does not run under the panel, and the Submit tooltip waits for its dwell.
+# board view (the window minus the 424 px panel), the bar does not run under the panel, and the Submit tooltip waits for its dwell, the bar fades after 3 idle seconds.
 # Layout (1400x800): main menu Guide (150,430), Puzzles (150,370); Guide Back (125,25); first puzzle "Back rank" (276,222).
 # In the 976 px board view the action row is centred on 488 (Submit is the third button, at (632,90)).
 wait 20
@@ -21,3 +21,10 @@ click 276 222        # Back rank
 move 880 740
 wait 60
 capture layout-puzzle-hud
+# The controls bar steps aside after three seconds without pointer input, and comes back when the pointer moves
+move 700 400
+wait 240
+capture layout-controls-hidden
+move 700 760
+wait 20
+capture layout-controls-back

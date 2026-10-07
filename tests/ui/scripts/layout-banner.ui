@@ -22,6 +22,7 @@ wait 30
 clicksq 0 0 e4
 wait 40
 click 841 90         # Submit
+move 880 740         # (the pointer leaves, so no tooltip covers the ruler)
 wait 3
 capture layout-banner-f03
 wait 6

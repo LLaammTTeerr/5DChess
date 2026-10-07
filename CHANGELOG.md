@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Minimap** at the right end of the ruler while part of the multiverse is off screen or tiny (one cell per board, the present column tinted, the visible part outlined); `BoardScene::minimap` / `minimapBoardAt` give the camera code its geometry.
 - **End card buttons**: Rematch (same mode, side and level; fresh seed against the computer), Review board (dismisses the card, the pill keeps the result) and Back to menu; the scrim is lighter so the final position stays readable.
 - **Undo label and badge**: "Undo move" (a move of this turn) or "Undo turn" (against the computer), with a count badge when the turn has several moves.
-- HUD data for the camera: `HudData::cameraLabel`, `nextBoardLabel`, `rightInset`; `ActionRow` returns `Overview` / `NextBoard` (the buttons and the new controls line show as soon as the screen reports a camera label); `BoardScene::presentColumnX` / `setPresentColumn` for the present-marker slide.
+- HUD data for the camera: `HudData::cameraLabel`, `nextBoardLabel`, `rightInset`; `ActionRow` returns `Overview` / `NextBoard` (the buttons and the new controls line show as soon as the screen reports a camera label); `BoardScene::presentColumnX(t)` (world x of a fractional half-turn column) and `setPresentAt(t)` for the present-marker slide.
 
 ### Changed
 - The "White / Black to move" banner no longer covers the turn ruler: after a turn change the pill's hint segment cross-fades to it for 1.2 s (and it is skipped while the computer is to move).

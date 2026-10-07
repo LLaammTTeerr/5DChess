@@ -44,14 +44,14 @@ float textW(::Font font, const std::string& s, float size) { return MeasureTextE
 // The longest of the candidate controls lines that fits `maxW` (the last one is cut with "..." if even it does not)
 std::string controlsLine(bool cameraControls, ::Font font, float maxW) {
   const std::string sep = std::string("  ") + kDot + "  ";
-  // Until the screen reports a camera state the old key line stands (Home / Space belong to the camera that reports it)
+  // Home / Space belong to the camera that reports a state (cameraLabel); until then only keys that always work are listed
   const std::string candidates[] = {
-      cameraControls ? "Home: overview" + sep + "Space: next board" + sep + "Drag/Wheel: pan/zoom" + sep + "Esc: back"
-                     : "Click: select" + sep + "Drag/Wheel: pan/zoom" + sep + "Z: auto-zoom" + sep + "X: fit" + sep + "Esc: menu",
-      cameraControls ? "Home: overview" + sep + "Space: next board" + sep + "Drag/Wheel" + sep + "Esc: back"
-                     : "Click: select" + sep + "Drag/Wheel: pan/zoom" + sep + "Esc: menu",
-      cameraControls ? "Home: overview" + sep + "Space: next board" : "Click: select" + sep + "Esc: menu",
+      cameraControls ? "Overview (Home)" + sep + "Next board (Space)" + sep + "Drag/Wheel" + sep + "H: hide menu"
+                     : "Click: select" + sep + "Drag/Wheel: pan/zoom",
+      cameraControls ? "Overview (Home)" + sep + "Next board (Space)" + sep + "Drag/Wheel" : "Click: select" + sep + "Drag/Wheel",
+      cameraControls ? "Overview (Home)" + sep + "Next board (Space)" : "Click: select",
   };
+
   for (const std::string& c : candidates)
     if (textW(font, c, UI::Font::mono) <= maxW) return c;
   return ui::ellipsized(candidates[2], maxW, [&](const std::string& t) { return textW(font, t, UI::Font::mono); });
@@ -420,7 +420,8 @@ void ActionRow::sync(const HudData& hud) {
   _undoCount = hud.undoCount;
   // The keys of the new key map (U, Esc) are named once the screen reports a camera state, i.e. has that map
   const char* u = overview ? " (U)" : "";
-  _undo.tip = std::string(hud.undoLabel == "Undo turn" ? "Take back your last turn and the reply" : "Take back the last move of this turn") + u;
+  _undo.tip = !_undo.enabled ? "Nothing to take back yet"
+              : std::string(hud.undoLabel == "Undo turn" ? "Take back your last turn and the reply" : "Take back the last move of this turn") + u;
   _deselect.tip = overview ? "Put the piece down (Esc)" : "Put the piece down";
   _submit.tip = hud.submitTip;
   _next.tip = hud.nextBoardLabel.empty() ? std::string() : hud.nextBoardLabel + " (Space)";
