@@ -3,8 +3,12 @@
 #include "Audio/AudioManager.h"
 #include "Input.h"
 #include "Render/UITheme.h"
+#include "ui/Audit.h"
+#include "ui/TextFit.h"
 #include <algorithm>
 #include <cmath>
+#include <functional>
+#include <sstream>
 
 namespace ui {
 
@@ -31,6 +35,54 @@ void beginFrame(bool pointerConsumed) { g_consumed = pointerConsumed; }
 bool pointerConsumed() { return g_consumed; }
 void consumePointer() { g_consumed = true; }
 
+bool hovered(Rectangle r) { return contains(r, Input::mousePosition()); }
+
+namespace {
+struct TipState { size_t id = 0; double since = 0.0, last = -10.0; };
+TipState g_tip;
+}
+
+void tooltip(Rectangle anchor, const std::string& text) {
+  if (text.empty() || !hovered(anchor)) return;
+  const size_t id = std::hash<std::string>{}(text) ^ (static_cast<size_t>(anchor.x) * 31u + static_cast<size_t>(anchor.y) * 131071u);
+  const double now = Input::time();
+  if (g_tip.id != id || now - g_tip.last > 0.25) g_tip = {id, now, now}; // another anchor, or the pointer left for a while: dwell restarts
+  g_tip.last = now;
+  const double shown = now - g_tip.since - kTooltipDwell;
+  if (shown < 0.0) return;
+  const float a = UI::Motion::reduced() ? 1.0f : UI::Motion::clamp01(static_cast<float>(shown) / UI::Motion::fast);
+
+  // Wrap to the width of a short paragraph; explicit '\n' starts a new line
+  const ::Font font = UI::Fonts::body();
+  constexpr float size = 16.0f, maxW = 320.0f, pad = 10.0f, lineH = 22.0f;
+  std::vector<std::string> lines;
+  std::istringstream paragraphs(text);
+  for (std::string para; std::getline(paragraphs, para);) {
+    std::string line;
+    std::istringstream words(para);
+    for (std::string word; words >> word;) {
+      const std::string trial = line.empty() ? word : line + " " + word;
+      if (!line.empty() && MeasureTextEx(font, trial.c_str(), size, 0).x > maxW) { lines.push_back(line); line = word; }
+      else line = trial;
+    }
+    lines.push_back(line);
+  }
+  float w = 0.0f;
+  for (const std::string& l : lines) w = std::max(w, MeasureTextEx(font, l.c_str(), size, 0).x);
+  const float h = lineH * static_cast<float>(lines.size()) + 2 * pad - 4.0f;
+  const float W = static_cast<float>(GetScreenWidth()), H = static_cast<float>(GetScreenHeight());
+  float x = anchor.x + anchor.width / 2 - (w + 2 * pad) / 2;
+  float y = anchor.y + anchor.height + 8.0f;
+  if (y + h > H - 6.0f) y = anchor.y - h - 8.0f;
+  x = std::clamp(x, 6.0f, std::max(6.0f, W - w - 2 * pad - 6.0f));
+  const Rectangle box = {std::floor(x), std::floor(y), w + 2 * pad, h};
+  auto fade = [a](Color c) { c.a = static_cast<unsigned char>(c.a * a); return c; };
+  DrawRectangleRounded({box.x + 1, box.y + 2, box.width, box.height}, 0.2f, 8, fade(UI::Color::shadow));
+  DrawRectangleRounded(box, 0.2f, 8, fade({31, 30, 29, 238}));
+  for (size_t i = 0; i < lines.size(); ++i)
+    DrawTextEx(font, lines[i].c_str(), {box.x + pad, std::floor(box.y + pad - 2.0f + static_cast<float>(i) * lineH)}, size, 0, fade({250, 249, 245, 255}));
+}
+
 std::vector<Rectangle> column(Rectangle area, int n, float itemH, float gap, Align align) {
   const float total = n * itemH + (n - 1) * gap;
   const float y0 = align == Align::Center ? area.y + (area.height - total) / 2 : area.y;
@@ -55,6 +107,7 @@ void Button::enterAfter(float delay) {
 
 bool Button::update(float dt, bool reachable) {
   const bool over = reachable && contains(rect, Input::mousePosition());
+  over_ = over && !g_consumed;
   hot_ = over && enabled && !g_consumed;
   if (over) consumePointer();
 
@@ -114,27 +167,50 @@ void Button::draw(float alpha) const {
     DrawTexturePro(*icon, {0, 0, static_cast<float>(icon->width), static_cast<float>(icon->height)},
                    {std::floor(r.x + (r.width - side) / 2), std::floor(r.y + (r.height - side) / 2), side, side}, {0, 0}, 0.0f,
                    fade(enabled ? WHITE : Color{255, 255, 255, 110}));
+    if (!tip.empty() && over_) ui::tooltip(rect, tip);
     return;
   }
   const ::Font font = UI::Fonts::button();
-  float size = UI::Font::button;
-  Vector2 ts = MeasureTextEx(font, label.c_str(), size, 0.0f);
-  const float maxW = r.width - 2 * UI::Space::md;  // shrink a long label (min 14 px) instead of overflowing
-  if (ts.x > maxW) {
-    size = std::fmax(static_cast<float>(UI::Font::minimum), size * maxW / ts.x);
-    ts = MeasureTextEx(font, label.c_str(), size, 0.0f);
-  }
-  std::string shown = label;
-  if (ellipsize && ts.x > maxW) {
-    // cut whole UTF-8 characters off the end until "<text>..." fits
-    while (!shown.empty() && ts.x > maxW) {
-      do shown.pop_back(); while (!shown.empty() && (static_cast<unsigned char>(shown.back()) & 0xC0) == 0x80);
-      ts = MeasureTextEx(font, (shown + "...").c_str(), size, 0.0f);
+  const float nominal = static_cast<float>(UI::Font::button);
+  float size = nominal;
+  auto widthOf = [&](const std::string& t, float sz) { return MeasureTextEx(font, t.c_str(), sz, 0.0f).x; };
+  const float pad = UI::Space::md;
+  const float maxW = r.width - 2 * pad;
+  const float textH = MeasureTextEx(font, "Ag", nominal, 0.0f).y;
+  const float ty = std::floor(r.y + (r.height - textH) / 2);
+  if (!detail.empty() || leftAligned) {
+    // A row of a list: the title at the left, the muted detail at the right; only the title is cut
+    const ::Font small = UI::Fonts::body();
+    const float dw = detail.empty() ? 0.0f : MeasureTextEx(small, detail.c_str(), UI::Font::body, 0.0f).x;
+    const float room = maxW - (detail.empty() ? 0.0f : dw + pad);
+    const std::string shown = ellipsize ? ui::ellipsized(label, room, [&](const std::string& t) { return widthOf(t, nominal); }) : label;
+    const float shownW = widthOf(shown, nominal);
+    if (ui::audit::enabled()) ui::audit::fit(detail.empty() ? "row label" : "row label + detail", shown, shownW + (detail.empty() ? 0.0f : dw + pad), textH,
+                   {0, 0, maxW, r.height});
+    DrawTextEx(font, shown.c_str(), {std::floor(r.x + pad), ty}, nominal, 0.0f, fade(text));
+    if (!detail.empty()) {
+      const Color muted = lerpColor(text, bg, 0.38f);
+      DrawTextEx(small, detail.c_str(), {std::floor(r.x + r.width - pad - dw), std::floor(r.y + (r.height - UI::Font::body) / 2)},
+                 UI::Font::body, 0.0f, fade(enabled ? muted : text));
     }
-    shown += "...";
+    if (!tip.empty() && over_) ui::tooltip(rect, tip);
+    return;
   }
-  DrawTextEx(font, shown.c_str(), {std::floor(r.x + (r.width - ts.x) / 2), std::floor(r.y + (r.height - ts.y) / 2)},
-             size, 0.0f, fade(text));
+  float w = widthOf(label, size);
+  std::string shown = label;
+  if (w > maxW) {
+    if (ellipsize) {
+      shown = ui::ellipsized(label, maxW, [&](const std::string& t) { return widthOf(t, nominal); });
+    } else {
+      size = std::fmax(static_cast<float>(UI::Font::minimum), size * maxW / w); // shrink a long label (min 14 px) instead of overflowing
+      if (ui::audit::enabled()) ui::audit::shrunk("button label", label, size, nominal);
+    }
+  }
+  const Vector2 ts = MeasureTextEx(font, shown.c_str(), size, 0.0f);
+  if (ui::audit::enabled()) ui::audit::fit("button label", shown, ts.x, ts.y, {0, 0, r.width - 8.0f, r.height});
+  DrawTextEx(font, shown.c_str(), {std::floor(r.x + (r.width - ts.x) / 2), std::floor(r.y + (r.height - ts.y) / 2)}, size, 0.0f,
+             fade(text));
+  if (!tip.empty() && over_) ui::tooltip(rect, tip);
 }
 
 Toggle::Toggle(Rectangle r, bool& value, const char* onLabel, const char* offLabel)
@@ -230,6 +306,13 @@ void ButtonList::draw(float alpha) const {
     DrawRectangleRoundedLinesEx(r, UI::Space::radius, 8, UI::Space::outline, fade(UI::Color::selected));
     const float barH = r.height * 0.5f;
     DrawRectangleRounded({r.x + 8, r.y + (r.height - barH) / 2, 4, barH}, 1.0f, 4, fade(UI::Color::selected));
+  }
+  if (clipped() && maxScroll_ > 0.0f) {
+    // Rows that continue past the viewport fade out instead of being cut through their text
+    const float fh = 18.0f, w = view_.width - scrollbarW_;
+    const Color bg = UI::Color::bg, clear = {bg.r, bg.g, bg.b, 0}, solid = {bg.r, bg.g, bg.b, static_cast<unsigned char>(255.0f * alpha)};
+    if (scroll_ < maxScroll_ - 0.5f) DrawRectangleGradientV(static_cast<int>(view_.x), static_cast<int>(view_.y + view_.height - fh), static_cast<int>(w), static_cast<int>(fh), clear, solid);
+    if (scroll_ > 0.5f) DrawRectangleGradientV(static_cast<int>(view_.x), static_cast<int>(view_.y), static_cast<int>(w), static_cast<int>(fh), solid, clear);
   }
   if (clipped()) EndScissorMode();
 

@@ -1,4 +1,6 @@
 #include "Screens/ModeSelectScreen.h"
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include "App.h"
 #include "Render/UITheme.h"
@@ -68,7 +70,10 @@ void ModeSelectScreen::buildList() {
   const float W = static_cast<float>(GetScreenWidth()), H = static_cast<float>(GetScreenHeight());
   const float top = _vs ? kListYVsComputer : kListYHotSeat;
   const float itemH = UI::Space::buttonHeight + 4.0f, gap = UI::Space::sm + 4.0f;
-  const Rectangle viewport = {W / 2 - 210.0f, top, 420.0f, H - top - 120.0f};  // leaves room for the Back / Play row
+  // Leaves room for the Back / Play row, and holds a whole number of rows: the last visible one is never cut through its text
+  const float rowPitch = itemH + gap;
+  const float rows = std::max(1.0f, std::floor((H - top - 120.0f + gap) / rowPitch));
+  const Rectangle viewport = {W / 2 - 210.0f, top, 420.0f, rows * rowPitch - gap};
   const float scrollbarW = 20.0f;
   const auto slots = ui::column({viewport.x + 10.0f, viewport.y, viewport.width - scrollbarW - 20.0f, viewport.height},
                                 static_cast<int>(titles.size()), itemH, gap, ui::Align::Top);

@@ -9,7 +9,7 @@ clicksq 0 2 d1
 wait 20
 clicksq 0 2 e1
 wait 60
-click 842 90         # Submit
+click 632 90         # Submit
 move 880 740
 wait 5
 waitai

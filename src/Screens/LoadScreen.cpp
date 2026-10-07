@@ -11,7 +11,7 @@ constexpr float kListW = 520.0f, kDeleteW = 110.0f, kRowH = UI::Space::buttonHei
 constexpr float kNavW = 200.0f;
 constexpr float kListTop = 140.0f;
 
-std::string slotLabel(App& app, int slot) { return "Slot " + std::to_string(slot + 1) + ": " + app.saves.slot(slot).describe(); }
+std::string slotLabel(App& app, int slot) { return "Slot " + std::to_string(slot + 1) + ": " + app.saves.slot(slot).headline(); }
 } // namespace
 
 LoadScreen::LoadScreen() {
@@ -41,6 +41,7 @@ void LoadScreen::build(App& app) {
   _slots = ui::ButtonList(labels, slots);
   _slots.selectable = false;
   _slots.setEllipsize(true);
+  for (int i = 0; i < savegame::kSlots; ++i) _slots.setLabel(static_cast<size_t>(i), labels[static_cast<size_t>(i)], app.saves.slot(i).detail());
   for (int i = 0; i < savegame::kSlots; ++i) _slots.setEnabled(i, _used[i]);
   _confirm.clear();
 }

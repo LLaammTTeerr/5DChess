@@ -1,0 +1,14 @@
+# The longest list row the game can produce: "Simplify - Knight vs Bishop" against the computer, in the Load screen and in the game's Save
+# panel. The title is cut with "..." at its normal size and the turns / date stay whole at the right; every row is left-aligned.
+# Layout (1400x800): main menu Load game (150,310); the first slot row (600,166); in the game Save (72,77).
+wait 20
+slot 1 ../records/vs-long-title.5dr
+slot 2 ../records/vs-white-easy.5dr
+click 150 310        # Load game
+wait 40
+capture layout-load-long-labels
+click 600 166        # slot 1
+wait 120
+click 72 77          # Save: the panel lists the three slots
+wait 30
+capture layout-save-long-labels

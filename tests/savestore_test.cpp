@@ -68,6 +68,10 @@ TEST_CASE("slots: write, read back, summarize, delete (files)") {
   CHECK(summary.turns == 4);
   CHECK(summary.date == "2026-10-06 14:32");
   CHECK(summary.describe().find("4 turns") != std::string::npos);
+  CHECK(summary.headline().find(summary.title) == 0); // the list row: the title at the left ...
+  CHECK(summary.detail() == "4 turns \xC2\xB7 2026-10-06 14:32"); // ... the turns and the date, muted, at the right
+  CHECK(store.slot(0).headline() == "Empty");
+  CHECK(store.slot(0).detail().empty());
   CHECK(store.slot(0).state == SlotSummary::State::Empty);
 
   const LoadResult loaded = store.loadSlot(1);

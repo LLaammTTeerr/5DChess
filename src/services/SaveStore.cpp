@@ -197,6 +197,22 @@ std::string SlotSummary::describe() const {
   return out;
 }
 
+std::string SlotSummary::headline() const {
+  switch (state) {
+    case State::Empty: return "Empty";
+    case State::Unreadable: return "Unreadable save";
+    case State::Ready: break;
+  }
+  return title + (vsComputer ? " vs Computer" : "");
+}
+
+std::string SlotSummary::detail() const {
+  if (state != State::Ready) return "";
+  std::string out = std::to_string(turns) + (turns == 1 ? " turn" : " turns");
+  if (!date.empty()) out += " \xC2\xB7 " + date;
+  return out;
+}
+
 // ---- SaveStore ---------------------------------------------------------------------------------------------------------
 
 bool SaveStore::autosave(const Chess::IGame& game, const play::VsAi* vs) {

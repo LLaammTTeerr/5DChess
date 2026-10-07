@@ -9,6 +9,9 @@
 #include "Render/PieceTheme.h"
 #include "Render/UITheme.h"
 #include "play/Paths.h"
+#include "ui/Audit.h"
+#include "ui/TextFit.h"
+#include "ui/Widgets.h"
 
 namespace play {
 
@@ -56,6 +59,15 @@ void triangleBoth(Vector2 a, Vector2 b, Vector2 c, Color color) {
 }
 
 } // namespace
+
+float BoardScene::presentColumnX(float halfTurn) {
+  const float x0 = BoardLayout::boardRect(0, 0).centerX();
+  return x0 + halfTurn * BoardLayout::kPitch;
+}
+
+void BoardScene::queueTip(Rectangle anchor, std::string text) const {
+  if (!ui::pointerConsumed() && ui::hovered(anchor)) _tip = PendingTip{anchor, std::move(text)};
+}
 
 std::string timelineLabel(int id) { return id > 0 ? "L+" + std::to_string(id) : "L" + std::to_string(id); }
 
@@ -176,8 +188,7 @@ void BoardScene::bakeAurora() {
 void BoardScene::drawPresentColumn(const SceneFrame& f, float top) {
   const BoardStyle& st = f.style;
   const float zoom = f.zoom();
-  const Rect present = BoardLayout::boardRect(0, f.view.presentHalfTurn);
-  const float cx = f.toScreen({present.centerX(), 0}).x;
+  const float cx = f.toScreen({presentColumnX(presentColumn(f)), 0}).x;
   const float halfW = (BoardLayout::kPitch / 2.0f) * zoom;
   const float bottom = static_cast<float>(GetScreenHeight()) - 6.0f;
   if (cx + halfW < 0 || cx - halfW > GetScreenWidth()) return;
@@ -224,13 +235,17 @@ void BoardScene::drawLanes(const SceneFrame& f, float top) {
     }
   }
 
+  // The lanes themselves never run up under the ruler: they start at the boards' area
+  const float laneTop = std::max(top, f.safe.y - 6.0f);
+  EndScissorMode();
+  BeginScissorMode(0, static_cast<int>(laneTop), W, H - static_cast<int>(laneTop));
   if (!f.view.timelines.empty() && st.lane != BoardStyle::Lane::Thread) {
     const int lo = f.view.timelines.front().id, hi = f.view.timelines.back().id;
     for (int l = lo; l <= hi; ++l) {
       const TimelineInfo* tl = f.view.timeline(l);
       const float y0 = f.toScreen({0, laneCenterY(l) - BoardLayout::kPitch / 2.0f}).y;
       const float h = BoardLayout::kPitch * zoom;
-      if (y0 + h < top || y0 > H) continue;
+      if (y0 + h < laneTop || y0 > H) continue;
       if (st.lane == BoardStyle::Lane::Band) {
         const Color tint = st.laneTint[laneColor(l)];
         const Rectangle r = {8.0f, y0 + 2.0f, W - 16.0f, h - 4.0f};
@@ -243,6 +258,8 @@ void BoardScene::drawLanes(const SceneFrame& f, float top) {
     }
   }
 
+  EndScissorMode();
+  BeginScissorMode(0, static_cast<int>(top), W, H - static_cast<int>(top));
   drawPresentColumn(f, top);
   EndScissorMode();
 }
@@ -277,8 +294,28 @@ void BoardScene::drawTails(const SceneFrame& f) const {
 
 namespace {
 
-// The arc of a jump: bottom centre of the source card, below and across to the bottom centre of the target card. Jumps
-// within one column leave through the gap to the right of the cards instead (a straight dip would run through them).
+// Rounded corners through the corners of a polyline (a corner's radius is cut to half of each run it joins)
+void roundedRoute(path::Poly& poly, const Vector2* pts, int n, float radius) {
+  poly.n = 0;
+  poly.add(pts[0]);
+  for (int i = 1; i + 1 < n; ++i) {
+    const Vector2 a = pts[i - 1], b = pts[i], c = pts[i + 1];
+    const float la = std::hypot(b.x - a.x, b.y - a.y), lc = std::hypot(c.x - b.x, c.y - b.y);
+    const float r = std::min({radius, la / 2.0f, lc / 2.0f});
+    if (r < 0.5f) { poly.add(b); continue; }
+    const Vector2 p0 = {b.x + (a.x - b.x) / la * r, b.y + (a.y - b.y) / la * r};
+    const Vector2 p1 = {b.x + (c.x - b.x) / lc * r, b.y + (c.y - b.y) / lc * r};
+    for (int k = 0; k <= 5; ++k) {
+      const float t = k / 5.0f, u = 1.0f - t;
+      poly.add({u * u * p0.x + 2 * u * t * b.x + t * t * p1.x, u * u * p0.y + 2 * u * t * b.y + t * t * p1.y});
+    }
+  }
+  poly.add(pts[n - 1]);
+}
+
+// The line of a jump: from the bottom centre of the source card down into the gap under its lane, along that gap and down (or up) the
+// column gap next to the source to the gap under the target's lane, then along it and up into the bottom centre of the target card, so it
+// runs between the boards instead of across them. Jumps within one column leave through the gap to the right of the cards instead.
 void jumpPath(path::Poly& poly, const BoardStyle& style, Vector2 s, Vector2 d) {
   const bool sameColumn = std::fabs(d.x - s.x) < 100.0f;
   if (sameColumn) {
@@ -297,25 +334,47 @@ void jumpPath(path::Poly& poly, const BoardStyle& style, Vector2 s, Vector2 d) {
     }
     return;
   }
-  if (style.connector == BoardStyle::Connector::Elbow) {
-    const float ym = std::max(s.y, d.y) + 58.0f;
-    const float dir = d.x >= s.x ? 1.0f : -1.0f;
-    const float r = std::min(9.0f, std::fabs(d.x - s.x) / 2.0f);
-    poly.n = 0;
-    poly.add(s);
-    auto corner = [&](Vector2 from, Vector2 control, Vector2 to) {
-      for (int i = 0; i <= 5; ++i) {
-        const float t = i / 5.0f, u = 1.0f - t;
-        poly.add({u * u * from.x + 2 * u * t * control.x + t * t * to.x, u * u * from.y + 2 * u * t * control.y + t * t * to.y});
-      }
-    };
-    corner({s.x, ym - r}, {s.x, ym}, {s.x + dir * r, ym});
-    corner({d.x - dir * r, ym}, {d.x, ym}, {d.x, ym - r});
-    poly.add(d);
-    return;
+  const float rowGap = BoardLayout::kPitch - (BoardLayout::kBoardSize + 2 * BoardLayout::kCardPad + BoardLayout::kCardFooter);
+  const float ys = s.y + rowGap / 2.0f, yd = d.y + rowGap / 2.0f;
+  const float dir = d.x >= s.x ? 1.0f : -1.0f;
+  Vector2 pts[6];
+  int n = 0;
+  pts[n++] = s;
+  pts[n++] = {s.x, ys};
+  if (std::fabs(yd - ys) > 1.0f) {
+    const float xv = s.x + dir * BoardLayout::kPitch / 2.0f; // the column gap beside the source board
+    pts[n++] = {xv, ys};
+    pts[n++] = {xv, yd};
   }
-  const float drop = 90.0f + 0.12f * std::fabs(d.x - s.x);
-  path::bezier(poly, s, {s.x, s.y + drop}, {d.x, d.y + drop}, d);
+  pts[n++] = {d.x, yd};
+  pts[n++] = d;
+  roundedRoute(poly, pts, n, style.connector == BoardStyle::Connector::Elbow ? 5.0f : 9.0f);
+}
+
+constexpr float kBadgeRadius = 21.0f; // fits the column gap between two cards (44 world units)
+
+struct BadgeSpot {
+  Vector2 at;
+  bool clear; // the badge touches no card
+};
+
+// Where the badge of a jump goes: the point of its line nearest the middle that no card lies under (a badge over a board hides the
+// pieces the player is reading); if there is none, the middle (and the caller drops the text).
+BadgeSpot badgeSpot(const MultiverseView& view, const path::Poly& poly) {
+  static constexpr float tries[] = {0.5f, 0.44f, 0.56f, 0.38f, 0.62f, 0.32f, 0.68f, 0.26f, 0.74f, 0.2f, 0.8f};
+  auto clearAt = [&](Vector2 m) {
+    for (const BoardInfo& b : view.boards) {
+      const Rect c = BoardLayout::cardRect(BoardLayout::boardRect(b.timeline, b.halfTurn));
+      const float nx = std::clamp(m.x, c.x, c.x + c.w), ny = std::clamp(m.y, c.y, c.y + c.h);
+      if (std::hypot(m.x - nx, m.y - ny) < kBadgeRadius - 0.5f) return false;
+    }
+    return true;
+  };
+  for (const float t : tries) {
+    const Vector2 m = poly.at(t);
+    if (clearAt(m)) return {m, true};
+  }
+  return {poly.at(0.5f), false};
 }
 
 Vector2 cardBottom(int timeline, int halfTurn) {
@@ -381,8 +440,8 @@ void BoardScene::drawJumpBadges(const SceneFrame& f) const {
     const Vector2 s = cardBottom(jump.move.from.l, jump.move.from.t), d = cardBottom(jump.move.to.l, jump.move.to.t);
     path::Poly poly;
     jumpPath(poly, st, s, d);
-    const Vector2 m = poly.at(0.5f);
-    const float radius = 28.0f;
+    const Vector2 m = badgeSpot(f.view, poly).at;
+    const float radius = kBadgeRadius;
     switch (st.connector) {
       case BoardStyle::Connector::Curve:
         _soft.draw({m.x - radius, m.y - radius, 2 * radius, 2 * radius}, fade(st.glowWhite, alpha));
@@ -441,9 +500,11 @@ void BoardScene::drawChecks(const SceneFrame& f) const {
 void BoardScene::drawCardLabels(const SceneFrame& f, const BoardLayout& layout) const {
   const BoardStyle& st = f.style;
   const float zoom = f.zoom();
-  if (BoardLayout::kCardFooter * zoom < 14.0f) return; // too small to read: the lane labels and the ruler still address the board
-  const char* mono = "ui.mono";
-  const Font font = fontOf(mono, 12);
+  constexpr float size = 12.0f; // a fixed size on screen: the label does not scale with the board
+  const Font font = fontOf("ui.mono", 12);
+  // The label strip below the board holds the text while it is tall enough; smaller, the board under the pointer names itself
+  const bool inStrip = BoardLayout::kCardFooter * zoom >= 14.0f;
+  const Vector2 mouse = Input::mousePosition();
   const auto& slots = layout.boards();
   for (size_t i = 0; i < slots.size() && i < f.view.boards.size(); ++i) {
     const Rect card = BoardLayout::cardRect(slots[i].rect);
@@ -454,7 +515,6 @@ void BoardScene::drawCardLabels(const SceneFrame& f, const BoardLayout& layout) 
       continue;
     const bool white = info.whiteToMove;
     const float footer = BoardLayout::kCardFooter * zoom;
-    const float ty = p.y + (footer - 12.0f) / 2.0f - 1.0f;
     const float a = info.inactive ? 0.55f : 1.0f;
     std::string label;
     Color color;
@@ -472,8 +532,25 @@ void BoardScene::drawCardLabels(const SceneFrame& f, const BoardLayout& layout) 
         color = white ? st.ink : WHITE;
         break;
     }
-    drawText(font, label, p.x + 9.0f * std::min(zoom, 1.0f), ty, 12.0f, fade(color, a));
-    if (st.card == BoardStyle::Card::Ink && info.role == BoardRole::Mandatory) {
+    if (inStrip) {
+      // Clipped to the card (to the left of the marker dot at its right end), never spilling onto the neighbours
+      const float left = 9.0f * std::min(zoom, 1.0f);
+      const float room = card.w * zoom - left - 22.0f * std::min(zoom, 1.0f);
+      const std::string shown = ui::ellipsized(label, room, [&](const std::string& t) { return textWidth(font, t, size); });
+      drawText(font, shown, p.x + left, p.y + (footer - size) / 2.0f - 1.0f, size, fade(color, a));
+      if (ui::audit::enabled()) ui::audit::fit("card label", shown, textWidth(font, shown, size), size, {0, 0, card.w * zoom, footer});
+    } else {
+      const Vector2 top = f.toScreen({card.x, card.y});
+      if (CheckCollisionPointRec(mouse, {top.x, top.y, card.w * zoom, card.h * zoom}) && !ui::pointerConsumed()) {
+        const float tw = textWidth(font, label, size);
+        const Rectangle tag = {std::clamp(top.x, f.safe.x, std::max(f.safe.x, f.safe.x + f.safe.width - tw - 14.0f)),
+                               std::max(top.y - 24.0f, f.safe.y + 2.0f), tw + 14.0f, 20.0f};
+        drawRoundedRect(tag, 10.0f, st.hudFill);
+        drawRoundedLines(tag, 10.0f, 1.0f, st.hudBorder);
+        drawText(font, label, tag.x + 7.0f, tag.y + 3.0f, size, st.hudText);
+      }
+    }
+    if (inStrip && st.card == BoardStyle::Card::Ink && info.role == BoardRole::Mandatory) {
       const Vector2 corner = f.toScreen({card.x + card.w, card.y + card.h});
       drawTextCentered(font, "!", corner.x - 8.0f, corner.y - 17.0f, 12.0f, white ? WHITE : st.ink);
     }
@@ -482,13 +559,14 @@ void BoardScene::drawCardLabels(const SceneFrame& f, const BoardLayout& layout) 
 
 void BoardScene::drawJumpLabels(const SceneFrame& f) const {
   const BoardStyle& st = f.style;
-  if (f.zoom() < 0.45f) return;
-  const Font font = fontOf(st.card == BoardStyle::Card::Paper ? "ui.public_sans" : "ui.mono", 12);
+  const Font font = fontOf(st.card == BoardStyle::Card::Paper ? "ui.public_sans" : "ui.mono", UI::Font::minimum);
+  const float zoom = f.zoom();
   for (const JumpInfo& jump : f.view.jumps) {
     const Vector2 s = cardBottom(jump.move.from.l, jump.move.from.t), d = cardBottom(jump.move.to.l, jump.move.to.t);
     path::Poly poly;
     jumpPath(poly, st, s, d);
-    const Vector2 m = f.toScreen(poly.at(0.5f));
+    const BadgeSpot spot = badgeSpot(f.view, poly);
+    const Vector2 m = f.toScreen(spot.at);
     const auto& from = jump.move.from;
     const auto& to = jump.move.to;
     std::string text = "jump ";
@@ -496,10 +574,68 @@ void BoardScene::drawJumpLabels(const SceneFrame& f) const {
     if (from.l != to.l && from.t != to.t) text += timelineLabel(from.l) + " " + a + " -> " + timelineLabel(to.l) + " " + b;
     else if (from.t != to.t) text += a + " -> " + b;
     else text += timelineLabel(from.l) + " -> " + timelineLabel(to.l);
-    Color color = st.connector == BoardStyle::Connector::Luminous ? st.whiteBranch : st.connector == BoardStyle::Connector::Elbow ? st.ink : st.accent;
-    if (st.connector == BoardStyle::Connector::Curve) color = {184, 83, 47, 255}; // the accent is too light for small text
-    drawTextCentered(font, text, m.x, m.y + 28.0f * f.zoom() + 6.0f, 12.0f, fade(color, jump.pending ? 1.0f : 0.75f));
+
+    // The text sits under the badge only where it covers no board; otherwise it is the badge's tooltip
+    const float tw = textWidth(font, text, UI::Font::minimum);
+    const float r = kBadgeRadius * zoom;
+    const Rectangle label = {m.x - tw / 2.0f, m.y + r + 3.0f, tw, UI::Font::minimum + 2.0f};
+    bool free = spot.clear && zoom >= 0.45f;
+    for (const BoardInfo& bi : f.view.boards) {
+      if (!free) break;
+      const Rect c = cardOf(bi.timeline, bi.halfTurn);
+      const Vector2 p = f.toScreen({c.x, c.y});
+      if (CheckCollisionRecs(label, {p.x, p.y, c.w * zoom, c.h * zoom})) free = false;
+    }
+    if (free) {
+      Color color = st.connector == BoardStyle::Connector::Luminous ? st.whiteBranch : st.connector == BoardStyle::Connector::Elbow ? st.ink : st.accent;
+      if (st.connector == BoardStyle::Connector::Curve) color = {184, 83, 47, 255}; // the accent is too light for small text
+      drawTextCentered(font, text, m.x, label.y, UI::Font::minimum, fade(color, jump.pending ? 1.0f : 0.75f));
+    } else {
+      queueTip({m.x - std::max(r, 10.0f), m.y - std::max(r, 10.0f), 2 * std::max(r, 10.0f), 2 * std::max(r, 10.0f)}, text);
+    }
   }
+}
+
+namespace {
+std::string upper(std::string s) {
+  for (char& c : s) if (c >= 'a' && c <= 'z') c = static_cast<char>(c - 'a' + 'A');
+  return s;
+}
+} // namespace
+
+std::optional<BoardScene::Minimap> BoardScene::minimap(const SceneFrame& f, float y, float height) {
+  if (f.view.boards.empty() || f.view.timelines.empty()) return std::nullopt;
+  const float zoom = f.zoom();
+  bool off = zoom < 0.3f;
+  for (const BoardInfo& b : f.view.boards) {
+    if (off) break;
+    const Rect c = cardOf(b.timeline, b.halfTurn);
+    const Vector2 p = f.toScreen({c.x, c.y});
+    off = p.x < f.safe.x - 1.0f || p.y < f.safe.y - 1.0f || p.x + c.w * zoom > f.safe.x + f.safe.width + 1.0f ||
+          p.y + c.h * zoom > f.safe.y + f.safe.height + 1.0f;
+  }
+  if (!off) return std::nullopt;
+  const int rows = f.view.timelines.back().id - f.view.timelines.front().id + 1;
+  const int cols = f.view.lastHalfTurn - f.view.firstHalfTurn + 1;
+  Minimap m;
+  m.cell = std::clamp(std::floor((height - 6.0f) / static_cast<float>(rows)) - 1.0f, 2.0f, 6.0f);
+  const float step = m.cell + 1.0f;
+  const float w = static_cast<float>(cols) * step - 1.0f, h = static_cast<float>(rows) * step - 1.0f;
+  m.rect = {f.safe.x + f.safe.width - w - 10.0f, y + (height - h) / 2.0f - 1.0f, w, h};
+  m.firstHalfTurn = f.view.firstHalfTurn;
+  m.topTimeline = f.view.timelines.back().id;
+  return m;
+}
+
+std::optional<std::pair<int, int>> BoardScene::minimapBoardAt(const SceneFrame& f, float y, float height, Vector2 point) {
+  const auto m = minimap(f, y, height);
+  if (!m || !CheckCollisionPointRec(point, {m->rect.x - 2.0f, m->rect.y - 2.0f, m->rect.width + 4.0f, m->rect.height + 4.0f})) return std::nullopt;
+  const float step = m->cell + 1.0f;
+  const int col = std::clamp(static_cast<int>(std::floor((point.x - m->rect.x) / step)), 0, f.view.lastHalfTurn - m->firstHalfTurn);
+  const int row = std::max(0, static_cast<int>(std::floor((point.y - m->rect.y) / step)));
+  const int timeline = m->topTimeline - row, halfTurn = m->firstHalfTurn + col;
+  if (!f.view.board(timeline, halfTurn)) return std::nullopt;
+  return std::make_pair(timeline, halfTurn);
 }
 
 void BoardScene::drawRuler(const SceneFrame& f, float y, float height) const {
@@ -508,7 +644,7 @@ void BoardScene::drawRuler(const SceneFrame& f, float y, float height) const {
   const float pitch = BoardLayout::kPitch * zoom;
   const float baseline = y + height - 2.0f;
   const bool atlas = st.lane == BoardStyle::Lane::Band, deep = st.lane == BoardStyle::Lane::Thread;
-  const Font labelFont = atlas ? fontOf("ui.montserrat_bold", 14) : deep ? fontOf("ui.mono", 13) : fontOf("ui.mono", 13);
+  const Font labelFont = atlas ? fontOf("ui.montserrat_bold", 14) : fontOf("ui.mono", 13);
   const Font letterFont = fontOf(atlas ? "ui.public_sans" : "ui.mono", 10);
 
   BeginScissorMode(static_cast<int>(f.safe.x - 6), static_cast<int>(y - 4), static_cast<int>(f.safe.width + 12), static_cast<int>(height + 8));
@@ -519,43 +655,92 @@ void BoardScene::drawRuler(const SceneFrame& f, float y, float height) const {
   else DrawRectangle(static_cast<int>(x0), static_cast<int>(baseline), static_cast<int>(x1 - x0), 1, st.ink);
 
   const int present = f.view.presentHalfTurn;
-  const float presentX = f.toScreen({BoardLayout::boardRect(0, present).centerX(), 0}).x;
+  const float presentX = f.toScreen({presentColumnX(presentColumn(f)), 0}).x;
+
+  // The present marker names the turn it is on ("Present . T3w"): it sits where the turn's own label would be
+  const std::string badgeText = atlas ? std::string("Present ") + kDot + " " + boardLabel(present) : upper(std::string("Present ") + kDot + " " + boardLabel(present));
+  const Font badgeFont = atlas ? fontOf("ui.public_sans_bold", 14) : fontOf("ui.mono", 14);
+  const float badgeSpacing = atlas ? 0.0f : 1.0f;
+  const float badgeW = textWidth(badgeFont, badgeText, 14.0f, badgeSpacing) + 22.0f;
+  const float badgeH = 22.0f;
+
   const int stride = std::max(1, static_cast<int>(std::ceil(46.0f / (2.0f * pitch)))); // label every n-th turn when crowded
   const Color tickColor = atlas ? Color{185, 165, 129, 255} : deep ? fade(st.grid, 0.6f) : st.ink;
   const Color labelColor = atlas ? st.ink : deep ? st.hudMuted : st.ink;
+  const Vector2 mouse = Input::mousePosition();
+  const bool overRuler = mouse.y >= y - 2.0f && mouse.y <= y + height && mouse.x >= x0 && mouse.x <= x1;
+  float bestTick = 1e9f;
+  Rectangle tickTip{};
+  std::string tickText;
 
   for (int c = f.view.firstHalfTurn; c <= f.view.lastHalfTurn; ++c) {
     const float x = f.toScreen({BoardLayout::boardRect(0, c).centerX(), 0}).x;
     if (x < x0 - 30 || x > x1 + 30) continue;
     const bool white = c % 2 == 0, isPresent = c == present;
     const float tick = white ? 8.0f : 5.0f;
+    const bool underBadge = std::fabs(x - presentX) < badgeW / 2.0f + 6.0f;
     DrawRectangle(static_cast<int>(std::round(x)), static_cast<int>(baseline - tick), 1 + (atlas ? 1 : 0), static_cast<int>(tick),
                   isPresent ? st.accent : tickColor);
-    if (white && ((c / 2) % stride == 0) && (isPresent || std::fabs(x - presentX) > 44.0f)) {
+    if (white && ((c / 2) % stride == 0) && !underBadge) {
       const std::string label = "T" + std::to_string(c / 2 + 1);
-      drawTextCentered(labelFont, label, x, y + 1.0f, 14.0f, isPresent ? st.accent : labelColor);
+      drawTextCentered(labelFont, label, x, y + 1.0f, 14.0f, labelColor);
     }
-    if (pitch >= 40.0f && (isPresent || std::fabs(x - presentX) > 44.0f || !white))
-      drawText(letterFont, white ? "w" : "b", x + 4.0f, baseline - 12.0f, 10.0f, isPresent ? st.accent : st.muted);
+    if (pitch >= 40.0f && !underBadge)
+      drawText(letterFont, white ? "w" : "b", x + 4.0f, baseline - 12.0f, 10.0f, st.muted);
+    if (overRuler && std::fabs(mouse.x - x) < bestTick && std::fabs(mouse.x - x) < std::max(10.0f, pitch / 2.0f)) {
+      bestTick = std::fabs(mouse.x - x);
+      tickTip = {x - 10.0f, y, 20.0f, height};
+      tickText = "Turn " + std::to_string(c / 2 + 1) + ", " + (white ? "White" : "Black");
+    }
   }
+  if (!tickText.empty()) queueTip(tickTip, tickText);
 
   // The present marker sits on the ruler at the present column
   if (presentX > x0 - 40 && presentX < x1 + 40) {
+    const float bx = std::clamp(presentX, x0 + badgeW / 2.0f, std::max(x0 + badgeW / 2.0f, x1 - badgeW / 2.0f));
+    const Rectangle pill = {std::floor(bx - badgeW / 2.0f), y, badgeW, badgeH};
+    const float ty = y + (badgeH - 14.0f) / 2.0f - 1.0f;
     if (atlas) {
-      const Rectangle pill = {presentX - 36, y, 72, 20};
-      drawRoundedRect(pill, 10.0f, st.accent);
-      drawTextCentered(fontOf("ui.public_sans_bold", 13), "Present", presentX, y + 2.0f, 13.0f, WHITE);
+      drawRoundedRect(pill, 11.0f, st.accent);
+      drawTextCentered(badgeFont, badgeText, bx, ty, 14.0f, WHITE);
     } else if (deep) {
-      const Rectangle pill = {presentX - 44, y, 88, 20};
-      drawRoundedRect(pill, 10.0f, {14, 30, 70, 255}); // opaque, so the ruler tick does not show through
-      drawRoundedRect(pill, 10.0f, fade(st.accent, 0.16f));
-      drawRoundedLines(pill, 10.0f, 1.0f, fade(st.accent, 0.8f));
-      drawTextCentered(fontOf("ui.mono", 12), "PRESENT", presentX, y + 3.0f, 12.0f, {197, 255, 243, 255}, 1.5f);
+      drawRoundedRect(pill, 11.0f, {14, 30, 70, 255}); // opaque, so the ruler tick does not show through
+      drawRoundedRect(pill, 11.0f, fade(st.accent, 0.16f));
+      drawRoundedLines(pill, 11.0f, 1.0f, fade(st.accent, 0.8f));
+      drawTextCentered(badgeFont, badgeText, bx, ty, 14.0f, {197, 255, 243, 255}, badgeSpacing);
     } else {
-      const Rectangle pill = {presentX - 36, y, 72, 20};
       DrawRectangleRec(pill, st.accent);
-      drawTextCentered(fontOf("ui.mono", 12), "PRESENT", presentX, y + 3.0f, 12.0f, WHITE, 1.0f);
+      drawTextCentered(badgeFont, badgeText, bx, ty, 14.0f, WHITE, badgeSpacing);
     }
+    if (ui::audit::enabled()) ui::audit::fit("present badge", badgeText, textWidth(badgeFont, badgeText, 14.0f, badgeSpacing), 14.0f, {0, 0, badgeW - 8.0f, badgeH});
+  }
+
+  // The strip of the whole multiverse at the right end, while part of it is out of view
+  if (const auto m = minimap(f, y, height)) {
+    const float step = m->cell + 1.0f;
+    const Rectangle back = {m->rect.x - 5.0f, m->rect.y - 4.0f, m->rect.width + 10.0f, m->rect.height + 8.0f};
+    drawRoundedRect(back, 5.0f, st.hudFill);
+    drawRoundedLines(back, 5.0f, 1.0f, st.hudBorder);
+    const float presentCol = (presentColumn(f) - static_cast<float>(m->firstHalfTurn)) * step;
+    DrawRectangleRec({m->rect.x + std::floor(presentCol) - 0.5f, m->rect.y - 2.0f, step, m->rect.height + 4.0f}, fade(st.accent, 0.3f));
+    for (const BoardInfo& b : f.view.boards) {
+      const float cx = m->rect.x + static_cast<float>(b.halfTurn - m->firstHalfTurn) * step;
+      const float cy = m->rect.y + static_cast<float>(m->topTimeline - b.timeline) * step;
+      Color c = b.role == BoardRole::Mandatory ? st.accent : b.role == BoardRole::Optional ? fade(st.muted, 0.9f) : fade(st.muted, 0.42f);
+      if (b.inactive) c = fade(c, 0.6f);
+      DrawRectangleRec({cx, cy, m->cell, m->cell}, c);
+    }
+    // The part the camera shows: from the safe area's corners back into board coordinates
+    const Vector2 w0 = GetScreenToWorld2D({f.safe.x, f.safe.y}, f.camera), w1 = GetScreenToWorld2D({f.safe.x + f.safe.width, f.safe.y + f.safe.height}, f.camera);
+    const float col0 = (w0.x - presentColumnX(0.0f)) / BoardLayout::kPitch + 0.5f - static_cast<float>(m->firstHalfTurn);
+    const float col1 = (w1.x - presentColumnX(0.0f)) / BoardLayout::kPitch + 0.5f - static_cast<float>(m->firstHalfTurn);
+    const float topY = laneCenterY(m->topTimeline);
+    const float row0 = (w0.y - topY) / BoardLayout::kPitch + 0.5f, row1 = (w1.y - topY) / BoardLayout::kPitch + 0.5f;
+    Rectangle view = {m->rect.x + col0 * step - 0.5f, m->rect.y + row0 * step - 0.5f, (col1 - col0) * step, (row1 - row0) * step};
+    const float vx0 = std::max(view.x, m->rect.x - 2.0f), vy0 = std::max(view.y, m->rect.y - 2.0f);
+    const float vx1 = std::min(view.x + view.width, m->rect.x + m->rect.width + 2.0f), vy1 = std::min(view.y + view.height, m->rect.y + m->rect.height + 2.0f);
+    if (vx1 > vx0 && vy1 > vy0) DrawRectangleLinesEx({vx0, vy0, vx1 - vx0, vy1 - vy0}, 1.0f, st.hudText);
+    queueTip(back, "The whole multiverse: click a board to go there");
   }
   EndScissorMode();
 }
@@ -564,55 +749,91 @@ void BoardScene::drawLaneLabels(const SceneFrame& f, Rectangle area) const {
   const BoardStyle& st = f.style;
   const float zoom = f.zoom();
   const float laneH = BoardLayout::kPitch * zoom;
-  if (laneH < 22.0f) return;
   const bool atlas = st.lane == BoardStyle::Lane::Band, deep = st.lane == BoardStyle::Lane::Thread;
   const float x = area.x + 14.0f;
-  BeginScissorMode(static_cast<int>(area.x), static_cast<int>(area.y), static_cast<int>(area.width), static_cast<int>(area.height));
-  for (const TimelineInfo& tl : f.view.timelines) {
-    const float cy = f.toScreen({0, laneCenterY(tl.id)}).y;
-    const bool roomy = laneH >= 88.0f;                      // the sub line and the inactive tag need room
-    const float blockH = roomy ? (tl.active ? 52.0f : 76.0f) : 24.0f;
-    float top = cy - blockH / 2.0f;
-    if (top + blockH < area.y || top > area.y + area.height) continue;
-    const float alpha = tl.active ? 1.0f : 0.72f;
-    const std::string label = timelineLabel(tl.id);
-    std::string sub = tl.created ? "from " + timelineLabel(tl.parent) + " " + kDot + " T" + std::to_string(tl.forkHalfTurn / 2 + 1)
-                                 : (tl.id == 0 ? "origin timeline" : "original");
-    const Color pillColor = st.lanePill[laneColor(tl.id)];
-    float y = top;
-    if (atlas) {
-      drawRoundedRect({x, y, 66, 24}, 12.0f, fade(pillColor, alpha));
-      drawTextCentered(fontOf("ui.montserrat_bold", 16), label, x + 33, y + 2.0f, 16.0f, fade(WHITE, alpha));
-      y += 28.0f;
-      if (roomy) drawText(fontOf("ui.public_sans", 12), sub, x, y, 12.0f, fade(st.muted, alpha));
-      y += 18.0f;
-      if (!tl.active && roomy) {
-        drawRoundedLines({x, y, 64, 22}, 11.0f, 1.2f, fade(st.muted, alpha));
-        drawTextCentered(fontOf("ui.public_sans", 12), "inactive", x + 32, y + 3.0f, 12.0f, fade(st.muted, alpha));
+  const float textRoom = area.x + area.width - x - 6.0f; // the column ends where the boards begin
+  constexpr float small = static_cast<float>(UI::Font::minimum);
+  auto fitted = [&](const Font& font, const std::string& t, float size, float spacing = 0.0f) {
+    return ui::ellipsized(t, textRoom, [&](const std::string& u) { return textWidth(font, u, size, spacing); });
+  };
+  if (laneH >= 22.0f) {
+    BeginScissorMode(static_cast<int>(area.x), static_cast<int>(area.y), static_cast<int>(area.width), static_cast<int>(area.height));
+    for (const TimelineInfo& tl : f.view.timelines) {
+      const float cy = f.toScreen({0, laneCenterY(tl.id)}).y;
+      // The sub line and the inactive tag need room; on a short lane only the pill is left (its tooltip says the rest)
+      const bool roomy = laneH >= 88.0f;
+      const float blockH = roomy ? (tl.active ? 54.0f : 82.0f) : 24.0f;
+      const float top = cy - blockH / 2.0f;
+      if (top + blockH < area.y || top > area.y + area.height) continue;
+      const float alpha = tl.active ? 1.0f : 0.72f;
+      const std::string label = timelineLabel(tl.id);
+      const std::string sub = tl.created ? "from " + timelineLabel(tl.parent) + " " + kDot + " T" + std::to_string(tl.forkHalfTurn / 2 + 1)
+                                         : (tl.id == 0 ? "origin timeline" : "original");
+      const Color pillColor = st.lanePill[laneColor(tl.id)];
+      float yy = top;
+      std::string tip = label + ": ";
+      tip += tl.created ? std::string("created by ") + (tl.byWhite ? "White" : "Black") + " at T" + std::to_string(tl.forkHalfTurn / 2 + 1) +
+                              ", branching from " + timelineLabel(tl.parent)
+                        : (tl.id == 0 ? "the timeline the game started on" : "one of the timelines the game started with");
+      if (!tl.active) tip += "\nInactive: this timeline is too far behind to need moves.";
+      if (atlas) {
+        drawRoundedRect({x, yy, 66, 24}, 12.0f, fade(pillColor, alpha));
+        drawTextCentered(fontOf("ui.montserrat_bold", 16), label, x + 33, yy + 2.0f, 16.0f, fade(WHITE, alpha));
+        yy += 28.0f;
+        if (roomy) {
+          const Font font = fontOf("ui.public_sans", UI::Font::minimum);
+          drawText(font, fitted(font, sub, small), x, yy, small, fade(st.muted, alpha));
+        }
+        yy += 20.0f;
+        if (!tl.active && roomy) {
+          const Font font = fontOf("ui.public_sans", UI::Font::minimum);
+          drawRoundedLines({x, yy, 68, 24}, 12.0f, 1.2f, fade(st.muted, alpha));
+          drawTextCentered(font, "inactive", x + 34, yy + 3.0f, small, fade(st.muted, alpha));
+          if (ui::audit::enabled()) ui::audit::fit("inactive tag", "inactive", textWidth(font, "inactive", small), small, {0, 0, 64.0f, 24.0f});
+          queueTip({x, yy, 68, 24}, "Inactive: this timeline is too far behind to need moves.");
+        }
+      } else if (deep) {
+        DrawCircleV({x + 4, yy + 11}, 4.0f, fade(pillColor, alpha));
+        DrawCircleV({x + 4, yy + 11}, 8.0f, fade(pillColor, 0.18f * alpha));
+        drawText(fontOf("ui.public_sans_bold", 20), label, x + 18, yy, 20.0f, fade(st.ink, alpha));
+        yy += 28.0f;
+        if (roomy) {
+          const Font font = fontOf("ui.mono", UI::Font::minimum);
+          drawText(font, fitted(font, sub, small), x, yy, small, fade(st.muted, alpha));
+        }
+        yy += 24.0f;
+        if (!tl.active && roomy) {
+          const Font font = fontOf("ui.mono", UI::Font::minimum);
+          drawRoundedLines({x, yy, 92, 24}, 12.0f, 1.0f, fade(st.muted, alpha));
+          drawTextCentered(font, "INACTIVE", x + 46, yy + 3.0f, small, fade(st.muted, alpha), 1.0f);
+          if (ui::audit::enabled()) ui::audit::fit("inactive tag", "INACTIVE", textWidth(font, "INACTIVE", small, 1.0f), small, {0, 0, 88.0f, 24.0f});
+          queueTip({x, yy, 92, 24}, "Inactive: this timeline is too far behind to need moves.");
+        }
+      } else {
+        drawText(fontOf("ui.mono", 20), label, x, yy, 20.0f, fade(st.ink, alpha));
+        yy += 26.0f;
+        if (roomy) {
+          const Font font = fontOf("ui.mono", UI::Font::minimum);
+          drawText(font, fitted(font, sub, small), x, yy, small, fade(st.muted, alpha));
+        }
+        yy += 24.0f;
+        if (!tl.active && roomy) {
+          const Font font = fontOf("ui.mono", UI::Font::minimum);
+          DrawRectangleLinesEx({x, yy, 92, 24}, 1.0f, fade(st.muted, alpha));
+          drawTextCentered(font, "INACTIVE", x + 46, yy + 3.0f, small, fade(st.muted, alpha), 1.0f);
+          if (ui::audit::enabled()) ui::audit::fit("inactive tag", "INACTIVE", textWidth(font, "INACTIVE", small, 1.0f), small, {0, 0, 88.0f, 24.0f});
+          queueTip({x, yy, 92, 24}, "Inactive: this timeline is too far behind to need moves.");
+        }
       }
-    } else if (deep) {
-      DrawCircleV({x + 4, y + 11}, 4.0f, fade(pillColor, alpha));
-      DrawCircleV({x + 4, y + 11}, 8.0f, fade(pillColor, 0.18f * alpha));
-      drawText(fontOf("ui.public_sans_bold", 20), label, x + 18, y, 20.0f, fade(st.ink, alpha));
-      y += 28.0f;
-      if (roomy) drawText(fontOf("ui.mono", 12), sub, x, y, 12.0f, fade(st.muted, alpha));
-      y += 22.0f;
-      if (!tl.active && roomy) {
-        drawRoundedLines({x, y, 76, 20}, 10.0f, 1.0f, fade(st.muted, alpha));
-        drawTextCentered(fontOf("ui.mono", 11), "INACTIVE", x + 38, y + 4.0f, 11.0f, fade(st.muted, alpha), 1.0f);
-      }
-    } else {
-      drawText(fontOf("ui.mono", 20), label, x, y, 20.0f, fade(st.ink, alpha));
-      y += 26.0f;
-      if (roomy) drawText(fontOf("ui.mono", 12), sub, x, y, 12.0f, fade(st.muted, alpha));
-      y += 22.0f;
-      if (!tl.active && roomy) {
-        DrawRectangleLinesEx({x, y, 76, 20}, 1.0f, fade(st.muted, alpha));
-        drawTextCentered(fontOf("ui.mono", 11), "INACTIVE", x + 38, y + 4.0f, 11.0f, fade(st.muted, alpha), 1.0f);
-      }
+      queueTip({x - 6.0f, top, textRoom + 6.0f, std::min(blockH, 30.0f)}, tip);
     }
+    EndScissorMode();
   }
-  EndScissorMode();
+  // Tooltips asked for by the labels of this frame (the lane pills, the ruler, the jump badges): outside every clip, on top
+  if (_tip) {
+    ui::tooltip(_tip->anchor, _tip->text);
+    _tip.reset();
+  }
 }
 
 } // namespace play

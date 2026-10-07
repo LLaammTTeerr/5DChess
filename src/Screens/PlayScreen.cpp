@@ -7,6 +7,7 @@
 #include "Render/UITheme.h"
 #include "Screens/ModeSelectScreen.h"
 #include "engine/GameCatalog.h"
+#include "engine/Notation.h"
 #include "play/BoardRenderer.h"
 
 using Chess::Core::Coord;
@@ -44,6 +45,7 @@ void PlayScreen::embed(float rightInset) {
   _embedded = true;
   _rightInset = rightInset;
   _camera.setInsets(UI::Layout::safeTop, _rightInset, UI::Layout::safeBottom, UI::Layout::laneLabelW);
+  _actions.layout(static_cast<float>(GetScreenWidth()) - _rightInset); // the action row centres on the board view, not on the panel
 }
 
 void PlayScreen::update(App& app, float dt) {
@@ -53,11 +55,24 @@ void PlayScreen::update(App& app, float dt) {
   // The buttons come first: whatever has the pointer is not a click on the board
   if (!_embedded && _back.update(dt, app.screens.navShown())) leave(app);
   if (!_embedded) _saveMenu.update(dt, app.screens.navShown(), style, *_game, _vs ? &*_vs : nullptr, _aiPlaying);
+  if (endCardShown() && !_embedded) { // (embedded boards show no buttons) the end card is modal: its buttons take the pointer before anything else
+    _endButtons.setSkin(&style.skin);
+    _endButtons.setRematch(!_embedded && Chess::GameCatalog::findById(_game->modeId()) != nullptr);
+    switch (_endButtons.update(dt, true)) {
+      case play::EndCardButtons::Action::Rematch: rematch(app); return;
+      case play::EndCardButtons::Action::Review: _reviewing = true; break;
+      case play::EndCardButtons::Action::Menu: leave(app); return;
+      case play::EndCardButtons::Action::None: break;
+    }
+  }
+  else if (endCardShown() && ui::hovered(play::endCardRect(false))) ui::consumePointer(); // (an embedded board's card is no way to click through)
   const play::ActionRow::Action action = _actions.update(dt);
   switch (_locked ? play::ActionRow::Action::None : action) { // (Undo stays available on the computer's turn: it takes the turn back)
     case play::ActionRow::Action::Undo: undo(); break;
-    case play::ActionRow::Action::Deselect: deselect(); break;
+    case play::ActionRow::Action::Deselect: if (_reviewing) _reviewing = false; else deselect(); break; // (reviewing: "Result" brings the card back)
     case play::ActionRow::Action::Submit: submitTurn(); break;
+    case play::ActionRow::Action::Overview: break;  // the camera's Home and Next board are handled once the HUD is given
+    case play::ActionRow::Action::NextBoard: break; // HudData::cameraLabel / nextBoardLabel (they show the buttons)
     case play::ActionRow::Action::None: break;
   }
   updatePicker(dt, style);
@@ -94,9 +109,12 @@ void PlayScreen::updatePicker(float dt, const play::BoardStyle& style) {
   const Rect square = BoardLayout::squareRect(BoardLayout::boardRect(target->l, target->t), _game->dim(), target->x, target->y);
   const Vector2 a = _camera.worldToScreen({square.x, square.y}), b = _camera.worldToScreen({square.x + square.w, square.y + square.h});
   _picker.show(_game->getCurrentTurnColor());
+  const play::Rect card = BoardLayout::cardRect(BoardLayout::boardRect(target->l, target->t));
+  const Vector2 c0 = _camera.worldToScreen({card.x, card.y}), c1 = _camera.worldToScreen({card.x + card.w, card.y + card.h});
   _picker.place({a.x, a.y, b.x - a.x, b.y - a.y},
                 {0.0f, UI::Layout::safeTop, static_cast<float>(GetScreenWidth()) - (_embedded ? _rightInset : 0.0f),
-                 static_cast<float>(GetScreenHeight()) - UI::Layout::safeTop});
+                 static_cast<float>(GetScreenHeight()) - UI::Layout::safeTop - UI::Layout::safeBottom},
+                {c0.x, c0.y, c1.x - c0.x, c1.y - c0.y});
   if (const auto piece = _picker.update(dt, style.grayPieces, &style.skin)) {
     _animator.finish();
     _arrows.finish();
@@ -233,6 +251,42 @@ void PlayScreen::leave(App& app) {
     else app.saves.clearAutosave();
   }
   app.screens.replace(std::make_unique<ModeSelectScreen>());
+}
+
+// Another game of the same mode (against the computer: the same side and level, a fresh seed)
+void PlayScreen::rematch(App& app) {
+  cancelAi();
+  const std::string id = _game->modeId();
+  if (!_vs) {
+    app.screens.replace(std::make_unique<PlayScreen>(id));
+    return;
+  }
+  std::uint64_t seed = 0;
+  for (int i = 0; i < 4; ++i) seed = (seed << 16) | static_cast<std::uint64_t>(GetRandomValue(0, 0xFFFF));
+  const play::SideChoice side = _vs->human == Chess::PieceColor::PIECEWHITE ? play::SideChoice::White : play::SideChoice::Black;
+  app.screens.replace(std::make_unique<PlayScreen>(id, play::makeVsAi(side, _vs->level, seed)));
+}
+
+std::string PlayScreen::submitTip(bool ongoing) const {
+  if (!ongoing) return "";
+  if (aiToMove()) return "The computer is playing its turn";
+  if (_canSubmit && !inputBlocked()) {
+    std::string text = "Hand in this turn:";
+    auto square = [](const Chess::Core::Coord& c) { return std::string(1, static_cast<char>('a' + c.x)) + std::to_string(c.y + 1); };
+    for (const Chess::Core::PlayedMove& m : _game->pendingMoves()) {
+      const auto& from = m.move.from;
+      const auto& to = m.move.to;
+      text += "\n" + square(from) + "-" + square(to);
+      if (from.l != to.l || from.t != to.t) text += " to " + play::timelineLabel(to.l) + " \xC2\xB7 T" + std::to_string(to.t / 2 + 1);
+      if (m.promotes) text += " (promotes)";
+    }
+    return text;
+  }
+  if (_selection.promotionTarget()) return "Choose a promotion first";
+  if (_noMandatoryBoard && _game->undoable()) return "Your king would be capturable: undo or change a move";
+  for (const play::BoardInfo& b : _view.boards)
+    if (b.role == play::BoardRole::Mandatory) return "Still to move on " + play::timelineLabel(b.timeline) + " \xC2\xB7 " + play::boardLabel(b.halfTurn);
+  return "Make a move first";
 }
 
 void PlayScreen::undo() {
@@ -412,7 +466,15 @@ void PlayScreen::refresh() {
   // The indicator shows for the whole of the computer's thinking; the bar once the search itself runs (its own progress, as is)
   _hudMotion.setThinking(aiTurn && !_aiPlaying, _search ? static_cast<float>(_search->progress().fraction) : -1.0f);
   _hudMotion.apply(_hud);
-  if (!_hudTitle.empty()) _hud.bannerActive = false;
+  if (!_hudTitle.empty() || aiTurn) _hud.bannerActive = false; // (the computer's turn is already in the pill: "Computer is thinking")
+  _hud.rightInset = _embedded ? _rightInset : 0.0f;
+  _hud.undoLabel = takeBackCount() > 0 ? "Undo turn" : "Undo move";
+  _hud.undoCount = static_cast<int>(_game->pendingMoves().size());
+  _hud.submitTip = submitTip(ongoing);
+  if (_reviewing && _hudTitle.empty())
+    _hud.title = result == Chess::GameResult::WhiteWins ? "White wins" : result == Chess::GameResult::BlackWins ? "Black wins" : "Draw";
+  _actions.setReview(_reviewing);
+  _actions.sync(_hud);
   _hudMotion.setEnded(!ongoing, result == Chess::GameResult::WhiteWins, result == Chess::GameResult::Draw);
 
   if (!ongoing) {
@@ -522,13 +584,14 @@ void PlayScreen::draw(App& app) const {
   _actions.draw();
   if (!_embedded) _saveMenu.draw(style, app.screens.navAlpha());
   _picker.draw(style);
-  if (!ongoing && _showEndCard) {
+  if (endCardShown()) {
     const Chess::GameResult result = _game->result();
     play::EndCard card = _hudMotion.endCard();
     card.title = result == Chess::GameResult::WhiteWins ? "White wins!" : result == Chess::GameResult::BlackWins ? "Black wins!" : "Draw";
     card.reason = result == Chess::GameResult::Draw ? "Stalemate" : "Checkmate";
     if (_embedded) card.footer = "Use Reset position to try again";
-    play::drawEndCard(card);
+    card.buttons = !_embedded;
+    play::drawEndCard(card, &_endButtons);
   }
   if (!_embedded) _back.draw(app.screens.navAlpha());
 }

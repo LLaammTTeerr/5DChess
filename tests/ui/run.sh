@@ -44,6 +44,16 @@ for s in "${scripts[@]}"; do
   tail -1 "$UI_OUT/$(basename "$s").log"
 done
 
+# The layout audit (include/ui/Audit.h) prints "UI-OVERFLOW ..." for every text that does not fit its box; "UI-SHRUNK" lines are notes.
+if grep -h "^UI-OVERFLOW" "$UI_OUT"/*.log > "$UI_OUT/overflow.txt" 2>/dev/null && [[ -s "$UI_OUT/overflow.txt" ]]; then
+  echo "layout audit: text that does not fit its box:" >&2
+  sort -u "$UI_OUT/overflow.txt" >&2
+  OVERFLOW=1
+else
+  OVERFLOW=0
+fi
+grep -h "^UI-SHRUNK" "$UI_OUT"/*.log 2>/dev/null | sort -u | sed 's/^/note: /' || true
+
 if [[ $UPDATE -eq 1 ]]; then
   rm -f "$UI"/baseline/*.png
   cp "$UI_OUT"/run/*.png "$UI/baseline/"
@@ -64,4 +74,5 @@ PY
 fi
 
 python3 "$UI/compare.py" "$UI_OUT/run" --baseline "$UI/baseline" --diff-dir "$UI_OUT/diff" \
-  --max-diff-percent "${MAX_DIFF_PERCENT:-0.2}" --channel-threshold "${CHANNEL_THRESHOLD:-8}"
+  --max-diff-percent "${MAX_DIFF_PERCENT:-0.2}" --channel-threshold "${CHANNEL_THRESHOLD:-8}" || exit 1
+exit "$OVERFLOW"

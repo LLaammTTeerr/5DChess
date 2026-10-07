@@ -5,6 +5,7 @@
 #include "App.h"
 #include "Input.h"
 #include "Render/UITheme.h"
+#include "ui/Audit.h"
 #include "engine/Notation.h"
 #include "play/Hud.h"
 #include "services/SaveStore.h"
@@ -19,7 +20,7 @@ constexpr float kMessageSeconds = 3.5f;
 bool inside(Rectangle r, Vector2 p) { return p.x >= r.x && p.x < r.x + r.width && p.y >= r.y && p.y < r.y + r.height; }
 
 std::string slotLabel(int slot) {
-  return "Slot " + std::to_string(slot + 1) + ": " + App::current().saves.slot(slot).describe();
+  return "Slot " + std::to_string(slot + 1) + ": " + App::current().saves.slot(slot).headline();
 }
 
 } // namespace
@@ -59,6 +60,8 @@ void SaveMenu::openPanel() {
   _slots = ui::ButtonList(labels, slots);
   _slots.selectable = false;
   _slots.setEllipsize(true);
+  for (int i = 0; i < savegame::kSlots; ++i)
+    _slots.setLabel(static_cast<size_t>(i), labels[static_cast<size_t>(i)], App::current().saves.slot(i).detail());
   _overwrite.clear();
   _open = true;
 }
@@ -102,7 +105,7 @@ void SaveMenu::update(float dt, bool reachable, const BoardStyle& style, const C
   const int armedBefore = _overwrite.armed();
   _overwrite.update(dt, hovered);
   if (_overwrite.armed() != armedBefore && armedBefore >= 0)
-    _slots.setLabel(armedBefore, slotLabel(armedBefore)); // disarmed (timeout or the pointer left)
+    _slots.setLabel(armedBefore, slotLabel(armedBefore), App::current().saves.slot(armedBefore).detail()); // disarmed (timeout or the pointer left)
   int clicked = _slots.update(dt, true);
   if (clicked >= 0 && _occupied[clicked]) {
     // Overwriting asks once more: the first click only arms the slot (and a double-click does not confirm)
@@ -153,6 +156,8 @@ void SaveMenu::draw(const BoardStyle& style, float navAlpha) const {
       color = style.check;
     }
     DrawTextEx(font, header.c_str(), {panel.x + kPad + 4.0f, std::floor(panel.y + (kHeader - fs) / 2 - 1)}, fs, 0, color);
+    ui::audit::within("save panel header", header, {panel.x + kPad + 4.0f, panel.y + (kHeader - fs) / 2,
+                                                    MeasureTextEx(font, header.c_str(), fs, 0).x, fs}, {panel.x, panel.y, panel.width - kPad, kHeader});
     _slots.draw(navAlpha);
   } else if (!_message.empty()) {
     const float w = MeasureTextEx(font, _message.c_str(), fs, 0).x + 2 * kPad + 8.0f;

@@ -4,6 +4,7 @@
 #include "App.h"
 #include "Input.h"
 #include "Render/UITheme.h"
+#include "ui/Audit.h"
 #include "Screens/PuzzleListScreen.h"
 #include "play/BoardStyle.h"
 #include "play/Hud.h"
@@ -18,7 +19,6 @@ constexpr float kTitleLine = 34.0f, kBodyLine = 24.0f, kSmallLine = 21.0f, kBann
 constexpr float kCardPad = 14.0f;
 constexpr float kBoardInset = kPanelW + kPanelRight + 16.0f; // what the board keeps free at the right
 constexpr float kMoveGap = 0.55f;                            // seconds between the moves of a scripted line
-constexpr float kWrongSeconds = 2.4f;                        // "Not quite" stays this long, then the puzzle resets
 constexpr float kStuckSeconds = 3.0f;                        // a finished script whose turn never shows up resets the puzzle
 constexpr double kProofMilliseconds = 6.0;                   // per frame, spent on the proof of a mate in 2
 constexpr long long kDefenceNodes = 20000;                   // cap of the engine's search for Black's reply
@@ -45,9 +45,14 @@ std::vector<std::string> wrap(::Font font, float size, const std::string& text, 
   return lines;
 }
 
-void drawLines(::Font font, float size, const std::vector<std::string>& lines, float x, float y, float lineH, ::Color color) {
-  for (size_t i = 0; i < lines.size(); ++i)
-    DrawTextEx(font, lines[i].c_str(), {std::floor(x), std::floor(y + static_cast<float>(i) * lineH)}, size, 0.0f, color);
+void drawLines(::Font font, float size, const std::vector<std::string>& lines, float x, float y, float lineH, ::Color color,
+               Rectangle bounds = {}) {
+  for (size_t i = 0; i < lines.size(); ++i) {
+    const Vector2 at = {std::floor(x), std::floor(y + static_cast<float>(i) * lineH)};
+    DrawTextEx(font, lines[i].c_str(), at, size, 0.0f, color);
+    if (bounds.width > 0.0f && ui::audit::enabled())
+      ui::audit::within("panel text", lines[i], {at.x, at.y, MeasureTextEx(font, lines[i].c_str(), size, 0.0f).x, size}, bounds);
+  }
 }
 
 void drawCheck(float x, float y, float size, float thickness, ::Color color) {
@@ -434,8 +439,7 @@ void PuzzleScreen::update(App& app, float dt) {
         _board->setInputLocked(false);
       }
       break;
-    case Phase::Wrong:
-      if (_clock > kWrongSeconds) reset();
+    case Phase::Wrong: // the position stays for the player to study; "Try again" (the Reset button) resets it
       break;
     case Phase::Solved:
       _solvedClock += step;
@@ -469,22 +473,22 @@ void PuzzleScreen::draw(App& app) const {
 
   play::drawPanel(_panel, style, 1.0f, 18.0f / std::min(_panel.width, _panel.height));
   const float x = _panel.x + kPad;
-  drawLines(UI::Fonts::mono(), UI::Font::mono, _step.lines, x, _step.y, kSmallLine, style.hudMuted);
-  drawLines(UI::Fonts::section(), UI::Font::section, _title.lines, x, _title.y, kTitleLine, style.hudText);
+  drawLines(UI::Fonts::mono(), UI::Font::mono, _step.lines, x, _step.y, kSmallLine, style.hudMuted, {_panel.x, _panel.y, _panel.width, _hint.rect.y - _panel.y});
+  drawLines(UI::Fonts::section(), UI::Font::section, _title.lines, x, _title.y, kTitleLine, style.hudText, {_panel.x, _panel.y, _panel.width, _hint.rect.y - _panel.y});
 
   // the goal banner
   const Rectangle bannerCard = {x, _banner.y - kCardPad, kInnerW, _banner.height + 2 * kCardPad};
   drawCard(bannerCard, style, UI::withAlpha(style.accent, 34), style.accent);
-  drawLines(UI::Fonts::button(), UI::Font::button, _banner.lines, x + kCardPad, _banner.y, kBannerLine, style.hudText);
+  drawLines(UI::Fonts::button(), UI::Font::button, _banner.lines, x + kCardPad, _banner.y, kBannerLine, style.hudText, {_panel.x, _panel.y, _panel.width, _hint.rect.y - _panel.y});
 
   const ::Color statusColor = _tone == Tone::Bad ? style.check : _tone == Tone::Good ? style.accent : style.hudMuted;
-  drawLines(UI::Fonts::body(), UI::Font::body, _status.lines, x, _status.y, kBodyLine, _message.empty() ? style.hudMuted : statusColor);
+  drawLines(UI::Fonts::body(), UI::Font::body, _status.lines, x, _status.y, kBodyLine, _message.empty() ? style.hudMuted : statusColor, {_panel.x, _panel.y, _panel.width, _hint.rect.y - _panel.y});
 
   if (!_hintText.lines.empty()) {
     const Rectangle card = {x, _hintText.y - kCardPad - kSmallLine - 2.0f, kInnerW, _hintText.height + 2 * kCardPad + kSmallLine + 2.0f};
     drawCard(card, style, UI::withAlpha(style.hudBorder, 70), style.hudBorder);
     DrawTextEx(UI::Fonts::mono(), "HINT", {x + kCardPad, std::floor(card.y + kCardPad)}, UI::Font::mono, 0.0f, style.accent);
-    drawLines(UI::Fonts::body(), UI::Font::body, _hintText.lines, x + kCardPad, _hintText.y, kBodyLine, style.hudText);
+    drawLines(UI::Fonts::body(), UI::Font::body, _hintText.lines, x + kCardPad, _hintText.y, kBodyLine, style.hudText, {_panel.x, _panel.y, _panel.width, _hint.rect.y - _panel.y});
   }
 
   const float a = app.screens.navAlpha();

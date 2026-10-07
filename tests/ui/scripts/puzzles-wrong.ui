@@ -1,5 +1,5 @@
-# A wrong move: Re1-e2 does not mate. "Not quite - try again" shows with a Try again button, then the puzzle resets itself after a moment.
-# Submit is at (842, 90).
+# A wrong move: Re1-e2 does not mate. "Not quite - try again" shows with a Try again button and stays (the player can study the position) until Try again is pressed.
+# Submit is at (632, 90).
 wait 20
 click 150 370        # Puzzles
 wait 40
@@ -10,9 +10,13 @@ wait 20
 clicksq 0 0 e2
 wait 40
 capture puzzles-wrong-move
-click 842 90         # Submit
+click 632 90         # Submit
 move 880 740
 wait 40
 capture puzzles-wrong-feedback
-wait 140
+wait 200
+capture puzzles-wrong-held       # still there after more than the old auto-reset delay
+click 1267 652       # Try again
+move 880 740
+wait 40
 capture puzzles-wrong-reset

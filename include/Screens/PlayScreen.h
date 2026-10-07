@@ -67,6 +67,8 @@ private:
   play::HudMotion _hudMotion;
   play::HudData _hud;
   play::ActionRow _actions;
+  play::EndCardButtons _endButtons;   // Rematch / Review board / Back to menu on the end card
+  bool _reviewing = false;            // "Review board": the end card is dismissed, the final position stays on screen
   play::SaveMenu _saveMenu;
   ui::Button _back = backButton();
 
@@ -112,6 +114,10 @@ private:
   void submitTurn();
   void doSubmit();
   void leave(App& app);
+  void rematch(App& app);
+  bool endCardShown() const { return _game->result() != Chess::GameResult::Ongoing && _showEndCard && !_reviewing; }
+  /// Submit's tooltip: why it is disabled, or the moves it hands in.
+  std::string submitTip(bool ongoing) const;
   void deselect();
   void clearSelection();
   /// After anything changed: rebuild what depends on the game state, button states, HUD, end of game.

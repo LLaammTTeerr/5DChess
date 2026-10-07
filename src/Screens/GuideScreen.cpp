@@ -4,6 +4,7 @@
 #include "App.h"
 #include "Input.h"
 #include "Render/UITheme.h"
+#include "ui/Audit.h"
 #include "Screens/MainMenuScreen.h"
 #include "guide/Guide.h"
 #include "play/BoardStyle.h"
@@ -41,9 +42,14 @@ std::vector<std::string> wrap(::Font font, float size, const std::string& text, 
   return lines;
 }
 
-void drawLines(::Font font, float size, const std::vector<std::string>& lines, float x, float y, float lineH, ::Color color) {
-  for (size_t i = 0; i < lines.size(); ++i)
-    DrawTextEx(font, lines[i].c_str(), {std::floor(x), std::floor(y + static_cast<float>(i) * lineH)}, size, 0.0f, color);
+void drawLines(::Font font, float size, const std::vector<std::string>& lines, float x, float y, float lineH, ::Color color,
+               Rectangle bounds = {}) {
+  for (size_t i = 0; i < lines.size(); ++i) {
+    const Vector2 at = {std::floor(x), std::floor(y + static_cast<float>(i) * lineH)};
+    DrawTextEx(font, lines[i].c_str(), at, size, 0.0f, color);
+    if (bounds.width > 0.0f && ui::audit::enabled())
+      ui::audit::within("panel text", lines[i], {at.x, at.y, MeasureTextEx(font, lines[i].c_str(), size, 0.0f).x, size}, bounds);
+  }
 }
 
 void drawCheck(float x, float y, float size, ::Color color) {
@@ -179,10 +185,10 @@ void GuideScreen::draw(App& app) const {
   // the HUD's panel with a fixed corner radius of about 18 px
   play::drawPanel(_panel, style, 1.0f, 18.0f / std::min(_panel.width, _panel.height));
   const float x = _panel.x + kPad;
-  drawLines(UI::Fonts::mono(), UI::Font::mono, _step.lines, x, _step.y, kSmallLine, style.hudMuted);
-  drawLines(UI::Fonts::section(), UI::Font::section, _title.lines, x, _title.y, kTitleLine, style.hudText);
-  drawLines(UI::Fonts::body(), UI::Font::body, _text.lines, x, _text.y, kTextLine, style.hudText);
-  drawLines(UI::Fonts::mono(), UI::Font::mono, _note.lines, x, _note.y, kSmallLine, style.hudMuted);
+  drawLines(UI::Fonts::mono(), UI::Font::mono, _step.lines, x, _step.y, kSmallLine, style.hudMuted, {_panel.x, _panel.y, _panel.width, std::min(_prev.rect.y, _reset.rect.y) - _panel.y});
+  drawLines(UI::Fonts::section(), UI::Font::section, _title.lines, x, _title.y, kTitleLine, style.hudText, {_panel.x, _panel.y, _panel.width, std::min(_prev.rect.y, _reset.rect.y) - _panel.y});
+  drawLines(UI::Fonts::body(), UI::Font::body, _text.lines, x, _text.y, kTextLine, style.hudText, {_panel.x, _panel.y, _panel.width, std::min(_prev.rect.y, _reset.rect.y) - _panel.y});
+  drawLines(UI::Fonts::mono(), UI::Font::mono, _note.lines, x, _note.y, kSmallLine, style.hudMuted, {_panel.x, _panel.y, _panel.width, std::min(_prev.rect.y, _reset.rect.y) - _panel.y});
 
   if (page.goal) {
     const float cardRound = style.hudSquare ? 0.0f : 12.0f / std::min(_card.width, _card.height);
@@ -195,13 +201,13 @@ void GuideScreen::draw(App& app) const {
 
     const float cx = _card.x + kCardPad;
     DrawTextEx(UI::Fonts::mono(), "TRY IT", {cx, std::floor(_card.y + kCardPad)}, UI::Font::mono, 0.0f, style.accent);
-    drawLines(UI::Fonts::button(), UI::Font::button, _prompt.lines, cx, _prompt.y, kPromptLine, style.hudText);
+    drawLines(UI::Fonts::button(), UI::Font::button, _prompt.lines, cx, _prompt.y, kPromptLine, style.hudText, {_panel.x, _panel.y, _panel.width, std::min(_prev.rect.y, _reset.rect.y) - _panel.y});
     float tx = cx;
     if (_done) {
       drawCheck(cx, _status.y + 3.0f, 18.0f, style.accent);
       tx += kCheckW;
     }
-    drawLines(UI::Fonts::body(), UI::Font::body, _status.lines, tx, _status.y, kStatusLine, _done ? style.hudText : style.hudMuted);
+    drawLines(UI::Fonts::body(), UI::Font::body, _status.lines, tx, _status.y, kStatusLine, _done ? style.hudText : style.hudMuted, {_panel.x, _panel.y, _panel.width, std::min(_prev.rect.y, _reset.rect.y) - _panel.y});
   }
 
   const float a = app.screens.navAlpha();

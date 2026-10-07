@@ -8,7 +8,7 @@ clicksq 0 0 e1
 wait 20
 clicksq 0 0 e8
 wait 60
-click 842 90         # Submit
+click 632 90         # Submit
 move 880 740
 wait 60
 capture puzzles-solved-card
