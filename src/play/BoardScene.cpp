@@ -70,10 +70,6 @@ void BoardScene::queueTip(Rectangle anchor, std::string text) const {
   if (!ui::pointerConsumed() && ui::hovered(anchor)) _tip = PendingTip{anchor, std::move(text)};
 }
 
-std::string timelineLabel(int id) { return id > 0 ? "L+" + std::to_string(id) : "L" + std::to_string(id); }
-
-std::string boardLabel(int halfTurn) { return "T" + std::to_string(halfTurn / 2 + 1) + (halfTurn % 2 == 0 ? "w" : "b"); }
-
 // ---------------------------------------------------------------------------------------------------------------------
 
 BoardScene::BoardScene() {
@@ -628,7 +624,15 @@ std::optional<BoardScene::Minimap> BoardScene::minimap(const SceneFrame& f, floa
   const int rows = f.view.timelines.back().id - f.view.timelines.front().id + 1;
   const int cols = f.view.lastHalfTurn - f.view.firstHalfTurn + 1;
   Minimap m;
-  m.cell = std::clamp(std::floor((height - 10.0f) / static_cast<float>(rows)) - 1.0f, 2.0f, 6.0f);  // (the strip and its frame stay within the ruler)
+  // (the strip and its frame stay within the ruler: whole pixels while they fit, from eight timelines on a fraction of a pixel, none past sixteen)
+  const float whole = std::clamp(std::floor((height - 10.0f) / static_cast<float>(rows)) - 1.0f, 2.0f, 6.0f);
+  if (static_cast<float>(rows) * (whole + 1.0f) - 1.0f + 8.0f <= height) {
+    m.cell = whole;
+  } else {
+    const float fitted = (height - 10.0f) / static_cast<float>(rows) - 1.0f;
+    if (fitted < 0.5f) return std::nullopt;
+    m.cell = fitted;
+  }
   const float step = m.cell + 1.0f;
   const float w = static_cast<float>(cols) * step - 1.0f, h = static_cast<float>(rows) * step - 1.0f;
   m.rect = {f.safe.x + f.safe.width - w - 10.0f, y + (height - h) / 2.0f - 1.0f, w, h};

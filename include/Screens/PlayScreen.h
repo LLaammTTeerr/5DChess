@@ -16,6 +16,7 @@
 #include "play/MoveAnimator.h"
 #include "play/PlayFeedback.h"
 #include "play/Selection.h"
+#include "play/TurnPanel.h"
 #include "play/TimelineArrows.h"
 #include "play/VsAi.h"
 #include "Render/UITheme.h"
@@ -108,10 +109,15 @@ private:
   play::SaveMenu _saveMenu;
   ui::Button _back = backButton();
 
+  // [TurnPanel] the docked turn checklist (play/TurnPanel): what it asks of the board view, and the flash of a clicked opponent move
+  play::TurnPanel _turnPanel;
+  struct Flash { Chess::Core::Coord from, to; float left = 0.0f; } _flash;
+
   std::optional<Chess::Core::Coord> _hover;
   bool _ended = false;
   bool _embedded = false;
   float _rightInset = UI::Layout::sideInset;
+  bool _insetsApplied = false; // [TurnPanel]
   std::optional<Chess::Core::Coord> _highlight;
   bool _locked = false, _showEndCard = true;
   std::string _hudTitle;
@@ -130,6 +136,14 @@ private:
   // Answers that are not free (a threat search over the multiverse), cached until the game's state changes
   bool _canSubmit = false, _noMandatoryBoard = true;
   bool _undoEnabled = false, _submitEnabled = false; // what the action row shows, for the U / Enter keys
+
+  // [TurnPanel]
+  play::TurnPanel::Mode turnPanelMode() const;
+  float boardInset() const; // what the boards keep free at the right: the Guide's / puzzle's panel, the turn panel, or the margin
+  void applyInsets();      // the boards' free area follows the panel (opened, folded, the game ended)
+  void toggleTurnPanel();
+  void focusBoardFromPanel(int timeline, int halfTurn);
+  void showMoveFromPanel(const play::LastMove& move);
 
   void boardInput();
   void onClick(Vector2 mouse);

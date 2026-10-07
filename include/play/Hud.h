@@ -28,6 +28,7 @@ struct HudData {
   std::string undoLabel;      // "Undo move" (one move of this turn) / "Undo turn" (against the computer: the turn); empty: "Undo"
   int undoCount = 0;          // moves of the unsubmitted turn: a badge on Undo when there are several
   std::string submitTip;      // the tooltip of Submit: why it is disabled, or the moves it will submit
+  int boardsDone = 0, boardsTotal = 0; // "3 / 5 boards" in the pill: the boards of this turn that must be moved on (shown from 2 up; 0: not shown)
   float controlsAlpha = 1.0f; // the controls bar fades out after a few seconds without input (HudMotion)
 };
 

@@ -1,0 +1,12 @@
+# The turn panel with eleven timelines (many-boards-11tl.5dr, White to move at T5w): the boards list shows whole rows, fades at its
+# edge and scrolls with the wheel (a notch is one row), mandatory boards first.
+record ../records/many-boards-11tl.5dr
+wait 150
+capture checklist-eleven-timelines
+move 1200 300
+wheel -2
+wait 10
+capture checklist-eleven-scrolled
+wheel -9
+wait 10
+capture checklist-eleven-end

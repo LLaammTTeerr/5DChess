@@ -34,6 +34,7 @@ constexpr float kDoubleClickPixels = 6.0f;
 constexpr float kDragPixels = 5.0f;       // a press that moves farther than this pans instead of clicking
 constexpr float kGhostSeconds = 2.0f;     // ghost cards at full strength this long after a piece is picked up, then dimmed
 constexpr float kFocusZoom = 1.0f;        // click-to-focus zoom
+constexpr float kFlashSeconds = 1.2f;     // [TurnPanel] the squares of a clicked move of the opponent's last turn stay marked this long
 constexpr int kPresentColumns = 2;        // Overview of a field too big to read: the present column +- this many
 
 Vector2 toVector(play::Vec2 v) { return {v.x, v.y}; }
@@ -51,6 +52,7 @@ PlayScreen::PlayScreen(std::shared_ptr<Chess::IGame> game, bool isAutosave, std:
   // A game that is already decided (a loaded record) is not a transition: no win sound, and no autosave left to continue
   _ended = _game->result() != Chess::GameResult::Ongoing;
   if (_ended && _autosaving) App::current().saves.clearAutosave();
+  applyInsets(); // [TurnPanel]
   // The first frame's input already needs the layout to map clicks onto, and the motion state is seeded from it
   refresh();
 }
@@ -61,6 +63,7 @@ void PlayScreen::embed(float rightInset) {
   _camera.setInsets(UI::Layout::safeTop, _rightInset, UI::Layout::safeBottom, UI::Layout::laneLabelW);
   _hud.rightInset = _rightInset;  // (the first frame is drawn before any update)
   _actions.layout(static_cast<float>(GetScreenWidth()) - _rightInset); // the action row centres on the board view, not on the panel
+  _turnPanel.setMode(play::TurnPanel::Mode::Off); // [TurnPanel] (the Guide and the puzzles have their own panel)
 }
 
 void PlayScreen::update(App& app, float dt) {
@@ -91,6 +94,14 @@ void PlayScreen::update(App& app, float dt) {
     case play::ActionRow::Action::Overview: cancelDeferredCamera(); goHome(); break;
     case play::ActionRow::Action::NextBoard: cancelDeferredCamera(); nextBoard(1); break;
     case play::ActionRow::Action::None: break;
+  }
+  { // [TurnPanel] (after the buttons, before the boards: it takes the pointer over itself)
+    applyInsets();
+    const auto events = _turnPanel.update(dt, turnPanelMode(), app.screens.navShown(), &style.skin);
+    if (events.toggled) toggleTurnPanel();
+    if (events.focusBoard) focusBoardFromPanel(events.focusBoard->first, events.focusBoard->second);
+    if (events.focusMove) showMoveFromPanel(*events.focusMove);
+    _flash.left = std::max(0.0f, _flash.left - UI::Motion::safeDt(dt));
   }
   updatePicker(dt, style);
   boardInput();
@@ -139,7 +150,7 @@ void PlayScreen::updatePicker(float dt, const play::BoardStyle& style) {
   const play::Rect card = BoardLayout::cardRect(BoardLayout::boardRect(target->l, target->t));
   const Vector2 c0 = toVector(_camera.worldToScreen({card.x, card.y})), c1 = toVector(_camera.worldToScreen({card.x + card.w, card.y + card.h}));
   _picker.place({a.x, a.y, b.x - a.x, b.y - a.y},
-                {0.0f, UI::Layout::safeTop, static_cast<float>(GetScreenWidth()) - (_embedded ? _rightInset : 0.0f),
+                {0.0f, UI::Layout::safeTop, static_cast<float>(GetScreenWidth()) - (_embedded || turnPanelMode() == play::TurnPanel::Mode::Open ? _rightInset : 0.0f),
                  static_cast<float>(GetScreenHeight()) - UI::Layout::safeTop - UI::Layout::safeBottom},
                 {c0.x, c0.y, c1.x - c0.x, c1.y - c0.y});
   if (const auto piece = _picker.update(dt, style.grayPieces, &style.skin)) {
@@ -790,6 +801,7 @@ void PlayScreen::handleKeys() {
     else if (!_selection.active() && _submitEnabled) submitTurn();
   }
   if (Input::keyPressed(KEY_U) && _undoEnabled && !_locked) undo();
+  if (Input::keyPressed(KEY_C) && turnPanelMode() != play::TurnPanel::Mode::Off) toggleTurnPanel(); // [TurnPanel]
 }
 
 // Boards the picked-up piece can reach that are (mostly) off-screen, as tags at the edge of the free area in their direction
@@ -798,7 +810,7 @@ std::vector<PlayScreen::Ghost> PlayScreen::ghostCards() const {
   const auto from = _selection.from();
   if (!from) return out;
   const float screenW = static_cast<float>(GetScreenWidth()), screenH = static_cast<float>(GetScreenHeight());
-  const Rectangle area = {UI::Layout::laneLabelW, UI::Layout::safeTop, screenW - UI::Layout::laneLabelW - (_embedded ? _rightInset : UI::Layout::sideInset),
+  const Rectangle area = {UI::Layout::laneLabelW, UI::Layout::safeTop, screenW - UI::Layout::laneLabelW - _rightInset,
                           screenH - UI::Layout::safeTop - UI::Layout::safeBottom};
   const Vector2 centre = {area.x + area.width / 2.0f, area.y + area.height / 2.0f};
   constexpr float w = 150.0f, h = 34.0f, margin = 10.0f;
@@ -826,6 +838,55 @@ std::vector<PlayScreen::Ghost> PlayScreen::ghostCards() const {
 
 
 // ---------------------------------------------------------------------------------------------------------------------
+// [TurnPanel] The docked turn checklist (play/TurnPanel): it narrows the boards' free area, and its clicks drive the camera
+
+play::TurnPanel::Mode PlayScreen::turnPanelMode() const {
+  using Mode = play::TurnPanel::Mode;
+  if (_embedded || _game->result() != Chess::GameResult::Ongoing) return Mode::Off; // (the Guide and the puzzles have their own panel)
+  return play::TurnPanel::wanted() ? Mode::Open : Mode::Collapsed;
+}
+
+// What the boards (and the promotion picker) keep free at the right. The HUD above is not narrowed by the turn panel: it sits under it.
+float PlayScreen::boardInset() const {
+  return _embedded ? _rightInset : turnPanelMode() == play::TurnPanel::Mode::Open ? play::TurnPanel::kInset : UI::Layout::sideInset;
+}
+
+void PlayScreen::applyInsets() {
+  if (_embedded) return;
+  const float inset = boardInset();
+  if (inset == _rightInset && _insetsApplied) return;
+  _insetsApplied = true;
+  _rightInset = inset;
+  _camera.setInsets(UI::Layout::safeTop, _rightInset, UI::Layout::safeBottom, UI::Layout::laneLabelW); // (reframes Overview / Focus)
+}
+
+void PlayScreen::toggleTurnPanel() {
+  play::TurnPanel::setWanted(!play::TurnPanel::wanted());
+  applyInsets();
+}
+
+// A row: show that board (the keyboard cursor goes there too, so the arrow keys carry on from it)
+void PlayScreen::focusBoardFromPanel(int timeline, int halfTurn) {
+  if (!_layout.contains(timeline, halfTurn)) return;
+  cancelDeferredCamera();
+  _camera.focusBoard(cardOf(timeline, halfTurn), kFocusZoom);
+  setCursor(timeline, halfTurn);
+}
+
+// A line of the opponent's last turn: show its board (with the board it went to, when that is another one) and flash the two squares
+void PlayScreen::showMoveFromPanel(const play::LastMove& move) {
+  if (!_layout.contains(move.from.l, move.from.t)) return;
+  cancelDeferredCamera();
+  const Rect from = cardOf(move.from.l, move.from.t);
+  if (play::keyOf(move.from) != play::keyOf(move.to) && _layout.contains(move.to.l, move.to.t))
+    _camera.showBoth(from, cardOf(move.to.l, move.to.t), play::BoardCamera::kReadableZoom);
+  else
+    _camera.focusBoard(from, kFocusZoom);
+  setCursor(move.from.l, move.from.t);
+  _flash = {move.from, move.to, kFlashSeconds};
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
 // State that follows the game
 
 void PlayScreen::rebuild() {
@@ -844,6 +905,7 @@ void PlayScreen::rebuild() {
   _noMandatoryBoard = std::none_of(_view.boards.begin(), _view.boards.end(),
                                    [](const play::BoardInfo& b) { return b.role == play::BoardRole::Mandatory; });
   _feedback.rebuilt(*_game, _view, presentBefore);
+  if (!_embedded) _turnPanel.setChecklist(play::turnChecklist(*_game)); // [TurnPanel]
 }
 
 std::string PlayScreen::hint() const {
@@ -861,6 +923,8 @@ std::string PlayScreen::hint() const {
 
 void PlayScreen::refresh() {
   if (_layout.sync(*_game)) rebuild();
+  applyInsets(); // [TurnPanel] (the panel folds, opens or goes with the game's end: the HUD and the boards follow before anything is drawn)
+  _turnPanel.setMode(turnPanelMode());
 
   const Chess::GameResult result = _game->result();
   const bool ongoing = result == Chess::GameResult::Ongoing;
@@ -886,6 +950,13 @@ void PlayScreen::refresh() {
   _hudMotion.apply(_hud);
   if (!_hudTitle.empty() || aiTurn) _hud.bannerActive = false; // (the computer's turn is already in the pill: "Computer is thinking")
   _hud.rightInset = _embedded ? _rightInset : 0.0f;
+  { // [TurnPanel]
+    const play::TurnChecklist& c = _turnPanel.checklist();
+    _hud.boardsDone = ongoing && !_embedded ? c.done : 0;
+    _hud.boardsTotal = ongoing && !_embedded ? c.total : 0;
+    _turnPanel.setHeadings(aiTurn ? "Computer's turn" : "This turn",
+                           !_vs ? "Opponent's last turn" : aiTurn ? "Your last turn" : "Computer's last turn");
+  }
   _hud.undoLabel = takeBackCount() > 0 ? "Undo turn" : "Undo move";
   _hud.undoCount = static_cast<int>(_game->pendingMoves().size());
   _hud.submitTip = submitTip(ongoing);
@@ -983,9 +1054,15 @@ void PlayScreen::draw(App& app) const {
     play::drawFocusRing({_cursorX.value, _cursorY.value, card.w, card.h}, style, zoom, 1.0f);
   }
 
+  if (const auto hovered = _turnPanel.hoveredBoard(); hovered && _layout.contains(hovered->first, hovered->second)) // [TurnPanel]
+    play::drawFocusRing(cardOf(hovered->first, hovered->second), style, zoom, 1.0f); // (the panel's row under the pointer)
+
   auto squareOf = [dim](const Coord& c) {
     return BoardLayout::squareRect(BoardLayout::boardRect(c.l, c.t), dim, c.x, c.y);
   };
+  if (_flash.left > 0.0f) // [TurnPanel] the opponent's move a click on its line in the panel shows
+    for (const Coord& c : {_flash.from, _flash.to})
+      if (_layout.contains(c.l, c.t)) play::drawSelectedSquare(squareOf(c), zoom, style);
   const auto& fading = _animator.hoverFading();
   if (fading.alpha > 0.0f && _layout.contains(fading.key.first, fading.key.second))
     play::drawHoverSquare(BoardLayout::squareRect(BoardLayout::boardRect(fading.key.first, fading.key.second), dim, fading.x, fading.y),
@@ -1040,6 +1117,7 @@ void PlayScreen::draw(App& app) const {
     }
   }
 
+  _turnPanel.draw(*_game, style, app.screens.navAlpha()); // [TurnPanel]
   play::drawHud(_hud, style);
   _feedback.overHud(fx);
   _actions.draw();

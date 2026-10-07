@@ -1,0 +1,19 @@
+# The turn panel against the computer (vs-white-easy.5dr: you are White, 1. e4 e5 is on the board): the opponent section is the
+# computer's last turn; after Nf3 and Submit it shows the computer's new reply; Undo takes the round back and the rows follow.
+record ../records/vs-white-easy.5dr
+wait 60
+capture checklist-vs-start
+clicksq 0 2 g1
+wait 30
+clicksq 0 2 f3
+wait 30
+key ENTER
+wait 4
+waitai
+wait 60
+capture checklist-vs-replied
+key U
+wait 30
+key HOME
+wait 40
+capture checklist-vs-undone

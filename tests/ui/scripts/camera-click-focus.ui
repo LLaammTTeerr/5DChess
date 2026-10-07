@@ -36,7 +36,7 @@ wait 60
 key HOME
 wait 40
 camexpect state Overview
-camexpect zoom 0.6 0.79
+camexpect zoom 0.5 0.79
 capture camera-click-focus-overview
 clicksq 0 4 f3       # the white knight on a board too small to read: the camera comes up and the piece is picked up
 wait 40

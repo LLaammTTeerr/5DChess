@@ -1,0 +1,16 @@
+5dchess-record 1
+mode: standard
+T1w: (L0T1)e2>(L0T1)e3
+T1b: (L0T1)d7>(L0T1)d5
+T2w: (L0T2)d2>(L0T2)d3
+T2b: (L0T2)b8>(L0T1)b6
+T2w: (L-1T2)a2>(L-1T2)a3
+T2b: (L-1T2)b8>(L0T2)b6
+T3w: (L-1T3)a3>(L-1T3)a4 (L0T3)g1>(L0T2)g3
+T2b: (L1T2)b8>(L-1T3)b8 (L0T3)g8>(L-1T3)g6
+T3w: (L-2T3)b2>(L-2T3)b4 (L1T3)g1>(L0T3)g3 (L0T4)a2>(L0T4)a4
+T3b: (L2T3)g7>(L2T3)g5 (L1T3)a7>(L1T3)a5 (L-2T3)h7>(L-2T3)h6
+T4w: (L-3T4)f2>(L-3T4)f4 (L-1T4)d1>(L-1T4)g4 (L1T4)d1>(L0T4)d2 (L2T4)d1>(L-2T4)h5
+T4b: (L-1T4)h7>(L-1T4)h5 (L2T4)c8>(L2T4)d7 (L3T4)d8>(L3T4)d7 (L0T4)b7>(L0T4)b6 (L-2T4)b8>(L-2T4)d7 (L1T4)d8>(L0T3)d7
+T4w: (L-4T4)g2>(L-4T4)g4 (L-1T5)g4>(L0T4)f4
+T4b: (L-3T4)g6>(L-1T4)h6 (L-4T4)d7>(L-4T4)g4 (L4T4)a8>(L4T4)b8 (L-1T5)b6>(L0T3)b6

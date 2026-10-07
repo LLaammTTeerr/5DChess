@@ -5,6 +5,10 @@ namespace play {
 
 using Chess::Core::Coord;
 
+std::string timelineLabel(int id) { return id > 0 ? "L+" + std::to_string(id) : "L" + std::to_string(id); }
+
+std::string boardLabel(int halfTurn) { return "T" + std::to_string(halfTurn / 2 + 1) + (halfTurn % 2 == 0 ? "w" : "b"); }
+
 MultiverseView MultiverseView::build(const Chess::IGame& game) {
   MultiverseView view;
   view.presentHalfTurn = game.bufferHalfTurn();
