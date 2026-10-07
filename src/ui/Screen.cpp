@@ -2,6 +2,7 @@
 #include "App.h"
 #include "Input.h"
 #include "Render/UITheme.h"
+#include "ui/Audit.h"
 #include <rlgl.h>
 
 ui::Button backButton() {
@@ -44,6 +45,7 @@ void ScreenStack::update(App& app, float dt) {
 
 void ScreenStack::draw(App& app) const {
   UI::Cursor::beginFrame();
+  if (ui::audit::enabled()) ui::audit::beginFrame();
   if (!_stack.empty()) {
     // The incoming screen slides 12 px in the direction of travel while the old one fades out over it (no slide under Reduce motion)
     const float slide = (_hasSnapshot && !UI::Motion::reduced()) ? 12.0f * static_cast<float>(_slideDir) * (1.0f - _fade.progress()) : 0.0f;
@@ -74,6 +76,7 @@ void ScreenStack::draw(App& app) const {
                      UI::withAlpha(WHITE, static_cast<unsigned char>(255.0f * a)));
     }
   }
+  if (ui::audit::enabled()) ui::audit::endFrame();
   ui::flushTooltip(); // the tooltip of the frame, over the screen and the fading snapshot
 }
 
@@ -110,6 +113,7 @@ void ScreenStack::captureSnapshot(App& app) {
   _stack.back()->draw(app);
   UI::restoreOpaqueAlpha(GetScreenWidth(), GetScreenHeight());
   EndTextureMode();
+  if (ui::audit::enabled()) ui::audit::discard(); // the old screen's rects belong to no frame
   _hasSnapshot = true;
 }
 

@@ -14,6 +14,7 @@ namespace ui {
 
 namespace {
 bool g_consumed = false;
+bool g_listDraws = false;  // a clipped list is drawing its rows: its viewport stands for them in the overlap audit
 
 bool contains(Rectangle r, Vector2 p) { return p.x >= r.x && p.x <= r.x + r.width && p.y >= r.y && p.y <= r.y + r.height; }
 
@@ -164,6 +165,7 @@ void Button::draw(float alpha) const {
     r = {r.x + r.width * (1.0f - s) / 2.0f, r.y + r.height * (1.0f - s) / 2.0f, r.width * s, r.height * s};
   }
 
+  if (ui::audit::enabled() && !g_listDraws) ui::audit::rect("button '" + label + "'", rect, ui::audit::Kind::Button);
   const Skin& k = skin ? *skin : defaultSkin();
   Color bg, border, text;
   float thickness = 1.0f;
@@ -321,6 +323,9 @@ int ButtonList::update(float dt, bool interactive) {
 }
 
 void ButtonList::draw(float alpha) const {
+  if (clipped() && ui::audit::enabled())
+    ui::audit::rect("list " + std::to_string(static_cast<int>(view_.x)) + "," + std::to_string(static_cast<int>(view_.y)), view_, ui::audit::Kind::List);
+  g_listDraws = clipped();
   if (clipped())
     BeginScissorMode(static_cast<int>(view_.x), static_cast<int>(view_.y), static_cast<int>(view_.width - scrollbarW_),
                      static_cast<int>(view_.height));
@@ -338,11 +343,12 @@ void ButtonList::draw(float alpha) const {
   if (clipped() && maxScroll_ > 0.0f) {
     // Rows that continue past the viewport fade out instead of being cut through their text
     const float fh = 18.0f, w = view_.width - scrollbarW_;
-    const Color bg = UI::Color::bg, clear = {bg.r, bg.g, bg.b, 0}, solid = {bg.r, bg.g, bg.b, static_cast<unsigned char>(255.0f * alpha)};
+    const Color bg = fadeTo, clear = {bg.r, bg.g, bg.b, 0}, solid = {bg.r, bg.g, bg.b, static_cast<unsigned char>(255.0f * alpha)};
     if (scroll_ < maxScroll_ - 0.5f) DrawRectangleGradientV(static_cast<int>(view_.x), static_cast<int>(view_.y + view_.height - fh), static_cast<int>(w), static_cast<int>(fh), clear, solid);
     if (scroll_ > 0.5f) DrawRectangleGradientV(static_cast<int>(view_.x), static_cast<int>(view_.y), static_cast<int>(w), static_cast<int>(fh), solid, clear);
   }
   if (clipped()) EndScissorMode();
+  g_listDraws = false;
 
   if (maxScroll_ > 0) {
     DrawRectangleRounded(scrollbar(), 1.0f, 6, UI::Color::surfaceAlt);

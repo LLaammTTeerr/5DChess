@@ -1,9 +1,9 @@
 # Double-click toggles Focus <-> Overview on a board; on empty canvas it is the Overview. A Standard game of four half-turns, five boards.
-# Layout (1400x800): Versus (150,250); Standard row (690,184); Play (808,712); Submit (841,90).
+# Layout (1400x800): Versus (150,250); Standard row (905,224); Play (808,712); Submit (841,90).
 wait 20
 click 150 250        # Versus
 wait 30
-click 690 184        # Standard
+click 905 224        # Standard
 wait 20
 click 808 712        # Play
 wait 120

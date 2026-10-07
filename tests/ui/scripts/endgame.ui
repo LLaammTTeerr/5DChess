@@ -1,15 +1,15 @@
 # Checkmate in Time Line Fragment (4x4, two timelines), found with a search over the engine: White steps the king
 # (d1 -> d2) on the white-moveable board (timeline 1), then Black plays pawn c4-c3 on timeline 0 and the bishop c4-d3 on
 # timeline 1; White then has no legal turn and its king is attacked: "Black wins!" (Checkmate).
-# Layout (1400x800): Versus (150,250); mode row 8 (690,604 after scrolling the list two notches); Play (808,712); Submit (841,90). Squares are clicked by name
+# Layout (1400x800): Versus (150,250); mode row 8 (905,584 after scrolling the list to its end); Play (808,712); Submit (841,90). Squares are clicked by name
 # (`clicksq <timeline> <half-turn> <square>`), see game-standard.ui.
 wait 20
 click 150 250        # Versus
 wait 30
-move 690 400
-wheel -2             # the list scrolls: the ninth row comes up to the eighth
+move 905 400
+wheel -4             # the list scrolls to its end: the last two rows come into view
 wait 10
-click 690 604        # Misc - Time Line Fragment (row 8)
+click 905 584        # Misc - Time Line Fragment (row 8)
 wait 20
 click 808 712        # Play
 wait 120

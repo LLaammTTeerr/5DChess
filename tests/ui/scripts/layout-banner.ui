@@ -1,7 +1,7 @@
 # The turn change under Motion: Full (the harness forces Reduce motion, the Display tab switches it back): after Submit the pill's hint
 # segment cross-fades to "Black to move" for 1.2 s instead of a banner dropping over the turn ruler. Frames are captured 3, 9, 24, 48 and
 # 90 frames after the click. Layout (1400x800): Settings (150,490), Display tab (880,172), the Motion button the second Display option
-# (200,308); Versus (150,250), Standard (690,184), Play (808,712), Submit (841,90).
+# (200,308); Versus (150,250), Standard (905,224), Play (808,712), Submit (841,90).
 wait 20
 click 150 490        # Settings
 wait 30
@@ -13,7 +13,7 @@ click 125 25         # Back
 wait 30
 click 150 250        # Versus
 wait 30
-click 690 184        # Standard
+click 905 224        # Standard
 wait 20
 click 808 712        # Play
 wait 150

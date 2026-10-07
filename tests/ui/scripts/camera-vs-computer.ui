@@ -1,15 +1,15 @@
 # Play vs Computer as Black: the computer opens, its moves and Submit follow the camera rules (150 ms after the move, so the flight
 # reads first) and the player starts with the one board that needs a move in focus.
-# Layout (1400x800): Versus (150,250); Computer (833,122); Black (752,174); Easy (644,226); Standard (690,320); Play (808,712).
+# Layout (1400x800): Versus (150,250); Computer (492,254); Black (400,350); Easy (280,446); Standard (905,224); Play (808,712).
 wait 20
 click 150 250        # Versus
 wait 30
-click 833 122        # Computer
+click 492 254        # Computer
 wait 20
-click 752 174        # Black
-click 644 226        # Easy
+click 400 350        # Black
+click 280 446        # Easy
 wait 10
-click 690 320        # Standard
+click 905 224        # Standard
 wait 20
 click 808 712        # Play
 wait 30

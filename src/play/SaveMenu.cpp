@@ -14,7 +14,7 @@ namespace play {
 
 namespace {
 
-constexpr float kLeft = 25.0f, kTop = 55.0f, kButtonW = 94.0f, kPanelW = 470.0f, kHeader = 38.0f, kRow = 40.0f, kGap = 6.0f, kPad = 10.0f;
+constexpr float kLeft = 25.0f, kTop = 55.0f, kButtonW = 94.0f, kPanelW = 440.0f  /* ends left of the action row (Undo starts near x=478) */, kHeader = 38.0f, kRow = 40.0f, kGap = 6.0f, kPad = 10.0f;
 constexpr float kMessageSeconds = 3.5f;
 
 bool inside(Rectangle r, Vector2 p) { return p.x >= r.x && p.x < r.x + r.width && p.y >= r.y && p.y < r.y + r.height; }
@@ -145,6 +145,7 @@ void SaveMenu::draw(const BoardStyle& style, float navAlpha) const {
   if (_open) {
     const Rectangle panel = panelRect();
     drawPanel(panel, style, navAlpha, 0.1f);
+    if (ui::audit::enabled()) ui::audit::rect("save panel", panel, ui::audit::Kind::Popup);
     // The header: the last result, else the warning that unsubmitted moves are not part of a save, else the invitation
     std::string header = "Save to slot";
     ::Color color = style.hudText;
@@ -163,6 +164,7 @@ void SaveMenu::draw(const BoardStyle& style, float navAlpha) const {
     const float w = MeasureTextEx(font, _message.c_str(), fs, 0).x + 2 * kPad + 8.0f;
     const Rectangle pill = {kLeft, kTop + UI::Space::buttonHeight + kGap + 2.0f, w, 34.0f};
     drawPanel(pill, style, navAlpha);
+    if (ui::audit::enabled()) ui::audit::rect("save message", pill, ui::audit::Kind::Popup);
     DrawTextEx(font, _message.c_str(), {pill.x + kPad + 4.0f, std::floor(pill.y + (pill.height - fs) / 2 - 1)}, fs, 0,
                _warn ? style.check : style.hudText);
   }

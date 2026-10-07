@@ -1,15 +1,15 @@
 # A game against the computer (Easy, playing White): a move, Submit, the computer's reply, and the "thinking" HUD.
-# Layout (1400x800): Versus (150,250), Computer (833,122), Easy (644,226), Standard (690,320), Play (808,712), Submit (841,90).
+# Layout (1400x800): Versus (150,250), Computer (492,254), Easy (280,446), Standard (905,224), Play (808,712), Submit (841,90).
 # `ainodes` pins how far the computer's search gets each frame: the capture of the indicator is taken with the search frozen
 # part-way (the bar at what the search has done so far), and `waitai` runs frames until it has replied.
 wait 20
 click 150 250        # Versus
 wait 30
-click 833 122        # Computer
+click 492 254        # Computer
 wait 20
-click 644 226        # Easy (White is the default side)
+click 280 446        # Easy (White is the default side)
 wait 10
-click 690 320        # Standard
+click 905 224        # Standard
 wait 20
 click 808 712        # Play
 wait 120

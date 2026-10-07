@@ -184,6 +184,7 @@ void GuideScreen::draw(App& app) const {
 
   // the HUD's panel with a fixed corner radius of about 18 px
   play::drawPanel(_panel, style, 1.0f, 18.0f / std::min(_panel.width, _panel.height));
+  if (ui::audit::enabled()) ui::audit::rect("guide panel", _panel, ui::audit::Kind::Panel);
   const float x = _panel.x + kPad;
   drawLines(UI::Fonts::mono(), UI::Font::mono, _step.lines, x, _step.y, kSmallLine, style.hudMuted, {_panel.x, _panel.y, _panel.width, std::min(_prev.rect.y, _reset.rect.y) - _panel.y});
   drawLines(UI::Fonts::section(), UI::Font::section, _title.lines, x, _title.y, kTitleLine, style.hudText, {_panel.x, _panel.y, _panel.width, std::min(_prev.rect.y, _reset.rect.y) - _panel.y});

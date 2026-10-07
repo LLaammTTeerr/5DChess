@@ -18,6 +18,7 @@ namespace play {
 namespace {
 
 constexpr const char* kDot = "\xC2\xB7"; // middle dot
+constexpr float kPresentBadgeH = 22.0f; // the "Present . T1b" marker on the ruler
 
 Font fontOf(const char* id, int size) { return App::current().assets.font(id, size); }
 
@@ -185,17 +186,23 @@ void BoardScene::bakeAurora() {
 
 // ---- Lanes and the present --------------------------------------------------------------------------------------
 
-void BoardScene::drawPresentColumn(const SceneFrame& f, float top) {
+void BoardScene::drawPresentColumn(const SceneFrame& f, float rulerTop) {
   const BoardStyle& st = f.style;
+  // The column hangs from the ruler: it begins at the middle of the Present marker, never above the ruler (the HUD zone is clear)
+  const float top = rulerTop + kPresentBadgeH / 2.0f;
   const float zoom = f.zoom();
   const float cx = f.toScreen({presentColumnX(presentColumn(f)), 0}).x;
   const float halfW = (BoardLayout::kPitch / 2.0f) * zoom;
   const float bottom = static_cast<float>(GetScreenHeight()) - 6.0f;
   if (cx + halfW < 0 || cx - halfW > GetScreenWidth()) return;
 
+  if (ui::audit::enabled()) {  // (the part over the ruler's own extent: the column is wider than the ruler at the screen's edges)
+    const float x0 = std::max(cx - halfW, f.safe.x), x1 = std::min(cx + halfW, f.safe.x + f.safe.width);
+    ui::audit::rect("present column band", {x0, top, x1 - x0, 2.0f}, ui::audit::Kind::PresentBand);
+  }
   switch (st.present) {
     case BoardStyle::Present::Glow: {
-      const Rectangle r = {cx - halfW, top - 6, 2 * halfW, bottom - top + 6};
+      const Rectangle r = {cx - halfW, top, 2 * halfW, bottom - top};
       _soft.draw(r, fade(st.accent, 0.14f));
       drawRoundedRect(r, std::min(28.0f, halfW), fade({226, 128, 86, 255}, 0.11f));
       drawRoundedLines(r, std::min(28.0f, halfW), 1.5f, fade(st.accent, 0.30f));
@@ -206,7 +213,7 @@ void BoardScene::drawPresentColumn(const SceneFrame& f, float top) {
       const float w = std::clamp(2.0f * halfW * 1.9f, 150.0f, 520.0f);
       BeginBlendMode(BLEND_ADDITIVE);
       DrawTexturePro(_aurora, {0, 0, static_cast<float>(_aurora.width), static_cast<float>(_aurora.height)},
-                     {cx - w / 2, top - 8, w, bottom - top + 8}, {0, 0}, 0.0f, WHITE);
+                     {cx - w / 2, top - 6, w, bottom - top + 6}, {0, 0}, 0.0f, WHITE);
       EndBlendMode();
       break;
     }
@@ -246,6 +253,8 @@ void BoardScene::drawLanes(const SceneFrame& f, float top) {
       const float y0 = f.toScreen({0, laneCenterY(l) - BoardLayout::kPitch / 2.0f}).y;
       const float h = BoardLayout::kPitch * zoom;
       if (y0 + h < laneTop || y0 > H) continue;
+      if (ui::audit::enabled() && st.lane != BoardStyle::Lane::Hairline)
+        ui::audit::rect("lane band L" + std::to_string(l), {8.0f, std::max(y0 + 2.0f, laneTop), W - 16.0f, 2.0f}, ui::audit::Kind::Band);
       if (st.lane == BoardStyle::Lane::Band) {
         const Color tint = st.laneTint[laneColor(l)];
         const Rectangle r = {8.0f, y0 + 2.0f, W - 16.0f, h - 4.0f};
@@ -619,7 +628,7 @@ std::optional<BoardScene::Minimap> BoardScene::minimap(const SceneFrame& f, floa
   const int rows = f.view.timelines.back().id - f.view.timelines.front().id + 1;
   const int cols = f.view.lastHalfTurn - f.view.firstHalfTurn + 1;
   Minimap m;
-  m.cell = std::clamp(std::floor((height - 6.0f) / static_cast<float>(rows)) - 1.0f, 2.0f, 6.0f);
+  m.cell = std::clamp(std::floor((height - 10.0f) / static_cast<float>(rows)) - 1.0f, 2.0f, 6.0f);  // (the strip and its frame stay within the ruler)
   const float step = m.cell + 1.0f;
   const float w = static_cast<float>(cols) * step - 1.0f, h = static_cast<float>(rows) * step - 1.0f;
   m.rect = {f.safe.x + f.safe.width - w - 10.0f, y + (height - h) / 2.0f - 1.0f, w, h};
@@ -655,6 +664,7 @@ void BoardScene::drawRuler(const SceneFrame& f, float y, float height) const {
   else if (atlas) DrawRectangle(static_cast<int>(x0), static_cast<int>(baseline), static_cast<int>(x1 - x0), 2, st.cardEdgeWhite);
   else DrawRectangle(static_cast<int>(x0), static_cast<int>(baseline), static_cast<int>(x1 - x0), 1, st.ink);
 
+  if (ui::audit::enabled()) ui::audit::rect("turn ruler", {x0, y, x1 - x0, height}, ui::audit::Kind::Ruler);
   const int present = f.view.presentHalfTurn;
   const float presentX = f.toScreen({presentColumnX(presentColumn(f)), 0}).x;
 
@@ -663,7 +673,7 @@ void BoardScene::drawRuler(const SceneFrame& f, float y, float height) const {
   const Font badgeFont = atlas ? fontOf("ui.public_sans_bold", 14) : fontOf("ui.mono", 14);
   const float badgeSpacing = atlas ? 0.0f : 1.0f;
   const float badgeW = textWidth(badgeFont, badgeText, 14.0f, badgeSpacing) + 22.0f;
-  const float badgeH = 22.0f;
+  const float badgeH = kPresentBadgeH;
 
   const int stride = std::max(1, static_cast<int>(std::ceil(46.0f / (2.0f * pitch)))); // label every n-th turn when crowded
   const Color tickColor = atlas ? Color{185, 165, 129, 255} : deep ? fade(st.grid, 0.6f) : st.ink;
@@ -696,10 +706,15 @@ void BoardScene::drawRuler(const SceneFrame& f, float y, float height) const {
   }
   if (!tickText.empty()) queueTip(tickTip, tickText);
 
+  const auto strip = minimap(f, y, height);
+
   // The present marker sits on the ruler at the present column
   if (presentX > x0 - 40 && presentX < x1 + 40) {
-    const float bx = std::clamp(presentX, x0 + badgeW / 2.0f, std::max(x0 + badgeW / 2.0f, x1 - badgeW / 2.0f));
+    // (it stops short of the minimap at the right end of the ruler)
+    const float room = strip ? strip->rect.x - 5.0f - 8.0f : x1;
+    const float bx = std::clamp(presentX, x0 + badgeW / 2.0f, std::max(x0 + badgeW / 2.0f, room - badgeW / 2.0f));
     const Rectangle pill = {std::floor(bx - badgeW / 2.0f), y, badgeW, badgeH};
+    if (ui::audit::enabled()) ui::audit::rect("present badge", pill, ui::audit::Kind::Badge, 8.0f);
     const float ty = y + (badgeH - 14.0f) / 2.0f - 1.0f;
     if (atlas) {
       drawRoundedRect(pill, 11.0f, st.accent);
@@ -717,9 +732,10 @@ void BoardScene::drawRuler(const SceneFrame& f, float y, float height) const {
   }
 
   // The strip of the whole multiverse at the right end, while part of it is out of view
-  if (const auto m = minimap(f, y, height)) {
+  if (const auto& m = strip) {
     const float step = m->cell + 1.0f;
     const Rectangle back = {m->rect.x - 5.0f, m->rect.y - 4.0f, m->rect.width + 10.0f, m->rect.height + 8.0f};
+    if (ui::audit::enabled()) ui::audit::rect("minimap", back, ui::audit::Kind::Panel);
     drawRoundedRect(back, 5.0f, st.hudFill);
     drawRoundedLines(back, 5.0f, 1.0f, st.hudBorder);
     const float presentCol = (presentColumn(f) - static_cast<float>(m->firstHalfTurn)) * step;

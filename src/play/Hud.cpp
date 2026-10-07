@@ -71,6 +71,7 @@ void drawHud(const HudData& hud, const BoardStyle& st) {
   const float availW = screenW - hud.rightInset; // a side panel at the right is not part of the board view
   const float cx = availW / 2.0f;
   const float margin = UI::Layout::sideInset;
+  if (ui::audit::enabled()) ui::audit::rect("HUD zone", {0.0f, 0.0f, availW, UI::Layout::hudBottom}, ui::audit::Kind::HudZone);
 
   // ---- Top-centre status pill: [chip] "White to move" | "Turn N . K timelines" | hint ----
   const ::Font statusFont = UI::Fonts::button();
@@ -97,7 +98,8 @@ void drawHud(const HudData& hud, const BoardStyle& st) {
   const float gap = UI::Space::md;
   const float dotR = 2.5f, dotsW = 3 * dotR * 2 + 2 * UI::Space::xs + UI::Space::sm;
   const float fixedW = pad + chipD + UI::Space::sm + statusW + gap + 1 + gap + infoW + pad;
-  const float maxPill = availW - 2 * margin;
+  // The pill is centred; it never reaches the Back button at the top left (which the game's own screens draw there)
+  const float maxPill = std::min(availW - 2 * margin, 2.0f * (cx - UI::Layout::backRight));
   const bool thinkingHint = hud.thinking > 0.003f && !hud.hint.empty();
 
   // The hint is cut with "..." when the pill would not fit beside the side panel / the window edge
@@ -116,6 +118,7 @@ void drawHud(const HudData& hud, const BoardStyle& st) {
 
   const Rectangle pill = {std::floor(cx - w / 2), UI::Layout::hudPillY, w, h};
   drawPanel(pill, st);
+  if (ui::audit::enabled()) ui::audit::rect("status pill", pill, ui::audit::Kind::Pill);
   if (ui::audit::enabled()) ui::audit::within("HUD pill", status + " | " + turnInfo + " | " + hintShown, pill, {margin / 2, 0.0f, availW - margin, screenH});
 
   float x = pill.x + pad;
@@ -177,6 +180,7 @@ void drawHud(const HudData& hud, const BoardStyle& st) {
     const Rectangle bar = {std::floor(cx - (cw + 2 * pad) / 2), screenH - UI::Layout::controlsBarMargin - UI::Layout::controlsBarH,
                            cw + 2 * pad, UI::Layout::controlsBarH};
     drawPanel(bar, st, 0.92f * a);
+    if (ui::audit::enabled()) ui::audit::rect("controls bar", bar, ui::audit::Kind::Pill);
     if (ui::audit::enabled()) ui::audit::within("controls bar", cam + " " + controls, bar, {0.0f, 0.0f, availW, screenH});
     float bx = bar.x + pad;
     const float by = std::floor(bar.y + (bar.height - UI::Font::mono) / 2 - 1);
@@ -464,6 +468,7 @@ void ActionRow::draw() const {
     const Vector2 c = {_undo.rect.x + _undo.rect.width - 6.0f, _undo.rect.y + 6.0f};
     const std::string n = std::to_string(std::min(_undoCount, 99));
     const ui::Skin& skin = _undo.skin ? *_undo.skin : ui::defaultSkin();
+    if (ui::audit::enabled()) ui::audit::rect("undo count badge", {c.x - 10.0f, c.y - 10.0f, 20.0f, 20.0f}, ui::audit::Kind::Badge);
     DrawCircleV(c, 10.0f, skin.primary);
     const ::Font font = UI::Fonts::mono();
     const Vector2 ts = MeasureTextEx(font, n.c_str(), UI::Font::minimum, 0);
