@@ -88,8 +88,14 @@ void flushTooltip() {
   float x = anchor.x + anchor.width / 2 - (w + 2 * pad) / 2;
   float y = anchor.y + anchor.height + 8.0f;
   if (y + h > H - 6.0f) y = anchor.y - h - 8.0f;
-  // Under an anchor above the turn ruler the bubble would cover the ruler: open above the anchor when there is room
-  if (anchor.y < UI::Layout::rulerY && y + h > UI::Layout::rulerY - 2.0f && anchor.y - h - 8.0f >= 4.0f) y = anchor.y - h - 8.0f;
+  // Under an anchor above the turn ruler the bubble would cover the ruler: open beside the anchor instead (right, else left)
+  if (anchor.y < UI::Layout::rulerY && y + h > UI::Layout::rulerY - 2.0f) {
+    const float bw = w + 2 * pad;
+    y = anchor.y + anchor.height / 2 - h / 2;
+    if (anchor.x + anchor.width + 8.0f + bw <= W - 6.0f) x = anchor.x + anchor.width + 8.0f;
+    else if (anchor.x - 8.0f - bw >= 6.0f) x = anchor.x - 8.0f - bw;
+    else y = anchor.y - h - 8.0f;
+  }
   x = std::clamp(x, 6.0f, std::max(6.0f, W - w - 2 * pad - 6.0f));
   const Rectangle box = {std::floor(x), std::floor(y), w + 2 * pad, h};
   auto fade = [a](Color c) { c.a = static_cast<unsigned char>(c.a * a); return c; };
