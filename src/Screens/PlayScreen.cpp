@@ -891,6 +891,7 @@ std::vector<PlayScreen::Ghost> PlayScreen::ghostCards() const {
 
 play::TurnPanel::Mode PlayScreen::turnPanelMode() const {
   using Mode = play::TurnPanel::Mode;
+  if (_playView) return Mode::Off; // [Play view] the cards carry the chips: no list beside them
   if (_embedded) return Mode::Off; // (the Guide and the puzzles have their own panel; a decided game keeps it, showing the turn that decided it)
   return play::TurnPanel::wanted() ? Mode::Open : Mode::Collapsed;
 }

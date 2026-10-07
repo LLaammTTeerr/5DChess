@@ -38,6 +38,7 @@ void PlayScreen::togglePlayView(bool on) {
   _arrows.finish();
   cancelDeferredCamera();
   _playView = on;
+  applyInsets(); // [TurnPanel] the list goes away in the Play view and comes back with the multiverse
   _cursorShown = false;
   _pvCursor.reset();
   _pressValid = _dragging = false;
