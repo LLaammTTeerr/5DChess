@@ -65,6 +65,9 @@ void PlayScreen::embed(float rightInset) {
   _rightInset = rightInset;
   _camera.setInsets(UI::Layout::safeTop, _rightInset, UI::Layout::safeBottom, UI::Layout::laneLabelW);
   _hud.rightInset = _rightInset;  // (the first frame is drawn before any update)
+  _hud.playViewAvailable = false; // [Play view] ... and has no view toggle
+  _hud.playView = false;
+  _actions.sync(_hud);
   _actions.layout(static_cast<float>(GetScreenWidth()) - _rightInset); // the action row centres on the board view, not on the panel
   _turnPanel.setMode(play::TurnPanel::Mode::Off); // [TurnPanel] (the Guide and the puzzles have their own panel)
 }
