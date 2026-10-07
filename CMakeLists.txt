@@ -51,7 +51,7 @@ else()
 endif()
 
 # --- Game-screen logic that needs no graphics (selection state machine, board layout, multiverse snapshot, settings file text) -----------------
-add_library(play_core STATIC src/play/Selection.cpp src/play/Feedback.cpp src/play/BoardLayout.cpp src/play/BoardCamera.cpp src/play/MultiverseView.cpp src/play/TurnChecklist.cpp src/play/VsAi.cpp
+add_library(play_core STATIC src/play/Selection.cpp src/play/Feedback.cpp src/play/BoardLayout.cpp src/play/BoardCamera.cpp src/play/MultiverseView.cpp src/play/TurnChecklist.cpp src/play/VsAi.cpp src/play/PlayViewLayout.cpp
   src/services/SettingsFile.cpp src/services/SaveStore.cpp src/guide/Guide.cpp src/Render/PieceThemes.cpp src/services/SettingsApply.cpp
   src/puzzles/Puzzle.cpp src/puzzles/Solver.cpp src/puzzles/Progress.cpp)
 target_link_libraries(play_core PUBLIC chess_core)
@@ -89,7 +89,7 @@ if(FDCHESS_BUILD_GAME)
   list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/engine/|/src/ai/") # engine and AI sources are part of chess_core / ai_core
   list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/guide/")  # guide content (no graphics) is part of play_core
   list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/puzzles/(Puzzle|Solver|Progress)\\.cpp") # puzzle data, proofs and progress text: part of play_core
-  list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/play/(Selection|Feedback|BoardLayout|BoardCamera|MultiverseView|TurnChecklist|VsAi)\\.cpp|/src/services/(SettingsFile|SaveStore)\\.cpp|/src/Render/PieceThemes\\.cpp|/src/services/SettingsApply\\.cpp") # part of play_core
+  list(FILTER GAME_SOURCES EXCLUDE REGEX "/src/play/(Selection|Feedback|BoardLayout|BoardCamera|MultiverseView|TurnChecklist|VsAi|PlayViewLayout)\\.cpp|/src/services/(SettingsFile|SaveStore)\\.cpp|/src/Render/PieceThemes\\.cpp|/src/services/SettingsApply\\.cpp") # part of play_core
 
   add_executable(5dchess ${GAME_SOURCES})
   target_include_directories(5dchess PRIVATE

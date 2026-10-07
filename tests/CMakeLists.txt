@@ -20,6 +20,7 @@ add_executable(chess_tests
   selection_test.cpp
   feedback_test.cpp
   layout_test.cpp
+  playview_test.cpp
   textfit_test.cpp
   camera_test.cpp
   view_test.cpp

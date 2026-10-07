@@ -23,6 +23,8 @@ struct HudData {
   double clock = 0.0;        // seconds, for the indicator's dots
   // Filled by PlayScreen from the camera and the game:
   std::string cameraLabel;    // "Overview" / "Focus" / "Free": drawn at the left of the controls bar
+  bool playView = false;      // the Play view is showing (cameraLabel is "Play view"): the toggle reads "Multiverse [M]", the controls line has its keys
+  bool playViewAvailable = false; // the "Play view [P]" / "Multiverse [M]" toggle shows (not on an embedded board)
   std::string nextBoardLabel; // non-empty while a Mandatory board is off-screen ("Move on L+1 . T3b"): the "Next board" button shows
   float rightInset = 0.0f;    // a side panel (Puzzle / Guide) of this width at the right: pill, action row and controls bar centre on the rest
   std::string undoLabel;      // "Undo move" (one move of this turn) / "Undo turn" (against the computer: the turn); empty: "Undo"
@@ -117,7 +119,7 @@ private:
 /// The Undo / Deselect / Submit row under the HUD pill, with the camera's Overview and Next board buttons at its right end.
 class ActionRow {
 public:
-  enum class Action { None, Undo, Deselect, Submit, Overview, NextBoard };
+  enum class Action { None, Undo, Deselect, Submit, Overview, NextBoard, ToggleView };
 
   ActionRow();
   /// Centre the row on `availableWidth` (the window minus a side panel); Overview and Next board sit at that width's right end.
@@ -129,7 +131,7 @@ public:
   void draw() const;
   /// The skin of the board view (nullptr: the default cream skin).
   void setSkin(const ui::Skin* skin) {
-    _undo.skin = _deselect.skin = _submit.skin = _overview.skin = _next.skin = skin;
+    _undo.skin = _deselect.skin = _submit.skin = _overview.skin = _next.skin = _view.skin = skin;
   }
   /// Reviewing a finished game: the Deselect slot becomes "Result" (enabled), which brings the end card back.
   void setReview(bool on) {
@@ -146,14 +148,16 @@ public:
   const ui::Button& undoButton() const { return _undo; }
   const ui::Button& overviewButton() const { return _overview; }
   const ui::Button& nextButton() const { return _next; }
+  const ui::Button& viewButton() const { return _view; }
+  bool viewVisible() const { return _viewShown; }
   bool nextVisible() const { return _nextShown; }
   bool overviewVisible() const { return _overviewShown; }
 
 private:
   float _availableW = 0.0f;
-  bool _nextShown = false, _overviewShown = false, _overviewLaidOut = false;
+  bool _nextShown = false, _overviewShown = false, _overviewLaidOut = false, _viewShown = false, _playView = false;
   int _undoCount = 0;
-  ui::Button _undo{"Undo", {}}, _deselect{"Deselect", {}}, _submit{"Submit", {}, true}, _overview{"Overview", {}}, _next{"Next board", {}};
+  ui::Button _undo{"Undo", {}}, _deselect{"Deselect", {}}, _submit{"Submit", {}, true}, _overview{"Overview", {}}, _next{"Next board", {}}, _view{"Play view [P]", {}};
 };
 
 } // namespace play

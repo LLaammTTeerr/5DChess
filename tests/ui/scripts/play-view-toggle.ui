@@ -1,0 +1,30 @@
+# Toggling between the views: the turn list (the checklist panel) is open in the multiverse and the boards keep its 340 px free at the right; the Play
+# view has no list (24 px margin, and C does nothing); M brings the list and its inset back. `camexpect inset` / `playview` assert it.
+record ../records/play-view-6tl.5dr
+wait 90
+camexpect playview 0
+camexpect inset 340
+key P
+wait 30
+camexpect playview 1
+camexpect inset 24
+capture play-view-toggle-cards         # the cards use the whole width
+key C                                  # the list's key does nothing here
+wait 10
+camexpect inset 24
+key M
+wait 60
+camexpect playview 0
+camexpect inset 340
+capture play-view-toggle-back          # the multiverse with its turn list again
+key C                                  # fold it: Turn list n/m
+wait 30
+camexpect inset 24
+key P
+wait 20
+key M
+wait 40
+camexpect inset 24                     # a folded list stays folded across the round trip
+key C
+wait 30
+camexpect inset 340

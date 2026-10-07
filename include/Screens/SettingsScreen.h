@@ -21,6 +21,7 @@ private:
   int _themeIndex = -1;             // highlighted theme (the one in use, found when the tab first opens)
   ui::ButtonList _options;          // theme names or music tracks
   std::optional<ui::Toggle> _toggle;  // Sound effects (Music tab) or Motion (Display tab)
+  std::optional<ui::Toggle> _playViewToggle; // Display tab: Start turns in Play view
   std::optional<ui::Cycle> _boardView; // Display tab: Board view: Deep space / Atlas / Blueprint
 
   mutable std::string _noteText;               // the description shown at the right and its wrapped lines (draw() caches them)

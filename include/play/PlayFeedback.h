@@ -31,6 +31,10 @@ public:
     std::optional<Chess::Core::Coord> hover; // the square under the pointer when the boards take input
     bool pointerFree = true;                 // no button or panel has the pointer
     bool blocked = false, aiToMove = false, locked = false, ended = false;
+    // The Play view has no camera: it names the card frame and the square under the pointer itself (camera and layout are then unused)
+    bool screenSpace = false;
+    std::optional<BoardKey> chrome;
+    std::optional<Chess::Core::Coord> squareUnder;
   };
   /// Once a frame after the boards took their input.
   void input(const Pointer& in);

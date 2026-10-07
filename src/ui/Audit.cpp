@@ -75,6 +75,7 @@ constexpr Allowed kAllowed[] = {
     {Kind::Ruler, Kind::PresentBand, Rule::Contain},  // the present column hangs from the ruler
     {Kind::Ruler, Kind::Popup, Rule::Overlap}, {Kind::Badge, Kind::Popup, Rule::Overlap},  // the Save panel drops over the ruler
     {Kind::Button, Kind::Badge, Rule::Overlap}, // the Undo count on its button
+    {Kind::Card, Kind::Button, Rule::Contain},  // the Play view's inspector tabs and inactive chips lie inside their column / row
 };
 
 bool contains(Rectangle outer, Rectangle inner) {

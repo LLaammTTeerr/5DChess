@@ -27,9 +27,11 @@ void PlayFeedback::input(const Pointer& in) {
   if (in.pointerFree && !in.ended) {
     const Vec2 w2 = in.camera.screenToWorld({pointer.x, pointer.y});
     const Vector2 world = {w2.x, w2.y};
-    for (const auto& slot : in.layout.boards())
-      if (BoardLayout::cardRect(slot.rect).contains(world.x, world.y) && !slot.rect.contains(world.x, world.y))
-        chrome = BoardKey{slot.timeline, slot.halfTurn};
+    if (in.screenSpace) chrome = in.chrome; // [Play view]
+    else
+      for (const auto& slot : in.layout.boards())
+        if (BoardLayout::cardRect(slot.rect).contains(world.x, world.y) && !slot.rect.contains(world.x, world.y))
+          chrome = BoardKey{slot.timeline, slot.halfTurn};
     if (!in.blocked) {
       if (in.hover && !in.selection.active() && _previewArmed && Selection::canPickUp(*in.hover, in.game)) piece = in.hover;
       if (in.hover && in.selection.active() && !in.selection.promotionTarget()) {
@@ -40,7 +42,7 @@ void PlayFeedback::input(const Pointer& in) {
       }
     } else if (in.aiToMove && !in.locked && Input::mousePressed(MOUSE_BUTTON_LEFT)) {
       // The computer's turn: a click on a board is ignored, but says so
-      if (const auto square = in.layout.hitTest(world.x, world.y)) refused(*square, Intent::Reason::ComputerThinking);
+      if (const auto square = in.screenSpace ? in.squareUnder : in.layout.hitTest(world.x, world.y)) refused(*square, Intent::Reason::ComputerThinking);
     }
   }
   _a.previewHover(piece);

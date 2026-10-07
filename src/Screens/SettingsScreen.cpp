@@ -61,12 +61,13 @@ void SettingsScreen::openTab(App& app, int tab) {
   const float H = static_cast<float>(GetScreenHeight());
   const Rectangle area = {kColumnX, kColumnTop, kOptionW, H - kColumnTop};
   const auto& tracks = AudioManager::tracks();
-  // Music: Off, tracks, SFX toggle; Display: board view, motion toggle
-  const int count = tab == Theme ? Themes::count : tab == Music ? static_cast<int>(tracks.size()) + 2 : 2;
+  // Music: Off, tracks, SFX toggle; Display: board view, motion toggle, Play view toggle
+  const int count = tab == Theme ? Themes::count : tab == Music ? static_cast<int>(tracks.size()) + 2 : 3;
   const auto slots = ui::column(area, count, UI::Space::buttonHeight, kOptionGap, ui::Align::Top);
 
   std::vector<std::string> labels;
   _toggle.reset();
+  _playViewToggle.reset();
   _boardView.reset();
   _options = {};
   if (tab == Theme) {
@@ -80,9 +81,11 @@ void SettingsScreen::openTab(App& app, int tab) {
     for (BoardView v : boardview::all) views.push_back(boardview::name(v));
     _boardView.emplace(slots[0], "Board view: ", views, static_cast<int>(app.settings.boardView));
     _boardView->enterAfter(0.0f);
-    _toggle.emplace(slots.back(), app.settings.reduceMotion, "Motion: Reduced", "Motion: Full");
+    _toggle.emplace(slots[1], app.settings.reduceMotion, "Motion: Reduced", "Motion: Full");
+    _playViewToggle.emplace(slots[2], app.settings.startInPlayView, "Start turns in Play view: On", "Start turns in Play view: Off");
+    _playViewToggle->enterAfter(2 * UI::Motion::stagger);
   }
-  if (_toggle) _toggle->enterAfter((count - 1) * UI::Motion::stagger);
+  if (_toggle) _toggle->enterAfter((tab == Display ? 1 : count - 1) * UI::Motion::stagger);
   _options = ui::ButtonList(labels, slots);
   if (tab == Theme) _options.selected = _themeIndex;
   // Highlight the track that is playing (music is global, not per screen)
@@ -102,6 +105,7 @@ void SettingsScreen::update(App& app, float dt) {
     app.audio.playMusic(picked == 0 ? AudioManager::offName() : AudioManager::tracks()[picked - 1].name);
   }
   if (_toggle) _toggle->update(dt);
+  if (_playViewToggle) _playViewToggle->update(dt);
   if (_boardView && _boardView->update(dt)) app.settings.boardView = boardview::all[_boardView->value()];
 
   if (_back.update(dt, app.screens.navShown())) app.screens.replace(std::make_unique<MainMenuScreen>());
@@ -112,6 +116,7 @@ void SettingsScreen::draw(App& app) const {
   _tabs.draw();
   _options.draw();
   if (_toggle) _toggle->draw();
+  if (_playViewToggle) _playViewToggle->draw();
   if (_boardView) _boardView->draw();
 
   if (_tab == Theme && _themeIndex >= 0) {  // preview of the chosen piece theme
@@ -125,7 +130,7 @@ void SettingsScreen::draw(App& app) const {
   std::string note;
   if (_tab == Music) note = "Music plays on every screen. Choose Off to silence it; sound effects are separate.";
   else if (_tab == Display && _boardView)
-    note = std::string(describeView(boardview::all[_boardView->value()])) + " Reduced motion swaps slides and bounces for quick fades.";
+    note = std::string(describeView(boardview::all[_boardView->value()])) + " Reduced motion swaps slides and bounces for quick fades. Play view shows one big card for each timeline's present board.";
   if (!note.empty()) {
     const ::Font font = UI::Fonts::body();
     const float room = static_cast<float>(GetScreenWidth()) - kPaneX - 50.0f;

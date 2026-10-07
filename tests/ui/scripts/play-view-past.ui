@@ -1,0 +1,36 @@
+# Play view: boards that are not cards go to the inspector (the last cell of the grid). The same 6-timeline record as play-view.ui.
+# A queen on L-2 can jump to boards of its own past: the inspector shows the first of them at card size with a tab for each (the docked target);
+# clicking a square of it makes the move, which branches a new timeline (here inactive at once, so it is shown in the inspector and listed in
+# the inactive row; an active new timeline gets a card appended at the end, the others keep their places).
+# Then the history of a timeline is read in the inspector: a click on the history stack, [ and ] step through it, E closes.
+record ../records/play-view-6tl.5dr
+wait 60
+key P
+wait 20
+clicksq -2 8 d1
+wait 20
+capture play-view-past-select         # the jump targets on past boards: the inspector shows L-2 T4w, tabs list the others
+hoversq -2 6 c2
+wait 30
+capture play-view-past-hover          # the live arc from the lifted queen to the docked board
+pvclick tab -1 6
+move 1380 600
+wait 20
+capture play-view-past-tab            # another target board picked from the tabs
+pvclick tab -2 6
+wait 10
+clicksq -2 6 c2
+wait 40
+capture play-view-past-jumped         # the jump made L+4, which is inactive at once: its board is shown in the inspector, a chip in the inactive row
+key ESCAPE                            # closes the inspector's board
+wait 10
+pvclick hist -1 8
+move 1380 600
+wait 20
+capture play-view-history-open        # the history of L-1 in the inspector: close button, a tab for every earlier board
+key LBRACKET
+wait 10
+capture play-view-history-older
+key E
+wait 10
+capture play-view-history-closed

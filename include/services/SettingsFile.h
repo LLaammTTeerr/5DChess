@@ -11,6 +11,7 @@
 //   music=Off
 //   sfx=on
 //   reduce_motion=off
+//   start_in_play_view=off   (a game opens, and each turn starts, in the Play view)
 //   opponent=two_players     (or computer: the Versus screen's last choice)
 //   vs_side=white            (white | black | random)
 //   vs_level=normal          (easy | normal | hard)

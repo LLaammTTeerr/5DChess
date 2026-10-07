@@ -11,6 +11,7 @@
 #include "engine/Notation.h"
 #include "play/BoardRenderer.h"
 #include "play/Feedback.h"
+#include "play/MotionOverlay.h"
 
 using Chess::Core::Coord;
 using play::BoardKey;
@@ -51,6 +52,7 @@ PlayScreen::PlayScreen(std::shared_ptr<Chess::IGame> game, bool isAutosave, std:
   _camera.setInsets(UI::Layout::safeTop, UI::Layout::sideInset, UI::Layout::safeBottom, UI::Layout::laneLabelW);
   // A game that is already decided (a loaded record) is not a transition: no win sound, and no autosave left to continue
   _ended = _game->result() != Chess::GameResult::Ongoing;
+  _playView = App::current().settings.startInPlayView; // [Play view] (embed() turns it off)
   if (_ended && _autosaving) App::current().saves.clearAutosave();
   applyInsets(); // [TurnPanel]
   // The first frame's input already needs the layout to map clicks onto, and the motion state is seeded from it
@@ -59,9 +61,13 @@ PlayScreen::PlayScreen(std::shared_ptr<Chess::IGame> game, bool isAutosave, std:
 
 void PlayScreen::embed(float rightInset) {
   _embedded = true;
+  _playView = false; // [Play view] not on an embedded board
   _rightInset = rightInset;
   _camera.setInsets(UI::Layout::safeTop, _rightInset, UI::Layout::safeBottom, UI::Layout::laneLabelW);
   _hud.rightInset = _rightInset;  // (the first frame is drawn before any update)
+  _hud.playViewAvailable = false; // [Play view] ... and has no view toggle
+  _hud.playView = false;
+  _actions.sync(_hud);
   _actions.layout(static_cast<float>(GetScreenWidth()) - _rightInset); // the action row centres on the board view, not on the panel
   _turnPanel.setMode(play::TurnPanel::Mode::Off); // [TurnPanel] (the Guide and the puzzles have their own panel)
 }
@@ -93,6 +99,7 @@ void PlayScreen::update(App& app, float dt) {
     case play::ActionRow::Action::Submit: submitTurn(); break;
     case play::ActionRow::Action::Overview: cancelDeferredCamera(); goHome(); break;
     case play::ActionRow::Action::NextBoard: cancelDeferredCamera(); nextBoard(1); break;
+    case play::ActionRow::Action::ToggleView: togglePlayView(!_playView); break; // [Play view]
     case play::ActionRow::Action::None: break;
   }
   { // [TurnPanel] (after the buttons, before the boards: it takes the pointer over itself)
@@ -144,11 +151,17 @@ void PlayScreen::updatePicker(float dt, const play::BoardStyle& style) {
     return;
   }
   const Rect square = BoardLayout::squareRect(BoardLayout::boardRect(target->l, target->t), _game->dim(), target->x, target->y);
-  const Vector2 a = toVector(_camera.worldToScreen({square.x, square.y})),
-                b = toVector(_camera.worldToScreen({square.x + square.w, square.y + square.h}));
-  _picker.show(_game->getCurrentTurnColor());
   const play::Rect card = BoardLayout::cardRect(BoardLayout::boardRect(target->l, target->t));
-  const Vector2 c0 = toVector(_camera.worldToScreen({card.x, card.y})), c1 = toVector(_camera.worldToScreen({card.x + card.w, card.y + card.h}));
+  Vector2 a = toVector(_camera.worldToScreen({square.x, square.y})),
+          b = toVector(_camera.worldToScreen({square.x + square.w, square.y + square.h}));
+  Vector2 c0 = toVector(_camera.worldToScreen({card.x, card.y})), c1 = toVector(_camera.worldToScreen({card.x + card.w, card.y + card.h}));
+  if (_playView) { // [Play view] the squares and cards are on screen already
+    const auto sq = _pv.squareRect(*target);
+    const auto cd = _pv.cardRect(play::keyOf(*target));
+    if (sq) { a = {sq->x, sq->y}; b = {sq->x + sq->w, sq->y + sq->h}; }
+    if (cd) { c0 = {cd->x, cd->y}; c1 = {cd->x + cd->w, cd->y + cd->h}; }
+  }
+  _picker.show(_game->getCurrentTurnColor());
   _picker.place({a.x, a.y, b.x - a.x, b.y - a.y},
                 {0.0f, UI::Layout::safeTop, static_cast<float>(GetScreenWidth()) - (_embedded || turnPanelMode() == play::TurnPanel::Mode::Open ? _rightInset : 0.0f),
                  static_cast<float>(GetScreenHeight()) - UI::Layout::safeTop - UI::Layout::safeBottom},
@@ -161,6 +174,7 @@ void PlayScreen::updatePicker(float dt, const play::BoardStyle& style) {
 }
 
 void PlayScreen::boardInput() {
+  if (_playView) { playViewInput(); return; } // [Play view]
   _hover.reset();
   const bool consumed = ui::pointerConsumed(); // over a button or the Guide's panel
   if (consumed && !_dragging) { // (a drag in progress carries on over them)
@@ -211,7 +225,9 @@ void PlayScreen::boardInput() {
 }
 
 void PlayScreen::feedbackInput() {
-  _feedback.input({*_game, _layout, _camera, _selection, _hover, !ui::pointerConsumed(), inputBlocked(), aiToMove(), _locked, _ended});
+  play::PlayFeedback::Pointer in{*_game, _layout, _camera, _selection, _hover, !ui::pointerConsumed(), inputBlocked(), aiToMove(), _locked, _ended};
+  if (_playView) playViewPointer(in); // [Play view]
+  _feedback.input(in);
 }
 
 // A click (press and release without a drag). Single: select / move on a square (zooming onto the board when it is small), focus a
@@ -303,7 +319,7 @@ void PlayScreen::perform(const play::Intent& intent) {
     case Kind::Select:
       _animator.select(intent.from, _selection.targets(), _game->dim());
       // A piece picked up on a board too small to read: one combined motion brings the board up. Nothing moves when it is readable.
-      if (_camera.zoom() < play::BoardCamera::kReadableZoom) _camera.focusBoard(cardOf(intent.from.l, intent.from.t), kFocusZoom);
+      if (!_playView && _camera.zoom() < play::BoardCamera::kReadableZoom) _camera.focusBoard(cardOf(intent.from.l, intent.from.t), kFocusZoom);
       break;
     case Kind::Move: makeMove(intent.move); break;
     case Kind::Rejected: // nothing happens to the game, but the click is answered
@@ -370,20 +386,37 @@ void PlayScreen::playMove(const Chess::Core::Move& move) {
 }
 
 Vector2 PlayScreen::squareToScreen(Coord c) const {
+  if (_playView) { // [Play view]
+    const auto sq = _pv.squareRect(c);
+    return sq ? Vector2{sq->centerX(), sq->centerY()} : Vector2{-1.0f, -1.0f};
+  }
   const Rect sq = BoardLayout::squareRect(BoardLayout::boardRect(c.l, c.t), _game->dim(), c.x, c.y);
   return toVector(_camera.worldToScreen({sq.centerX(), sq.centerY()}));
 }
 
 Vector2 PlayScreen::cardStripToScreen(int timeline, int halfTurn) const {
+  if (_playView) { // [Play view]
+    const auto card = _pv.cardRect({timeline, halfTurn});
+    return card ? Vector2{card->centerX(), card->y + card->h - 6.0f} : Vector2{-1.0f, -1.0f};
+  }
   const Rect card = cardOf(timeline, halfTurn);
   return toVector(_camera.worldToScreen({card.centerX(), card.y + card.h - BoardLayout::kCardFooter / 2.0f}));
 }
 
 bool PlayScreen::boardVisible(int timeline, int halfTurn, float fraction) const {
+  if (_playView) { // [Play view]
+    const auto card = _pv.cardRect({timeline, halfTurn});
+    if (!card) return false;
+    const Rect area = _pv.gridArea();
+    const float w = std::max(0.0f, std::min(card->x + card->w, area.x + area.w) - std::max(card->x, area.x));
+    const float h = std::max(0.0f, std::min(card->y + card->h, area.y + area.h) - std::max(card->y, area.y));
+    return w * h >= fraction * card->w * card->h - 0.5f;
+  }
   return _camera.isBoardVisible(cardOf(timeline, halfTurn), fraction);
 }
 
 PlayScreen::CameraInfo PlayScreen::cameraInfo() const {
+  if (_playView) return {_pv.grid().square, 0.0f, 0.0f, "Play view", false}; // [Play view] "zoom" is the square size in pixels
   const play::Vec2 t = _camera.target();
   return {_camera.zoom(), t.x, t.y, _camera.stateLabel(), _camera.moving()};
 }
@@ -525,6 +558,8 @@ void PlayScreen::setGame(std::shared_ptr<Chess::IGame> game) {
   _submitRule = false;
   _cursor.reset();
   _cursorShown = false;
+  _pv.reset(); // [Play view]
+  _pvCursor.reset();
   _game = std::move(game);
   _layout = play::BoardLayout(); // another game object: rebuilt from scratch by the next refresh()
   _selection.clear();
@@ -633,6 +668,10 @@ void PlayScreen::goHome(bool snap) {
 // A move was made. Same board, readable zoom: nothing (at most a peek at the board that appeared, when it is off-screen). Another
 // board (time travel): keep both boards in view. Overview zoom: the new board is brought into view without a zoom change.
 void PlayScreen::afterMove(const Chess::Core::Move& move, const play::BoardKey& created, bool delayed) {
+  if (_playView) { // [Play view] the cards do not move
+    _pv.noteMove(created.first);
+    return;
+  }
   const Rect newCard = cardOf(created.first, created.second);
   const Rect sourceCard = cardOf(move.from.l, move.from.t);
   const bool crossBoard = play::keyOf(move.from) != play::keyOf(move.to);
@@ -650,11 +689,13 @@ void PlayScreen::afterMove(const Chess::Core::Move& move, const play::BoardKey& 
 void PlayScreen::markSubmitted(bool delayed) {
   _submitRule = true;
   _submitRuleDelayed = delayed;
+  if (!_embedded && App::current().settings.startInPlayView && !_playView && !_ended && _game->result() == Chess::GameResult::Ongoing) togglePlayView(true); // [Play view] "Start turns in Play view"
 }
 
 // After a submit: exactly one Mandatory board: focus it (at >= 0.8). Several: the present column. A view the player put there
 // stays when the board that needs a move is mostly in it.
 void PlayScreen::applySubmitRule() {
+  if (_playView) return; // [Play view]
   if (_game->result() != Chess::GameResult::Ongoing || aiToMove()) return; // (the computer moves on its own: nothing for the player to see yet)
   std::vector<Rect> mandatory;
   for (const play::BoardInfo& b : _view.boards)
@@ -672,6 +713,7 @@ void PlayScreen::applySubmitRule() {
 
 // The first Mandatory board that is (mostly) off-screen, as "L+1 · T3b"
 std::string PlayScreen::nextMandatoryLabel() const {
+  if (_playView) return ""; // [Play view] every board is on screen
   if (_game->result() != Chess::GameResult::Ongoing || aiToMove()) return "";
   for (const play::BoardInfo& b : _view.boards)
     if (b.role == play::BoardRole::Mandatory && !_camera.isBoardVisible(cardOf(b.timeline, b.halfTurn), 0.5f))
@@ -765,6 +807,11 @@ bool PlayScreen::escape(App&) {
     clearSelection();
     return true;
   }
+  if (_playView) { // [Play view] Esc closes the inspector's history, then is not ours
+    if (!_pv.browsingTimeline()) return false;
+    _pv.closeBrowse();
+    return true;
+  }
   if (_camera.state() != play::BoardCamera::State::Overview) {
     cancelDeferredCamera();
     goHome();
@@ -776,6 +823,8 @@ bool PlayScreen::escape(App&) {
 // Keys: Home (Overview), Space / Tab / Shift+Tab (next board), + / - (zoom), and unless the Guide's page owns the arrows:
 // the arrows (board cursor), Enter (focus the cursor's board; with the board already framed or no cursor: Submit), U (undo).
 void PlayScreen::handleKeys() {
+  if (!_embedded && Input::keyPressed(KEY_P)) { togglePlayView(!_playView); return; } // [Play view]
+  if (_playView) { playViewKeys(); return; }                                          // [Play view]
   if (Input::keyPressed(KEY_HOME)) {
     cancelDeferredCamera();
     goHome();
@@ -842,6 +891,7 @@ std::vector<PlayScreen::Ghost> PlayScreen::ghostCards() const {
 
 play::TurnPanel::Mode PlayScreen::turnPanelMode() const {
   using Mode = play::TurnPanel::Mode;
+  if (_playView) return Mode::Off; // [Play view] the cards carry the chips: no list beside them
   if (_embedded) return Mode::Off; // (the Guide and the puzzles have their own panel; a decided game keeps it, showing the turn that decided it)
   return play::TurnPanel::wanted() ? Mode::Open : Mode::Collapsed;
 }
@@ -904,6 +954,7 @@ void PlayScreen::rebuild() {
   }
   _noMandatoryBoard = std::none_of(_view.boards.begin(), _view.boards.end(),
                                    [](const play::BoardInfo& b) { return b.role == play::BoardRole::Mandatory; });
+  _pv.sync(*_game, _view); // [Play view] (also while it is off: the turn's card order is fixed when the turn starts)
   _feedback.rebuilt(*_game, _view, presentBefore);
   if (!_embedded) _turnPanel.setChecklist(play::turnChecklist(*_game, _canSubmit)); // [TurnPanel]
 }
@@ -939,7 +990,9 @@ void PlayScreen::refresh() {
   _hud.timelineCount = _game->timeLineCount();
   _hud.hint = hint();
   _hud.title = _hudTitle;
-  _hud.cameraLabel = _camera.stateLabel();
+  _hud.cameraLabel = _playView ? "Play view" : _camera.stateLabel(); // [Play view]
+  _hud.playView = _playView;
+  _hud.playViewAvailable = !_embedded;
   const std::string next = ongoing && !blocked && !_selection.active() ? nextMandatoryLabel() : std::string();
   _hud.nextBoardLabel = next.empty() ? "" : "Move on " + next;
   _hud.rightInset = _embedded ? _rightInset : 0.0f;
@@ -976,6 +1029,7 @@ void PlayScreen::refresh() {
     _ended = true;
   }
 
+  if (_playView) playViewPlace(); // [Play view]
   if (_submitRule) { // the turn was submitted and the layout has the new boards: frame the ones that need a move
     _submitRule = false;
     scheduleCamera(_submitRuleDelayed ? kAiCameraDelay : 0.0f, [this] { applySubmitRule(); });
@@ -1004,6 +1058,11 @@ void PlayScreen::draw(App& app) const {
   // Behind everything: the background, then lanes and the present column (they run under the HUD)
   _scene.drawBackground(style);
   const play::PlayFeedback::Draw fx{style, _view, _layout, *_game, camera, _scene, _selection.from().has_value()};
+  if (_playView) { // [Play view] cards instead of the camera's scene, then the same HUD
+    playViewDraw(app, style, fx);
+    drawHudLayer(app, style, fx);
+    return;
+  }
   _feedback.beforeLanes(_scene);
   if (!_layout.boards().empty()) _scene.drawLanes(frame, UI::Layout::rulerY);
   _feedback.afterLanes(fx);
@@ -1119,9 +1178,15 @@ void PlayScreen::draw(App& app) const {
     }
   }
 
+  drawHudLayer(app, style, fx);
+}
+
+// The HUD and everything over it: the pill, the action row, the save menu, the promotion chooser, the end card, Back
+void PlayScreen::drawHudLayer(App& app, const play::BoardStyle& style, const play::PlayFeedback::Draw& fx) const {
   _turnPanel.draw(*_game, style, app.screens.navAlpha()); // [TurnPanel]
   play::drawHud(_hud, style);
-  _feedback.overHud(fx);
+  if (_playView) play::overlay::drawHintAlert(_animator.hintAlert().text, _animator.hintAlert().alpha, style); // [Play view] (no ruler to light up)
+  else _feedback.overHud(fx);
   _actions.draw();
   if (!_embedded) _saveMenu.draw(style, app.screens.navAlpha());
   _picker.draw(style);

@@ -15,6 +15,7 @@
 #include "play/Hud.h"
 #include "play/MoveAnimator.h"
 #include "play/PlayFeedback.h"
+#include "play/PlayViewLayout.h"
 #include "play/Selection.h"
 #include "play/TurnPanel.h"
 #include "play/TimelineArrows.h"
@@ -72,6 +73,14 @@ public:
   bool boardVisible(int timeline, int halfTurn, float fraction) const;
   /// A Mandatory board lies (mostly) off-screen: the HUD offers "Next board (Space)".
   bool nextMandatoryOffscreen() const;
+  /// [Play view] the second way to show the multiverse (play/PlayView.h): P toggles it. Developer tools: the screen point of one
+  /// of its parts, for the UI script's `pvclick <kind> <l> <t>`: "hist" (a timeline's history stack), "tab" (an inspector tab of board l,t),
+  /// "chip" (an inactive timeline's chip), "close" (the inspector's close button). nullopt: it is not on screen.
+  bool playView() const { return _playView; }
+  /// Developer tools: the width kept free at the right of the boards (the turn panel open: kInset; else the margin).
+  float boardInsetNow() const { return _rightInset; }
+  void setPlayView(bool on) { togglePlayView(on); }
+  std::optional<Vector2> playViewPoint(const std::string& what, int timeline, int halfTurn) const;
 
 private:
   std::shared_ptr<Chess::IGame> _game;
@@ -144,6 +153,22 @@ private:
   void toggleTurnPanel();
   void focusBoardFromPanel(int timeline, int halfTurn);
   void showMoveFromPanel(const play::LastMove& move);
+
+  // [Play view] state and the code in Screens/PlayScreenPlayView.cpp (the multiverse view's camera code never runs while it is on)
+  bool _playView = false;
+  play::PlayViewLayout _pv;
+  std::optional<int> _pvCursor; // the timeline whose card the keyboard cursor rings
+  void togglePlayView(bool on);
+  void playViewInput();
+  void playViewPointer(play::PlayFeedback::Pointer& in) const;
+  void playViewClick(Vector2 mouse);
+  void playViewKeys();
+  void playViewPlace();
+  void playViewCycle(int direction);
+  void playViewCursor(play::BoardLayout::Dir dir);
+  void playViewDraw(App& app, const play::BoardStyle& style, const play::PlayFeedback::Draw& fx) const;
+  play::Rect playViewArea() const;
+  void drawHudLayer(App& app, const play::BoardStyle& style, const play::PlayFeedback::Draw& fx) const;
 
   void boardInput();
   void onClick(Vector2 mouse);

@@ -1,0 +1,41 @@
+# Play view (P): one big card per timeline's present board. Standard, 6 timelines, White to move on T5w: five boards must move (L+3, L+2, L+1, L-1,
+# L-2) and L0 is ahead (T5b). The record is tests/ui/records/play-view-6tl.5dr; the turn below is its next legal turn (W: d1-b3 on L+3, b1-a3 on
+# L+2, d1 (L-2) to c2 (L-1), d2-d4 on L+1): eight clicks and Submit. The camera does not move in the Play view (`zoom?` prints the square size).
+# Layout (1400x800): Submit (841,90); Multiverse / Play view toggle (1298,90).
+record ../records/play-view-6tl.5dr
+wait 90
+capture play-view-multiverse-6tl      # the default: the multiverse, with the "Play view [P]" toggle beside Overview
+key P
+wait 30
+zoom?
+capture play-view-6tl-start           # five MUST MOVE chips, one waiting, history stacks left of each card, the empty inspector
+clicksq 3 8 d1
+wait 20
+capture play-view-6tl-select          # the queen picked up: dots on its board, the other boards unchanged
+clicksq 3 8 b3
+wait 30
+capture play-view-6tl-moved           # L+3 now shows its new board and is marked "moved"; the order of the cards did not change
+clicksq 2 8 b1
+wait 10
+clicksq 2 8 a3
+wait 30
+clicksq -2 8 d1
+wait 20
+hoversq -1 8 c2
+wait 30
+capture play-view-6tl-cross-select    # a queen on L-2 can reach L-1 (a card): its dots are on that card, an arc between the two, the target glows
+clicksq -1 8 c2
+wait 30
+capture play-view-6tl-cross-done      # both boards moved; the jump's arc stays between the cards
+clicksq 1 8 d2
+wait 10
+clicksq 1 8 d4
+wait 30
+capture play-view-6tl-ready           # every board moved: Submit lit
+click 841 90
+move 1380 600
+wait 40
+capture play-view-6tl-submitted       # Black to move: the cards show the new boards, waiting
+key M
+wait 60
+capture play-view-multiverse-back     # M: the multiverse again

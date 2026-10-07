@@ -13,6 +13,7 @@ struct Settings {
   std::string music = "Off"; // selected track's display name, or AudioManager::offName()
   bool sfx = true;           // sound effects on
   bool reduceMotion = false;
+  bool startInPlayView = false; // a game opens (and every turn starts) in the Play view instead of the multiverse
   // The last choices on the Versus screen
   bool vsComputer = false;
   play::SideChoice vsSide = play::SideChoice::White;
@@ -20,6 +21,6 @@ struct Settings {
 
   bool operator==(const Settings& o) const {
     return std::strcmp(theme.prefix, o.theme.prefix) == 0 && boardView == o.boardView && music == o.music && sfx == o.sfx &&
-           reduceMotion == o.reduceMotion && vsComputer == o.vsComputer && vsSide == o.vsSide && vsLevel == o.vsLevel;
+           reduceMotion == o.reduceMotion && startInPlayView == o.startInPlayView && vsComputer == o.vsComputer && vsSide == o.vsSide && vsLevel == o.vsLevel;
   }
 };
