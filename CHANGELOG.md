@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-07
+
+Playing a turn across many timelines is now manageable.
+
+- **Play view** (press **P**, or *Start turns in Play view* in Settings): one large board per timeline you can play, must-move first, about 32 px squares at six timelines instead of 8. History folds into a thumbnail per timeline; past boards and jump targets open in an inspector, marked as past. **M** or **Home** returns to the full multiverse.
+- **Turn checklist** (in the multiverse view; **C** hides it): every board of this turn with its state and the move played, an *n / m boards* count, why Submit is still locked, and the opponent's last turn. Click a row to jump to its board.
+
 ### Added
 - **Turn checklist.** The first slice of making multi-timeline turns pleasant: a panel docked at the right of the game screen (`play::TurnPanel`) lists the boards of this turn. One row per board, the ones you must move on first, then the optional ones, then those that are ahead and waiting: a thumbnail of the board, its label ("L+1 · T5w"), a chip (*must move* / *optional* / *moved* / *waiting*) and, once played, the move in readable form ("e2-e4", "Ng1 -> L-1 · T3w f3"; the board another move landed on says "Queen from L-2 · T5w"). Rows keep their place as they are played. The header says "This turn · 3 / 5 boards", a line says "Submit: ready" or "Submit locked: 2 boards left" (and that Space jumps to the next board to move), and **Opponent's last turn** lists the other side's moves (against the computer, the computer's). Hovering a row rings its board in the multiverse, a click focuses it; a click on a move of the opponent's turn focuses its board and flashes its squares. Undo updates the rows; with ten or more timelines the list scrolls (whole rows, faded edges). The panel narrows the boards' free area (the camera's right inset), so every game frame is a little narrower. **C** or the "Hide list" button at the top right folds it away (kept for the session); the Guide and the puzzles, which have their own panel, do not show it. A finished game keeps it (titled "Game over") with the turn that decided it, so the boards do not jump when the end card appears.
 - **"3 / 5 boards" in the status pill** while a turn has two or more boards to move on.
@@ -259,7 +266,8 @@ The first complete release: a computer opponent, puzzles, an interactive guide, 
 - Dead and unused files and code.
 - Tracked `.DS_Store` and `.vscode` files.
 
-[Unreleased]: https://github.com/LLaammTTeerr/5DChess/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/LLaammTTeerr/5DChess/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/LLaammTTeerr/5DChess/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/LLaammTTeerr/5DChess/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/LLaammTTeerr/5DChess/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/LLaammTTeerr/5DChess/compare/v0.5.0...v1.0.0
