@@ -1,0 +1,29 @@
+# Motion: Full in the Play view: a queen's move between two cards (L-2 d1 to L-1 c2) flies from one card to the other along an arc (captured
+# mid-flight), the new boards grow in, and a refused click shakes its card in place.
+# Settings layout: Settings (150,490); Display tab (880,172); Motion toggle (200,308); Back (125,25).
+wait 20
+click 150 490
+wait 30
+click 880 172
+wait 20
+click 200 308        # Motion: Reduced -> Full
+wait 10
+click 125 25
+wait 30
+startplayview on
+record ../records/play-view-6tl.5dr
+wait 120
+clicksq -2 8 d1
+wait 30
+clicksq -1 8 c2
+wait 3
+capture motion-play-view-f3
+wait 6
+capture motion-play-view-f9
+wait 10
+capture motion-play-view-f19
+wait 60
+clicksq 0 9 e7       # a piece of the other side: refused, its card shakes
+wait 3
+capture motion-play-view-shake
+wait 60

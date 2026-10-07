@@ -13,7 +13,7 @@ struct Settings {
   std::string music = "Off"; // selected track's display name, or AudioManager::offName()
   bool sfx = true;           // sound effects on
   bool reduceMotion = false;
-  bool startInPlayView = false; // a game opens (and every turn starts) in the Play view instead of the multiverse (docs/CAMERA.md)
+  bool startInPlayView = false; // a game opens (and every turn starts) in the Play view instead of the multiverse
   // The last choices on the Versus screen
   bool vsComputer = false;
   play::SideChoice vsSide = play::SideChoice::White;

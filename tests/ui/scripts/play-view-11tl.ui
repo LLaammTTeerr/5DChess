@@ -1,0 +1,24 @@
+# Play view with 11 timelines (tests/ui/records/play-view-11tl.5dr: Standard, T5w, ten present boards of which nine must move, L-6 inactive): squares stay
+# at 20 px (the multiverse view's Overview draws them 4.5 px), the inactive timeline is a chip in the collapsed row at the bottom and a click on it
+# shows its board in the inspector. "Start turns in Play view" is switched on first, so the game opens in the Play view.
+startplayview on
+record ../records/play-view-11tl.5dr
+wait 90
+zoom?
+capture play-view-11tl-start
+key SPACE
+wait 10
+key SPACE
+wait 10
+capture play-view-11tl-cursor         # Space moves the keyboard cursor over the boards that need a move
+key DOWN
+wait 10
+key RIGHT
+wait 10
+capture play-view-11tl-arrows
+pvclick chip -6 6
+wait 20
+capture play-view-11tl-inactive       # the inactive timeline's board in the inspector
+clicksq -5 8 g4
+wait 20
+capture play-view-11tl-select         # a lifted piece whose target is on the inactive board: the dock shows it with its dots

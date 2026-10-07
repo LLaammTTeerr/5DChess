@@ -56,7 +56,7 @@ TEST_CASE("PlayView grid: cells lie inside the area, never overlap, and the squa
     REQUIRE(static_cast<int>(g.cells.size()) == count);
     CHECK(g.square == std::floor(g.square));
     CHECK(g.square >= pv::kMinSquare);
-    CHECK(g.square <= pv::kMaxSquare);
+    CHECK(g.square <= pv::kMaxBoard / 8.0f);
     for (size_t i = 0; i < g.cells.size(); ++i) {
       CHECK(g.cells[i].x >= area.x);
       CHECK(g.cells[i].x + g.cells[i].w <= area.x + area.w + 1.0f);

@@ -73,7 +73,7 @@ public:
   bool boardVisible(int timeline, int halfTurn, float fraction) const;
   /// A Mandatory board lies (mostly) off-screen: the HUD offers "Next board (Space)".
   bool nextMandatoryOffscreen() const;
-  /// [Play view] the second way to show the multiverse (play/PlayView.h, docs/CAMERA.md): P toggles it. Developer tools: the screen point of one
+  /// [Play view] the second way to show the multiverse (play/PlayView.h): P toggles it. Developer tools: the screen point of one
   /// of its parts, for the UI script's `pvclick <kind> <l> <t>`: "hist" (a timeline's history stack), "tab" (an inspector tab of board l,t),
   /// "chip" (an inactive timeline's chip), "close" (the inspector's close button). nullopt: it is not on screen.
   bool playView() const { return _playView; }

@@ -10,7 +10,7 @@
 
 namespace play {
 
-/// Play view: a second way to show the multiverse (docs/CAMERA.md, "Play view"). One big card per ACTIVE timeline, showing that
+/// Play view: a second way to show the multiverse (README, Features -> Play view). One big card per ACTIVE timeline, showing that
 /// timeline's present board, in a grid that makes the squares as large as the free rectangle allows; beside every card a stack of
 /// its history; the inactive timelines in a collapsed row; and one more cell at the end of the grid, the *inspector*, that shows
 /// whatever is not a card: the past boards a lifted piece can jump to (the docked target), and the history of a timeline the player
@@ -20,7 +20,7 @@ namespace play {
 /// never leaves it.
 namespace pv {
 
-inline constexpr float kMaxSquare = 36.0f; // the largest square the grid chooses on its own (2 timelines are not drawn 50 px per square)
+inline constexpr float kMaxBoard = 288.0f;  // the largest board the grid chooses on its own: 36 px squares on 8x8 (2 timelines are not drawn 50 px per square), 57 on 5x5
 inline constexpr float kMinSquare = 16.0f; // a Pixel sprite's native size; below it the grid scrolls instead of shrinking further
 inline constexpr float kCellGap = 6.0f;    // between cells
 inline constexpr float kInner = 4.0f;      // between a cell's history column and its card
@@ -43,9 +43,9 @@ struct Grid {
   float contentHeight = 0;     // all rows together; larger than the area's height when the grid scrolls
   bool scrolls = false;
 };
-/// The grid for `count` cells of `dim` x `dim` boards in `area` that maximises the square size (capped at maxSquare): the number of
+/// The grid for `count` cells of `dim` x `dim` boards in `area` that maximises the square size (capped at maxSquare; 0: kMaxBoard / dim): the number of
 /// columns is tried from 1 to `count`. When even `minSquare` does not fit every row, the squares stay at minSquare and the grid scrolls.
-Grid gridFor(const Rect& area, int count, int dim, float maxSquare = kMaxSquare, float minSquare = kMinSquare);
+Grid gridFor(const Rect& area, int count, int dim, float maxSquare = 0.0f, float minSquare = kMinSquare);
 
 /// The groups the cards are ordered in: boards that must move, boards that may, the rest (waiting / ahead).
 enum class Group { MustMove, Optional, Waiting };

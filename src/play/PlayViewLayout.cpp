@@ -38,6 +38,7 @@ float largestSquare(const Rect& area, int cols, int rows, int dim, float maxSqua
 Grid gridFor(const Rect& area, int count, int dim, float maxSquare, float minSquare) {
   Grid g;
   if (count <= 0 || dim <= 0) return g;
+  if (maxSquare <= 0.0f) maxSquare = std::floor(kMaxBoard / static_cast<float>(dim));
   Fit best;
   for (int cols = 1; cols <= count; ++cols) {
     const int rows = (count + cols - 1) / cols;
