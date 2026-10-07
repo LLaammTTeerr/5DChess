@@ -100,3 +100,101 @@ TEST_CASE("BoardLayout: bounds cover every board; sync rebuilds only when the ga
   CHECK(layout.sync(*game));
   CHECK(layout.boards().size() == 1);
 }
+
+TEST_CASE("BoardLayout: boardAt hits the whole card (frame and label strip), find and cardBounds agree") {
+  Sandbox game(8, std::vector<int>{3, 2}, 3); // timeline 0: half-turns 0..2, timeline 1: 0..1
+  BoardLayout layout;
+  layout.sync(game);
+  const auto board = BoardLayout::boardRect(0, 1);
+  const Rect card = BoardLayout::cardRect(board);
+  const auto onSquare = layout.boardAt(board.x + 10, board.y + 10);
+  REQUIRE(onSquare.has_value());
+  CHECK(onSquare->timeline == 0);
+  CHECK(onSquare->halfTurn == 1);
+  const float strip = board.y + board.h + BoardLayout::kCardFooter - 2; // the label strip: on the card, on no square
+  const auto onLabel = layout.boardAt(board.x + 100, strip);
+  REQUIRE(onLabel.has_value());
+  CHECK(onLabel->halfTurn == 1);
+  CHECK_FALSE(layout.hitTest(board.x + 100, strip).has_value());
+  const auto onFrame = layout.boardAt(card.x + 2, card.y + 2);
+  REQUIRE(onFrame.has_value());
+  CHECK(onFrame->halfTurn == 1);
+  CHECK_FALSE(layout.boardAt(card.x + card.w + 5, card.centerY()).has_value()); // the gap to the next card
+  const Rect missing = BoardLayout::boardRect(1, 2);
+  CHECK_FALSE(layout.boardAt(missing.x + 10, missing.y + 10).has_value());
+  CHECK_FALSE(layout.boardAt(-500, -500).has_value());
+
+  CHECK(layout.find(0, 2).has_value());
+  CHECK_FALSE(layout.find(1, 2).has_value());
+  const auto all = layout.cardBounds();
+  REQUIRE(all.has_value());
+  const Rect first = BoardLayout::cardRect(BoardLayout::boardRect(1, 0)), last = BoardLayout::cardRect(BoardLayout::boardRect(0, 2));
+  CHECK(all->x == doctest::Approx(first.x));
+  CHECK(all->y == doctest::Approx(first.y));
+  CHECK(all->x + all->w == doctest::Approx(last.x + last.w));
+  CHECK(all->y + all->h == doctest::Approx(last.y + last.h));
+  BoardLayout empty;
+  CHECK_FALSE(empty.cardBounds().has_value());
+}
+
+TEST_CASE("BoardLayout: neighbour moves a cursor between existing boards") {
+  using Dir = BoardLayout::Dir;
+  Sandbox game(8, std::vector<int>{4, 2}, 3); // timeline 0: half-turns 0..3, timeline 1: 0..1
+  game.addCreatedTimeLine(-1, 1);
+  BoardLayout layout;
+  layout.sync(game);
+  auto at = [&](int l, int t) { return *layout.find(l, t); };
+
+  CHECK(layout.neighbour(at(0, 1), Dir::Right)->halfTurn == 2);
+  CHECK(layout.neighbour(at(0, 1), Dir::Left)->halfTurn == 0);
+  CHECK_FALSE(layout.neighbour(at(0, 3), Dir::Right).has_value());
+  CHECK_FALSE(layout.neighbour(at(0, 0), Dir::Left).has_value());
+  // Up: the higher timeline id; on it the board with the closest half-turn
+  const auto up = layout.neighbour(at(0, 3), Dir::Up);
+  REQUIRE(up.has_value());
+  CHECK(up->timeline == 1);
+  CHECK(up->halfTurn == 1);
+  const auto down = layout.neighbour(at(0, 2), Dir::Down);
+  REQUIRE(down.has_value());
+  CHECK(down->timeline == -1);
+  CHECK(down->halfTurn == 0);
+  CHECK_FALSE(layout.neighbour(at(1, 0), Dir::Up).has_value());
+  CHECK_FALSE(layout.neighbour(at(-1, 0), Dir::Down).has_value());
+  CHECK(layout.neighbour(at(1, 1), Dir::Down)->timeline == 0);
+  CHECK(layout.neighbour(at(1, 1), Dir::Down)->halfTurn == 1);
+  CHECK(layout.neighbour(at(-1, 0), Dir::Up)->timeline == 0);
+  CHECK(layout.neighbour(at(-1, 0), Dir::Up)->halfTurn == 0);
+}
+
+TEST_CASE("BoardLayout: neighbour breaks a tie towards the earlier half-turn") {
+  Sandbox game(8, std::vector<int>{2, 4}, 3); // timeline 1: half-turns 0..3; from (0, 1)... timeline 0 holds 0 and 1
+  BoardLayout layout;
+  layout.sync(game);
+  // From (1, 3) down: timeline 0 holds half-turns 0 and 1, so 1 is the nearer; from (1, 0) down the nearest is 0
+  CHECK(layout.neighbour(*layout.find(1, 3), BoardLayout::Dir::Down)->halfTurn == 1);
+  CHECK(layout.neighbour(*layout.find(1, 0), BoardLayout::Dir::Down)->halfTurn == 0);
+  Sandbox gap(8, std::vector<int>{1, 3}, 2); // timeline 0: only half-turn 0; timeline 1: 0..2
+  BoardLayout other;
+  other.sync(gap);
+  CHECK(other.neighbour(*other.find(1, 2), BoardLayout::Dir::Down)->halfTurn == 0);
+}
+
+TEST_CASE("BoardLayout: columnBounds covers the cards of the half-turns asked for") {
+  Sandbox game(8, std::vector<int>{4, 2}, 3);
+  BoardLayout layout;
+  layout.sync(game);
+  const auto col = layout.columnBounds(1, 1);
+  REQUIRE(col.has_value());
+  const Rect top = BoardLayout::cardRect(BoardLayout::boardRect(1, 1)), bottom = BoardLayout::cardRect(BoardLayout::boardRect(0, 1));
+  CHECK(col->x == doctest::Approx(top.x));
+  CHECK(col->w == doctest::Approx(top.w));
+  CHECK(col->y == doctest::Approx(top.y));
+  CHECK(col->y + col->h == doctest::Approx(bottom.y + bottom.h));
+  const auto wide = layout.columnBounds(0, 3);
+  REQUIRE(wide.has_value());
+  CHECK(wide->w == doctest::Approx(3 * BoardLayout::kPitch + top.w));
+  CHECK(layout.columnBounds(1, 3)->x == doctest::Approx(top.x));
+  CHECK_FALSE(layout.columnBounds(7, 9).has_value());
+  // columns beyond the field are ignored, the ones inside kept
+  CHECK(layout.columnBounds(-2, 1)->x == doctest::Approx(BoardLayout::cardRect(BoardLayout::boardRect(0, 0)).x));
+}

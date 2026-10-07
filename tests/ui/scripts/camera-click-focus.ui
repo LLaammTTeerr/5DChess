@@ -1,0 +1,66 @@
+# Click to focus. A Standard game, four half-turns (1. e4 e5 2. Nf3 Nc6), then Home: the Overview of five boards at zoom ~0.78 (< 0.8).
+# A single click on a square below zoom 0.8 focuses that board (zoom 1.0) and selects the piece in one motion; Esc steps back: the
+# selection first, then the framing. A click on a card's label strip, or on a board that is history, focuses that board.
+# Layout (1400x800): Versus (150,250); Standard row (690,184); Play (808,712); Submit (841,90).
+wait 20
+click 150 250        # Versus
+wait 30
+click 690 184        # Standard
+wait 20
+click 808 712        # Play
+wait 120
+clicksq 0 0 e2
+wait 30
+clicksq 0 0 e4
+wait 30
+click 841 90         # Submit
+wait 60
+clicksq 0 1 e7
+wait 30
+clicksq 0 1 e5
+wait 30
+click 841 90
+wait 60
+clicksq 0 2 g1
+wait 30
+clicksq 0 2 f3
+wait 30
+click 841 90
+wait 60
+clicksq 0 3 b8
+wait 30
+clicksq 0 3 c6
+wait 30
+click 841 90
+wait 60
+key HOME
+wait 40
+camexpect state Overview
+camexpect zoom 0.6 0.79
+capture camera-click-focus-overview
+clicksq 0 4 f3       # the white knight on a board too small to read: the camera comes up and the piece is picked up
+wait 40
+camexpect state Focus
+camexpect zoom 0.99 1.01
+camexpect visible 0 4
+capture camera-click-focus-piece-selected
+key ESCAPE           # step 1: the selection goes, the framing stays
+wait 20
+camexpect state Focus
+capture camera-click-focus-esc-selection
+key ESCAPE           # step 2: back to the Overview
+wait 40
+camexpect state Overview
+capture camera-click-focus-esc-overview
+clickcard 0 1        # the label strip of a board that is history
+wait 40
+camexpect state Focus
+camexpect visible 0 1
+capture camera-click-focus-card-chrome
+key HOME
+wait 40
+clicksq 0 2 d5       # an empty square of a past board: focus it, nothing is selected
+wait 40
+camexpect state Focus
+camexpect visible 0 2
+capture camera-click-focus-past-board

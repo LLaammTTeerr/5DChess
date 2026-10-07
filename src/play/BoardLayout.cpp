@@ -65,4 +65,74 @@ std::optional<Chess::Core::Coord> BoardLayout::hitTest(float worldX, float world
                             static_cast<int16_t>(timeline)};
 }
 
+std::optional<BoardLayout::Slot> BoardLayout::find(int timeline, int halfTurn) const {
+  const Slot key{timeline, halfTurn, {}};
+  const auto it = std::lower_bound(_boards.begin(), _boards.end(), key, before);
+  if (it == _boards.end() || it->timeline != timeline || it->halfTurn != halfTurn) return std::nullopt;
+  return *it;
+}
+
+std::optional<BoardLayout::Slot> BoardLayout::boardAt(float worldX, float worldY) const {
+  if (_boards.empty()) return std::nullopt;
+  // A card reaches kCardPad / kCardFooter beyond its board, and the gap between boards is larger than both
+  const int timeline = -static_cast<int>(std::floor(worldY / kPitch));
+  const int halfTurn = static_cast<int>(std::floor(worldX / kPitch));
+  for (int dt = -1; dt <= 1; ++dt)
+    for (int dl = -1; dl <= 1; ++dl) {
+      const auto slot = find(timeline + dl, halfTurn + dt);
+      if (slot && cardRect(slot->rect).contains(worldX, worldY)) return slot;
+    }
+  return std::nullopt;
+}
+
+std::optional<BoardLayout::Slot> BoardLayout::neighbour(const Slot& from, Dir dir) const {
+  switch (dir) {
+    case Dir::Left:
+    case Dir::Right: {
+      const int step = dir == Dir::Left ? -1 : 1;
+      std::optional<Slot> best;
+      for (const Slot& s : _boards)
+        if (s.timeline == from.timeline && (s.halfTurn - from.halfTurn) * step > 0 &&
+            (!best || std::abs(s.halfTurn - from.halfTurn) < std::abs(best->halfTurn - from.halfTurn)))
+          best = s;
+      return best;
+    }
+    case Dir::Up:
+    case Dir::Down: {
+      const int step = dir == Dir::Up ? 1 : -1; // White's timelines (higher ids) are drawn above
+      std::optional<int> row; // the nearest timeline in that direction
+      for (const Slot& s : _boards)
+        if ((s.timeline - from.timeline) * step > 0 && (!row || std::abs(s.timeline - from.timeline) < std::abs(*row - from.timeline)))
+          row = s.timeline;
+      if (!row) return std::nullopt;
+      std::optional<Slot> best;
+      for (const Slot& s : _boards) // ascending half-turn: the first of equally near boards is the earlier
+        if (s.timeline == *row && (!best || std::abs(s.halfTurn - from.halfTurn) < std::abs(best->halfTurn - from.halfTurn))) best = s;
+      return best;
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<Rect> BoardLayout::columnBounds(int firstHalfTurn, int lastHalfTurn) const {
+  std::optional<Rect> out;
+  for (const Slot& s : _boards) {
+    if (s.halfTurn < firstHalfTurn || s.halfTurn > lastHalfTurn) continue;
+    const Rect c = cardRect(s.rect);
+    if (!out) {
+      out = c;
+      continue;
+    }
+    const float x0 = std::min(out->x, c.x), y0 = std::min(out->y, c.y);
+    const float x1 = std::max(out->x + out->w, c.x + c.w), y1 = std::max(out->y + out->h, c.y + c.h);
+    out = Rect{x0, y0, x1 - x0, y1 - y0};
+  }
+  return out;
+}
+
+std::optional<Rect> BoardLayout::cardBounds() const {
+  if (_boards.empty()) return std::nullopt;
+  return cardRect(_bounds);
+}
+
 } // namespace play

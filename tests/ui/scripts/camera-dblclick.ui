@@ -1,0 +1,52 @@
+# Double-click toggles Focus <-> Overview on a board; on empty canvas it is the Overview. A Standard game of four half-turns, five boards.
+# Layout (1400x800): Versus (150,250); Standard row (690,184); Play (808,712); Submit (841,90).
+wait 20
+click 150 250        # Versus
+wait 30
+click 690 184        # Standard
+wait 20
+click 808 712        # Play
+wait 120
+clicksq 0 0 e2
+wait 30
+clicksq 0 0 e4
+wait 30
+click 841 90         # Submit
+wait 60
+clicksq 0 1 e7
+wait 30
+clicksq 0 1 e5
+wait 30
+click 841 90
+wait 60
+clicksq 0 2 g1
+wait 30
+clicksq 0 2 f3
+wait 30
+click 841 90
+wait 60
+clicksq 0 3 b8
+wait 30
+clicksq 0 3 c6
+wait 30
+click 841 90
+wait 60
+key HOME
+wait 40
+dblclicksq 0 1 e5    # a board that is history: Focus
+wait 40
+camexpect state Focus
+camexpect visible 0 1
+capture camera-dblclick-focus
+dblclicksq 0 1 e5    # the same board again: back to the Overview
+wait 40
+camexpect state Overview
+capture camera-dblclick-overview
+dblclicksq 0 3 e5    # another one
+wait 40
+camexpect state Focus
+camexpect visible 0 3
+dblclick 700 700     # empty canvas below the boards: Overview
+wait 40
+camexpect state Overview
+capture camera-dblclick-canvas

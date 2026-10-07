@@ -1,0 +1,34 @@
+# Play vs Computer as Black: the computer opens, its moves and Submit follow the camera rules (150 ms after the move, so the flight
+# reads first) and the player starts with the one board that needs a move in focus.
+# Layout (1400x800): Versus (150,250); Computer (833,122); Black (752,174); Easy (644,226); Standard (690,320); Play (808,712).
+wait 20
+click 150 250        # Versus
+wait 30
+click 833 122        # Computer
+wait 20
+click 752 174        # Black
+click 644 226        # Easy
+wait 10
+click 690 320        # Standard
+wait 20
+click 808 712        # Play
+wait 30
+camlog on
+waitai               # the computer opens 1. e4 (or what its seeded search picks) and submits
+camlog off
+wait 60
+camexpect state Focus
+camexpect visible 0 1
+capture camera-vs-computer-opened
+clicksq 0 1 e7
+wait 30
+clicksq 0 1 e5
+wait 30
+click 841 90         # Submit: it is the computer's turn, nothing for the camera to frame
+wait 20
+zoom?
+waitai
+wait 60
+camexpect state Focus
+camexpect visible 0 3
+capture camera-vs-computer-replied

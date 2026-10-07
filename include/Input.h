@@ -14,6 +14,7 @@ struct Scripted {
   bool pressed[3] = {false, false, false};  // went down this frame
   float wheel = 0.0f;
   std::vector<int> keysPressed;             // KEY_* pressed this frame
+  bool shift = false;                       // a Shift key is held this frame
 };
 Scripted& scripted();
 
@@ -24,6 +25,8 @@ bool mouseDown(int button);
 float mouseWheel();
 bool keyPressed(int key);
 // Seconds the previous frame took (fixed in test mode) and seconds since start.
+/// A Shift key is held.
+bool shiftDown();
 float frameTime();
 double time();
 

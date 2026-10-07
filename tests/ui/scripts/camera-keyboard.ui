@@ -1,0 +1,75 @@
+# The keyboard: arrow keys move a board cursor (a ring around the card) among the existing boards; Enter focuses the cursor's board;
+# + / - zoom around it; Esc steps back (selection, then framing); U undoes a move; Enter with nothing selected submits.
+# Misc - Time Line Battle (three timelines, White to move on all). Layout (1400x800): Versus (150,250); row 7 (690,604); Play (808,712).
+wait 20
+click 150 250        # Versus
+wait 30
+click 690 604        # Misc - Time Line Battle (row 7)
+wait 20
+click 808 712        # Play
+wait 120
+key RIGHT            # the cursor appears on the first board that needs a move
+wait 20
+capture camera-keys-cursor-start
+key DOWN             # timeline 0 is the lowest timeline: no board below, the cursor stays
+wait 20
+key UP               # timeline 1
+wait 20
+camexpect state Overview
+capture camera-keys-cursor-up
+key ENTER            # focus the cursor's board
+wait 40
+camexpect state Focus
+camexpect visible 1 0
+capture camera-keys-enter-focus
+key PLUS             # one step in around the cursor's board
+wait 20
+camexpect state Free
+zoom?
+capture camera-keys-zoom-in
+key MINUS
+wait 20
+key MINUS
+wait 20
+zoom?
+key HOME
+wait 40
+key UP               # (the cursor is on timeline 1) timeline 2
+wait 20
+key ENTER
+wait 40
+camexpect visible 2 0
+clicksq 2 0 c3       # pick up a pawn on timeline 2 ...
+wait 40
+key ESCAPE           # ... Esc puts it down (and the nav buttons stay)
+wait 20
+capture camera-keys-esc-deselect
+clicksq 2 0 c3
+wait 30
+clicksq 2 0 c4
+wait 40
+key U                # undo the move
+wait 40
+capture camera-keys-undo
+key HOME             # (every board is in view again: below zoom 0.8 a click on a square brings its board up first)
+wait 40
+clicksq 2 0 c3
+wait 30
+clicksq 2 0 c4
+wait 30
+key HOME
+wait 40
+clicksq 1 0 c2
+wait 30
+clicksq 1 0 c3
+wait 30
+key HOME
+wait 40
+clicksq 0 0 c1
+wait 30
+clicksq 0 0 c2
+wait 30
+capture camera-keys-three-moves
+key ENTER            # nothing is selected: Enter submits the turn
+wait 90
+capture camera-keys-enter-submit

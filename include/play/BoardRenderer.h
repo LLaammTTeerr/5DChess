@@ -70,4 +70,10 @@ void drawRoundedLines(Rectangle r, float radius, float thickness, Color color);
 
 Color fade(Color c, float alpha);
 
+/// The keyboard cursor: a ring (3 px on screen, the selection outline's colour) around a card, in world space.
+void drawFocusRing(const Rect& card, const BoardStyle& style, float zoom, float alpha);
+/// A ghost card for a board that lies off-screen (screen space, drawn at the edge of the free area): a small tag with the board's
+/// label and a pointer towards it. `direction` is the unit vector from the free area's centre to the board.
+void drawGhostCard(Rectangle where, Vector2 direction, const std::string& label, const BoardStyle& style, float alpha, bool hovered);
+
 } // namespace play

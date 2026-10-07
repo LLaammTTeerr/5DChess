@@ -1,0 +1,39 @@
+# Submit in a multi-timeline position: Black has a mandatory board on every timeline, so the camera frames the present column
+# (an Overview, zoom >= 0.6) instead of focusing one board. Misc - Time Line Battle (three timelines).
+# Layout (1400x800): Versus (150,250); row 7 of the mode list (690,604); Play (808,712); Submit (841,90).
+wait 20
+click 150 250        # Versus
+wait 30
+click 690 604        # Misc - Time Line Battle (row 7)
+wait 20
+click 808 712        # Play
+wait 120
+clicksq 0 0 c1       # timeline 0: below zoom 0.8 the click brings the board up and picks the pawn
+wait 30
+clicksq 0 0 c2
+wait 30
+key HOME             # all three boards in view again
+wait 40
+clicksq 1 0 c2
+wait 30
+clicksq 1 0 c3
+wait 30
+key HOME
+wait 40
+clicksq 2 0 c3
+wait 30
+clicksq 2 0 c4
+wait 30
+click 841 90         # Submit
+wait 90
+camexpect state Overview
+camexpect zoom 0.59 1.26
+camexpect visible 0 1
+camexpect visible 1 1
+camexpect visible 2 1
+capture camera-submit-multi-black
+clicksq 0 1 e3       # Black's pawns: each click picks up and brings the board up (the zoom is below 0.8 on the first one)
+wait 30
+clicksq 0 1 e2
+wait 30
+capture camera-submit-multi-black-moved

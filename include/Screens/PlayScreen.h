@@ -1,4 +1,5 @@
 #pragma once
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -57,6 +58,19 @@ public:
   void back(App& app) override { if (!_embedded) leave(app); }
   /// Developer tools: where a square is on screen right now (its centre), so scripted clicks name squares, not pixels.
   Vector2 squareToScreen(Chess::Core::Coord square) const;
+  /// Developer tools: the camera this frame (the UI script's `zoom?`).
+  struct CameraInfo {
+    float zoom, x, y; // zoom and the world point at the centre of the free area
+    const char* state;
+    bool moving;
+  };
+  CameraInfo cameraInfo() const;
+  /// Developer tools: the middle of a board's label strip (on its card, on none of its squares).
+  Vector2 cardStripToScreen(int timeline, int halfTurn) const;
+  /// Developer tools: at least `fraction` of the board's card is inside the free area.
+  bool boardVisible(int timeline, int halfTurn, float fraction) const;
+  /// A Mandatory board lies (mostly) off-screen: the HUD offers "Next board (Space)".
+  bool nextMandatoryOffscreen() const;
 
 private:
   std::shared_ptr<Chess::IGame> _game;
@@ -66,6 +80,23 @@ private:
   play::PromotionPicker _picker;
   play::Selection _selection;
   play::BoardCamera _camera;
+  // Pointer: a press that has not moved 5 px is a click on release; farther it is a drag that pans (and never selects)
+  bool _pressValid = false, _dragging = false;
+  Vector2 _pressPos{}, _flingVelocity{};
+  double _lastClickTime = -1e9;
+  Vector2 _lastClickPos{};
+  bool _selectedBeforeClick = false; // ... and a piece was already picked up
+  bool _focusedBeforeClick = false; // the first click of a (possible) double-click found its board already focused
+  // Keyboard: the board cursor (a ring around a card), the Space / Tab cycle through the boards that need a move
+  std::optional<std::pair<int, int>> _cursor; // (timeline, half-turn)
+  bool _cursorShown = false;
+  UI::Motion::Spring _cursorX, _cursorY;     // the ring's card position (world)
+  int _cycle = -1;
+  float _selectedFor = 0.0f;                  // seconds a piece has been picked up (the ghost cards fade after 2 s)
+  // A camera action that waits (the computer's / scripted moves: 150 ms, so the flight reads first); player input cancels it
+  std::function<void()> _deferredCamera;
+  float _deferredDelay = 0.0f;
+  bool _submitRule = false, _submitRuleDelayed = false; // a turn was submitted: frame the next boards once the layout has them
   play::MoveAnimator _animator;
   play::PlayFeedback _feedback{_animator}; // feedback motion and cues (play/PlayFeedback)
   play::TimelineArrows _arrows;
@@ -98,11 +129,38 @@ private:
 
   // Answers that are not free (a threat search over the multiverse), cached until the game's state changes
   bool _canSubmit = false, _noMandatoryBoard = true;
+  bool _undoEnabled = false, _submitEnabled = false; // what the action row shows, for the U / Enter keys
 
   void boardInput();
+  void onClick(Vector2 mouse);
+  /// Click a square as the player would; returns what the click meant.
+  play::Intent::Kind clickSquare(Chess::Core::Coord square);
+  void handleKeys();
+  void goHome(bool snap = false);
+  void nextBoard(int direction);
+  void setCursor(int timeline, int halfTurn);
+  void moveCursor(play::BoardLayout::Dir dir);
+  void focusCursor();
+  void zoomStep(int direction);
+  void feedbackInput();
+  void syncLock();
+  void scheduleCamera(float delay, std::function<void()> action);
+  void cancelDeferredCamera() { _deferredCamera = nullptr; }
+  void afterMove(const Chess::Core::Move& move, const play::BoardKey& created, bool delayed);
+  void applySubmitRule();
+  void markSubmitted(bool delayed);
+  struct Ghost {
+    Rectangle rect;
+    Vector2 direction;
+    std::string label;
+    int timeline, halfTurn;
+  };
+  std::vector<Ghost> ghostCards() const;
+  std::string nextMandatoryLabel() const; // "L+1 · T3b" of the first Mandatory board that is off-screen, else empty
+  std::vector<std::pair<int, int>> boardsToMoveOn() const; // Mandatory boards, then Optional ones
   void updatePicker(float dt, const play::BoardStyle& style);
   void perform(const play::Intent& intent);
-  void makeMove(const Chess::Core::Move& move);
+  void makeMove(const Chess::Core::Move& move, bool delayedCamera = false);
   void undo();
   /// Against the computer: the turns that "Undo" takes back now (0: none; 1: the player's turn while the computer thinks; 2: the
   /// player's last turn and the computer's reply).
@@ -117,7 +175,7 @@ private:
   void finishAiTurn();
   void autosaveNow();
   void submitTurn();
-  void doSubmit();
+  void doSubmit(bool delayedCamera = false);
   void leave(App& app);
   void rematch(App& app);
   bool endCardShown() const { return _game->result() != Chess::GameResult::Ongoing && _showEndCard && !_reviewing; }

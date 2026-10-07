@@ -1,0 +1,39 @@
+# A time-travel move keeps both boards in view; the Submit after it focuses the one board Black must move on.
+# Standard: 1. e4 e5, then the knight g1 on the present board jumps back to g3 on the first board (a new timeline, L+1).
+# Layout (1400x800): Versus (150,250); Standard row (690,184); Play (808,712); Submit (841,90).
+wait 20
+click 150 250        # Versus
+wait 30
+click 690 184        # Standard
+wait 20
+click 808 712        # Play
+wait 120
+clicksq 0 0 e2
+wait 30
+clicksq 0 0 e4
+wait 30
+click 841 90         # Submit
+wait 60
+clicksq 0 1 e7
+wait 30
+clicksq 0 1 e5
+wait 30
+click 841 90
+wait 60
+camexpect state Focus
+camexpect visible 0 2
+clicksq 0 2 g1       # the white knight on the present board
+wait 40
+capture camera-timetravel-selected
+clicksq 0 0 g3       # its target two half-turns back: it creates timeline L+1 (board L+1 T1b)
+wait 60
+camexpect visible 0 2   # the board it left ...
+camexpect visible 1 1   # ... and the board it created
+camexpect zoom 0.79 1.26
+capture camera-timetravel-both-in-view
+click 841 90         # Submit
+wait 90
+camexpect state Focus
+camexpect visible 1 1   # Black's one mandatory board
+camexpect zoom 0.79 1.26
+capture camera-timetravel-submitted

@@ -307,4 +307,41 @@ void drawFlights(const std::vector<MoveAnimator::Flight>& flights, bool gray) {
   }
 }
 
+void drawFocusRing(const Rect& card, const BoardStyle& style, float zoom, float alpha) {
+  const Rectangle c = toRay(card);
+  const float gap = worldThickness(5.0f, zoom);
+  const Rectangle ring = {c.x - gap, c.y - gap, c.width + 2 * gap, c.height + 2 * gap};
+  const float thickness = worldThickness(3.0f, zoom);
+  if (style.card == BoardStyle::Card::Ink) DrawRectangleLinesEx(ring, thickness, fade(style.accent2, alpha));
+  else drawRoundedLines(ring, worldThickness(16.0f, zoom), thickness, fade(style.accent2, alpha));
+}
+
+void drawGhostCard(Rectangle where, Vector2 direction, const std::string& label, const BoardStyle& style, float alpha, bool hovered) {
+  const bool square = style.hudSquare || style.card == BoardStyle::Card::Ink;
+  const float radius = square ? 0.0f : 10.0f;
+  Color fill = style.cardWhite;
+  fill.a = 235;
+  const Rectangle shadow = {where.x + 1, where.y + 3, where.width, where.height};
+  if (radius > 0) drawRoundedRect(shadow, radius, fade(style.hudShadow, alpha));
+  else DrawRectangleRec(shadow, fade(style.hudShadow, alpha));
+  if (radius > 0) drawRoundedRect(where, radius, fade(fill, alpha));
+  else DrawRectangleRec(where, fade(fill, alpha));
+  const Color edge = hovered ? style.accent : style.accent2;
+  if (radius > 0) drawRoundedLines(where, radius, hovered ? 3.0f : 2.0f, fade(edge, alpha));
+  else DrawRectangleLinesEx(where, hovered ? 3.0f : 2.0f, fade(edge, alpha));
+  const Font font = App::current().assets.font("ui.mono", 14);
+  const Vector2 size = MeasureTextEx(font, label.c_str(), 14.0f, 0.0f);
+  const float arrowRoom = 22.0f;
+  DrawTextEx(font, label.c_str(), {where.x + (where.width - arrowRoom - size.x) / 2.0f, where.y + (where.height - size.y) / 2.0f}, 14.0f,
+             0.0f, fade(style.hudText, alpha));
+  // A small arrowhead at the right pointing the way the board lies
+  const Vector2 c = {where.x + where.width - arrowRoom / 2.0f - 4.0f, where.y + where.height / 2.0f};
+  const float len = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+  const Vector2 d = len > 0.0001f ? Vector2{direction.x / len, direction.y / len} : Vector2{1.0f, 0.0f};
+  const Vector2 n = {-d.y, d.x};
+  const float r = 7.0f;
+  fillTriangle({c.x + d.x * r, c.y + d.y * r}, {c.x - d.x * r * 0.6f + n.x * r * 0.8f, c.y - d.y * r * 0.6f + n.y * r * 0.8f},
+               {c.x - d.x * r * 0.6f - n.x * r * 0.8f, c.y - d.y * r * 0.6f - n.y * r * 0.8f}, fade(edge, alpha));
+}
+
 } // namespace play

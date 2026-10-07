@@ -1,0 +1,41 @@
+# Space / Tab / Shift+Tab cycle through the boards that need a move (Mandatory first), each focused at zoom >= 0.8; Home is the Overview.
+# Misc - Time Line Battle: three 5x5 boards (timelines 0, 1 and 2), White must move on all three.
+# Layout (1400x800): Versus (150,250); row 7 of the mode list (690,604); Play (808,712).
+wait 20
+click 150 250        # Versus
+wait 30
+click 690 604        # Misc - Time Line Battle (row 7)
+wait 20
+click 808 712        # Play
+wait 120
+camexpect state Overview
+camexpect zoom 0.4 0.7
+capture camera-space-overview
+key SPACE            # the first board that needs a move: timeline 0
+wait 40
+camexpect state Focus
+camexpect zoom 0.79 2.0
+camexpect visible 0 0
+capture camera-space-first
+key SPACE            # timeline 1
+wait 40
+camexpect visible 1 0
+capture camera-space-second
+key SPACE            # timeline 2
+wait 40
+camexpect visible 2 0
+capture camera-space-third
+key SPACE            # wraps round to timeline 0
+wait 40
+camexpect visible 0 0
+key SHIFT_TAB        # backwards: timeline 2
+wait 40
+camexpect visible 2 0
+capture camera-space-backwards
+key TAB              # forwards again
+wait 40
+camexpect visible 0 0
+key HOME
+wait 40
+camexpect state Overview
+capture camera-space-home

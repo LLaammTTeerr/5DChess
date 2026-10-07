@@ -48,6 +48,11 @@ game screenshot shows the Pixel pieces in the Atlas board view unless the script
 release frame. After a click that changes the camera (new boards appear) wait ~40-90 frames before the next one.
 Use `capture` after enough `wait` frames for scene cross-fades (about 10 frames under Reduce motion).
 
+Camera commands (see the header of `tools/ui_script.cpp`): `dblclick x y`, `dblclicksq <l> <t> <sq>`, `drag x0 y0 x1 y1 [steps]`, `movesq` and `clickcard <l> <t>` (the label strip of a card);
+`zoom?` prints the camera of the game screen (state, zoom, target, moving) to the log and takes no frame; `camlog on|off` prints it every frame;
+`camstill on|off` fails the script when the camera moves on any frame in between ("the camera stays still mid-turn"); `camexpect state <Overview|Focus|Free>`, `camexpect zoom <min> <max>`,
+`camexpect visible <l> <t> [fraction]`, `camexpect squareat <l> <t> <sq> <x> <y>|pointer` and `camexpect nextboard <0|1>` fail the script (exit 2) when the camera is not where the script says. Key names include `HOME`, `PLUS`, `MINUS` and `SHIFT_TAB`.
+
 `ainodes <n>` sets how many nodes of the computer opponent's search run each frame (400 until changed; 0 freezes it where it is,
 to capture the "thinking" HUD; `clock` is the shipped wall-clock budget, not reproducible, for `FDCHESS_PERF=1` measurements) and
 `waitai` runs frames until the computer has nothing left to do (it has replied and the game's own legal-turn search finished; the On a puzzle it waits for the judging of a submitted turn, the proof of a mate in 2, the engine's reply and a scripted solution.
@@ -89,6 +94,15 @@ mode, Play) or by a record with the `# vs-computer:` line (`record`, `slot`).
 | motion-lane | Motion: Full: Black's jump creating L-1, its lane unfolding from L0 |
 | motion-check | Motion: Full: Ra8+ submitted, the checked king pulsing and the attack line drawing on |
 | motion-screens | Motion: Full: a screen sliding in (back and forward) and a click during the cross-fade reaching the new screen |
+| camera-click-focus | a click on a square below zoom 0.8 brings the board up and picks the piece; Esc steps back (selection, then the framing); a click on a card's label strip and on a board that is history focus it |
+| camera-dblclick | double-click on a board: Focus, again: Overview; on empty canvas: Overview |
+| camera-wheel-drag | the wheel zooms around the pointer (the square under it stays), limits 0.4 and 2.5; a drag pans at once and Home returns |
+| camera-space-cycle | Time Line Battle: Space / Tab / Shift+Tab cycle through the three boards that need a move; Home |
+| camera-keyboard | the board cursor with the arrow keys, Enter focuses, + / - zoom, Esc deselects, U undoes, Enter submits |
+| camera-timetravel | a knight's time-travel jump keeps its source and the new timeline's board in view; Submit focuses Black's one board |
+| camera-submit-multi | Submit with three mandatory boards frames the present column (Overview) |
+| camera-still-midturn | `camstill`: from Black's board being focused to the Submit the camera does not move (selecting, switching pieces, moving, Undo) |
+| camera-vs-computer | vs Computer as Black: the computer opens, the camera frames the player's board; the reply is framed too |
 | rules-visuals | tests/ui/positions: check (attack line from the rook to the king), an inactive timeline (dimmed, tagged), the promotion picker and a chosen promotion |
 
 ## Layout audit

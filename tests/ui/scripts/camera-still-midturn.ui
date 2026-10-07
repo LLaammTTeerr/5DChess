@@ -1,0 +1,48 @@
+# The camera stays still in the middle of a turn: no refit, no pan to the picked-up piece, no fly-back. After White's first turn the
+# camera focuses the board Black must move on (1.25); from there to the Submit the only things that may move it are the player's
+# own drag / wheel / keys. `camstill on` fails the script if the zoom or target changes on any frame; `camlog on` prints them.
+# Layout (1400x800): Versus (150,250); Standard row (690,184); Play (808,712); Submit (841,90); Undo (558,90).
+wait 20
+click 150 250        # Versus
+wait 30
+click 690 184        # Standard
+wait 20
+click 808 712        # Play
+wait 120
+clicksq 0 0 e2
+wait 30
+clicksq 0 0 e4
+wait 30
+click 841 90         # Submit
+wait 90              # the camera hops to Black's board and settles
+camexpect state Focus
+zoom?
+camlog on
+camstill on
+move 100 400         # hover about
+wait 20
+clicksq 0 1 e7       # pick up a pawn ...
+wait 30
+clicksq 0 1 d7       # ... pick up another (switching pieces)
+wait 30
+clicksq 0 1 d7       # ... put it down again (Clear)
+wait 30
+clicksq 0 1 e7
+wait 30
+clicksq 0 1 e5       # a move on the board: the new board appears at the right and the camera does not follow
+wait 60
+click 558 90         # Undo (the board goes away)
+wait 40
+clicksq 0 1 e7
+wait 30
+clicksq 0 1 e5
+wait 90
+capture camera-still-midturn-after-move
+camstill off
+camlog off
+zoom?
+click 841 90         # Submit: now the camera may frame White's board
+wait 90
+camexpect state Focus
+camexpect visible 0 2
+capture camera-still-midturn-submitted
