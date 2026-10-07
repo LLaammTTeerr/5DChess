@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-10-07
+
+Nothing on screen overlaps any more: the Undo / Deselect / Submit row has the top of the screen to itself, the mode screen has a proper Setup panel, and every screenshot test now fails if two parts of the interface collide.
+
 ### Fixed
 - **Game screen: nothing enters the HUD zone.** The present column and the lane bands no longer run up behind the Undo / Deselect / Submit row, and the "Present" badge no longer sits directly under it: the HUD zone (Back / Save / Copy, the status pill, the action row, Overview / Next board) ends at `UI::Layout::hudBottom`, the turn ruler starts 8 px below it, and the scene (and the camera's safe rect) below the ruler. The present column now hangs from the middle of its badge. Disabled buttons of the Deep space view are opaque, so nothing reads through them.
 - Also found by the new overlap audit: the status pill could run under the Back button of the Guide and puzzle screens (it now stops short of it); the Present badge could lie over the minimap at the right end of the ruler (it stops before it); the minimap's frame could poke out of the ruler on many timelines; the Save panel reached 17 px under the Undo button (narrower now); the embedded Guide and puzzle boards drew their first frame without the side panel's inset.
@@ -235,7 +239,8 @@ The first complete release: a computer opponent, puzzles, an interactive guide, 
 - Dead and unused files and code.
 - Tracked `.DS_Store` and `.vscode` files.
 
-[Unreleased]: https://github.com/LLaammTTeerr/5DChess/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/LLaammTTeerr/5DChess/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/LLaammTTeerr/5DChess/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/LLaammTTeerr/5DChess/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/LLaammTTeerr/5DChess/compare/v0.5.0...v1.0.0
 [0.5.0]: https://github.com/LLaammTTeerr/5DChess/compare/v0.4.0...v0.5.0
