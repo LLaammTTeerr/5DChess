@@ -33,7 +33,7 @@ jobs:
           cp build-web/5dchess.js build-web/5dchess.wasm build-web/5dchess.data site/
           cp build-web/5dchess.html site/index.html
           touch site/.nojekyll
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: site
 
